@@ -1,0 +1,43 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}{{ profile.username }} – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <section class="panel profile">
+        {{ ui.picture(profile.avatar, 'avatars', profile.username) }}
+        <div class="profile-info">
+            <h1>{{ profile.lifeForm.icon }} {{ profile.username }}</h1>
+            <p class="muted">
+                {{ profile.lifeForm.label }}
+                {% if profile.alliance %}
+                    · {{ profile.allianceRank.label }} in <a href="{{ path('app_alliance_public', {id: profile.alliance.id}) }}">{{ profile.alliance.name }} [{{ profile.alliance.tag }}]</a>
+                {% endif %}
+                · {{ profile.planets|length }} Planet{{ profile.planets|length == 1 ? '' : 'en' }}
+                · dabei seit {{ profile.createdAt|date('d.m.Y') }}
+            </p>
+            {% if profile.profileText %}
+                <div class="message-body">{{ profile.profileText }}</div>
+            {% else %}
+                <p class="muted">{{ own ? 'Du hast noch nichts über dich geschrieben.' : profile.username ~ ' hat noch nichts über sich geschrieben.' }}</p>
+            {% endif %}
+        </div>
+    </section>
+
+    {% if own %}
+        <section class="panel">
+            <h2>Profil bearbeiten</h2>
+            <form method="post" action="{{ path('app_profile_update') }}" enctype="multipart/form-data" class="fleet-form">
+                <input type="hidden" name="_token" value="{{ csrf_token('profile') }}">
+                <label for="profile-text">Über dich (sehen alle, die auf deinen Namen klicken)</label>
+                <textarea id="profile-text" name="text" rows="6" maxlength="5000">{{ profile.profileText }}</textarea>
+                <label for="profile-image">Bild (JPEG, PNG, WebP oder GIF, max. 2 MB – wird auf 400 × 400 Pixel verkleinert)</label>
+                <input id="profile-image" type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif">
+                {% if profile.avatar %}
+                    <label class="checkbox"><input type="checkbox" name="remove_image" value="1"> Bild entfernen</label>
+                {% endif %}
+                <button class="btn btn-small" type="submit" id="profile-save">Speichern</button>
+            </form>
+        </section>
+    {% endif %}
+{% endblock %}

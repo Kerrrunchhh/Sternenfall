@@ -1,0 +1,295 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% macro ship_inputs(rows, prefix = 'ships') %}
+    <table class="table">
+        <tr class="table-head"><td>Schiff</td><td class="num">Verfügbar</td><td class="num">Anzahl</td></tr>
+        {% for row in rows %}
+            <tr>
+                <td>{{ row.type.label }}</td>
+                <td class="num">{{ row.count|number_format(0, ',', '.') }}</td>
+                <td class="num">
+                    <input type="number" name="{{ prefix }}[{{ row.type.value }}]" min="0" max="{{ row.count }}" value="0"
+                           aria-label="Anzahl {{ row.type.label }}" data-cargo="{{ row.type.spec.cargo }}">
+                    <button type="button" class="btn btn-small btn-secondary" data-fill-max="{{ row.count }}">max</button>
+                </td>
+            </tr>
+        {% endfor %}
+    </table>
+{% endmacro %}
+
+{% macro target_inputs(target, missions, with_cargo) %}
+    <div class="coords">
+        <label>Galaxie <input type="number" name="galaxy" min="1" value="{{ target.galaxy }}" required></label>
+        <label>System <input type="number" name="system" min="1" value="{{ target.system }}" required></label>
+        <label>Position <input type="number" name="position" min="1" value="{{ target.position }}" required></label>
+    </div>
+    <h3>Auftrag</h3>
+    <div class="missions">
+        {% for m in missions %}
+            <label class="mission">
+                <input type="radio" name="mission" value="{{ m.value }}" {{ m == target.mission ? 'checked' }}>
+                <strong>{{ m.label }}</strong>
+                <span class="muted small">{{ m.description }}</span>
+            </label>
+        {% endfor %}
+    </div>
+    <details class="trade-order">
+        <summary>Bestellung (nur für „Handeln“)</summary>
+        <div class="coords">
+            <label>Fusionatoren <input type="number" name="order[fusionator]" min="0" value="0"></label>
+            {% for type in enum_cases('App\\Game\\ResourceType') %}
+                <label>{{ type.label }} <input type="number" name="order[{{ type.value }}]" min="0" value="0"></label>
+            {% endfor %}
+        </div>
+        <p class="muted small">Gekauft wird bei Ankunft so viel, wie Lager, deine Credits und der freie Frachtraum hergeben – zuerst Fusionatoren, dann Rohstoffe.</p>
+    </details>
+    {% if with_cargo %}
+        <h3>Ladung</h3>
+        <div class="coords">
+            {% for type in enum_cases('App\\Game\\ResourceType') %}
+                <label>{{ type.label }} <input type="number" name="cargo[{{ type.value }}]" min="0" value="0"></label>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endmacro %}
+
+{% block title %}Flotten – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h1>Flotten</h1>
+
+    {% if incoming is not empty %}
+        <section class="panel construction">
+            <div>
+                <h2>Fremde Flotten im Anflug <small class="muted">(soweit dein Radar sie sieht)</small></h2>
+                <table class="table">
+                    {% for f in incoming %}
+                        <tr>
+                            <td>{{ ui.player(f.owner) }}</td>
+                            <td>{{ f.mission.label }}</td>
+                            <td>→ [{{ f.targetCoordinates }}]</td>
+                            <td class="num">{{ ui.countdown(f.arriveAt, now) }}</td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </section>
+    {% endif %}
+
+    <h2 class="section-title">Deine Flotten</h2>
+    {% for e in entries %}
+        {% set f = e.fleet %}
+        <article class="panel fleet-card {{ f.moving ? 'moving' }}">
+            <div class="building-head">
+                <h2>{{ f.label }}</h2>
+                <span class="muted small">
+                    {% if f.idle %}
+                        wartet bei [{{ f.coordinates }}]{% if e.at %} · {{ e.at.name }}{% if not e.base %} ({{ e.at.owner.username }}){% endif %}{% endif %}
+                    {% else %}
+                        {{ f.mission.label }} [{{ f.coordinates }}] {{ f.returning ? '←' : '→' }} [{{ f.targetCoordinates }}]
+                        · {{ f.returning ? 'Rückkehr in' : 'Ankunft in' }} {{ ui.countdown(f.nextEventAt, now) }}
+                    {% endif %}
+                </span>
+            </div>
+            <p class="small">
+                {% for s in f.shipList %}{{ s.count|number_format(0, ',', '.') }} × {{ s.type.label }}{{ not loop.last ? ', ' }}{% endfor %}
+                {% if not f.cargo.empty %}
+                    <br><span class="muted">Ladung ({{ f.cargo.total|number_format(0, ',', '.') }} / {{ e.capacity|number_format(0, ',', '.') }}):
+                    {% for type in enum_cases('App\\Game\\ResourceType') %}{% if f.cargo.get(type) > 0 %}{{ type.label }} {{ f.cargo.get(type)|number_format(0, ',', '.') }} {% endif %}{% endfor %}</span>
+                {% endif %}
+            </p>
+
+            {% if f.moving and not f.returning %}
+                <form method="post" action="{{ path('app_fleet_recall', {id: f.id}) }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
+                    <button class="btn btn-danger btn-small" type="submit">Rückruf</button>
+                </form>
+            {% endif %}
+
+            {% if f.named %}
+                <div class="fleet-actions">
+                    <details>
+                        <summary>Umbenennen</summary>
+                        <form method="post" action="{{ path('app_fleets_rename', {id: f.id}) }}" class="inline-action">
+                            <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
+                            <input type="text" name="name" value="{{ f.name }}" maxlength="40" required aria-label="Neuer Name">
+                            <button class="btn btn-small" type="submit">Speichern</button>
+                        </form>
+                    </details>
+
+                    {% if f.idle %}
+                        <details>
+                            <summary>Losschicken</summary>
+                            <form method="post" action="{{ path('app_fleets_send', {id: f.id}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
+                                {{ _self.target_inputs(target, missions, e.base is not null) }}
+                                <p class="muted small">
+                                    {% if e.base %}Treibstoff und Proviant für Hin- und Rückflug zahlt {{ e.base.name }}.
+                                    {% else %}Die Flotte steht nicht an einem eigenen Planeten: Treibstoff und Proviant werden aus ihrer Ladung bezahlt.{% endif %}
+                                </p>
+                                <button class="btn btn-small" type="submit" id="fleet-{{ f.id }}-send">Flotte starten</button>
+                            </form>
+                        </details>
+
+                        <details>
+                            <summary>Aufteilen</summary>
+                            <form method="post" action="{{ path('app_fleets_split', {id: f.id}) }}" class="fleet-form">
+                                <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
+                                <p class="muted small">Die gewählten Schiffe bilden eine neue Flotte am selben Ort. Die Ladung bleibt in dieser Flotte.</p>
+                                <label>Name der neuen Flotte <input type="text" name="name" maxlength="40" required></label>
+                                {{ _self.ship_inputs(f.shipList) }}
+                                <button class="btn btn-small" type="submit" id="fleet-{{ f.id }}-split">Aufteilen</button>
+                            </form>
+                        </details>
+
+                        <details>
+                            <summary>Schiffe zusammenziehen</summary>
+                            <form method="post" action="{{ path('app_fleets_gather', {id: f.id}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
+                                <p class="muted small">Schiffe der gewählten Typen fliegen von allen deinen Planeten zu dieser Flotte, wenn sie sie innerhalb der Höchstflugzeit erreichen. Jeder Planet zahlt Treibstoff und Proviant für den einfachen Flug.</p>
+                                <label class="inline-action">Höchstens <input type="number" name="minutes" min="1" value="60" required class="short"> Minuten entfernt</label>
+                                <div class="type-checks">
+                                    {% for type in ship_types|filter(t => not t.stationary) %}
+                                        <label><input type="checkbox" name="types[]" value="{{ type.value }}"> {{ type.label }}</label>
+                                    {% endfor %}
+                                </div>
+                                <button class="btn btn-small" type="submit" id="fleet-{{ f.id }}-gather">Zusammenziehen</button>
+                            </form>
+                        </details>
+
+                        {% if e.base %}
+                            <details>
+                                <summary>Schiffe umladen (Hangar von {{ e.base.name }})</summary>
+                                <div class="grid">
+                                    <form method="post" action="{{ path('app_fleets_transfer', {id: f.id}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
+                                        <input type="hidden" name="direction" value="in">
+                                        <h3>Aus dem Hangar in die Flotte</h3>
+                                        {% set rows = [] %}
+                                        {% for type in ship_types %}{% if e.base.shipCount(type) > 0 and not type.stationary %}{% set rows = rows|merge([{type: type, count: e.base.shipCount(type)}]) %}{% endif %}{% endfor %}
+                                        {% if rows is empty %}<p class="muted small">Der Hangar ist leer.</p>{% else %}
+                                            {{ _self.ship_inputs(rows) }}
+                                            <button class="btn btn-small" type="submit">Aufnehmen</button>
+                                        {% endif %}
+                                    </form>
+                                    <form method="post" action="{{ path('app_fleets_transfer', {id: f.id}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
+                                        <input type="hidden" name="direction" value="out">
+                                        <h3>Aus der Flotte in den Hangar</h3>
+                                        {{ _self.ship_inputs(f.shipList) }}
+                                        <button class="btn btn-small" type="submit">Abgeben</button>
+                                    </form>
+                                </div>
+                            </details>
+                            <div class="inline-action">
+                                {% if not f.cargo.empty %}
+                                    <form method="post" action="{{ path('app_fleets_unload', {id: f.id}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
+                                        <button class="btn btn-small btn-secondary" type="submit">Ladung abladen</button>
+                                    </form>
+                                {% endif %}
+                                <form method="post" action="{{ path('app_fleets_dissolve', {id: f.id}) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
+                                    <button class="btn btn-small btn-danger" type="submit" data-confirm="Flotte auflösen? Alle Schiffe und die Ladung kommen in den Hangar von {{ e.base.name }}." data-confirm-label="Auflösen">Auflösen</button>
+                                </form>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                    {% if player.alliance %}
+                        <details {{ f.releasedToAlliance or f.releasedTo is not empty ? 'open' }}>
+                            <summary>Freigabe ({{ f.releasedToAlliance ? 'für ' ~ player.alliance.type : 'nicht allgemein' }}{{ f.releasedTo is not empty ? ', ' ~ f.releasedTo|length ~ ' einzeln' }})</summary>
+                            <form method="post" action="{{ path('app_fleets_release_alliance', {id: f.id}) }}" class="inline-action">
+                                <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
+                                <input type="hidden" name="released" value="{{ f.releasedToAlliance ? '0' : '1' }}">
+                                <span class="small">{{ f.releasedToAlliance ? 'Alle Gründer und Kommandanten sehen und steuern diese Flotte.' : 'Nur für dich und einzeln freigegebene Mitglieder.' }}</span>
+                                <button class="btn btn-small btn-secondary" type="submit" id="fleet-{{ f.id }}-release-alliance">
+                                    {{ f.releasedToAlliance ? 'Allgemeine Freigabe zurücknehmen' : 'Für ' ~ player.alliance.type ~ ' freigeben' }}
+                                </button>
+                            </form>
+                            {% if f.releasedTo is not empty %}
+                                <div class="release-list">
+                                    {% for u in f.releasedTo %}
+                                        <span class="release-chip">{{ u.username }}
+                                            <form method="post" action="{{ path('app_fleets_revoke', {id: f.id, member: u.id}) }}" class="inline">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
+                                                <button class="link-button" type="submit" aria-label="Freigabe für {{ u.username }} zurücknehmen">✕</button>
+                                            </form>
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            {% if allies is not empty %}
+                                <form method="post" action="{{ path('app_fleets_release', {id: f.id}) }}" class="inline-action">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
+                                    <select name="member" aria-label="Mitglied für Einzelfreigabe">
+                                        {% for ally in allies %}<option value="{{ ally.id }}">{{ ally.username }} ({{ ally.allianceRank.label }})</option>{% endfor %}
+                                    </select>
+                                    <button class="btn btn-small btn-secondary" type="submit" id="fleet-{{ f.id }}-release">Einzeln freigeben</button>
+                                </form>
+                            {% endif %}
+                        </details>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </article>
+    {% else %}
+        <p class="panel muted">Du hast keine Flotten. Schiffe können nur als Flotte fliegen – bilde unten eine Flotte aus den Schiffen im Hangar.</p>
+    {% endfor %}
+
+    {% if shared is not empty %}
+        <h2 class="section-title">Für dich freigegebene Flotten</h2>
+        {% for e in shared %}
+            {% set f = e.fleet %}
+            <article class="panel fleet-card {{ f.moving ? 'moving' }}">
+                <div class="building-head">
+                    <h2>{{ f.name }} <small class="muted">von {{ ui.player(f.owner) }}</small></h2>
+                    <span class="muted small">
+                        {% if f.idle %}wartet bei [{{ f.coordinates }}]{% if e.at %} · {{ e.at.name }}{% endif %}
+                        {% else %}{{ f.mission.label }} → [{{ f.targetCoordinates }}] · {{ f.returning ? 'Rückkehr in' : 'Ankunft in' }} {{ ui.countdown(f.nextEventAt, now) }}{% endif %}
+                    </span>
+                </div>
+                <p class="small">{% for s in f.shipList %}{{ s.count|number_format(0, ',', '.') }} × {{ s.type.label }}{{ not loop.last ? ', ' }}{% endfor %}</p>
+                {% if f.moving and not f.returning %}
+                    <form method="post" action="{{ path('app_fleet_recall', {id: f.id}) }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
+                        <button class="btn btn-danger btn-small" type="submit">Rückruf</button>
+                    </form>
+                {% elseif f.idle %}
+                    <details>
+                        <summary>Losschicken</summary>
+                        <form method="post" action="{{ path('app_fleets_send', {id: f.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
+                            {{ _self.target_inputs(target, missions, e.base is not null) }}
+                            <p class="muted small">
+                                {% if e.base %}Treibstoff, Proviant und Ladung kommen von {{ e.base.name }} ({{ f.owner.username }}).
+                                {% else %}Treibstoff und Proviant werden aus der Ladung der Flotte bezahlt.{% endif %}
+                                {{ f.owner.username }} wird benachrichtigt.
+                            </p>
+                            <button class="btn btn-small" type="submit" id="fleet-{{ f.id }}-send">Flotte starten</button>
+                        </form>
+                    </details>
+                {% endif %}
+            </article>
+        {% endfor %}
+    {% endif %}
+
+    <section class="panel">
+        <h2>Hangar von {{ planet.name }}</h2>
+        {% if hangar is empty %}
+            <p class="muted">Keine Schiffe im Hangar. <a href="{{ path('app_shipyard') }}">Zur Werft</a></p>
+        {% else %}
+            <p class="muted small">Schiffe im Hangar können nicht fliegen. Bilde eine Flotte oder hole sie mit „Schiffe zusammenziehen“ in eine bestehende Flotte.</p>
+            <details open>
+                <summary>Neue Flotte bilden</summary>
+                <form method="post" action="{{ path('app_fleets_create') }}" class="fleet-form" id="fleet-form">
+                    <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
+                    <label>Name <input type="text" name="name" maxlength="40" required placeholder="z. B. Heimatverteidigung"></label>
+                    {{ _self.ship_inputs(hangar) }}
+                    <p class="muted small">Ladekapazität: <span id="cargo-capacity">0</span></p>
+                    <button class="btn btn-small" type="submit" id="fleet-create">Flotte bilden</button>
+                </form>
+            </details>
+        {% endif %}
+    </section>
+{% endblock %}

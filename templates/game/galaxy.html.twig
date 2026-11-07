@@ -1,0 +1,59 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}Galaxie – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h1>Galaxie</h1>
+
+    <form method="get" action="{{ path('app_galaxy') }}" class="panel galaxy-nav">
+        <a class="btn btn-small btn-secondary" href="{{ path('app_galaxy', {galaxy: galaxy, system: max(1, system - 1)}) }}">←</a>
+        <label>Galaxie <input type="number" name="galaxy" min="1" max="{{ galaxies }}" value="{{ galaxy }}"></label>
+        <label>System <input type="number" name="system" min="1" max="{{ systems }}" value="{{ system }}"></label>
+        <button class="btn btn-small" type="submit">Anzeigen</button>
+        <a class="btn btn-small btn-secondary" href="{{ path('app_galaxy', {galaxy: galaxy, system: min(systems, system + 1)}) }}">→</a>
+    </form>
+
+    <section class="panel">
+        <h2>System {{ galaxy }}:{{ system }} <small class="muted">· {{ slots|length }} Planetenplätze</small></h2>
+        <table class="table galaxy-table">
+            {% for position, p in slots %}
+                {% set coords = {galaxy: galaxy, system: system, position: position} %}
+                <tr class="{{ p and p.owner.id == player.id ? 'own' }} {{ not p and posts[position] is defined ? 'trade-post' }}">
+                    <td class="num pos">{{ position }}{% if debris[position] is defined %}<br><a class="debris" href="{{ path('app_fleet', coords|merge({mission: 'salvage'})) }}" title="Trümmerfeld: {{ debris[position].iron|number_format(0, ',', '.') }} Eisen, {{ debris[position].titanium|number_format(0, ',', '.') }} Titan – bergen">✦</a>{% endif %}</td>
+                    {% if p %}
+                        <td>
+                            {% if position == p.position %}{{ p.name }}{% if p.fused %} <span class="muted small">(Fusion aus {{ p.fusionSize }} Planeten)</span>{% endif %}{% if p.integrating(now) %} <span class="muted small">(invadiert, Übergang am {{ p.integratedAt|date('d.m.Y') }})</span>{% endif %}
+                            {% else %}<span class="muted">↳ verschweißt mit {{ p.name }}</span>{% endif %}
+                        </td>
+                        <td>{{ ui.player(p.owner) }}</td>
+                        <td class="num actions">
+                            {% if p.owner.id == player.id %}
+                                <a href="{{ path('app_fleet', coords|merge({mission: 'transport'})) }}">Transport</a>
+                                <a href="{{ path('app_fleet', coords|merge({mission: 'station'})) }}">Stationieren</a>
+                                <a href="{{ path('app_fleet', coords|merge({mission: 'fuse'})) }}">Fusionieren</a>
+                            {% else %}
+                                <a href="{{ path('app_fleet', coords|merge({mission: 'spy'})) }}">Spionieren</a>
+                                {% if not player.allyOf(p.owner) %}<a href="{{ path('app_fleet', coords|merge({mission: 'attack'})) }}">Angreifen</a>{% endif %}
+                                <a href="{{ path('app_fleet', coords|merge({mission: 'transport'})) }}">Transport</a>
+                            {% endif %}
+                        </td>
+                    {% elseif posts[position] is defined %}
+                        {% set post = posts[position] %}
+                        <td>⚖ {{ post.name }} <span class="muted small">{{ post.active ? 'Handelsstützpunkt' : 'aufgegebener Handelsstützpunkt' }}</span></td>
+                        <td>{{ ui.player(post.owner) }}</td>
+                        <td class="num actions">
+                            {% if post.owner.id == player.id and post.active %}<a href="{{ path('app_fleet', coords|merge({mission: 'supply'})) }}">Beliefern</a>{% endif %}
+                            {% if post.accessibleTo(player) %}<a href="{{ path('app_fleet', coords|merge({mission: 'trade'})) }}">Handeln</a>{% else %}<span class="muted small">gesperrt</span>{% endif %}
+                            <a href="{{ path('app_trade') }}">Preise</a>
+                        </td>
+                    {% else %}
+                        <td class="muted">frei</td>
+                        <td></td>
+                        <td class="num actions"><a href="{{ path('app_fleet', coords|merge({mission: 'colonize'})) }}">Kolonisieren</a></td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+        </table>
+    </section>
+{% endblock %}

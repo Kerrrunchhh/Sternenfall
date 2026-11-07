@@ -1,0 +1,26 @@
+{# Lists the non-zero amounts of a Resources object; amounts the planet can't pay are marked. #}
+{% macro cost(cost, planet, multiplier = 1) %}
+    {% for type in enum_cases('App\\Game\\ResourceType') %}
+        {% set amount = cost.get(type) * multiplier %}
+        {% if amount > 0 %}<span class="{{ amount > planet.resources.get(type) ? 'lacking' }}">{{ type.label }} {{ amount|number_format(0, ',', '.') }}</span>{% endif %}
+    {% endfor %}
+{% endmacro %}
+
+{% macro countdown(finishes_at, now) %}
+    <span class="countdown" data-finishes="{{ finishes_at.timestamp }}" data-now="{{ now.timestamp }}">{{ (finishes_at.timestamp - now.timestamp)|format_duration }}</span>
+{% endmacro %}
+
+{# Player name with life form icon, link to the profile and the alliance tag (link to its public page). #}
+{% macro player(user, with_alliance = true) %}
+    <span class="player-name"><span class="lf-icon" title="{{ user.lifeForm.label }}" aria-label="{{ user.lifeForm.label }}">{{ user.lifeForm.icon }}</span>
+    <a href="{{ path('app_player', {id: user.id}) }}">{{ user.username }}</a>
+    {%- if with_alliance and user.alliance %} <a class="alliance-tag" href="{{ path('app_alliance_public', {id: user.alliance.id}) }}" title="{{ user.alliance.type }} {{ user.alliance.name }}">[{{ user.alliance.tag }}]</a>{% endif %}</span>
+{%- endmacro %}
+
+{% macro picture(file, kind, alt, size = 'large') %}
+    {% if file %}
+        <img class="picture picture-{{ size }}" src="{{ path('app_media', {kind: kind, name: file}) }}" alt="{{ alt }}">
+    {% else %}
+        <div class="picture picture-{{ size }} picture-empty" aria-hidden="true">{{ alt|first|upper }}</div>
+    {% endif %}
+{% endmacro %}

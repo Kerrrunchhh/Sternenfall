@@ -1,0 +1,60 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}Werft – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h1>Werft</h1>
+
+    {{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Shipyard, entries: queue, back: 'app_shipyard'}) }}
+
+    {% if planet.buildingLevel(enum('App\\Game\\BuildingType').Shipyard) == 0 %}
+        <p class="panel warning">Auf diesem Planeten steht noch keine Raumwerft.</p>
+    {% endif %}
+
+    {% for group, ships in groups %}
+        <h2 class="section-title">{{ group }}</h2>
+        <div class="building-list">
+            {% for s in ships %}
+                <article class="panel building ship">
+                    <div class="building-head">
+                        <h2>
+                            {% if s.type.combatShip or s.type.stationary %}<span class="firing-order" title="Schussreihenfolge">#{{ s.type.firingOrder }}</span>{% endif %}
+                            {{ s.type.label }}
+                        </h2>
+                        <span class="level">Im Hangar: {{ s.stationed|number_format(0, ',', '.') }}</span>
+                    </div>
+                    <p class="building-desc">{{ s.type.description }}</p>
+                    <dl class="stats">
+                        <div><dt>Angriff</dt><dd>{{ s.spec.attack|number_format(0, ',', '.') }}</dd></div>
+                        <div><dt>Schild</dt><dd>{{ s.spec.shield|number_format(0, ',', '.') }}</dd></div>
+                        <div><dt>Hülle</dt><dd>{{ s.spec.hull|number_format(0, ',', '.') }}</dd></div>
+                        <div><dt>Tempo</dt><dd>{{ s.speed|number_format(0, ',', '.') }}</dd></div>
+                        <div><dt>Fracht</dt><dd>{{ s.spec.cargo|number_format(0, ',', '.') }}</dd></div>
+                        <div><dt>Wasserstoff/Flug</dt><dd>{{ s.spec.fuel|number_format(0, ',', '.') }}</dd></div>
+                        <div><dt>Besatzung</dt><dd>{{ s.spec.crew|number_format(0, ',', '.') }}</dd></div>
+                        <div><dt>Antrieb</dt><dd>{{ s.spec.drive.label }}</dd></div>
+                    </dl>
+                    <div class="building-foot">
+                        <div class="cost">
+                            {{ ui.cost(s.cost, planet) }}
+                            <span class="{{ s.credits > player.credits ? 'lacking' }}">Credits {{ s.credits|number_format(0, ',', '.') }}</span>
+                            <span class="{{ s.spec.crew > planet.population ? 'lacking' }}">Besatzung {{ s.spec.crew|number_format(0, ',', '.') }}</span>
+                            <span class="duration">Dauer {{ s.seconds|format_duration }}</span>
+                        </div>
+                        {% if s.missing is not empty %}
+                            <span class="requirement">Benötigt: {{ s.missing|join(', ') }}</span>
+                        {% else %}
+                            <form method="post" action="{{ path('app_shipyard_order', {type: s.type.value}) }}" class="order-form">
+                                <input type="hidden" name="_token" value="{{ csrf_token('shipyard') }}">
+                                <input type="number" name="quantity" min="1" max="{{ max(s.max, 1) }}" value="{{ s.max > 0 ? 1 : 0 }}" aria-label="Anzahl {{ s.type.label }}" {{ s.max > 0 ? '' : 'disabled' }}>
+                                <span class="muted">max. {{ s.max|number_format(0, ',', '.') }}</span>
+                                <button class="btn btn-small" type="submit" id="order-{{ s.type.value }}" {{ s.max > 0 ? '' : 'disabled' }}>Bauen</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% endfor %}
+{% endblock %}

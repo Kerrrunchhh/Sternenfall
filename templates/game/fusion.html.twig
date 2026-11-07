@@ -1,0 +1,72 @@
+{% extends 'game/_layout.html.twig' %}
+
+{% block title %}Fusion – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h1>Fusion</h1>
+
+    {% if planet.fused %}
+        <section class="panel">
+            <h2>{{ planet.name }} ist eine Fusion aus {{ planet.fusionSize }} Planeten</h2>
+            <table class="table">
+                <tr><td>{{ planet.position }}</td><td>{{ planet.name }} <span class="muted small">(oberster Planet)</span></td></tr>
+                {% for part in planet.fusedPlanets %}
+                    <tr><td>{{ part.position }}</td><td>{{ part.name }}</td></tr>
+                {% endfor %}
+            </table>
+            <p class="muted">Beim Sprengen entstehen die Planeten wieder. Gebäudestufen, Rohstoffe und Bevölkerung werden so gleichmäßig wie möglich verteilt, die Schiffe bleiben auf {{ planet.name }}.</p>
+            <form method="post" action="{{ path('app_fusion_split') }}" class="inline-action">
+                <input type="hidden" name="_token" value="{{ csrf_token('fusion') }}">
+                <span class="{{ split_cost.hydrogen > planet.resources.hydrogen ? 'lacking' }}">Kosten: {{ split_cost.hydrogen|number_format(0, ',', '.') }} Wasserstoff</span>
+                <button class="btn btn-danger" type="submit" id="fusion-split" {{ split_cost.hydrogen > planet.resources.hydrogen ? 'disabled' }}>Fusion sprengen</button>
+            </form>
+        </section>
+    {% endif %}
+
+    <section class="panel">
+        <h2>Planeten verschweißen</h2>
+        <p class="muted">
+            Schicke eine Flotte mit Fusionatoren mit dem Auftrag <a href="{{ path('app_fleet', {galaxy: planet.galaxy, system: planet.system, position: planet.position, mission: 'fuse'}) }}">„Fusionieren“</a> hierher.
+            Sie verschweißt diesen Planeten mit deinen Planeten direkt darunter. Die Fusion endet am Systemrand, an einem freien Platz oder an einem fremden Planeten.
+            Jeder Fusionator schafft so viele Planeten, wie deine Fusionstechnik erlaubt. Verbraucht werden nur die benötigten Fusionatoren, der Rest fliegt zurück.
+            Gebäudestufen, Rohstoffe, Bevölkerung und Schiffe werden zusammengelegt. Laufende Gebäudebauten und die laufende Forschung werden abgebrochen.
+            Invadierte Planeten können erst nach 4 Wochen fusioniert werden. Fusionatoren bauen nur Händler.
+        </p>
+        <table class="table">
+            <tr><td>Planeten pro Fusionator (Fusionstechnik)</td><td class="num">{{ capacity }}</td></tr>
+            <tr><td>Verschweißbar von hier aus</td><td class="num">{{ chain|length }} Planet{{ chain|length == 1 ? '' : 'en' }}</td></tr>
+            <tr><td>Benötigte Fusionatoren für alle</td><td class="num">{{ needed }}</td></tr>
+        </table>
+
+        {% if chain is not empty %}
+            <h3>Vorschau</h3>
+            <table class="table">
+                <tr class="table-head">
+                    <td>Gebäude</td>
+                    <td class="num">{{ planet.name }}</td>
+                    {% for p in chain %}<td class="num">{{ p.name }} [{{ p.position }}{{ p.fused ? '-' ~ p.lastPosition }}]</td>{% endfor %}
+                    <td class="num">Nach Fusion</td>
+                </tr>
+                {% for row in preview %}
+                    <tr>
+                        <td>{{ row.type.label }}</td>
+                        {% for level in row.levels %}<td class="num">{{ level }}</td>{% endfor %}
+                        <td class="num"><strong>{{ row.total }}</strong></td>
+                    </tr>
+                {% endfor %}
+            </table>
+        {% endif %}
+
+        {% if stop_reason %}<p class="muted">{{ stop_reason }}</p>{% endif %}
+        {% if integrating %}
+            <p class="warning">{{ planet.name }} wurde invadiert und geht erst am {{ planet.integratedAt|date('d.m.Y H:i') }} in deinen Besitz über. Bis dahin kann von hier aus nicht fusioniert werden.</p>
+        {% endif %}
+        {% if pending is not empty %}
+            <div class="warning">
+                Bei der Fusion wird abgebrochen (Rohstoffe werden erstattet):
+                <ul>{% for work in pending %}<li>{{ work }}</li>{% endfor %}</ul>
+            </div>
+        {% endif %}
+
+    </section>
+{% endblock %}

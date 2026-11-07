@@ -1,0 +1,12 @@
+{% extends 'security/_layout.html.twig' %}
+
+{% block title %}Registrieren – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h2>Registrieren</h2>
+    {{ form_start(form) }}
+        {{ form_widget(form) }}
+        <button class="btn" type="submit">Kolonie gründen</button>
+    {{ form_end(form) }}
+    <p class="hint">Schon dabei? <a href="{{ path('app_login') }}">Anmelden</a></p>
+{% endblock %}

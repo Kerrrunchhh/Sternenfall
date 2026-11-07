@@ -1,0 +1,41 @@
+{#
+  A sortable queue (drag & drop, or the arrow buttons without a mouse).
+  Parameters: queue_planet, kind (QueueKind), entries (from QueueTimeline), back (route to return to)
+#}
+{% import 'game/_macros.html.twig' as ui %}
+<section class="panel queue">
+    <h2>
+        {{ kind.label }}-Bauschleife
+        <small class="muted">{{ entries|length }}/{{ kind.maxLength }}</small>
+    </h2>
+    {% if entries is empty %}
+        <p class="muted small">Keine Aufträge.</p>
+    {% else %}
+        <form method="post" action="{{ path('app_queue_reorder', {id: queue_planet.id, kind: kind.value}) }}" class="queue-form">
+            <input type="hidden" name="_token" value="{{ csrf_token('queue') }}">
+            <input type="hidden" name="to" value="{{ back }}">
+            <ol class="queue-list" data-sortable>
+                {% for e in entries %}
+                    <li draggable="true" class="queue-item {{ e.active ? 'active' }}">
+                        <input type="hidden" name="order[]" value="{{ e.id }}">
+                        <span class="queue-handle" title="Ziehen zum Umsortieren" aria-hidden="true">⠿</span>
+                        <span class="queue-label">
+                            {{ e.label }}
+                            <span class="muted small">{{ e.seconds|format_duration }}{{ e.detail ? ' · ' ~ e.detail }}</span>
+                        </span>
+                        <span class="queue-time small">
+                            {% if e.active %}läuft · {{ ui.countdown(e.finishesAt, now) }}{% else %}fertig ca. {{ e.finishesAt|date('d.m. H:i') }}{% endif %}
+                        </span>
+                        <span class="queue-buttons">
+                            <button type="submit" name="move" value="{{ e.id }}:up" class="btn btn-small btn-secondary" {{ loop.first ? 'disabled' }} aria-label="{{ e.label }} nach oben">▲</button>
+                            <button type="submit" name="move" value="{{ e.id }}:down" class="btn btn-small btn-secondary" {{ loop.last ? 'disabled' }} aria-label="{{ e.label }} nach unten">▼</button>
+                            <button type="submit" formaction="{{ path('app_queue_cancel', {id: queue_planet.id, kind: kind.value, orderId: e.id}) }}"
+                                    class="btn btn-small btn-danger" aria-label="{{ e.label }} abbrechen"
+                                    data-confirm="{{ kind.value == 'buildings' ? 'Bau von ' ~ e.label ~ ' wirklich abbrechen? Die Kosten werden erstattet, der Fortschritt geht verloren.' : e.label ~ ' wirklich abbrechen? Rohstoffe, Credits und Besatzung der noch nicht gebauten Schiffe werden erstattet.' }}" data-confirm-label="{{ kind.value == 'buildings' ? 'Bau abbrechen' : 'Auftrag abbrechen' }}">✕</button>
+                        </span>
+                    </li>
+                {% endfor %}
+            </ol>
+        </form>
+    {% endif %}
+</section>

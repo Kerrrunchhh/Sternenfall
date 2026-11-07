@@ -1,0 +1,86 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}Übersicht – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h1>{{ planet.name }} <small>[{{ planet.coordinates }}]</small></h1>
+
+    {% if planet.integrating(now) %}
+        <p class="panel warning">{{ planet.name }} wurde invadiert und geht am {{ planet.integratedAt|date('d.m.Y H:i') }} vollständig in deinen Besitz über.</p>
+    {% endif %}
+    {% if building_queue is not empty or shipyard_queue is not empty %}
+        <div class="grid">
+            {% if building_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Buildings, entries: building_queue, back: 'app_overview'}) }}{% endif %}
+            {% if shipyard_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Shipyard, entries: shipyard_queue, back: 'app_overview'}) }}{% endif %}
+        </div>
+    {% endif %}
+    {% if player.researching %}
+        <div class="panel construction">
+            <div><strong>Forschung:</strong> {{ player.researchType.label }} (Stufe {{ player.researchTargetLevel }})</div>
+            <div>{{ ui.countdown(player.researchFinishesAt, now) }}</div>
+        </div>
+    {% endif %}
+
+    <div class="grid">
+        <section class="panel">
+            <h2>Rohstoffe pro Stunde</h2>
+            <table class="table">
+                <tr class="table-head"><td></td><td class="num">Produktion</td><td class="num">Verbrauch</td><td class="num">Bilanz</td></tr>
+                {% for type in enum_cases('App\\Game\\ResourceType') %}
+                    {% set balance = net.get(type) %}
+                    <tr>
+                        <td>{{ type.label }}</td>
+                        <td class="num">{{ production.get(type)|number_format(0, ',', '.') }}</td>
+                        <td class="num">{{ consumption.get(type) > 0 ? '−' ~ consumption.get(type)|number_format(0, ',', '.') : '' }}</td>
+                        <td class="num {{ balance < 0 ? 'negative' }}">{{ balance >= 0 ? '+' }}{{ balance|number_format(0, ',', '.') }}</td>
+                    </tr>
+                {% endfor %}
+            </table>
+            {% for type in enum_cases('App\\Game\\ResourceType') %}
+                {% set balance = net.get(type) %}
+                {% if balance < 0 %}
+                    {% set stock = planet.resources.get(type) %}
+                    <p class="warning">
+                        {% if stock < 1 %}
+                            {{ type.label }} ist aufgebraucht – deine Bevölkerung hungert und schrumpft!
+                        {% else %}
+                            {{ type.label }} reicht noch {{ (stock / -balance * 3600)|format_duration }}. Danach beginnt deine Bevölkerung zu schrumpfen.
+                        {% endif %}
+                    </p>
+                {% endif %}
+            {% endfor %}
+        </section>
+        <section class="panel">
+            <h2>Bevölkerung</h2>
+            <table class="table">
+                <tr><td>Einwohner</td><td class="num">{{ planet.population|number_format(0, ',', '.') }}</td></tr>
+                <tr><td>Platz in Biozellen</td><td class="num">{{ population_capacity|number_format(0, ',', '.') }}</td></tr>
+                <tr><td>Wachstum</td><td class="num">{{ population_growth > 0 ? '+' ~ population_growth|number_format(0, ',', '.') ~ '/h' : (population_capacity > 0 ? 'Biozellen voll' : 'keine Biozelle') }}</td></tr>
+                <tr><td>Bunkerplätze</td><td class="num">{{ bunker_capacity|number_format(0, ',', '.') }}</td></tr>
+            </table>
+            {% if planet.population > bunker_capacity %}
+                <p class="hint">{{ (planet.population - bunker_capacity)|number_format(0, ',', '.') }} Einwohner wären bei einem Bombardement ungeschützt.</p>
+            {% endif %}
+        </section>
+        <section class="panel">
+            <h2>Planet</h2>
+            <table class="table">
+                <tr><td>Koordinaten</td><td class="num">{{ planet.coordinates }}</td></tr>
+                <tr><td>Vor Plünderung geschützt</td><td class="num">{{ protected|number_format(0, ',', '.') }} je Rohstoff</td></tr>
+            </table>
+        </section>
+        <section class="panel">
+            <h2>Hangar</h2>
+            {% if hangar is empty %}
+                <p class="muted">Keine Schiffe stationiert.{% if planet.buildingLevel(enum('App\\Game\\BuildingType').Shipyard) > 0 %} <a href="{{ path('app_shipyard') }}">Zur Werft</a>{% endif %}</p>
+            {% else %}
+                <table class="table">
+                    {% for entry in hangar %}
+                        <tr><td>{{ entry.type.label }}</td><td class="num">{{ entry.count|number_format(0, ',', '.') }}</td></tr>
+                    {% endfor %}
+                </table>
+            {% endif %}
+        </section>
+    </div>
+{% endblock %}

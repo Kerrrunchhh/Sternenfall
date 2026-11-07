@@ -1,0 +1,36 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}{{ alliance.name }} – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <section class="panel profile">
+        {{ ui.picture(alliance.image, 'alliances', alliance.name) }}
+        <div class="profile-info">
+            <h1>{{ alliance.name }} <small>[{{ alliance.tag }}]</small></h1>
+            <p class="muted">{{ alliance.type }} · {{ alliance.members|length }} Mitglied{{ alliance.members|length == 1 ? '' : 'er' }} · gegründet {{ alliance.createdAt|date('d.m.Y') }}</p>
+            {% if alliance.externalText %}
+                <div class="message-body">{{ alliance.externalText }}</div>
+            {% else %}
+                <p class="muted">Diese {{ alliance.type }} hat sich noch nicht vorgestellt.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="panel">
+        <h2>Mitglieder</h2>
+        <table class="table">
+            {% for m in alliance.members %}
+                <tr><td>{{ ui.player(m, false) }}</td><td class="num muted">{{ m.allianceRank.label }}</td></tr>
+            {% endfor %}
+        </table>
+        {% if player.alliance is null %}
+            <form method="post" action="{{ path('app_alliance_apply', {id: alliance.id}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
+                <button class="btn btn-small" type="submit">Bewerben</button>
+            </form>
+        {% elseif player.alliance.id == alliance.id %}
+            <a class="btn btn-small btn-secondary" href="{{ path('app_alliance') }}">Zur Allianzverwaltung</a>
+        {% endif %}
+    </section>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}Forschung – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h1>Forschung</h1>
+
+    {% if player.researching %}
+        <div class="panel construction">
+            <div><strong>In Forschung:</strong> {{ player.researchType.label }} (Stufe {{ player.researchTargetLevel }})</div>
+            <div>{{ ui.countdown(player.researchFinishesAt, now) }}</div>
+            <form method="post" action="{{ path('app_research_cancel') }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('research') }}">
+                <button class="btn btn-danger btn-small" type="submit"
+                        data-confirm="Forschung an {{ player.researchType.label }} (Stufe {{ player.researchTargetLevel }}) wirklich abbrechen? Die Kosten werden erstattet, der Fortschritt geht verloren."
+                        data-confirm-label="Forschung abbrechen">Abbrechen</button>
+            </form>
+        </div>
+    {% endif %}
+
+    {% if planet.buildingLevel(enum('App\\Game\\BuildingType').ResearchLab) == 0 %}
+        <p class="panel warning">Auf diesem Planeten steht noch kein Forschungslabor. Baue eines, um Technologien zu erforschen.</p>
+    {% endif %}
+
+    {% for category, items in categories %}
+        <h2 class="section-title">{{ category }}</h2>
+        <div class="building-list">
+            {% for r in items %}
+                <article class="panel building">
+                    <div class="building-head">
+                        <h2>{{ r.type.label }}</h2>
+                        <span class="level">Stufe {{ r.level }}</span>
+                    </div>
+                    <p class="building-desc">
+                        {{ r.type.description }}
+                        {% if r.type.value == 'fusion_tech' and r.level > 0 %}<br>Aktuell: {{ fusion_capacity }} Planeten pro Fusionator.{% endif %}
+                    </p>
+                    <div class="building-foot">
+                        <div class="cost">
+                            {{ ui.cost(r.cost, planet) }}
+                            <span class="duration">Dauer {{ r.seconds|format_duration }}</span>
+                        </div>
+                        {% if r.missing is not empty %}
+                            <span class="requirement">Benötigt: {{ r.missing|join(', ') }}</span>
+                        {% elseif player.researching %}
+                            <button class="btn btn-small" disabled>Labor belegt</button>
+                        {% else %}
+                            <form method="post" action="{{ path('app_research_start', {type: r.type.value}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('research') }}">
+                                <button class="btn btn-small" type="submit" id="research-{{ r.type.value }}" {{ r.affordable ? '' : 'disabled' }}>
+                                    {{ r.level == 0 ? 'Erforschen' : 'Stufe ' ~ (r.level + 1) }}
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% endfor %}
+{% endblock %}

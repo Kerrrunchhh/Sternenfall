@@ -1,0 +1,10 @@
+{% extends 'security/_layout.html.twig' %}
+
+{% block content %}
+    <p>Übernimm das Kommando über eine junge Kolonie: Fördere Rohstoffe, errichte Gebäude,
+       erforsche neue Technologien und schicke deine Flotten in die Weiten des Universums.</p>
+    <div class="actions">
+        <a class="btn" href="{{ path('app_register') }}">Jetzt registrieren</a>
+        <a class="btn btn-secondary" href="{{ path('app_login') }}">Anmelden</a>
+    </div>
+{% endblock %}

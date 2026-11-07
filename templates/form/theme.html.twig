@@ -1,0 +1,7 @@
+{% use 'form_div_layout.html.twig' %}
+
+{% block form_errors %}
+    {% for error in errors %}
+        <div class="field-error">{{ error.message }}</div>
+    {% endfor %}
+{% endblock %}

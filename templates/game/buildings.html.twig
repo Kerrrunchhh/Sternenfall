@@ -1,0 +1,40 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}Gebäude – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h1>Gebäude</h1>
+
+    {{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Buildings, entries: queue, back: 'app_buildings'}) }}
+
+    <div class="building-list">
+        {% for b in buildings %}
+            <article class="panel building">
+                <div class="building-head">
+                    <h2>{{ b.type.label }}</h2>
+                    <span class="level">Stufe {{ b.level }}{% if b.planned > b.level %} <span class="muted">→ {{ b.planned }} geplant</span>{% endif %}</span>
+                </div>
+                <p class="building-desc">{{ b.type.description }}</p>
+                <div class="building-foot">
+                    <div class="cost">
+                        {{ ui.cost(b.cost, planet) }}
+                        <span class="duration">Dauer {{ b.seconds|format_duration }}</span>
+                    </div>
+                    {% if b.missing is not empty %}
+                        <span class="requirement">Benötigt: {{ b.missing|join(', ') }}</span>
+                    {% elseif queue_full %}
+                        <button class="btn btn-small" disabled>Bauschleife voll</button>
+                    {% else %}
+                        <form method="post" action="{{ path('app_build', {type: b.type.value}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('build') }}">
+                            <button class="btn btn-small" type="submit" id="build-{{ b.type.value }}" {{ b.affordable ? '' : 'disabled' }}>
+                                {{ b.planned == 0 ? 'Bauen' : 'Ausbauen auf ' ~ (b.planned + 1) }}{{ queue is not empty ? ' (einreihen)' }}
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </article>
+        {% endfor %}
+    </div>
+{% endblock %}

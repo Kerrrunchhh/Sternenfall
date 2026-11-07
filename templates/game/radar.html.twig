@@ -1,0 +1,61 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}Radar – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h1>Radar</h1>
+    <p class="muted">
+        Wartende Flotten sind unsichtbar. Sichtbar werden Flotten, die angreifen oder Rohstoffe transportieren – wenn ihr nächstes Ziel in deinem Radarbereich liegt.
+        {% if radar_range is null %}
+            <strong>Du hast noch kein Radar erforscht.</strong>
+        {% else %}
+            Dein Radar (Stufe {{ radar_level }}) deckt die Systeme deiner Planeten {{ radar_range > 0 ? 'und je ' ~ radar_range ~ ' System(e) links und rechts davon' }} ab.
+        {% endif %}
+        {% if player.lifeForm.value in ['guardian', 'pirate'] %}Als {{ player.lifeForm.label }} kannst du angreifende Flotten abfangen.{% endif %}
+        {% if player.lifeForm.value == 'pirate' %} Transporte kannst du überfallen – ohne Bomber bleiben Transportschiffe und Ladung aber verschont.{% endif %}
+    </p>
+
+    {% if radar_range is not null %}
+        <section class="panel">
+            <h2>Abdeckung deiner Planeten</h2>
+            <table class="table">
+                {% for p in player.planets %}
+                    <tr class="{{ p.id == planet.id ? 'own' }}">
+                        <td>{{ p.name }} <span class="muted small">[{{ p.coordinates }}]</span></td>
+                        <td class="num small">Galaxie {{ p.galaxy }}, System {{ max(1, p.system - radar_range) }}{{ radar_range > 0 ? '–' ~ (p.system + radar_range) }}</td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </section>
+    {% endif %}
+
+    {% for c in contacts %}
+        {% set f = c.fleet %}
+        <article class="panel fleet-card {{ c.attacking ? 'moving' }}">
+            <div class="building-head">
+                <h2>{{ ui.player(f.owner) }} <small class="muted">{{ c.ally ? '(verbündet)' }}</small></h2>
+                <span class="small">{{ f.mission.label }}{{ f.returning ? ' (Rückflug)' }} → [{{ c.stop }}] · Ankunft in {{ ui.countdown(f.nextEventAt, now) }}</span>
+            </div>
+            <p class="small">
+                {{ c.ships|number_format(0, ',', '.') }} Schiffe{{ f.cargo.total >= 1 ? ' · beladen' }}
+                <span class="muted">· gesehen von {{ c.seen_by|map(p => p.name)|join(', ') }}</span>
+            </p>
+            {% if not c.ally and (c.can_intercept or c.can_raid) %}
+                {% if own_fleets is empty %}
+                    <p class="muted small">Du hast keine wartende Flotte, die du losschicken könntest.</p>
+                {% else %}
+                    <form method="post" action="{{ path('app_radar_hunt', {id: f.id, mission: c.can_intercept ? 'intercept' : 'raid'}) }}" class="inline-action">
+                        <input type="hidden" name="_token" value="{{ csrf_token('radar') }}">
+                        <select name="fleet" aria-label="Eigene Flotte">
+                            {% for own in own_fleets %}<option value="{{ own.id }}">{{ own.label }} [{{ own.coordinates }}]</option>{% endfor %}
+                        </select>
+                        <button class="btn btn-small btn-danger" type="submit" id="hunt-{{ f.id }}">{{ c.can_intercept ? 'Abfangen' : 'Überfallen' }}</button>
+                    </form>
+                {% endif %}
+            {% endif %}
+        </article>
+    {% else %}
+        <p class="panel muted">Keine fremden Flotten auf dem Radar.</p>
+    {% endfor %}
+{% endblock %}

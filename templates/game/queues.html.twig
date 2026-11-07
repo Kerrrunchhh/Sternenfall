@@ -1,0 +1,15 @@
+{% extends 'game/_layout.html.twig' %}
+
+{% block title %}Bauschleifen – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h1>Bauschleifen</h1>
+    <p class="muted">Alle Bauschleifen deiner Planeten. Ziehe Aufträge mit der Maus an eine andere Stelle oder nutze die Pfeile. Bereits begonnene Arbeit geht beim Umsortieren nicht verloren.</p>
+    {% for entry in planets %}
+        <h2 class="section-title">{{ entry.planet.name }} <small class="muted">[{{ entry.planet.coordinates }}]</small></h2>
+        <div class="grid">
+            {{ include('game/_queue.html.twig', {queue_planet: entry.planet, kind: enum('App\\Game\\QueueKind').Buildings, entries: entry.buildings, back: 'app_queues'}) }}
+            {{ include('game/_queue.html.twig', {queue_planet: entry.planet, kind: enum('App\\Game\\QueueKind').Shipyard, entries: entry.shipyard, back: 'app_queues'}) }}
+        </div>
+    {% endfor %}
+{% endblock %}

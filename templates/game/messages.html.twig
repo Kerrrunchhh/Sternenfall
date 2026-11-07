@@ -1,0 +1,18 @@
+{% extends 'game/_layout.html.twig' %}
+
+{% block title %}Nachrichten – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h1>Nachrichten</h1>
+    {% for m in messages %}
+        <details class="panel message {{ m.read ? '' : 'unread' }}" {{ loop.first and not m.read ? 'open' }}>
+            <summary>
+                <span>{{ m.subject }}</span>
+                <span class="muted small">{{ m.createdAt|date('d.m.Y H:i') }}</span>
+            </summary>
+            <pre class="message-body">{{ m.body }}</pre>
+        </details>
+    {% else %}
+        <p class="panel muted">Keine Nachrichten.</p>
+    {% endfor %}
+{% endblock %}

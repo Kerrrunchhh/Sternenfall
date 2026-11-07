@@ -1,0 +1,34 @@
+{% extends 'game/_layout.html.twig' %}
+
+{% block title %}Lebensform – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h1>Lebensform</h1>
+    <p class="muted">
+        Jeder beginnt als Siedler. Frühestens 30 Tage nach Spielstart bzw. nach dem letzten Wechsel kannst du die Lebensform wechseln.
+        {% if not can_change %}Nächster möglicher Wechsel: <strong>{{ player.nextLifeFormChangeAt|date('d.m.Y H:i') }}</strong>.{% endif %}
+    </p>
+
+    {% if posts_lost > 0 %}
+        <p class="panel warning">Wechselst du die Lebensform, verkaufen deine {{ posts_lost }} Handelsstützpunkt(e) nichts mehr. Die Ware bleibt im Lager und du kannst sie mit einer Flotte abholen.</p>
+    {% endif %}
+
+    <div class="grid">
+        {% for form in life_forms %}
+            {% set current = form == player.lifeForm %}
+            <article class="panel lifeform {{ current ? 'current' }}">
+                <h2>{{ form.label }}{% if current %} <span class="badge">aktuell</span>{% endif %}</h2>
+                <ul>{% for trait in form.traits %}<li>{{ trait }}</li>{% endfor %}</ul>
+                {% if not current %}
+                    <form method="post" action="{{ path('app_lifeform_change', {lifeForm: form.value}) }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('lifeform') }}">
+                        <button class="btn btn-small" type="submit" id="lifeform-{{ form.value }}" {{ can_change ? '' : 'disabled' }}
+                                data-confirm="Wirklich zu den {{ form.label }} wechseln? Der nächste Wechsel ist erst in 30 Tagen möglich.{{ posts_lost > 0 ? ' Deine ' ~ posts_lost ~ ' Handelsstützpunkt(e) verkaufen danach nichts mehr.' }}" data-confirm-label="Wechseln">
+                            Zu {{ form.label }} wechseln
+                        </button>
+                    </form>
+                {% endif %}
+            </article>
+        {% endfor %}
+    </div>
+{% endblock %}

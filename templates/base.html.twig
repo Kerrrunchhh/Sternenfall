@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="de">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>{% block title %}{{ game_name }}{% endblock %}</title>
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2230%22 fill=%22%234fc3f7%22/><ellipse cx=%2250%22 cy=%2250%22 rx=%2248%22 ry=%2212%22 fill=%22none%22 stroke=%22%23ffb74d%22 stroke-width=%225%22/></svg>">
+        <link rel="stylesheet" href="{{ asset('css/game.css') }}">
+        {% block javascripts %}{% endblock %}
+    </head>
+    <body>
+        {% block body %}{% endblock %}
+    </body>
+</html>

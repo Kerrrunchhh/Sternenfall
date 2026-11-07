@@ -1,0 +1,12 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    <main class="landing">
+        <h1 class="logo">{{ game_name }}</h1>
+        <p class="tagline">Baue dein Imperium zwischen den Sternen.</p>
+        <div class="panel landing-panel">
+            {{ include('_flashes.html.twig') }}
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+{% endblock %}
