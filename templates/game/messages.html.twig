@@ -10,7 +10,7 @@
                 <span>{{ m.subject }}</span>
                 <span class="muted small">{{ m.createdAt|date('d.m.Y H:i') }}</span>
             </summary>
-            <pre class="message-body">{{ m.body }}</pre>
+            <pre class="message-body">{{ m.body|link_coordinates }}</pre>
         </details>
     {% else %}
         <p class="panel muted">Keine Nachrichten.</p>

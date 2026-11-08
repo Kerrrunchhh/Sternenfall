@@ -18,6 +18,7 @@ enum BuildingType: string
     case Bunker = 'bunker';
     case ResearchLab = 'research_lab';
     case Shipyard = 'shipyard';
+    case ShieldGenerator = 'shield_generator';
 
     public function label(): string
     {
@@ -33,6 +34,7 @@ enum BuildingType: string
             self::Bunker => 'Bunker',
             self::ResearchLab => 'Forschungslabor',
             self::Shipyard => 'Raumwerft',
+            self::ShieldGenerator => 'Schildgenerator',
         };
     }
 
@@ -50,6 +52,7 @@ enum BuildingType: string
             self::Storage => 'Gesicherte Lagerhallen: Rohstoffe bis zu dieser Menge sind vor Plünderung durch Angreifer geschützt.',
             self::ResearchLab => 'Erforscht neue Technologien. Jede Stufe verkürzt die Forschungszeit und schaltet weitere Technologien frei.',
             self::Shipyard => 'Baut Raumschiffe. Jede Stufe verkürzt die Bauzeit und schaltet größere Schiffsklassen frei.',
+            self::ShieldGenerator => 'Spannt einen Schutzschild um den Planeten (20.000 je Stufe, bei Fusionen werden die Stufen addiert). Ist die Angriffskraft der Angreifer, die den Kampf überstehen, größer als der Schild, wird der unterste Planet einer Fusion abgesprengt.',
         };
     }
 
@@ -68,6 +71,7 @@ enum BuildingType: string
             self::Bunker => new Resources(iron: 300, titanium: 150),
             self::ResearchLab => new Resources(iron: 200, titanium: 400, hydrogen: 200),
             self::Shipyard => new Resources(iron: 400, titanium: 200, hydrogen: 100),
+            self::ShieldGenerator => new Resources(iron: 800, titanium: 600, hydrogen: 300),
         };
     }
 
@@ -79,7 +83,7 @@ enum BuildingType: string
             self::Electrolysis => 1.55,
             self::TitaniumMine => 1.6,
             self::Storage => 1.8,
-            self::BioCell, self::Bunker => 1.7,
+            self::BioCell, self::Bunker, self::ShieldGenerator => 1.7,
             self::CommandCenter, self::ResearchLab, self::Shipyard => 2.0,
         };
     }
@@ -115,7 +119,7 @@ enum BuildingType: string
     {
         return match ($this) {
             self::Electrolysis, self::ResearchLab, self::Bunker => [new Requirement(self::CommandCenter, 2)],
-            self::Shipyard => [new Requirement(self::CommandCenter, 3)],
+            self::Shipyard, self::ShieldGenerator => [new Requirement(self::CommandCenter, 3)],
             default => [],
         };
     }

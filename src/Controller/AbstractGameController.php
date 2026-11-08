@@ -28,7 +28,7 @@ abstract class AbstractGameController extends AbstractController
 
     /** Pages a form may send the player back to (no open redirects). */
     protected const array GAME_ROUTES = [
-        'app_overview', 'app_buildings', 'app_queues', 'app_research', 'app_shipyard', 'app_fleet', 'app_galaxy',
+        'app_overview', 'app_buildings', 'app_queues', 'app_research', 'app_shipyard', 'app_defense', 'app_fleet', 'app_galaxy', 'app_trade_fusionators',
         'app_radar', 'app_fusion', 'app_trade', 'app_messages', 'app_lifeform', 'app_alliance',
     ];
 

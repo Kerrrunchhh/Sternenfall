@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Fleet;
+use App\Game\Espionage;
 use App\Game\FleetMission;
 use App\Game\GameException;
 use App\Game\LifeForm;
@@ -18,7 +19,7 @@ use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 class RadarController extends AbstractGameController
 {
     #[Route('/radar', name: 'app_radar', methods: ['GET'])]
-    public function index(Radar $radar, FleetRepository $fleets): Response
+    public function index(Radar $radar, FleetRepository $fleets, Espionage $espionage): Response
     {
         $planet = $this->currentPlanet();
         $player = $this->player();
@@ -29,8 +30,10 @@ class RadarController extends AbstractGameController
             static fn (Fleet $f): bool => $f->isIdle() && $f->isNamed(),
         ));
 
+        $visible = $radar->visibleFleets($player);
+        $intel = $espionage->fleetIntel($player, $visible);
         $contacts = [];
-        foreach ($radar->visibleFleets($player) as $fleet) {
+        foreach ($visible as $fleet) {
             $attacking = FleetMission::Attack === $fleet->getMission() && !$fleet->isReturning();
             [$g, $s] = Radar::nextStop($fleet);
             $contacts[] = [
@@ -41,7 +44,7 @@ class RadarController extends AbstractGameController
                 'ally' => $player->isAllyOf($fleet->getOwner()),
                 'can_intercept' => $attacking && \in_array($lifeForm, [LifeForm::Guardian, LifeForm::Pirate], true),
                 'can_raid' => $fleet->getCargo()->total() >= 1 && LifeForm::Pirate === $lifeForm,
-                'ships' => array_sum($fleet->getShips()),
+                'intel' => $intel[$fleet->getId()] ?? null,
             ];
         }
 
@@ -55,6 +58,20 @@ class RadarController extends AbstractGameController
         ]);
     }
 
+    #[Route('/radar/{id}/spy', name: 'app_radar_spy', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    #[IsCsrfTokenValid('radar', tokenKey: '_token')]
+    public function spy(Fleet $target): Response
+    {
+        $this->currentPlanet();
+        try {
+            $this->addFlash('success', $this->fleetService->spyFleet($this->player(), $target));
+        } catch (GameException $e) {
+            $this->addFlash('error', $e->getMessage());
+        }
+
+        return $this->redirectToRoute('app_radar');
+    }
+
     #[Route('/radar/{id}/{mission}', name: 'app_radar_hunt', requirements: ['id' => Requirement::DIGITS, 'mission' => 'intercept|raid'], methods: ['POST'])]
     #[IsCsrfTokenValid('radar', tokenKey: '_token')]
     public function hunt(Fleet $prey, string $mission, Request $request, FleetRepository $fleets): Response
@@ -65,7 +82,8 @@ class RadarController extends AbstractGameController
             if (null === $hunter) {
                 throw new GameException('Bitte wähle eine eigene Flotte aus.');
             }
-            $this->addFlash('success', $this->fleetService->hunt($hunter, $this->player(), $prey, FleetMission::from($mission)));
+            $speed = \App\Game\Navigation::parsePercent($request->request->getString('speed'));
+            $this->addFlash('success', $this->fleetService->hunt($hunter, $this->player(), $prey, FleetMission::from($mission), $speed));
         } catch (GameException $e) {
             $this->addFlash('error', $e->getMessage());
         }

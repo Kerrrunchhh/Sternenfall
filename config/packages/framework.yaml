@@ -5,6 +5,10 @@ framework:
     # Note that the session will be started ONLY if you read or write from it.
     session: true
 
+    # Cache busting: asset URLs carry the file's modification time.
+    assets:
+        version_strategy: App\Asset\FileMtimeVersionStrategy
+
     #esi: true
     #fragments: true
 

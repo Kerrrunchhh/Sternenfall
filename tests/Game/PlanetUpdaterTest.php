@@ -8,7 +8,9 @@ use App\Entity\ShipyardOrder;
 use App\Entity\User;
 use App\Game\BuildingType;
 use App\Game\Economy;
+use App\Game\PlanetType;
 use App\Game\PlanetUpdater;
+use App\Game\Universe;
 use App\Game\ResourceType;
 use App\Game\ShipType;
 use App\Game\Resources;
@@ -102,6 +104,17 @@ class PlanetUpdaterTest extends TestCase
         self::assertSame(BuildingType::WaterPump, $third->getBuildingType());
         self::assertEquals($this->start->modify('+'.(3600 + $secondSeconds).' seconds'), $third->getStartedAt());
         self::assertNotSame($first, $third);
+    }
+
+    public function testSecondQueuedBuildingCostsThirtyPercentMore(): void
+    {
+        $first = $this->economy->queuedBuildCost(BuildingType::IronMine, 1, 0);
+        $second = $this->economy->queuedBuildCost(BuildingType::IronMine, 1, 1);
+
+        self::assertEquals(new Resources(iron: 60, titanium: 15), $first);
+        self::assertEquals(new Resources(iron: 78, titanium: 20), $second, '60 × 1.3 = 78, 15 × 1.3 = 19.5 → 20');
+        self::assertSame(2, \App\Game\QueueKind::Buildings->maxLength());
+        self::assertNull(\App\Game\QueueKind::Shipyard->maxLength(), 'the shipyard queue is unlimited');
     }
 
     public function testPlannedLevelCountsQueuedUpgrades(): void
@@ -210,7 +223,7 @@ class PlanetUpdaterTest extends TestCase
 
     public function testPopulationGrowsUpToBioCellCapacity(): void
     {
-        $planet = $this->planet(new Resources(food: 10_000, water: 10_000));
+        $planet = $this->planet(new Resources(food: 10_000, water: 10_000), PlanetType::Water);
         $planet->setBuildingLevel(BuildingType::BioCell, 1);
         $planet->setPopulation(100);
 
@@ -248,7 +261,7 @@ class PlanetUpdaterTest extends TestCase
 
     public function testStarvingPopulationShrinksToWhatCanBeSupplied(): void
     {
-        $planet = $this->planet(new Resources(food: 0, water: 100_000));
+        $planet = $this->planet(new Resources(food: 0, water: 100_000), PlanetType::Water);
         $planet->setBuildingLevel(BuildingType::BioCell, 1);
         $planet->setPopulation(250);
 
@@ -294,11 +307,62 @@ class PlanetUpdaterTest extends TestCase
         return $order;
     }
 
-    private function planet(Resources $resources = new Resources()): Planet
+    /**
+     * A planet on a slot of the given type. Default "blue": food and water are
+     * unchanged there; tests about growth pick a type without the growth bonus.
+     */
+    private function planet(Resources $resources = new Resources(), PlanetType $type = PlanetType::Blue): Planet
     {
-        $planet = new Planet(new User('tester'), 'Test', 1, 1, 1, $this->start);
+        $planet = new Planet(new User('tester'), 'Test', 1, 1, self::slotOf($type), $this->start);
         $planet->setResources($resources);
 
         return $planet;
+    }
+
+    /** First position in system 1:1 that has the given planet type. */
+    public static function slotOf(PlanetType $type): int
+    {
+        for ($position = 1; $position <= 30; ++$position) {
+            if (Universe::planetType(1, 1, $position) === $type) {
+                return $position;
+            }
+        }
+
+        throw new \LogicException('No slot of type '.$type->value);
+    }
+
+    public function testPlanetTypesChangeProductionAndGrowth(): void
+    {
+        $production = [];
+        $growth = [];
+        foreach (PlanetType::cases() as $type) {
+            $planet = $this->planet(type: $type);
+            $planet->setBuildingLevel(BuildingType::BioCell, 1);
+            $production[$type->value] = $this->economy->productionPerHour($planet);
+            $growth[$type->value] = $this->economy->populationGrowthPerHour($planet);
+        }
+
+        // Base production: 10 food and 10 water per hour.
+        self::assertEqualsWithDelta(15, $production['red']->food, 0.001);
+        self::assertEqualsWithDelta(15, $production['water']->water, 0.001);
+        self::assertEqualsWithDelta(5, $production['stone']->food, 0.001);
+        self::assertEqualsWithDelta(5, $production['desert']->food, 0.001);
+        self::assertEqualsWithDelta(5, $production['desert']->water, 0.001);
+        self::assertEqualsWithDelta(10, $production['blue']->food, 0.001);
+        self::assertEqualsWithDelta(20, $production['stone']->iron, 0.001, 'iron is never affected');
+
+        self::assertEqualsWithDelta(2 * $growth['red'], $growth['blue'], 0.001);
+        self::assertEqualsWithDelta($growth['red'], $growth['desert'], 0.001);
+    }
+
+    public function testSlotTypesAreFixedAndAllTypesOccur(): void
+    {
+        self::assertSame(Universe::planetType(2, 77, 13), Universe::planetType(2, 77, 13));
+
+        $seen = [];
+        for ($position = 1; $position <= 50; ++$position) {
+            $seen[Universe::planetType(1, 7, $position)->value] = true;
+        }
+        self::assertCount(\count(PlanetType::cases()), $seen);
     }
 }

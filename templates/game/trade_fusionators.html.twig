@@ -1,0 +1,93 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}Fusionatoren – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h1>Handel</h1>
+    {{ include('game/_trade_tabs.html.twig') }}
+
+    <p class="muted small">Händler stellen hier Fusionatoren ein. Gekaufte Fusionatoren fliegen sofort als eigene Flotte zu deinem Hauptplaneten{% if home %} {{ home.name }} {{ ui.coords(home.coordinates) }}{% endif %} – kostenlos, aber mit der normalen Flugzeit.</p>
+
+    <h2 class="section-title">Angebote ({{ market|length }})</h2>
+    {% if market is empty %}
+        <p class="panel muted">Zurzeit bietet dir niemand Fusionatoren an.</p>
+    {% else %}
+        <div class="panel">
+            <table class="table fusionator-market">
+                <tr class="table-head"><td>Händler</td><td>Standort</td><td class="num">Anzahl</td><td class="num">Preis/Stück</td><td class="num">Flugzeit zu dir</td><td>Kaufen</td></tr>
+                {% for row in market %}
+                    {% set o = row.offer %}
+                    <tr>
+                        <td>{{ ui.player(o.seller) }}{% if o.restricted %}<br><span class="muted small">nur für {{ (o.allowedLifeForms|map(l => l.label)|merge(o.allowedAlliances|map(a => '[' ~ a.tag ~ ']')))|join(', ') }}</span>{% endif %}</td>
+                        <td>{{ ui.coords(o.coordinates) }}</td>
+                        <td class="num">{{ o.quantity|number_format(0, ',', '.') }}</td>
+                        <td class="num">{{ o.price|number_format(0, ',', '.') }} Credits</td>
+                        <td class="num">{{ row.seconds is not null ? row.seconds|format_duration : '–' }}</td>
+                        <td>
+                            <form method="post" action="{{ path('app_fusionator_buy', {id: o.id}) }}" class="order-form">
+                                <input type="hidden" name="_token" value="{{ csrf_token('fusionator_market') }}">
+                                <input type="number" name="quantity" min="1" max="{{ o.quantity }}" value="1" aria-label="Anzahl Fusionatoren von {{ o.seller.username }}">
+                                <button class="btn btn-small" type="submit" id="buy-{{ o.id }}" {% if o.price > player.credits %}disabled title="Nicht genug Credits"{% endif %}>Kaufen</button>
+                                <button class="btn btn-small btn-secondary" type="submit" name="all" value="1" id="buy-all-{{ o.id }}"
+                                        {{ o.price * o.quantity > player.credits ? 'disabled' }}
+                                        title="Alle {{ o.quantity }} für {{ (o.price * o.quantity)|number_format(0, ',', '.') }} Credits">Alle ({{ (o.price * o.quantity)|number_format(0, ',', '.') }} Cr)</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+    {% endif %}
+
+    {% if is_trader or mine is not empty %}
+        <h2 class="section-title">Deine Angebote ({{ mine|length }})</h2>
+        {% if mine is empty %}
+            <p class="panel muted">Du hast keine Fusionatoren eingestellt.</p>
+        {% else %}
+            <div class="panel">
+                <table class="table">
+                    {% for o in mine %}
+                        <tr>
+                            <td>{{ o.quantity|number_format(0, ',', '.') }} × Fusionator bei {{ ui.coords(o.coordinates) }}</td>
+                            <td class="num">{{ o.price|number_format(0, ',', '.') }} Credits/Stück</td>
+                            <td class="muted small">{% if o.restricted %}nur für {{ (o.allowedLifeForms|map(l => l.label)|merge(o.allowedAlliances|map(a => '[' ~ a.tag ~ ']')))|join(', ') }}{% else %}für alle{% endif %}</td>
+                            <td class="num">
+                                <form method="post" action="{{ path('app_fusionator_withdraw', {id: o.id}) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('fusionator_market') }}">
+                                    <button class="btn btn-small btn-danger" type="submit" id="withdraw-{{ o.id }}" data-confirm="Angebot zurückziehen? Die Fusionatoren kommen zurück in den Hangar." data-confirm-label="Zurückziehen">Zurückziehen</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        {% endif %}
+    {% endif %}
+
+    {% if is_trader %}
+        <section class="panel">
+            <h2>Fusionatoren einstellen</h2>
+            {% if in_hangar == 0 %}
+                <p class="muted">Im Hangar von {{ planet.name }} stehen keine Fusionatoren. Baue welche in der <a href="{{ path('app_shipyard') }}">Werft</a> oder wechsle den Planeten.</p>
+            {% else %}
+                <form method="post" action="{{ path('app_fusionator_offer') }}" class="fleet-form">
+                    <input type="hidden" name="_token" value="{{ csrf_token('fusionator_market') }}">
+                    <p class="muted small">Aus dem Hangar von {{ planet.name }} {{ ui.coords(planet.coordinates) }} – dort stehen {{ in_hangar|number_format(0, ',', '.') }} Fusionator(en).</p>
+                    <label>Anzahl <input type="number" name="quantity" min="1" max="{{ in_hangar }}" value="{{ in_hangar }}" required></label>
+                    <label>Preis pro Stück (Credits) <input type="text" name="price" inputmode="decimal" required placeholder="z. B. 250000"></label>
+                    <fieldset>
+                        <legend>Wer darf kaufen? <span class="muted small">(nichts angekreuzt: alle)</span></legend>
+                        {% for lf in life_forms %}
+                            <label><input type="checkbox" name="life_forms[]" value="{{ lf.value }}"> {{ lf.icon }} {{ lf.label }}</label>
+                        {% endfor %}
+                        {% for a in alliances %}
+                            <label><input type="checkbox" name="alliances[]" value="{{ a.id }}"> [{{ a.tag }}] {{ a.name }}</label>
+                        {% endfor %}
+                    </fieldset>
+                    <button class="btn" type="submit" id="fusionator-offer">Einstellen</button>
+                </form>
+            {% endif %}
+        </section>
+    {% endif %}
+{% endblock %}

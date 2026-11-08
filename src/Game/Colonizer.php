@@ -67,6 +67,7 @@ final readonly class Colonizer
         $planet->setBuildingLevel(BuildingType::CommandCenter, 1);
         $planet->setBuildingLevel(BuildingType::BioCell, 1);
         $planet->setPopulation(100);
+        $planet->markHomeworld();
         $user->addCredits(1000);
         $this->em->persist($planet);
 
@@ -102,6 +103,10 @@ final readonly class Colonizer
             $galaxy = random_int(1, Universe::GALAXIES);
             $system = random_int(1, Universe::SYSTEMS_PER_GALAXY);
             $slot = [$galaxy, $system, random_int(1, Universe::planetsInSystem($galaxy, $system))];
+            // Nobody starts on a stone or desert world.
+            if (!Universe::planetType(...$slot)->isFriendly()) {
+                continue;
+            }
             if (!$this->planets->isOccupied(...$slot) && null === $this->tradePosts->findAt(...$slot)) {
                 return $slot;
             }

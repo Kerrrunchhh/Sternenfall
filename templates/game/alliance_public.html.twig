@@ -9,28 +9,29 @@
         <div class="profile-info">
             <h1>{{ alliance.name }} <small>[{{ alliance.tag }}]</small></h1>
             <p class="muted">{{ alliance.type }} · {{ alliance.members|length }} Mitglied{{ alliance.members|length == 1 ? '' : 'er' }} · gegründet {{ alliance.createdAt|date('d.m.Y') }}</p>
+            {# Members stay private: the public page shows no member list. #}
+            <div class="apply-box">
+                {% if player.alliance and player.alliance.id == alliance.id %}
+                    <a class="btn btn-small btn-secondary" href="{{ path('app_alliance') }}">Zur Allianzverwaltung</a>
+                {% elseif request and not request.invitation %}
+                    <button class="btn btn-small" type="button" disabled>Bewerbung abgeschickt</button>
+                    <span class="muted small">am {{ request.createdAt|date('d.m.Y H:i') }} – die Führung entscheidet darüber.</span>
+                {% elseif player.alliance %}
+                    <button class="btn btn-small" type="button" disabled>Bewerben</button>
+                    <span class="muted small">Du bist bereits Mitglied von [{{ player.alliance.tag }}]. Um dich hier zu bewerben, musst du dort erst austreten.</span>
+                {% else %}
+                    <form method="post" action="{{ path('app_alliance_apply', {id: alliance.id}) }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
+                        <button class="btn" type="submit">{{ request ? 'Einladung annehmen und beitreten' : 'Bewerben' }}</button>
+                    </form>
+                    <span class="muted small">{{ request ? 'Du wurdest eingeladen.' : 'Die Führung von ' ~ alliance.name ~ ' entscheidet über deine Bewerbung.' }}</span>
+                {% endif %}
+            </div>
             {% if alliance.externalText %}
                 <div class="message-body">{{ alliance.externalText }}</div>
             {% else %}
-                <p class="muted">Diese {{ alliance.type }} hat sich noch nicht vorgestellt.</p>
+                <p class="muted">{{ alliance.name }} hat sich noch nicht vorgestellt.</p>
             {% endif %}
         </div>
-    </section>
-
-    <section class="panel">
-        <h2>Mitglieder</h2>
-        <table class="table">
-            {% for m in alliance.members %}
-                <tr><td>{{ ui.player(m, false) }}</td><td class="num muted">{{ m.allianceRank.label }}</td></tr>
-            {% endfor %}
-        </table>
-        {% if player.alliance is null %}
-            <form method="post" action="{{ path('app_alliance_apply', {id: alliance.id}) }}">
-                <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
-                <button class="btn btn-small" type="submit">Bewerben</button>
-            </form>
-        {% elseif player.alliance.id == alliance.id %}
-            <a class="btn btn-small btn-secondary" href="{{ path('app_alliance') }}">Zur Allianzverwaltung</a>
-        {% endif %}
     </section>
 {% endblock %}

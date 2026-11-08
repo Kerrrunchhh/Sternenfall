@@ -48,6 +48,12 @@ final readonly class BattleResult
         return $ships;
     }
 
+    /** Combined attack strength of the units of one side that are still alive (research included). */
+    public function attackPower(string $side): float
+    {
+        return array_sum(array_map(static fn (BattleGroup $g): float => $g->alive() * $g->attackPerUnit(), $this->side($side)));
+    }
+
     public function survivingCount(string $side, ShipType $type): int
     {
         return array_sum(array_map(static fn (BattleGroup $g): int => $g->type === $type ? $g->alive() : 0, $this->side($side)));

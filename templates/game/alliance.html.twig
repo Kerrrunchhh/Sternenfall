@@ -156,7 +156,7 @@
                             </form>
                         {% endif %}
                     </div>
-                    <div class="message-body">{{ p.body }}</div>
+                    <div class="message-body">{{ p.body|link_coordinates }}</div>
                 </article>
             {% else %}
                 <p class="muted">Noch keine Beiträge.</p>

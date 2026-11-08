@@ -19,11 +19,28 @@
         <table class="table galaxy-table">
             {% for position, p in slots %}
                 {% set coords = {galaxy: galaxy, system: system, position: position} %}
-                <tr class="{{ p and p.owner.id == player.id ? 'own' }} {{ not p and posts[position] is defined ? 'trade-post' }}">
+                <tr id="slot-{{ position }}" class="{{ p and p.owner.id == player.id ? 'own' }} {{ not p and posts[position] is defined ? 'trade-post' }}">
+                    {% set slot_type = types[position] %}
                     <td class="num pos">{{ position }}{% if debris[position] is defined %}<br><a class="debris" href="{{ path('app_fleet', coords|merge({mission: 'salvage'})) }}" title="Trümmerfeld: {{ debris[position].iron|number_format(0, ',', '.') }} Eisen, {{ debris[position].titanium|number_format(0, ',', '.') }} Titan – bergen">✦</a>{% endif %}</td>
+                    <td class="spy-cell">
+                        {% if not (p and p.owner.id == player.id) %}
+                            <form method="post" action="{{ path('app_galaxy_spy') }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('galaxy') }}">
+                                <input type="hidden" name="galaxy" value="{{ galaxy }}">
+                                <input type="hidden" name="system" value="{{ system }}">
+                                <input type="hidden" name="position" value="{{ position }}">
+                                <button class="icon-button" type="submit" title="Ausspionieren: die nächste Sonde aus deinen Hangars fliegt los (verglüht danach)" aria-label="Platz {{ position }} ausspionieren">🔭</button>
+                            </form>
+                        {% endif %}
+                    </td>
+                    {% if slot_type %}
+                        <td class="slot-type" title="{{ slot_type.label }}: {{ slot_type.effect }}">{{ slot_type.icon }}</td>
+                    {% else %}
+                        <td class="slot-type unknown" title="Planetentyp unbekannt – schicke eine Sonde hin">❔</td>
+                    {% endif %}
                     {% if p %}
                         <td>
-                            {% if position == p.position %}{{ p.name }}{% if p.fused %} <span class="muted small">(Fusion aus {{ p.fusionSize }} Planeten)</span>{% endif %}{% if p.integrating(now) %} <span class="muted small">(invadiert, Übergang am {{ p.integratedAt|date('d.m.Y') }})</span>{% endif %}
+                            {% if position == p.position %}{% if p.homeworld %}<span title="Heimatplanet – kann nicht invadiert werden">🏠</span> {% endif %}{{ p.name }}{% if p.fused %} <span class="muted small">(Fusion aus {{ p.fusionSize }} Planeten)</span>{% endif %}{% if p.integrating(now) %} <span class="muted small">(invadiert, Übergang am {{ p.integratedAt|date('d.m.Y') }})</span>{% endif %}
                             {% else %}<span class="muted">↳ verschweißt mit {{ p.name }}</span>{% endif %}
                         </td>
                         <td>{{ ui.player(p.owner) }}</td>
@@ -33,7 +50,6 @@
                                 <a href="{{ path('app_fleet', coords|merge({mission: 'station'})) }}">Stationieren</a>
                                 <a href="{{ path('app_fleet', coords|merge({mission: 'fuse'})) }}">Fusionieren</a>
                             {% else %}
-                                <a href="{{ path('app_fleet', coords|merge({mission: 'spy'})) }}">Spionieren</a>
                                 {% if not player.allyOf(p.owner) %}<a href="{{ path('app_fleet', coords|merge({mission: 'attack'})) }}">Angreifen</a>{% endif %}
                                 <a href="{{ path('app_fleet', coords|merge({mission: 'transport'})) }}">Transport</a>
                             {% endif %}
@@ -50,7 +66,9 @@
                     {% else %}
                         <td class="muted">frei</td>
                         <td></td>
-                        <td class="num actions"><a href="{{ path('app_fleet', coords|merge({mission: 'colonize'})) }}">Kolonisieren</a></td>
+                        <td class="num actions">
+                            <a href="{{ path('app_fleet', coords|merge({mission: 'colonize'})) }}">Kolonisieren</a>
+                        </td>
                     {% endif %}
                 </tr>
             {% endfor %}

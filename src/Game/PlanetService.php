@@ -6,6 +6,7 @@ use App\Entity\BuildingOrder;
 use App\Entity\Planet;
 use App\Entity\QueueItem;
 use App\Entity\ShipyardOrder;
+use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Lock\LockFactory;
@@ -18,6 +19,13 @@ use Symfony\Component\Lock\LockFactory;
 final readonly class PlanetService
 {
     public const int MAX_ORDER_QUANTITY = 100_000;
+    /** Defenses have no order limit; only the database column (signed INT) bounds the number. */
+    public const int MAX_DEFENSE_ORDER_QUANTITY = 2_147_483_647;
+
+    public static function maxOrderQuantity(ShipType $type): int
+    {
+        return $type->isStationary() ? self::MAX_DEFENSE_ORDER_QUANTITY : self::MAX_ORDER_QUANTITY;
+    }
 
     public function __construct(
         private EntityManagerInterface $em,
@@ -40,7 +48,7 @@ final readonly class PlanetService
         $this->locked($planet, function (Planet $planet, \DateTimeImmutable $now) use ($type): void {
             $queue = $planet->getBuildingQueue();
             if (\count($queue) >= QueueKind::Buildings->maxLength()) {
-                throw new GameException(\sprintf('Die Bauschleife ist voll (höchstens %d Aufträge).', QueueKind::Buildings->maxLength()));
+                throw new GameException('Die Bauschleife ist voll: ein Gebäude im Bau und eines in Wartestellung.');
             }
 
             // Requirements may be fulfilled by upgrades that are already queued.
@@ -50,7 +58,8 @@ final readonly class PlanetService
             }
 
             $targetLevel = $planet->getPlannedBuildingLevel($type) + 1;
-            $cost = $this->economy->buildCost($type, $targetLevel);
+            // The second upgrade in the queue costs a surcharge; it stays with the order.
+            $cost = $this->economy->queuedBuildCost($type, $targetLevel, \count($queue));
             $this->pay($planet, $cost);
 
             $order = new BuildingOrder($planet, $type, $targetLevel, $cost, $this->nextPosition($queue));
@@ -75,9 +84,30 @@ final readonly class PlanetService
             }
 
             $targetLevel = $player->getResearchLevel($type) + 1;
+            if (null !== $type->maxLevel() && $targetLevel > $type->maxLevel()) {
+                throw new GameException(\sprintf('%s ist bereits auf der höchsten Stufe %d.', $type->label(), $type->maxLevel()));
+            }
             $this->pay($planet, $this->economy->researchCost($type, $targetLevel));
             $seconds = $this->economy->researchSeconds($type, $targetLevel, $planet);
-            $player->startResearch($type, $targetLevel, $now->modify("+{$seconds} seconds"));
+            $player->startResearch($type, $targetLevel, $now->modify("+{$seconds} seconds"), $planet);
+        });
+    }
+
+    /**
+     * Renames a planet. Its owner may do so, including a freshly invaded planet
+     * during the integration period (it already belongs to the invader).
+     */
+    public function rename(Planet $planet, User $actor, string $name): void
+    {
+        $name = trim(preg_replace('/\s+/u', ' ', $name) ?? '');
+        if ('' === $name || mb_strlen($name) > 30) {
+            throw new GameException('Der Planetenname muss 1 bis 30 Zeichen lang sein.');
+        }
+        $this->locked($planet, function (Planet $planet) use ($actor, $name): void {
+            if (!$planet->getOwner()->isSameAs($actor)) {
+                throw new GameException('Du kannst nur deine eigenen Planeten umbenennen.');
+            }
+            $planet->setName($name);
         });
     }
 
@@ -96,12 +126,17 @@ final readonly class PlanetService
         });
     }
 
-    /** Queue ships in the shipyard. Resources and crew are taken immediately. */
-    public function orderShips(Planet $planet, ShipType $type, int $quantity): void
+    /**
+     * Queue ships in the shipyard. Resources and crew are taken immediately.
+     * Above 100 % the order costs more (see Economy::shipOrderCost) and is built faster.
+     */
+    public function orderShips(Planet $planet, ShipType $type, int $quantity, int $percent = 100): void
     {
-        $this->locked($planet, function (Planet $planet, \DateTimeImmutable $now) use ($type, $quantity): void {
-            if ($quantity < 1 || $quantity > self::MAX_ORDER_QUANTITY) {
-                throw new GameException(\sprintf('Bitte gib eine Anzahl zwischen 1 und %s an.', number_format(self::MAX_ORDER_QUANTITY, 0, ',', '.')));
+        Economy::assertBuildPercent($percent);
+        $this->locked($planet, function (Planet $planet, \DateTimeImmutable $now) use ($type, $quantity, $percent): void {
+            $limit = self::maxOrderQuantity($type);
+            if ($quantity < 1 || $quantity > $limit) {
+                throw new GameException(\sprintf('Bitte gib eine Anzahl zwischen 1 und %s an.', number_format($limit, 0, ',', '.')));
             }
 
             $missing = $this->economy->missingShipRequirements($type, $planet);
@@ -115,8 +150,8 @@ final readonly class PlanetService
             }
 
             $player = $planet->getOwner();
-            $unitCost = $this->economy->shipCost($type, $player);
-            $unitCredits = $this->economy->shipCredits($type, $player);
+            $unitCost = $this->economy->shipOrderCost($type, $player, $percent);
+            $unitCredits = $this->economy->shipOrderCredits($type, $player, $percent);
             if ($unitCredits * $quantity > $player->getCredits()) {
                 throw new GameException(\sprintf('Nicht genügend Credits (%s benötigt).', number_format($unitCredits * $quantity, 0, ',', '.')));
             }
@@ -124,20 +159,18 @@ final readonly class PlanetService
             $player->addCredits(-$unitCredits * $quantity);
             $planet->setPopulation($planet->getPopulation() - $crew);
 
-            $queue = $planet->getShipyardQueue();
-            if (\count($queue) >= QueueKind::Shipyard->maxLength()) {
-                throw new GameException(\sprintf('Die Werftschleife ist voll (höchstens %d Aufträge).', QueueKind::Shipyard->maxLength()));
-            }
+            $queue = $planet->getQueue(QueueKind::forShip($type));
             $queueIsIdle = [] === $queue;
             $planet->addShipyardOrder(new ShipyardOrder(
                 $planet,
                 $type,
                 $quantity,
-                $this->economy->shipSeconds($type, $planet),
+                $this->economy->shipOrderSeconds($type, $planet, $percent),
                 $queueIsIdle ? $now : null,
                 $unitCost,
                 $unitCredits,
                 $this->nextPosition($queue),
+                $percent,
             ));
         });
     }
@@ -172,7 +205,7 @@ final readonly class PlanetService
     public function reorder(Planet $planet, QueueKind $kind, array $orderIds): void
     {
         $this->locked($planet, function (Planet $planet, \DateTimeImmutable $now) use ($kind, $orderIds): void {
-            $queue = QueueKind::Buildings === $kind ? $planet->getBuildingQueue() : $planet->getShipyardQueue();
+            $queue = $planet->getQueue($kind);
             $byId = [];
             foreach ($queue as $item) {
                 $byId[$item->getId()] = $item;
@@ -222,7 +255,7 @@ final readonly class PlanetService
                     break;
                 }
             }
-        } elseif (null !== $head = $planet->getShipyardQueue()[0] ?? null) {
+        } elseif (null !== $head = $planet->getQueue($kind)[0] ?? null) {
             if (!$head->isStarted()) {
                 $head->start($now);
             }
@@ -231,8 +264,7 @@ final readonly class PlanetService
 
     private function findOrder(Planet $planet, QueueKind $kind, int $orderId): BuildingOrder|ShipyardOrder
     {
-        $queue = QueueKind::Buildings === $kind ? $planet->getBuildingQueue() : $planet->getShipyardQueue();
-        foreach ($queue as $order) {
+        foreach ($planet->getQueue($kind) as $order) {
             if ($order->getId() === $orderId) {
                 return $order;
             }

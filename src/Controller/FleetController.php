@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Fleet;
 use App\Game\FleetMission;
+use App\Game\Navigation;
 use App\Game\Radar;
 use App\Game\GameException;
 use App\Game\Resources;
@@ -22,27 +23,36 @@ use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 class FleetController extends AbstractGameController
 {
     #[Route('/fleet', name: 'app_fleet', methods: ['GET'])]
-    public function index(Request $request, FleetRepository $fleets, PlanetRepository $planets, Radar $radar): Response
+    public function index(Request $request, FleetRepository $fleets, PlanetRepository $planets, Radar $radar, Navigation $navigation): Response
     {
         $planet = $this->currentPlanet();
         $player = $planet->getOwner();
 
         $hangar = [];
         foreach (ShipType::cases() as $type) {
-            if ($planet->getShipCount($type) > 0 && !$type->isStationary()) {
+            if ($planet->getShipCount($type) > 0 && !$type->isStationary() && !$type->isProbe()) {
                 $hangar[] = ['type' => $type, 'count' => $planet->getShipCount($type), 'speed' => $this->economy->shipSpeed($type, $player)];
             }
         }
 
         // Where each fleet is: own planets allow loading, unloading and dissolving.
         $entries = [];
+        $hoverSources = $this->fleetService->hoverSources($player);
         foreach ($fleets->findByOwner($player) as $fleet) {
             $at = $planets->findAt($fleet->getGalaxy(), $fleet->getSystem(), $fleet->getPosition());
+            $hover = [];
+            if ($fleet->isIdle() && $fleet->isNamed()) {
+                foreach ($hoverSources as $key => $source) {
+                    $hover[] = ['key' => $key, 'label' => $source['label'], 'seconds' => $this->fleetService->hoverSeconds($fleet, $source)];
+                }
+            }
             $entries[] = [
+                'speed' => $navigation->slowestSpeed($fleet->getShips(), $player),
+                'hover' => $hover,
                 'fleet' => $fleet,
                 'at' => $at,
                 'base' => null !== $at && $at->getOwner()->getId() === $player->getId() ? $at : null,
-                'capacity' => array_sum(array_map(static fn (array $s): int => $s['type']->spec()->cargo * $s['count'], $fleet->getShipList())),
+                'capacity' => array_sum(array_map(static fn (array $s): int => $s['type']->cargo() * $s['count'], $fleet->getShipList())),
             ];
         }
 
@@ -51,6 +61,7 @@ class FleetController extends AbstractGameController
         foreach ($fleets->findControllableBy($player) as $fleet) {
             $at = $planets->findAt($fleet->getGalaxy(), $fleet->getSystem(), $fleet->getPosition());
             $shared[] = [
+                'speed' => $navigation->slowestSpeed($fleet->getShips(), $fleet->getOwner()),
                 'fleet' => $fleet,
                 'at' => $at,
                 'base' => null !== $at && $at->getOwner()->isSameAs($fleet->getOwner()) ? $at : null,
@@ -63,6 +74,7 @@ class FleetController extends AbstractGameController
         ));
 
         return $this->renderGame('game/fleet.html.twig', $planet, [
+            'game_speed' => $this->economy->speed(),
             'hangar' => $hangar,
             'entries' => $entries,
             'shared' => $shared,
@@ -110,7 +122,8 @@ class FleetController extends AbstractGameController
         $mission = FleetMission::tryFrom($form->getString('mission')) ?? FleetMission::Transport;
         try {
             $order = array_map('floatval', $form->all('order'));
-            $this->addFlash('success', $this->fleetService->sendFleet($fleet, $this->player(), $form->getInt('galaxy'), $form->getInt('system'), $form->getInt('position'), $mission, $this->cargo($request), $order));
+            $speed = Navigation::parsePercent($form->getString('speed'));
+            $this->addFlash('success', $this->fleetService->sendFleet($fleet, $this->player(), $form->getInt('galaxy'), $form->getInt('system'), $form->getInt('position'), $mission, $this->cargo($request), $order, $speed));
         } catch (GameException $e) {
             $this->addFlash('error', $e->getMessage());
         }
@@ -205,6 +218,20 @@ class FleetController extends AbstractGameController
         return $this->redirectToRoute('app_fleet');
     }
 
+    #[Route('/fleets/{id}/hover', name: 'app_fleets_hover', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
+    public function hover(Fleet $fleet, Request $request): Response
+    {
+        $this->currentPlanet();
+        try {
+            $this->addFlash('success', $this->fleetService->hover($fleet, $this->player(), $request->request->getString('source')));
+        } catch (GameException $e) {
+            $this->addFlash('error', $e->getMessage());
+        }
+
+        return $this->redirectToRoute('app_fleet');
+    }
+
     #[Route('/fleets/{id}/unload', name: 'app_fleets_unload', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
     public function unload(Fleet $fleet): Response
@@ -230,7 +257,8 @@ class FleetController extends AbstractGameController
     public function recall(Fleet $fleet): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->fleetService->recall($fleet, $this->player()), 'Die Flotte kehrt um.');
+        $hovering = FleetMission::Hover === $fleet->getMission();
+        $this->attempt(fn () => $this->fleetService->recall($fleet, $this->player()), $hovering ? 'Die Flotte ist wieder gelandet.' : 'Die Flotte kehrt um.');
 
         return $this->redirectToRoute('app_fleet');
     }

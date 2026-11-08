@@ -58,6 +58,19 @@ class FleetRepository extends ServiceEntityRepository
      * Deletes a fleet. Fleets that were heading for it (interceptors, gathering
      * groups) lose their target first; they notice on arrival and turn back.
      */
+    /** Colony ships of a player that are on their way to found a colony. */
+    public function countColonyShipsUnderway(User $owner): int
+    {
+        $count = 0;
+        foreach ($this->findBy(['owner' => $owner, 'mission' => \App\Game\FleetMission::Colonize, 'returning' => false]) as $fleet) {
+            if ($fleet->isMoving()) {
+                ++$count;
+            }
+        }
+
+        return $count;
+    }
+
     public function forget(Fleet $fleet): void
     {
         if (null !== $fleet->getId()) {
@@ -98,6 +111,18 @@ class FleetRepository extends ServiceEntityRepository
             ->setParameter('s', $system)
             ->setParameter('p', $position)
             ->setParameter('owners', $owners)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /** @return list<Fleet> all fleets waiting at a position */
+    public function findIdleAt(int $galaxy, int $system, int $position): array
+    {
+        return $this->createQueryBuilder('f')
+            ->where('f.galaxy = :g AND f.system = :s AND f.position = :p AND f.mission IS NULL')
+            ->setParameter('g', $galaxy)
+            ->setParameter('s', $system)
+            ->setParameter('p', $position)
             ->getQuery()
             ->getResult();
     }

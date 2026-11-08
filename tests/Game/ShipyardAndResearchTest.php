@@ -169,7 +169,12 @@ class ShipyardAndResearchTest extends TestCase
         foreach (ShipType::cases() as $ship) {
             $spec = $ship->spec();
             self::assertContainsOnlyInstancesOf(Requirement::class, $spec->requirements);
-            self::assertGreaterThan(0, $spec->crew, $ship->label());
+            // Ships need a crew; defenses (turrets) need none.
+            if ($ship->isStationary()) {
+                self::assertSame(0, $spec->crew, $ship->label());
+            } else {
+                self::assertGreaterThan(0, $spec->crew, $ship->label());
+            }
             self::assertGreaterThan(0, $spec->hull, $ship->label());
         }
     }
@@ -211,5 +216,17 @@ class ShipyardAndResearchTest extends TestCase
     private function planet(): Planet
     {
         return new Planet(new User('tester'), 'Test', 1, 1, 1, $this->start);
+    }
+
+    public function testResearchSpeedOnlyShortensResearch(): void
+    {
+        $planet = new Planet(new User('forscher'), 'Labor', 1, 1, 1, new \DateTimeImmutable('2026-01-01'));
+        $planet->setBuildingLevel(BuildingType::ResearchLab, 2)->setBuildingLevel(BuildingType::Shipyard, 2);
+        $normal = new Economy(1.0);
+        $fastResearch = new Economy(1.0, 4.0);
+
+        self::assertSame((int) round($normal->researchSeconds(ResearchType::Espionage, 3, $planet) / 4), $fastResearch->researchSeconds(ResearchType::Espionage, 3, $planet));
+        self::assertSame($normal->shipSeconds(ShipType::Pfeil, $planet), $fastResearch->shipSeconds(ShipType::Pfeil, $planet), 'ships unaffected');
+        self::assertSame($normal->buildSeconds(BuildingType::IronMine, 3, $planet), $fastResearch->buildSeconds(BuildingType::IronMine, 3, $planet), 'buildings unaffected');
     }
 }

@@ -69,9 +69,16 @@ class AllianceController extends AbstractGameController
     public function apply(Alliance $alliance): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->alliances->apply($this->player(), $alliance), \sprintf('Deine Bewerbung bei „%s“ wurde abgeschickt.', $alliance->getName()));
+        // Applying to an alliance that invited the player admits them at once.
+        $invited = true === $this->repository->findRequest($alliance, $this->player())?->isInvitation();
+        $this->attempt(
+            fn () => $this->alliances->apply($this->player(), $alliance),
+            $invited ? \sprintf('Du bist „%s“ beigetreten.', $alliance->getName()) : \sprintf('Deine Bewerbung bei „%s“ wurde abgeschickt.', $alliance->getName()),
+        );
 
-        return $this->redirectToRoute('app_alliance');
+        return $invited && $this->player()->getAlliance()
+            ? $this->redirectToRoute('app_alliance')
+            : $this->redirectToRoute('app_alliance_public', ['id' => $alliance->getId()]);
     }
 
     #[Route('/alliance/request/{id}/{answer}', name: 'app_alliance_answer', requirements: ['id' => Requirement::DIGITS, 'answer' => 'accept|decline'], methods: ['POST'])]
@@ -162,13 +169,16 @@ class AllianceController extends AbstractGameController
         return $this->redirectToRoute('app_alliance');
     }
 
-    /** Public page of any alliance (picture, external text, members). */
+    /** Public page of any alliance (picture, external text, apply button; no member list). */
     #[Route('/alliances/{id}', name: 'app_alliance_public', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
     public function show(Alliance $alliance): Response
     {
         $planet = $this->currentPlanet();
 
-        return $this->renderGame('game/alliance_public.html.twig', $planet, ['alliance' => $alliance]);
+        return $this->renderGame('game/alliance_public.html.twig', $planet, [
+            'alliance' => $alliance,
+            'request' => $this->repository->findRequest($alliance, $this->player()),
+        ]);
     }
 
     #[Route('/alliance/presentation', name: 'app_alliance_present', methods: ['POST'])]

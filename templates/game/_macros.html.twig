@@ -7,7 +7,19 @@
 {% endmacro %}
 
 {% macro countdown(finishes_at, now) %}
-    <span class="countdown" data-finishes="{{ finishes_at.timestamp }}" data-now="{{ now.timestamp }}">{{ (finishes_at.timestamp - now.timestamp)|format_duration }}</span>
+    <span class="countdown" title="{{ finishes_at|date('d.m.Y H:i:s') }}" data-finishes="{{ finishes_at.timestamp }}" data-now="{{ now.timestamp }}">{{ (finishes_at.timestamp - now.timestamp)|format_duration }}</span>
+{% endmacro %}
+
+{# Coordinates "g:s:p" (or "g:s:p-q" of a fusion) as a link to that system in the universe view, slot highlighted. #}
+{% macro coords(coordinates) %}
+    {%- set parts = coordinates|split(':') -%}
+    {%- set position = parts[2]|split('-')|first -%}
+    <a class="coords" href="{{ path('app_galaxy', {galaxy: parts[0], system: parts[1]}) }}#slot-{{ position }}" title="Im Universum anzeigen">[{{ coordinates }}]</a>
+{%- endmacro %}
+
+{# Exact server time (seconds) for timing fleets; the date only when it is not today. #}
+{% macro at(moment, now) %}
+    <span class="at">{{ moment|date('d.m.') != now|date('d.m.') ? moment|date('d.m. ') }}{{ moment|date('H:i:s') }}</span>
 {% endmacro %}
 
 {# Player name with life form icon, link to the profile and the alliance tag (link to its public page). #}

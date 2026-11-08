@@ -14,7 +14,13 @@
                     <tr><td>{{ part.position }}</td><td>{{ part.name }}</td></tr>
                 {% endfor %}
             </table>
-            <p class="muted">Beim Sprengen entstehen die Planeten wieder. Gebäudestufen, Rohstoffe und Bevölkerung werden so gleichmäßig wie möglich verteilt, die Schiffe bleiben auf {{ planet.name }}.</p>
+            <p><strong>Schild: {{ shield|number_format(0, ',', '.') }}</strong> <span class="muted small">({{ planet.buildingLevel(enum('App\\Game\\BuildingType').ShieldGenerator) }} Stufen Schildgenerator)</span></p>
+            <ul class="muted small">
+                <li>Ist die Angriffskraft der Angreifer, die einen Kampf überstehen, größer als der Schild, wird der unterste Planet abgesprengt. Er nimmt seinen Anteil (1/{{ planet.fusionSize }}) an Rohstoffen, Bevölkerung und Gebäudestufen mit. Danach ist der Schild wieder voll.</li>
+                <li>Eine gelungene Invasion sprengt ebenfalls nur einen Planeten ab und übernimmt ihn. Die Chance hängt von der Zahl der Invasionsschiffe und der Bevölkerung der ganzen Fusion ab (1 Invasionsschiff je ca. 20.000 Einwohner, immer 1–99 %).</li>
+                <li>Eine Forschung, die auf {{ planet.name }} läuft, läuft weiter, bis auch dieser Planet invadiert wird.</li>
+            </ul>
+            <p class="muted">Beim Sprengen entstehen die Planeten wieder. Gebäudestufen, Rohstoffe und Bevölkerung werden so gleichmäßig wie möglich verteilt, die Schiffe bleiben auf {{ planet.name }}. <strong>Alle Verteidigungsanlagen werden dabei zerstört.</strong></p>
             <form method="post" action="{{ path('app_fusion_split') }}" class="inline-action">
                 <input type="hidden" name="_token" value="{{ csrf_token('fusion') }}">
                 <span class="{{ split_cost.hydrogen > planet.resources.hydrogen ? 'lacking' }}">Kosten: {{ split_cost.hydrogen|number_format(0, ',', '.') }} Wasserstoff</span>

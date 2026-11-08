@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Game\Economy;
 use App\Game\ResearchType;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -23,6 +24,7 @@ class ResearchController extends AbstractGameController
             $categories[$type->category()][] = [
                 'type' => $type,
                 'level' => $nextLevel - 1,
+                'maxed' => null !== $type->maxLevel() && $nextLevel > $type->maxLevel(),
                 'cost' => $cost,
                 'seconds' => $this->economy->researchSeconds($type, $nextLevel, $planet),
                 'missing' => $this->economy->missingRequirements($type->requirements(), $planet),
@@ -33,6 +35,8 @@ class ResearchController extends AbstractGameController
         return $this->renderGame('game/research.html.twig', $planet, [
             'categories' => $categories,
             'player' => $player,
+            'colony_slots' => $this->economy->colonySlots($player),
+            'owned_slots' => Economy::ownedSlots($player),
             'fusion_capacity' => $this->economy->fusionCapacity($player),
         ]);
     }

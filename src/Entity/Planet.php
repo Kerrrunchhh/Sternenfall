@@ -3,6 +3,9 @@
 namespace App\Entity;
 
 use App\Game\BuildingType;
+use App\Game\PlanetType;
+use App\Game\QueueKind;
+use App\Game\Universe;
 use App\Game\Resources;
 use App\Game\ShipType;
 use App\Repository\PlanetRepository;
@@ -36,6 +39,14 @@ class Planet
     /** Topmost position this planet occupies. */
     #[ORM\Column(type: Types::SMALLINT)]
     private int $position;
+
+    /** The planet a player started on: it can be attacked, but never invaded. */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $homeworld = false;
+
+    /** Left out of the owner's public planet list (e.g. a combat colony); at most a few per player. */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $hiddenInProfile = false;
 
     /** After an invasion the planet only fully passes to its new owner after this period. */
     public const string INTEGRATION_PERIOD = '+28 days';
@@ -148,6 +159,16 @@ class Planet
             : \sprintf('%d:%d:%d', $this->galaxy, $this->system, $this->position);
     }
 
+    public function isHomeworld(): bool
+    {
+        return $this->homeworld;
+    }
+
+    public function markHomeworld(): void
+    {
+        $this->homeworld = true;
+    }
+
     /** Marks the planet as freshly invaded: it becomes fully owned after the integration period. */
     public function markInvaded(\DateTimeImmutable $now): void
     {
@@ -163,6 +184,22 @@ class Planet
     public function isIntegrating(\DateTimeInterface $now): bool
     {
         return null !== $this->integratedAt && $this->integratedAt > $now;
+    }
+
+    /** The kind of world, given by the (topmost) slot the planet occupies. */
+    public function getType(): PlanetType
+    {
+        return Universe::planetType($this->galaxy, $this->system, $this->position);
+    }
+
+    public function isHiddenInProfile(): bool
+    {
+        return $this->hiddenInProfile;
+    }
+
+    public function setHiddenInProfile(bool $hidden): void
+    {
+        $this->hiddenInProfile = $hidden;
     }
 
     public function getFusionSize(): int
@@ -205,6 +242,22 @@ class Planet
             ...$planet->getFusedPlanets(),
         ];
         $this->fusionSize += $planet->getFusionSize();
+    }
+
+    /**
+     * Detaches the bottom-most welded slot (it becomes a planet of its own again).
+     *
+     * @return array{position: int, name: string}
+     */
+    public function detachBottom(): array
+    {
+        if ([] === $this->fusedPlanets) {
+            throw new \LogicException('Only a fusion has a bottom planet to detach.');
+        }
+        $bottom = array_pop($this->fusedPlanets);
+        --$this->fusionSize;
+
+        return $bottom;
     }
 
     public function resetFusion(): void
@@ -290,6 +343,7 @@ class Planet
      */
     public function conquer(User $newOwner, \DateTimeImmutable $now): void
     {
+        $this->hiddenInProfile = false;
         $this->owner->getPlanets()->removeElement($this);
         $this->owner = $newOwner;
         $newOwner->addPlanet($this);
@@ -359,10 +413,31 @@ class Planet
         return self::sorted($this->buildingOrders->toArray());
     }
 
-    /** @return list<ShipyardOrder> shipyard queue, first entry is being built */
+    /** @return list<ShipyardOrder> ship queue of the shipyard, first entry is being built */
     public function getShipyardQueue(): array
     {
-        return self::sorted($this->shipyardOrders->toArray());
+        return $this->getShipQueue(QueueKind::Shipyard);
+    }
+
+    /** @return list<ShipyardOrder> defense queue (runs in parallel to the ships), first entry is being built */
+    public function getDefenseQueue(): array
+    {
+        return $this->getShipQueue(QueueKind::Defense);
+    }
+
+    /** @return list<BuildingOrder>|list<ShipyardOrder> */
+    public function getQueue(QueueKind $kind): array
+    {
+        return QueueKind::Buildings === $kind ? $this->getBuildingQueue() : $this->getShipQueue($kind);
+    }
+
+    /** @return list<ShipyardOrder> */
+    private function getShipQueue(QueueKind $kind): array
+    {
+        return self::sorted(array_filter(
+            $this->shipyardOrders->toArray(),
+            static fn (ShipyardOrder $order): bool => QueueKind::forShip($order->getShipType()) === $kind,
+        ));
     }
 
     /**

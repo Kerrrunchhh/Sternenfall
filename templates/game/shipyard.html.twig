@@ -1,60 +1,100 @@
 {% extends 'game/_layout.html.twig' %}
 {% import 'game/_macros.html.twig' as ui %}
 
-{% block title %}Werft – {{ game_name }}{% endblock %}
+{% block title %}{{ defense ? 'Planetenverteidigung' : 'Werft' }} – {{ game_name }}{% endblock %}
 
 {% block content %}
-    <h1>Werft</h1>
+    <h1>{{ defense ? 'Planetenverteidigung' : 'Werft' }}</h1>
 
-    {{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Shipyard, entries: queue, back: 'app_shipyard'}) }}
+    {{ include('game/_queue.html.twig', {queue_planet: planet, kind: defense ? enum('App\\Game\\QueueKind').Defense : enum('App\\Game\\QueueKind').Shipyard, entries: queue, back: defense ? 'app_defense' : 'app_shipyard'}) }}
 
     {% if planet.buildingLevel(enum('App\\Game\\BuildingType').Shipyard) == 0 %}
-        <p class="panel warning">Auf diesem Planeten steht noch keine Raumwerft.</p>
+        <p class="panel warning">Auf diesem Planeten steht noch keine Raumwerft{{ defense ? ' – auch Verteidigungsanlagen werden dort gebaut' }}.</p>
+    {% endif %}
+
+    {% if defense %}<p class="muted small">Verteidigungsanlagen stehen fest auf dem Planeten und schießen bei Angriffen mit. Sie werden in der Werft gebaut und teilen sich die Bauschleife mit den Schiffen.</p>{% endif %}
+    <p class="muted small">Schiffe und Verteidigung lassen sich auch mit 125–200 % bauen: Das kostet mehr Eisen und Titan und zusätzlich so viel Nahrung und Wasser wie das Mehr an Eisen (Wasserstoff ein Zehntel davon); bei Verteidigungsanlagen steigen auch die Credits. Dafür sinkt die Bauzeit (200 % = halbe Zeit). Alles, was in der Bauschleife steckt, ist vor Plünderung sicher und wird beim Abbrechen voll erstattet.</p>
+
+    {% if not defense %}
+        <nav class="tabs" aria-label="Werft">
+            <a href="{{ path('app_shipyard') }}" class="{{ not civil ? 'active' }}" {{ not civil ? 'aria-current="page"' }}>Kriegsschiffe</a>
+            <a href="{{ path('app_shipyard', {tab: 'civil'}) }}" class="{{ civil ? 'active' }}" {{ civil ? 'aria-current="page"' }}>Zivile Schiffe</a>
+        </nav>
     {% endif %}
 
     {% for group, ships in groups %}
-        <h2 class="section-title">{{ group }}</h2>
+        {% if defense %}<h2 class="section-title">{{ group }}</h2>{% endif %}
         <div class="building-list">
             {% for s in ships %}
-                <article class="panel building ship">
+                {% set picture = game_picture(defense ? 'defense' : 'ships', s.type.value) %}
+                <article class="panel building ship {{ picture ? 'has-picture' }}">
+                    {% if picture %}<img class="card-picture" src="{{ asset(picture) }}" alt="{{ s.type.label }}" loading="lazy">{% endif %}
+                    <div class="card-body">
                     <div class="building-head">
                         <h2>
                             {% if s.type.combatShip or s.type.stationary %}<span class="firing-order" title="Schussreihenfolge">#{{ s.type.firingOrder }}</span>{% endif %}
                             {{ s.type.label }}
                         </h2>
-                        <span class="level">Im Hangar: {{ s.stationed|number_format(0, ',', '.') }}</span>
+                        <span class="level">{{ defense ? 'Auf dem Planeten' : 'Im Hangar' }}: {{ s.stationed|number_format(0, ',', '.') }}</span>
                     </div>
                     <p class="building-desc">{{ s.type.description }}</p>
                     <dl class="stats">
                         <div><dt>Angriff</dt><dd>{{ s.spec.attack|number_format(0, ',', '.') }}</dd></div>
                         <div><dt>Schild</dt><dd>{{ s.spec.shield|number_format(0, ',', '.') }}</dd></div>
                         <div><dt>Hülle</dt><dd>{{ s.spec.hull|number_format(0, ',', '.') }}</dd></div>
+                        {% if not defense %}
                         <div><dt>Tempo</dt><dd>{{ s.speed|number_format(0, ',', '.') }}</dd></div>
-                        <div><dt>Fracht</dt><dd>{{ s.spec.cargo|number_format(0, ',', '.') }}</dd></div>
+                        {% if s.type.salvageCapacity > 0 %}
+                            <div><dt>Bergeraum</dt><dd>{{ s.type.salvageCapacity|number_format(0, ',', '.') }}</dd></div>
+                        {% else %}
+                            <div><dt>Fracht</dt><dd>{{ s.type.cargo > 0 ? s.type.cargo|number_format(0, ',', '.') : '–' }}</dd></div>
+                        {% endif %}
                         <div><dt>Wasserstoff/Flug</dt><dd>{{ s.spec.fuel|number_format(0, ',', '.') }}</dd></div>
-                        <div><dt>Besatzung</dt><dd>{{ s.spec.crew|number_format(0, ',', '.') }}</dd></div>
-                        <div><dt>Antrieb</dt><dd>{{ s.spec.drive.label }}</dd></div>
+                        {% endif %}
+                        {% if not defense %}<div><dt>Besatzung</dt><dd>{{ s.spec.crew|number_format(0, ',', '.') }}</dd></div>{% endif %}
+                        {% if not defense %}<div><dt>Antrieb</dt><dd>{{ s.spec.drive.label }}</dd></div>{% endif %}
                     </dl>
-                    <div class="building-foot">
-                        <div class="cost">
-                            {{ ui.cost(s.cost, planet) }}
-                            <span class="{{ s.credits > player.credits ? 'lacking' }}">Credits {{ s.credits|number_format(0, ',', '.') }}</span>
-                            <span class="{{ s.spec.crew > planet.population ? 'lacking' }}">Besatzung {{ s.spec.crew|number_format(0, ',', '.') }}</span>
-                            <span class="duration">Dauer {{ s.seconds|format_duration }}</span>
-                        </div>
+                    <div class="building-foot" data-build-rates>
+                        {% for percent, r in s.rates|filter((r, percent) => percent == 100) %}
+                            {{ _self.rate_row(percent, r, s, planet, player, true) }}
+                        {% endfor %}
+                        {# Higher build rates only on demand. #}
+                        <details class="rate-details" data-rate-details>
+                            <summary>Kosten bei 125–200 % (schneller bauen, Rohstoffe sichern)</summary>
+                            {% for percent, r in s.rates|filter((r, percent) => percent > 100) %}
+                                {{ _self.rate_row(percent, r, s, planet, player, false) }}
+                            {% endfor %}
+                        </details>
                         {% if s.missing is not empty %}
                             <span class="requirement">Benötigt: {{ s.missing|join(', ') }}</span>
                         {% else %}
+                            {% set base = s.rates|first %}
                             <form method="post" action="{{ path('app_shipyard_order', {type: s.type.value}) }}" class="order-form">
                                 <input type="hidden" name="_token" value="{{ csrf_token('shipyard') }}">
-                                <input type="number" name="quantity" min="1" max="{{ max(s.max, 1) }}" value="{{ s.max > 0 ? 1 : 0 }}" aria-label="Anzahl {{ s.type.label }}" {{ s.max > 0 ? '' : 'disabled' }}>
-                                <span class="muted">max. {{ s.max|number_format(0, ',', '.') }}</span>
-                                <button class="btn btn-small" type="submit" id="order-{{ s.type.value }}" {{ s.max > 0 ? '' : 'disabled' }}>Bauen</button>
+                                <input type="number" name="quantity" min="1" max="{{ max(base.max, 1) }}" value="1" aria-label="Anzahl {{ s.type.label }}">
+                                <select name="percent" aria-label="Baurate {{ s.type.label }}" title="Baurate: mehr Kosten, kürzere Bauzeit">
+                                    {% for percent, r in s.rates %}<option value="{{ percent }}">{{ percent }} %</option>{% endfor %}
+                                </select>
+                                <span class="muted" data-rate-max-label>max. {{ base.max|number_format(0, ',', '.') }}</span>
+                                <button class="btn btn-small" type="submit" id="order-{{ s.type.value }}">Bauen</button>
                             </form>
                         {% endif %}
+                    </div>
                     </div>
                 </article>
             {% endfor %}
         </div>
     {% endfor %}
 {% endblock %}
+
+{# One cost line of a build rate (100–200 %). #}
+{% macro rate_row(percent, r, s, planet, player, active) %}
+    {% import 'game/_macros.html.twig' as ui %}
+    <div class="cost rate-row {{ active ? 'rate-active' }}" data-rate-percent="{{ percent }}" data-rate-max="{{ r.max }}">
+        <span class="rate-label" title="Kosten pro Stück beim Bau mit {{ percent }} %">{{ percent }} %</span>
+        {{ ui.cost(r.cost, planet) }}
+        <span class="{{ r.credits > player.credits ? 'lacking' }}">Credits {{ r.credits|number_format(0, ',', '.') }}</span>
+        {% if s.spec.crew > 0 %}<span class="{{ s.spec.crew > planet.population ? 'lacking' }}">Besatzung {{ s.spec.crew|number_format(0, ',', '.') }}</span>{% endif %}
+        <span class="duration">Dauer {{ r.seconds|format_duration }}</span>
+    </div>
+{% endmacro %}

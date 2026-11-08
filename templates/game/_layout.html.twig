@@ -15,7 +15,7 @@
 
 {% block body %}
     <header class="topbar">
-        <a class="logo logo-small" href="{{ path('app_overview') }}">{{ game_name }}</a>
+        <a class="logo-link" href="{{ path('app_overview') }}" title="Zur Übersicht"><img class="logo-image" src="{{ asset('pictures/brand/logo-header.webp') }}" alt="{{ game_name }}" width="151" height="48"></a>
         <div class="resources">
             {% for type in enum_cases('App\\Game\\ResourceType') %}
                 {{ _self.resource(type.label, type.value, planet.resources.get(type), net.get(type), protected) }}
@@ -31,6 +31,10 @@
                 <span class="res-rate">max. {{ population_capacity|number_format(0, ',', '.') }}</span>
             </div>
         </div>
+        <div class="server-clock" title="Serverzeit (Europe/Berlin) – danach richten sich alle Flotten">
+            <span class="res-label">Serverzeit</span>
+            <time data-server-clock data-server-ms="{{ server_time_ms() }}">{{ 'now'|date('H:i:s') }}</time>
+        </div>
         <div class="user">
             {% if player.alliance %}<a class="alliance-tag" href="{{ path('app_alliance_public', {id: player.alliance.id}) }}">[{{ player.alliance.tag }}]</a> {% endif %}<a href="{{ path('app_player', {id: player.id}) }}" title="Dein Profil">{{ player.lifeForm.icon }} {{ app.user.username }}</a> <span class="muted">({{ player.lifeForm.label }})</span> · <a href="{{ path('app_logout') }}">Abmelden</a>
         </div>
@@ -44,16 +48,20 @@
             <a href="{{ path('app_queues') }}" class="{{ route == 'app_queues' ? 'active' }}">Bauschleifen</a>
             <a href="{{ path('app_research') }}" class="{{ route == 'app_research' ? 'active' }}">Forschung</a>
             <a href="{{ path('app_shipyard') }}" class="{{ route == 'app_shipyard' ? 'active' }}">Werft</a>
+            <a href="{{ path('app_defense') }}" class="{{ route == 'app_defense' ? 'active' }}">Planetenverteidigung</a>
 
             <h2 class="sidebar-title">Planeten <small>{{ player.planets|length }}</small></h2>
             <div class="planet-list">
                 {% for p in player.planets %}
-                    <a href="{{ path('app_planet_select', {id: p.id, to: route}) }}" class="planet-badge {{ p.id == planet.id ? 'current' }}" {{ p.id == planet.id ? 'aria-current="true"' }}>
-                        <strong>{{ p.name }}</strong>
-                        <span>[{{ p.coordinates }}]</span>
+                    {# One line per planet: type, name, coordinates, what is going on. #}
+                    <a href="{{ path('app_planet_select', {id: p.id, to: route}) }}" class="planet-badge {{ p.id == planet.id ? 'current' }}" {{ p.id == planet.id ? 'aria-current="true"' }} title="{{ p.name }} [{{ p.coordinates }}] – {{ p.type.label }}">
+                        <span class="pb-icon" aria-hidden="true">{{ p.type.icon }}</span>
+                        <span class="pb-name">{{ p.name }}</span>
+                        <span class="pb-coords">{{ p.coordinates }}</span>
                         <span class="planet-status">
                             {%- if p.constructing %}<span title="Gebäude im Bau">🏗</span>{% endif -%}
                             {%- if p.shipyardQueue is not empty %}<span title="Werft arbeitet">🚀</span>{% endif -%}
+                            {%- if p.defenseQueue is not empty %}<span title="Verteidigung im Bau">🛡</span>{% endif -%}
                             {%- if p.integrating(now) %}<span title="Invadiert, Übergang läuft">⏳</span>{% endif -%}
                         </span>
                     </a>
@@ -71,7 +79,7 @@
             <a href="{{ path('app_galaxy') }}" class="{{ route == 'app_galaxy' ? 'active' }}">Galaxie</a>
             <a href="{{ path('app_radar') }}" class="{{ route == 'app_radar' ? 'active' }}">Radar</a>
             <a href="{{ path('app_fusion') }}" class="{{ route == 'app_fusion' ? 'active' }}">Fusion</a>
-            <a href="{{ path('app_trade') }}" class="{{ route == 'app_trade' ? 'active' }}">Handel</a>
+            <a href="{{ path('app_trade') }}" class="{{ route in ['app_trade', 'app_trade_fusionators'] ? 'active' }}">Handel</a>
             <a href="{{ path('app_messages') }}" class="{{ route == 'app_messages' ? 'active' }}">
                 Nachrichten{% if unread_messages > 0 %} <span class="badge">{{ unread_messages }}</span>{% endif %}
             </a>
@@ -95,7 +103,7 @@
                     {% for p in board_posts %}
                         <article class="board-note">
                             <div class="board-meta"><strong>{{ p.author ? p.author.username : 'ehemaliges Mitglied' }}</strong> · {{ p.createdAt|date('d.m. H:i') }}</div>
-                            <div class="message-body">{{ p.body }}</div>
+                            <div class="message-body">{{ p.body|link_coordinates }}</div>
                         </article>
                     {% else %}
                         <p class="muted small board-hint">Noch keine Beiträge. Schreib den ersten!</p>

@@ -12,6 +12,14 @@ final class Universe
     public const int MIN_PLANETS_PER_SYSTEM = 30;
     public const int MAX_PLANETS_PER_SYSTEM = 50;
 
+    /** The kind of world in a slot: fixed per slot, each type equally likely. */
+    public static function planetType(int $galaxy, int $system, int $position): PlanetType
+    {
+        $types = PlanetType::cases();
+
+        return $types[crc32("planet:$galaxy:$system:$position") % \count($types)];
+    }
+
     /** Number of planet slots in a system: fixed per system, between 30 and 50. */
     public static function planetsInSystem(int $galaxy, int $system): int
     {

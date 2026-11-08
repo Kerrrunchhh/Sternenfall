@@ -8,7 +8,10 @@ use App\Entity\Planet;
  * Pure fusion rules (no persistence):
  * - welding adds up the building levels, resources, population and ships of all planets;
  * - blowing a fusion apart restores the welded planets and spreads building levels,
- *   resources and population as evenly as possible. Ships stay on the topmost planet.
+ *   resources and population as evenly as possible. Ships stay on the topmost planet,
+ *   all defenses are destroyed;
+ * - an attack through the shield or an invasion breaks off the bottom planet only:
+ *   it takes its share (1 / size of the fusion) of resources, population and buildings.
  */
 final class Fusion
 {
@@ -32,6 +35,10 @@ final class Fusion
                 if ($planet->getShipCount($ship) > 0) {
                     $top->addShips($ship, $planet->getShipCount($ship));
                 }
+            }
+            // A welded home planet passes its protection on to the fusion.
+            if ($planet->isHomeworld()) {
+                $top->markHomeworld();
             }
             $top->absorb($planet);
         }
@@ -69,9 +76,43 @@ final class Fusion
             $planet->setPopulation($population);
         }
 
+        // Blowing a fusion apart destroys every defense installation.
+        foreach (ShipType::cases() as $ship) {
+            if ($ship->isStationary() && $top->getShipCount($ship) > 0) {
+                $top->addShips($ship, -$top->getShipCount($ship));
+            }
+        }
+
         $top->resetFusion();
 
         return $restored;
+    }
+
+    /**
+     * Breaks the bottom planet off a fusion (not yet persisted). It takes its share of
+     * resources, population and building levels; ships and defenses stay with the fusion.
+     */
+    public static function breakOff(Planet $top, \DateTimeImmutable $now): Planet
+    {
+        $share = 1 / $top->getFusionSize();
+        $bottom = $top->detachBottom();
+        $planet = new Planet($top->getOwner(), $bottom['name'], $top->getGalaxy(), $top->getSystem(), $bottom['position'], $now);
+
+        $resources = $top->getResources()->multiply($share)->floor();
+        $planet->setResources($resources);
+        $top->setResources($top->getResources()->subtract($resources));
+
+        $population = floor($top->getPopulation() * $share);
+        $planet->setPopulation($population);
+        $top->setPopulation($top->getPopulation() - $population);
+
+        foreach (BuildingType::cases() as $type) {
+            $levels = (int) floor($top->getBuildingLevel($type) * $share);
+            $planet->setBuildingLevel($type, $levels);
+            $top->setBuildingLevel($type, $top->getBuildingLevel($type) - $levels);
+        }
+
+        return $planet;
     }
 
     /**

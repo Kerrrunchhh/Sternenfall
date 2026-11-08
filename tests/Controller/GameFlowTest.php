@@ -107,7 +107,8 @@ class GameFlowTest extends WebTestCase
         $planet = $this->planet('Baumeister');
         self::assertFalse($planet->isConstructing());
         self::assertSame(2, $planet->getBuildingLevel(BuildingType::IronMine));
-        self::assertGreaterThan(500 - 60 - 90, $planet->getResources()->iron);
+        // Level 2 was the second entry of the queue: 90 iron + 30 % surcharge = 117.
+        self::assertGreaterThan(500 - 60 - 117, $planet->getResources()->iron);
     }
 
     public function testQueueCanBeReordered(): void
@@ -118,7 +119,9 @@ class GameFlowTest extends WebTestCase
         foreach (['iron_mine', 'water_pump', 'farm'] as $type) {
             $this->client->request('POST', "/buildings/$type/build", ['_token' => $this->buildToken()]);
         }
+        // Only two upgrades fit into the building queue; the third was rejected.
         $queue = $this->planet('Planerin')->getBuildingQueue();
+        self::assertCount(2, $queue);
         $ids = array_map(static fn ($order) => $order->getId(), $queue);
 
         $crawler = $this->client->request('GET', '/buildings');
@@ -127,12 +130,12 @@ class GameFlowTest extends WebTestCase
         $this->client->request('POST', "/planet/$planetId/queue/buildings/reorder", [
             '_token' => $token,
             'to' => 'app_buildings',
-            'order' => [$ids[2], $ids[0], $ids[1]],
+            'order' => [$ids[1], $ids[0]],
         ]);
         self::assertResponseRedirects('/buildings');
 
         $queue = $this->planet('Planerin')->getBuildingQueue();
-        self::assertSame([BuildingType::Farm, BuildingType::IronMine, BuildingType::WaterPump], array_map(static fn ($o) => $o->getBuildingType(), $queue));
+        self::assertSame([BuildingType::WaterPump, BuildingType::IronMine], array_map(static fn ($o) => $o->getBuildingType(), $queue));
         self::assertTrue($queue[0]->isStarted());
         self::assertFalse($queue[1]->isStarted());
     }

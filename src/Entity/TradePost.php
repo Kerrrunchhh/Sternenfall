@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Game\BuyerAccess;
 use App\Game\LifeForm;
 use App\Game\TradeDeal;
 use App\Repository\TradePostRepository;
@@ -206,22 +207,10 @@ class TradePost
     /** The owner always; others only at active posts, if unrestricted or if their life form or alliance is allowed. */
     public function isAccessibleTo(User $user): bool
     {
-        if ($this->owner->isSameAs($user)) {
-            return true;
-        }
-        if (!$this->active) {
+        if (!$this->active && !$this->owner->isSameAs($user)) {
             return false;
         }
-        if (!$this->isRestricted()) {
-            return true;
-        }
-        if (\in_array($user->getLifeForm()->value, $this->allowedLifeForms, true)) {
-            return true;
-        }
-        $alliance = $user->getAlliance();
 
-        return null !== $alliance && $this->allowedAlliances->exists(
-            static fn (int $key, Alliance $allowed): bool => $allowed === $alliance || (null !== $allowed->getId() && $allowed->getId() === $alliance->getId()),
-        );
+        return BuyerAccess::allows($this->owner, $user, $this->allowedLifeForms, $this->allowedAlliances);
     }
 }

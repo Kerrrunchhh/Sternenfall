@@ -5,14 +5,23 @@
 
 {% block content %}
     <h1>{{ planet.name }} <small>[{{ planet.coordinates }}]</small></h1>
+    <details class="rename">
+        <summary>Umbenennen</summary>
+        <form method="post" action="{{ path('app_planet_rename', {id: planet.id}) }}" class="inline-action">
+            <input type="hidden" name="_token" value="{{ csrf_token('planet_rename') }}">
+            <input type="text" name="name" value="{{ planet.name }}" maxlength="30" required aria-label="Neuer Name für {{ planet.name }}">
+            <button class="btn btn-small" type="submit" id="planet-rename">Speichern</button>
+        </form>
+    </details>
 
     {% if planet.integrating(now) %}
         <p class="panel warning">{{ planet.name }} wurde invadiert und geht am {{ planet.integratedAt|date('d.m.Y H:i') }} vollständig in deinen Besitz über.</p>
     {% endif %}
-    {% if building_queue is not empty or shipyard_queue is not empty %}
+    {% if building_queue is not empty or shipyard_queue is not empty or defense_queue is not empty %}
         <div class="grid">
             {% if building_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Buildings, entries: building_queue, back: 'app_overview'}) }}{% endif %}
             {% if shipyard_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Shipyard, entries: shipyard_queue, back: 'app_overview'}) }}{% endif %}
+            {% if defense_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Defense, entries: defense_queue, back: 'app_overview'}) }}{% endif %}
         </div>
     {% endif %}
     {% if player.researching %}
@@ -20,6 +29,37 @@
             <div><strong>Forschung:</strong> {{ player.researchType.label }} (Stufe {{ player.researchTargetLevel }})</div>
             <div>{{ ui.countdown(player.researchFinishesAt, now) }}</div>
         </div>
+    {% endif %}
+
+    {% if incoming is not empty or own_movements is not empty %}
+        <section class="panel movements">
+            <h2>Flottenbewegungen</h2>
+            <table class="table">
+                {% for f in incoming %}
+                    {% set intel = incoming_intel[f.id] ?? null %}
+                    <tr class="{{ f.mission.value == 'attack' ? 'hostile' }}">
+                        <td>
+                            {% if f.mission.value == 'attack' %}<strong>⚠ Angriff</strong>{% else %}{{ f.mission.label }}{% endif %}
+                            von {{ ui.player(f.owner) }} auf {{ ui.coords(f.targetCoordinates) }}
+                            <div class="small muted">
+                                {% if intel %}erspäht {{ intel.scoutedAt|date('H:i') }}: {% for s in intel.shipList %}{{ s.count|number_format(0, ',', '.') }} × {{ s.type.label }}{{ not loop.last ? ', ' }}{% endfor %}
+                                {% else %}Zusammensetzung unbekannt – <a href="{{ path('app_radar') }}">auf dem Radar ausspionieren</a>{% endif %}
+                            </div>
+                        </td>
+                        <td class="num">Einschlag in {{ ui.countdown(f.arriveAt, now) }}<br><span class="small muted">{{ ui.at(f.arriveAt, now) }}</span></td>
+                    </tr>
+                {% endfor %}
+                {% for f in own_movements %}
+                    <tr>
+                        <td>
+                            {{ f.named ? f.name : (f.shipList|length == 1 and f.shipList[0].type.value == 'scout' ? 'Sonde' : 'Flotte') }}:
+                            {{ f.mission.label }}{% if f.mission.value != 'hover' %} {{ f.returning ? '← zurück nach' : '→' }} {{ ui.coords(f.returning ? f.coordinates : f.targetCoordinates) }}{% endif %}
+                        </td>
+                        <td class="num">{{ f.returning ? 'Rückkehr' : (f.mission.value == 'hover' ? 'landet' : 'Ankunft') }} in {{ ui.countdown(f.nextEventAt, now) }}<br><span class="small muted">{{ ui.at(f.nextEventAt, now) }}</span></td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </section>
     {% endif %}
 
     <div class="grid">
@@ -67,6 +107,7 @@
             <h2>Planet</h2>
             <table class="table">
                 <tr><td>Koordinaten</td><td class="num">{{ planet.coordinates }}</td></tr>
+                <tr><td>Planetentyp</td><td class="num">{{ planet.type.icon }} {{ planet.type.label }}<br><span class="muted small">{{ planet.type.effect }}</span></td></tr>
                 <tr><td>Vor Plünderung geschützt</td><td class="num">{{ protected|number_format(0, ',', '.') }} je Rohstoff</td></tr>
             </table>
         </section>

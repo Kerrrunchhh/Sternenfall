@@ -97,6 +97,76 @@ class FusionTest extends TestCase
         self::assertSame('1:1:5', $top->getCoordinates());
     }
 
+    public function testFusionAddsUpDefensesAndBlowingItApartDestroysThem(): void
+    {
+        $top = $this->planet(5, 'Oben');
+        $top->addShips(ShipType::LaserTurret, 10)->addShips(ShipType::Pfeil, 3);
+        $lower = $this->planet(6, 'Unten');
+        $lower->addShips(ShipType::LaserTurret, 5)->addShips(ShipType::PlasmaTurret, 1);
+
+        Fusion::merge($top, [$lower]);
+        self::assertSame(15, $top->getShipCount(ShipType::LaserTurret));
+        self::assertSame(1, $top->getShipCount(ShipType::PlasmaTurret));
+
+        $restored = Fusion::split($top, $this->now);
+        self::assertSame(0, $top->getShipCount(ShipType::LaserTurret), 'all defenses are destroyed');
+        self::assertSame(0, $top->getShipCount(ShipType::PlasmaTurret));
+        self::assertSame(0, $restored[0]->getShipCount(ShipType::LaserTurret));
+        self::assertSame(3, $top->getShipCount(ShipType::Pfeil), 'ships survive');
+    }
+
+    public function testBreakingOffTakesTheBottomPlanetWithItsShare(): void
+    {
+        // 20 welded planets: the broken-off one takes 5 % of everything.
+        $top = $this->planet(1, 'P1', iron: 40, bio: 20, ironStock: 2000, population: 1000);
+        $top->addShips(ShipType::LaserTurret, 50);
+        $chain = [];
+        for ($position = 2; $position <= 20; ++$position) {
+            $chain[] = $this->planet($position, 'P'.$position);
+        }
+        Fusion::merge($top, $chain);
+
+        $planet = Fusion::breakOff($top, $this->now);
+
+        self::assertSame(20, $planet->getPosition());
+        self::assertSame('P20', $planet->getName());
+        self::assertSame($this->owner, $planet->getOwner());
+        self::assertSame(19, $top->getFusionSize());
+        self::assertSame('1:1:1-19', $top->getCoordinates());
+        self::assertSame(100.0, $planet->getResources()->iron);
+        self::assertSame(1900.0, $top->getResources()->iron);
+        self::assertSame(50.0, $planet->getPopulation());
+        self::assertSame(950.0, $top->getPopulation());
+        self::assertSame(2, $planet->getBuildingLevel(BuildingType::IronMine));
+        self::assertSame(38, $top->getBuildingLevel(BuildingType::IronMine));
+        self::assertSame(1, $planet->getBuildingLevel(BuildingType::BioCell));
+        self::assertSame(0, $planet->getShipCount(ShipType::LaserTurret), 'defenses stay with the fusion');
+        self::assertSame(50, $top->getShipCount(ShipType::LaserTurret));
+    }
+
+    public function testInvasionChanceNeverReachesZeroOrHundredPercent(): void
+    {
+        self::assertEqualsWithDelta(0.9, \App\Game\Economy::invasionChance(1, 20_000), 1e-9, 'one ship for 20.000 inhabitants');
+        self::assertEqualsWithDelta(0.45, \App\Game\Economy::invasionChance(1, 40_000), 1e-9);
+        self::assertEqualsWithDelta(0.9, \App\Game\Economy::invasionChance(10, 200_000), 1e-9);
+        self::assertSame(0.99, \App\Game\Economy::invasionChance(50, 1_000), 'never 100 %');
+        self::assertSame(0.01, \App\Game\Economy::invasionChance(1, 100_000_000), 'never 0 %');
+        self::assertSame(0.99, \App\Game\Economy::invasionChance(1, 0), 'empty planet');
+    }
+
+    public function testHomeworldStatusSurvivesFusion(): void
+    {
+        $top = $this->planet(5, 'Kolonie');
+        $home = $this->planet(6, 'Heimat');
+        $home->markHomeworld();
+
+        Fusion::merge($top, [$home]);
+        self::assertTrue($top->isHomeworld(), 'welding the home planet keeps the protection');
+
+        Fusion::split($top, $this->now);
+        self::assertTrue($top->isHomeworld(), 'after blowing apart, the top planet stays protected');
+    }
+
     public function testInvadedPlanetIntegratesAfterFourWeeks(): void
     {
         $planet = $this->planet(5, 'Beute');

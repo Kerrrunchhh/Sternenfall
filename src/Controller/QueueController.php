@@ -14,7 +14,7 @@ use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 
 class QueueController extends AbstractGameController
 {
-    private const array RETURN_ROUTES = ['app_queues', 'app_buildings', 'app_shipyard', 'app_overview'];
+    private const array RETURN_ROUTES = ['app_queues', 'app_buildings', 'app_shipyard', 'app_defense', 'app_overview'];
 
     #[Route('/queues', name: 'app_queues', methods: ['GET'])]
     public function index(QueueTimeline $timeline): Response
@@ -27,6 +27,7 @@ class QueueController extends AbstractGameController
                 'planet' => $p,
                 'buildings' => $timeline->entries($p, QueueKind::Buildings),
                 'shipyard' => $timeline->entries($p, QueueKind::Shipyard),
+                'defense' => $timeline->entries($p, QueueKind::Defense),
             ];
         }
 

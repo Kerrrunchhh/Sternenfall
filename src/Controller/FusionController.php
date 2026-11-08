@@ -41,6 +41,7 @@ class FusionController extends AbstractGameController
             'stop_reason' => $this->fusion->stopReason($planet, Universe::MAX_PLANETS_PER_SYSTEM),
             'integrating' => $planet->isIntegrating($this->clock->now()),
             'split_cost' => Fusion::splitCost($planet),
+            'shield' => $this->economy->planetShield($planet),
         ]);
     }
 

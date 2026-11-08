@@ -74,11 +74,21 @@ final readonly class PlanetUpdater
         }
     }
 
-    /** Builds queued ships one after another; the next order starts when the previous one finishes. */
+    /**
+     * Builds queued ships one after another; the next order starts when the previous one
+     * finishes. Ships and defenses are two queues that run in parallel.
+     */
     private function advanceShipyard(Planet $planet, \DateTimeImmutable $now): void
     {
+        $this->advanceShipQueue($planet, $planet->getShipyardQueue(), $now);
+        $this->advanceShipQueue($planet, $planet->getDefenseQueue(), $now);
+    }
+
+    /** @param list<\App\Entity\ShipyardOrder> $queue */
+    private function advanceShipQueue(Planet $planet, array $queue, \DateTimeImmutable $now): void
+    {
         $previousFinishedAt = null;
-        foreach ($planet->getShipyardQueue() as $order) {
+        foreach ($queue as $order) {
             if (!$order->isStarted()) {
                 // Next order begins when the previous one is done; an idle queue head starts now.
                 $order->start($previousFinishedAt ?? $now);

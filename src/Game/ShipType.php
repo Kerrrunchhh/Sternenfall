@@ -52,7 +52,7 @@ enum ShipType: string
             self::Brecher => 'Brecher',
             self::Leviathan => 'Leviathan',
             self::HeavyBomber => 'Schwerer Bomber',
-            self::Scout => 'Späher',
+            self::Scout => 'Sonde',
             self::Freighter => 'Frachter',
             self::LargeFreighter => 'Großfrachter',
             self::Salvager => 'Bergungsschiff',
@@ -81,6 +81,30 @@ enum ShipType: string
     public function isStationary(): bool
     {
         return \in_array($this, [self::LaserTurret, self::ElectronTurret, self::TachyonTurret, self::PlasmaTurret], true);
+    }
+
+    /** Single-use probes: never part of a fleet, launched straight from a hangar and used up on arrival. */
+    public function isProbe(): bool
+    {
+        return self::Scout === $this;
+    }
+
+    /** Only trade ships (freighters) carry cargo: resources, plunder and goods bought at trade posts. */
+    public function carriesCargo(): bool
+    {
+        return \in_array($this, [self::Freighter, self::LargeFreighter], true);
+    }
+
+    /** Cargo space for resources and goods (0 for every ship that is no trade ship). */
+    public function cargo(): int
+    {
+        return $this->carriesCargo() ? $this->spec()->cargo : 0;
+    }
+
+    /** Hold for debris; only salvagers have one. */
+    public function salvageCapacity(): int
+    {
+        return self::Salvager === $this ? $this->spec()->cargo : 0;
     }
 
     /** Ships that carry goods; in a raid without bombers they and their cargo are spared. */
@@ -163,17 +187,17 @@ enum ShipType: string
             self::Brecher => 'Spezialisiert darauf, planetare Geschütztürme zu knacken.',
             self::Leviathan => 'Das gewaltigste Kriegsschiff des Universums. Immense Kosten und Bauzeit.',
             self::HeavyBomber => 'Bombardiert Infrastruktur und Bevölkerung. Nur Einwohner in Bunkern sind sicher.',
-            self::Scout => 'Extrem schnelle Spionagesonde, die Planeten und Flotten ausspäht.',
-            self::Freighter => 'Kleiner Transporter für Rohstoffe zwischen Kolonien.',
-            self::LargeFreighter => 'Großer Transporter mit enormer Ladekapazität.',
-            self::Salvager => 'Sammelt nach Raumschlachten die Trümmerfelder im Orbit ein.',
+            self::Scout => 'Sehr billige, extrem schnelle Einweg-Sonde: startet über 🔭 direkt aus dem Hangar, späht Planeten, freie Plätze oder Flotten aus und verglüht danach – auch wenn sie nichts entdeckt. Kann nicht in Flotten aufgenommen werden.',
+            self::Freighter => 'Kleines Handelsschiff für Rohstoffe zwischen Kolonien. Nur Handelsschiffe können Fracht und Beute transportieren.',
+            self::LargeFreighter => 'Großes Handelsschiff mit enormer Ladekapazität. Nur Handelsschiffe können Fracht und Beute transportieren.',
+            self::Salvager => 'Sammelt nach Raumschlachten die Trümmerfelder im Orbit ein. Sein Bergeraum nimmt nur Trümmer auf, keine andere Fracht.',
             self::ColonyShip => 'Gründet eine Kolonie auf einem freien Planeten und wird dabei verbraucht. Die Besatzung wird zu Siedlern.',
-            self::InvasionShip => 'Bringt Truppen für die Übernahme besiedelter feindlicher Planeten.',
+            self::InvasionShip => 'Bringt Truppen für die Übernahme feindlicher Planeten. Ein Invasionsschiff reicht für etwa 20.000 Einwohner (dann 90 % Chance); die Chance liegt immer zwischen 1 und 99 %. Bei einer Fusion wird nur ein Planet abgesprengt und übernommen.',
             self::LaserTurret => 'Günstiges Abwehrgeschütz gegen leichte Jäger. Steht fest auf dem Planeten.',
             self::ElectronTurret => 'Mittelschweres Abwehrgeschütz. Steht fest auf dem Planeten.',
             self::TachyonTurret => 'Schweres Abwehrgeschütz gegen Großkampfschiffe. Steht fest auf dem Planeten.',
             self::PlasmaTurret => 'Die stärkste planetare Verteidigung. Steht fest auf dem Planeten.',
-            self::Fusionator => 'Verschweißt Planeten miteinander. Fliegt zu jedem deiner Planeten und verschweißt ihn mit den eigenen Planeten darunter – wie viele, hängt von der Fusionstechnik ab (max. 50). Nach dem Späher das schnellste Schiff. Nur Händler können ihn bauen; alle anderen kaufen ihn bei Händlern. Eine Fusion kann nur mit genug Wasserstoff wieder gesprengt werden.',
+            self::Fusionator => 'Verschweißt Planeten miteinander. Fliegt zu jedem deiner Planeten und verschweißt ihn mit den eigenen Planeten darunter – wie viele, hängt von der Fusionstechnik ab (max. 50). Nach der Sonde das schnellste Schiff. Nur Händler können ihn bauen; alle anderen kaufen ihn bei Händlern. Eine Fusion kann nur mit genug Wasserstoff wieder gesprengt werden.',
         };
     }
 
@@ -188,33 +212,33 @@ enum ShipType: string
         $solid = ResearchType::SolidDrive;
 
         return match ($this) {
-            self::Pfeil => new ShipSpec($r(3000, 1000), 2, 50, 10, 400, 12000, 50, 20, $ion,
+            self::Pfeil => new ShipSpec($r(3000, 1000), 2, 50, 10, 400, 12000, 0, 20, $ion,
                 [$yard(1), $tech($ion, 1), $tech(ResearchType::ImpulseLaser, 1)]),
-            self::Falke => new ShipSpec($r(5000, 2500), 4, 120, 25, 750, 14000, 80, 40, $ion,
+            self::Falke => new ShipSpec($r(5000, 2500), 4, 120, 25, 750, 14000, 0, 40, $ion,
                 [$yard(2), $tech($ion, 2), $tech(ResearchType::ImpulseLaser, 3), $tech(ResearchType::RotationShield, 1)]),
-            self::Lanze => new ShipSpec($r(8000, 5000, 500), 8, 250, 60, 1300, 11000, 100, 75, $ion,
+            self::Lanze => new ShipSpec($r(8000, 5000, 500), 8, 250, 60, 1300, 11000, 0, 75, $ion,
                 [$yard(3), $tech($ion, 3), $tech(ResearchType::HeavyLaser, 1), $tech(ResearchType::RotationShield, 2)]),
-            self::Korsar => new ShipSpec($r(15000, 10000, 1000), 20, 450, 120, 2500, 10000, 300, 150, $ion,
+            self::Korsar => new ShipSpec($r(15000, 10000, 1000), 20, 450, 120, 2500, 10000, 0, 150, $ion,
                 [$yard(4), $tech($ion, 4), $tech(ResearchType::HeavyLaser, 3), $tech(ResearchType::PhaseShield, 1)]),
-            self::Bastion => new ShipSpec($r(25000, 25000, 2500), 40, 500, 600, 5000, 9000, 500, 250, $plasma,
+            self::Bastion => new ShipSpec($r(25000, 25000, 2500), 40, 500, 600, 5000, 9000, 0, 250, $plasma,
                 [$yard(5), $tech($plasma, 1), $tech(ResearchType::ElectronCannon, 1), $tech(ResearchType::PhaseShield, 3)]),
-            self::Mantikor => new ShipSpec($r(30000, 30000, 4000), 50, 1100, 250, 4500, 9500, 400, 300, $plasma,
+            self::Mantikor => new ShipSpec($r(30000, 30000, 4000), 50, 1100, 250, 4500, 9500, 0, 300, $plasma,
                 [$yard(6), $tech($plasma, 2), $tech(ResearchType::ElectronCannon, 3), $tech(ResearchType::PhaseShield, 3)]),
-            self::Hammerhai => new ShipSpec($r(50000, 40000, 8000), 100, 1500, 600, 9000, 8000, 1500, 500, $plasma,
+            self::Hammerhai => new ShipSpec($r(50000, 40000, 8000), 100, 1500, 600, 9000, 8000, 0, 500, $plasma,
                 [$yard(7), $tech($plasma, 4), $tech(ResearchType::ElectronCannon, 5), $tech(ResearchType::QuantumShield, 1)]),
-            self::Inferno => new ShipSpec($r(60000, 70000, 12000), 150, 3000, 500, 8000, 8500, 1000, 650, $plasma,
+            self::Inferno => new ShipSpec($r(60000, 70000, 12000), 150, 3000, 500, 8000, 8500, 0, 650, $plasma,
                 [$yard(8), $tech($plasma, 5), $tech(ResearchType::TachyonLauncher, 1), $tech(ResearchType::QuantumShield, 2)]),
-            self::Monarch => new ShipSpec($r(150000, 120000, 30000), 250, 6000, 2500, 20000, 7000, 3000, 1200, $warp,
+            self::Monarch => new ShipSpec($r(150000, 120000, 30000), 250, 6000, 2500, 20000, 7000, 0, 1200, $warp,
                 [$yard(10), $tech($warp, 1), $tech(ResearchType::TachyonLauncher, 4), $tech(ResearchType::QuantumShield, 4)]),
-            self::Koloss => new ShipSpec($r(250000, 200000, 50000), 350, 12000, 3000, 30000, 3500, 2000, 2000, $warp,
+            self::Koloss => new ShipSpec($r(250000, 200000, 50000), 350, 12000, 3000, 30000, 3500, 0, 2000, $warp,
                 [$yard(11), $tech($warp, 2), $tech(ResearchType::PlasmaLauncher, 1), $tech(ResearchType::GravitonShield, 1)]),
-            self::Brecher => new ShipSpec($r(200000, 250000, 50000), 300, 9000, 4000, 25000, 5000, 1500, 1800, $warp,
+            self::Brecher => new ShipSpec($r(200000, 250000, 50000), 300, 9000, 4000, 25000, 5000, 0, 1800, $warp,
                 [$yard(11), $tech($warp, 3), $tech(ResearchType::PlasmaLauncher, 2), $tech(ResearchType::QuantumShield, 5)]),
-            self::Leviathan => new ShipSpec($r(1000000, 800000, 250000), 500, 40000, 15000, 100000, 4000, 20000, 5000, $warp,
+            self::Leviathan => new ShipSpec($r(1000000, 800000, 250000), 500, 40000, 15000, 100000, 4000, 0, 5000, $warp,
                 [$yard(12), $tech($warp, 5), $tech(ResearchType::PlasmaLauncher, 4), $tech(ResearchType::GravitonShield, 3)]),
-            self::HeavyBomber => new ShipSpec($r(40000, 35000, 10000), 60, 900, 300, 6000, 5000, 500, 700, $plasma,
+            self::HeavyBomber => new ShipSpec($r(40000, 35000, 10000), 60, 900, 300, 6000, 5000, 0, 700, $plasma,
                 [$yard(6), $tech($plasma, 3), $tech(ResearchType::ElectronCannon, 4), $tech(ResearchType::PhaseShield, 4)]),
-            self::Scout => new ShipSpec($r(500, 500, 100), 1, 0, 0, 100, 60000, 5, 1, $solid,
+            self::Scout => new ShipSpec($r(100, 50), 1, 0, 0, 100, 60000, 0, 1, $solid,
                 [$yard(1), $tech($solid, 1), $tech(ResearchType::Espionage, 1)]),
             self::Freighter => new ShipSpec($r(2000, 1000), 3, 5, 10, 400, 6000, 5000, 10, $solid,
                 [$yard(1), $tech($solid, 1)]),
@@ -222,19 +246,19 @@ enum ShipType: string
                 [$yard(4), $tech($ion, 3)]),
             self::Salvager => new ShipSpec($r(8000, 6000, 1000), 10, 1, 10, 1600, 2500, 20000, 300, $ion,
                 [$yard(3), $tech($ion, 2), $tech(ResearchType::RotationShield, 2)]),
-            self::ColonyShip => new ShipSpec($r(10000, 20000, 10000), 100, 0, 100, 3000, 2500, 7500, 1000, $ion,
+            self::ColonyShip => new ShipSpec($r(10000, 20000, 10000), 100, 0, 100, 3000, 2500, 0, 1000, $ion,
                 [$yard(4), $tech($ion, 3), $tech(ResearchType::InvasionTech, 1)]),
-            self::InvasionShip => new ShipSpec($r(30000, 40000, 15000), 500, 0, 200, 7000, 3000, 1000, 1500, $plasma,
+            self::InvasionShip => new ShipSpec($r(30000, 40000, 15000), 500, 0, 200, 7000, 3000, 0, 1500, $plasma,
                 [$yard(6), $tech($plasma, 2), $tech(ResearchType::InvasionTech, 4)]),
             self::Fusionator => new ShipSpec($r(500000, 1000000, 500000), 1000, 0, 5000, 50000, 40000, 0, 10000, $warp,
                 [$yard(10), $tech($warp, 3), $tech(ResearchType::FusionTech, 1)]),
-            self::LaserTurret => new ShipSpec($r(1500, 500), 2, 80, 20, 200, 0, 0, 0, $solid,
+            self::LaserTurret => new ShipSpec($r(1500, 500), 0, 80, 20, 200, 0, 0, 0, $solid,
                 [$yard(1), $tech(ResearchType::ImpulseLaser, 1)]),
-            self::ElectronTurret => new ShipSpec($r(8000, 6000, 500), 5, 400, 150, 2000, 0, 0, 0, $solid,
+            self::ElectronTurret => new ShipSpec($r(8000, 6000, 500), 0, 400, 150, 2000, 0, 0, 0, $solid,
                 [$yard(4), $tech(ResearchType::ElectronCannon, 1), $tech(ResearchType::RotationShield, 2)]),
-            self::TachyonTurret => new ShipSpec($r(40000, 30000, 5000), 15, 2500, 800, 8000, 0, 0, 0, $solid,
+            self::TachyonTurret => new ShipSpec($r(40000, 30000, 5000), 0, 2500, 800, 8000, 0, 0, 0, $solid,
                 [$yard(7), $tech(ResearchType::TachyonLauncher, 1), $tech(ResearchType::PhaseShield, 3)]),
-            self::PlasmaTurret => new ShipSpec($r(120000, 100000, 20000), 40, 8000, 3000, 25000, 0, 0, 0, $solid,
+            self::PlasmaTurret => new ShipSpec($r(120000, 100000, 20000), 0, 8000, 3000, 25000, 0, 0, 0, $solid,
                 [$yard(10), $tech(ResearchType::PlasmaLauncher, 1), $tech(ResearchType::QuantumShield, 3)]),
         };
     }

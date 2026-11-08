@@ -103,7 +103,8 @@ final readonly class TradeService
      */
     public function sendAwayPlan(Fleet $fleet): ?array
     {
-        $home = $fleet->getOwner()->getPlanets()->first();
+        $planets = $fleet->getOwner()->getPlanets();
+        $home = $planets->findFirst(static fn (int $key, Planet $p): bool => $p->isHomeworld()) ?? $planets->first();
         if (!$home instanceof Planet) {
             return null;
         }
@@ -203,7 +204,7 @@ final readonly class TradeService
         $this->asPlayer($buyer, function () use ($post, $fleet, $buyer, $own, &$deal): void {
             $capacity = 0;
             foreach ($fleet->getShipList() as $entry) {
-                $capacity += $entry['type']->spec()->cargo * $entry['count'];
+                $capacity += $entry['type']->cargo() * $entry['count'];
             }
             $deal = TradeDeal::compute(
                 $fleet->getTradeOrder(),

@@ -27,6 +27,7 @@ enum ResearchType: string
     case Espionage = 'espionage';
     case InvasionTech = 'invasion_tech';
     case FusionTech = 'fusion_tech';
+    case Colonization = 'colonization';
     case TradeNetwork = 'trade_network';
     case Radar = 'radar';
 
@@ -49,6 +50,7 @@ enum ResearchType: string
             self::Espionage => 'Spionagetechnik',
             self::InvasionTech => 'Invasionstechnik',
             self::FusionTech => 'Fusionstechnik',
+            self::Colonization => 'Kolonisationstechnik',
             self::TradeNetwork => 'Handelsnetz',
             self::Radar => 'Radar',
         };
@@ -60,7 +62,7 @@ enum ResearchType: string
             self::SolidDrive, self::IonDrive, self::PlasmaDrive, self::WarpDrive => 'Antriebe',
             self::ImpulseLaser, self::HeavyLaser, self::ElectronCannon, self::TachyonLauncher, self::PlasmaLauncher => 'Waffen',
             self::RotationShield, self::PhaseShield, self::QuantumShield, self::GravitonShield => 'Schilde',
-            self::Espionage, self::InvasionTech, self::FusionTech, self::TradeNetwork, self::Radar => 'Zusatztechnologien',
+            self::Espionage, self::InvasionTech, self::FusionTech, self::Colonization, self::TradeNetwork, self::Radar => 'Zusatztechnologien',
         };
     }
 
@@ -80,15 +82,30 @@ enum ResearchType: string
             self::PhaseShield => 'Phasenverschobene Schilde für schwerere Hüllen.',
             self::QuantumShield => 'Quantenfelder, ohne die kein Schlachtschiff überlebt.',
             self::GravitonShield => 'Gravitationsbarrieren für die mächtigsten Schiffe.',
-            self::Espionage => 'Sensorik und Tarntechnik für Späher.',
+            self::Espionage => 'Sensorik für Sonden. Stufe 1: Planetentyp. Stufe 5: Gebäude, Rohstoffe, Bevölkerung, Forschung. Stufe 10: stationierte Schiffe. Stufe 20: du siehst Sonden, die deine Planeten anfliegen.',
             self::InvasionTech => 'Landungs- und Besiedlungstechnik für Kolonie- und Invasionsschiffe.',
-            self::FusionTech => 'Ermöglicht den Fusionator. Jede Stufe erlaubt es, einen weiteren Planeten zu verschweißen (max. 50).',
+            self::FusionTech => 'Ermöglicht den Fusionator. Die Stufe ist die größte erlaubte Fusion: Stufe 20 verschweißt höchstens 20 Planeten (max. Stufe 50). Langzeitforschung: anfangs schnell, später sehr langsam – die Dauer hängt ganz von den Forschungslaboren ab.',
+            self::Colonization => 'Jede Stufe erlaubt einen weiteren Planeten: Stufe n erlaubt n + 1 Planetenplätze, verschweißte Plätze zählen einzeln (max. Stufe 50). Langzeitforschung: anfangs schnell, später sehr langsam – die Dauer hängt ganz von den Forschungslaboren ab.',
             self::TradeNetwork => 'Logistik für den Fernhandel. Jede Stufe erlaubt Händlern einen weiteren Handelsstützpunkt.',
             self::Radar => 'Macht angreifende und Rohstoffe transportierende Flotten sichtbar: ab Stufe 1 im eigenen System, je 5 Stufen ein System weiter nach links und rechts.',
         };
     }
 
-    /** Cost of level 1; every further level doubles. */
+    /**
+     * Long-term research (fusion and colonization): costs grow gently, the time steeply,
+     * and only the research labs decide how long a level takes. Highest level 50.
+     */
+    public function isLongTerm(): bool
+    {
+        return \in_array($this, [self::FusionTech, self::Colonization], true);
+    }
+
+    public function maxLevel(): ?int
+    {
+        return $this->isLongTerm() ? 50 : null;
+    }
+
+    /** Cost of level 1; every further level doubles (long-term research: grows with level^1.5). */
     public function baseCost(): Resources
     {
         return match ($this) {
@@ -108,6 +125,7 @@ enum ResearchType: string
             self::Espionage => new Resources(iron: 200, titanium: 1000, hydrogen: 200),
             self::InvasionTech => new Resources(iron: 4000, titanium: 8000, hydrogen: 4000),
             self::FusionTech => new Resources(iron: 200000, titanium: 400000, hydrogen: 200000),
+            self::Colonization => new Resources(iron: 2000, titanium: 4000, hydrogen: 1000),
             self::TradeNetwork => new Resources(iron: 2000, titanium: 3000, hydrogen: 500),
             self::Radar => new Resources(iron: 1000, titanium: 2000, hydrogen: 500),
         };
@@ -134,6 +152,7 @@ enum ResearchType: string
             self::GravitonShield => [$lab(9), $tech(self::QuantumShield, 4)],
             self::InvasionTech => [$lab(3), $tech(self::IonDrive, 2)],
             self::FusionTech => [$lab(10), $tech(self::WarpDrive, 2), $tech(self::GravitonShield, 1)],
+            self::Colonization => [$lab(1)],
             self::TradeNetwork => [$lab(2), $tech(self::SolidDrive, 1)],
             self::Radar => [$lab(2)],
         };

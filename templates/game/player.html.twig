@@ -13,7 +13,7 @@
                 {% if profile.alliance %}
                     · {{ profile.allianceRank.label }} in <a href="{{ path('app_alliance_public', {id: profile.alliance.id}) }}">{{ profile.alliance.name }} [{{ profile.alliance.tag }}]</a>
                 {% endif %}
-                · {{ profile.planets|length }} Planet{{ profile.planets|length == 1 ? '' : 'en' }}
+                · {{ listed_planets|length }} Planet{{ listed_planets|length == 1 ? '' : 'en' }}
                 · dabei seit {{ profile.createdAt|date('d.m.Y') }}
             </p>
             {% if profile.profileText %}
@@ -22,6 +22,38 @@
                 <p class="muted">{{ own ? 'Du hast noch nichts über dich geschrieben.' : profile.username ~ ' hat noch nichts über sich geschrieben.' }}</p>
             {% endif %}
         </div>
+    </section>
+
+    <section class="panel">
+        <h2>Planeten</h2>
+        {% if own %}
+            <p class="muted small">Bis zu {{ max_hidden }} Planeten kannst du hier verbergen, z. B. Kampfkolonien – andere sehen sie dann nicht in dieser Liste. Verborgen: {{ hidden_count }} von {{ max_hidden }}.</p>
+        {% endif %}
+        {% if listed_planets is empty %}
+            <p class="muted">Keine Planeten.</p>
+        {% else %}
+            <table class="table">
+                {% for p in listed_planets %}
+                    <tr class="{{ p.hiddenInProfile ? 'muted' }}">
+                        <td>{% if own %}<span title="{{ p.type.label }}">{{ p.type.icon }}</span> {% endif %}{{ p.name }}{% if p.homeworld %} <span title="Heimatplanet">🏠</span>{% endif %}{% if p.fused %} <span class="muted small">Fusion aus {{ p.fusionSize }} Planeten</span>{% endif %}</td>
+                        <td class="num">{{ ui.coords(p.coordinates) }}</td>
+                        {% if own %}
+                            <td class="num">
+                                <form method="post" action="{{ path('app_profile_planet_visibility', {id: p.id}) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('profile') }}">
+                                    {% if p.hiddenInProfile %}
+                                        <span class="small">verborgen</span>
+                                        <button class="btn btn-small btn-secondary" type="submit" name="hidden" value="0" id="show-planet-{{ p.id }}">Zeigen</button>
+                                    {% else %}
+                                        <button class="btn btn-small btn-secondary" type="submit" name="hidden" value="1" id="hide-planet-{{ p.id }}" {% if hidden_count >= max_hidden %}disabled title="Schon {{ max_hidden }} Planeten verborgen"{% endif %}>Verbergen</button>
+                                    {% endif %}
+                                </form>
+                            </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+            </table>
+        {% endif %}
     </section>
 
     {% if own %}

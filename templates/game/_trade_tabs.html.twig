@@ -1,0 +1,5 @@
+{# Sub navigation of the trade section. #}
+<nav class="tabs" aria-label="Handel">
+    <a href="{{ path('app_trade') }}" class="{{ app.request.attributes.get('_route') == 'app_trade' ? 'active' }}">Handelsstützpunkte</a>
+    <a href="{{ path('app_trade_fusionators') }}" class="{{ app.request.attributes.get('_route') == 'app_trade_fusionators' ? 'active' }}">Fusionatoren</a>
+</nav>

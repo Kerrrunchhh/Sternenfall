@@ -6,6 +6,7 @@ use App\Entity\Fleet;
 use App\Entity\Planet;
 use App\Entity\User;
 use App\Repository\FleetRepository;
+use App\Repository\PlanetRepository;
 
 /**
  * What a player can see of other fleets. Waiting fleets are invisible. Moving
@@ -15,8 +16,11 @@ use App\Repository\FleetRepository;
  */
 final readonly class Radar
 {
-    public function __construct(private FleetRepository $fleets)
-    {
+    public function __construct(
+        private FleetRepository $fleets,
+        private PlanetRepository $planets,
+        private Espionage $espionage,
+    ) {
     }
 
     /** Systems to the left and right that are covered, or null without radar. */
@@ -47,7 +51,7 @@ final readonly class Radar
     /** Fleets that give themselves away: attackers and resource transports. */
     public static function emits(Fleet $fleet): bool
     {
-        if (!$fleet->isMoving() || FleetMission::Gather === $fleet->getMission()) {
+        if (!$fleet->isMoving() || \in_array($fleet->getMission(), [FleetMission::Gather, FleetMission::Hover], true)) {
             return false;
         }
 
@@ -66,6 +70,12 @@ final readonly class Radar
     {
         if ($fleet->getOwner()->isSameAs($player)) {
             return true;
+        }
+        if (FleetMission::Spy === $fleet->getMission()) {
+            // Probes are silent; only top espionage notices those heading for the own planets.
+            [$g, $s, $p] = self::nextStop($fleet);
+
+            return $this->espionage->seesProbe($player, $fleet, $this->planets->findAt($g, $s, $p));
         }
         if (!self::emits($fleet)) {
             return false;

@@ -3,6 +3,7 @@
 namespace App\Game;
 
 use App\Entity\Planet;
+use App\Entity\ShipyardOrder;
 use App\Twig\GameExtension;
 use Psr\Clock\ClockInterface;
 
@@ -39,13 +40,13 @@ final readonly class QueueTimeline
                 $cursor = $finishesAt;
             }
         } else {
-            foreach ($planet->getShipyardQueue() as $order) {
+            foreach ($planet->getQueue($kind) as $order) {
                 $seconds = $order->getRemaining() * $order->getUnitSeconds();
                 $finishesAt = $order->getFinishesAt() ?? $cursor->modify('+'.($seconds - $order->getProgressSeconds()).' seconds');
                 $entries[] = [
                     'id' => $order->getId(),
                     'label' => \sprintf('%s × %s', number_format($order->getRemaining(), 0, ',', '.'), $order->getShipType()->label()),
-                    'detail' => 'je '.self::duration($order->getUnitSeconds()),
+                    'detail' => 'je '.self::duration($order->getUnitSeconds()).self::rateDetail($order),
                     'seconds' => $seconds,
                     'finishesAt' => $finishesAt,
                     'active' => $order->isStarted(),
@@ -55,6 +56,23 @@ final readonly class QueueTimeline
         }
 
         return $entries;
+    }
+
+    /** "200 % · gebunden: Nahrung … · Wasser … · Wasserstoff …" for orders above 100 %. */
+    private static function rateDetail(ShipyardOrder $order): string
+    {
+        if ($order->getPercent() <= 100) {
+            return '';
+        }
+        $bound = $order->getUnitCost()->multiply($order->getRemaining());
+        $parts = [];
+        foreach ([ResourceType::Food, ResourceType::Water, ResourceType::Hydrogen] as $type) {
+            if ($bound->get($type) > 0) {
+                $parts[] = $type->label().' '.number_format($bound->get($type), 0, ',', '.');
+            }
+        }
+
+        return \sprintf(' · %d %%', $order->getPercent()).([] === $parts ? '' : ' · gebunden: '.implode(', ', $parts));
     }
 
     private static function duration(int $seconds): string

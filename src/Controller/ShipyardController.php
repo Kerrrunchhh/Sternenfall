@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Game\Economy;
 use App\Game\PlanetService;
 use App\Game\QueueKind;
 use App\Game\QueueTimeline;
@@ -15,52 +16,80 @@ use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 
 class ShipyardController extends AbstractGameController
 {
+    /** Shipyard with two tabs: warships (default) and civil ships (?tab=civil). */
     #[Route('/shipyard', name: 'app_shipyard', methods: ['GET'])]
-    public function index(QueueTimeline $timeline): Response
+    public function index(QueueTimeline $timeline, Request $request): Response
+    {
+        return $this->page($timeline, defense: false, civil: 'civil' === $request->query->getString('tab'));
+    }
+
+    /** Planetary defense: the turrets, built in the same shipyard queue. */
+    #[Route('/defense', name: 'app_defense', methods: ['GET'])]
+    public function defense(QueueTimeline $timeline): Response
+    {
+        return $this->page($timeline, defense: true);
+    }
+
+    private function page(QueueTimeline $timeline, bool $defense, bool $civil = false): Response
     {
         $planet = $this->currentPlanet();
         $player = $planet->getOwner();
         $stock = $planet->getResources();
 
-        $groups = ['Kampfschiffe' => [], 'Zivile Schiffe' => [], 'Verteidigung' => []];
+        $groups = match (true) {
+            $defense => ['Verteidigungsanlagen' => []],
+            $civil => ['Zivile Schiffe' => []],
+            default => ['Kriegsschiffe' => []],
+        };
         foreach (ShipType::cases() as $type) {
+            if ($type->isStationary() !== $defense || (!$defense && $type->isCombatShip() === $civil)) {
+                continue;
+            }
             $spec = $type->spec();
 
-            $cost = $this->economy->shipCost($type, $player);
-            $credits = $this->economy->shipCredits($type, $player);
+            // One variant per build rate: cost, credits, time and the affordable quantity.
+            $rates = [];
+            foreach (Economy::BUILD_PERCENTS as $percent) {
+                $cost = $this->economy->shipOrderCost($type, $player, $percent);
+                $credits = $this->economy->shipOrderCredits($type, $player, $percent);
 
-            // Maximum affordable quantity, limited by every resource, credits and the available crew.
-            $max = $spec->crew > 0 ? (int) floor($planet->getPopulation() / $spec->crew) : PlanetService::MAX_ORDER_QUANTITY;
-            foreach (ResourceType::cases() as $resource) {
-                if ($cost->get($resource) > 0) {
-                    $max = min($max, (int) floor($stock->get($resource) / $cost->get($resource)));
+                // Maximum affordable quantity, limited by every resource, credits and the available crew.
+                $max = $spec->crew > 0 ? (int) floor($planet->getPopulation() / $spec->crew) : PlanetService::maxOrderQuantity($type);
+                foreach (ResourceType::cases() as $resource) {
+                    if ($cost->get($resource) > 0) {
+                        $max = min($max, (int) floor($stock->get($resource) / $cost->get($resource)));
+                    }
                 }
+                if ($credits > 0) {
+                    $max = min($max, (int) floor($player->getCredits() / $credits));
+                }
+                $rates[$percent] = [
+                    'cost' => $cost,
+                    'credits' => $credits,
+                    'seconds' => $this->economy->shipOrderSeconds($type, $planet, $percent),
+                    'max' => min($max, PlanetService::maxOrderQuantity($type)),
+                ];
             }
-            if ($credits > 0) {
-                $max = min($max, (int) floor($player->getCredits() / $credits));
-            }
-            $max = min($max, PlanetService::MAX_ORDER_QUANTITY);
 
             $groups[match (true) {
-                $type->isStationary() => 'Verteidigung',
-                $type->isCombatShip() => 'Kampfschiffe',
+                $type->isStationary() => 'Verteidigungsanlagen',
+                $type->isCombatShip() => 'Kriegsschiffe',
                 default => 'Zivile Schiffe',
             }][] = [
                 'type' => $type,
                 'spec' => $spec,
-                'cost' => $cost,
-                'credits' => $credits,
+                'rates' => $rates,
                 'stationed' => $planet->getShipCount($type),
                 'speed' => $this->economy->shipSpeed($type, $player),
-                'seconds' => $this->economy->shipSeconds($type, $planet),
                 'missing' => $this->economy->missingShipRequirements($type, $planet),
-                'max' => $max,
             ];
         }
 
         return $this->renderGame('game/shipyard.html.twig', $planet, [
+            'defense' => $defense,
+            'civil' => $civil,
             'groups' => $groups,
-            'queue' => $timeline->entries($planet, QueueKind::Shipyard),
+            'queue' => $timeline->entries($planet, $defense ? QueueKind::Defense : QueueKind::Shipyard),
         ]);
     }
 
@@ -70,11 +99,16 @@ class ShipyardController extends AbstractGameController
     {
         $planet = $this->currentPlanet();
         $quantity = $request->request->getInt('quantity');
+        $percent = $request->request->getInt('percent', 100);
         $this->attempt(
-            fn () => $this->planetService->orderShips($planet, $type, $quantity),
-            \sprintf('%d × %s in Auftrag gegeben.', $quantity, $type->label()),
+            fn () => $this->planetService->orderShips($planet, $type, $quantity, $percent),
+            \sprintf('%s × %s in Auftrag gegeben%s.', number_format($quantity, 0, ',', '.'), $type->label(), 100 === $percent ? '' : " ($percent %)"),
         );
 
-        return $this->redirectToRoute('app_shipyard');
+        return match (true) {
+            $type->isStationary() => $this->redirectToRoute('app_defense'),
+            $type->isCombatShip() => $this->redirectToRoute('app_shipyard'),
+            default => $this->redirectToRoute('app_shipyard', ['tab' => 'civil']),
+        };
     }
 }

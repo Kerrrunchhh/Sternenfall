@@ -2,7 +2,7 @@
 
 {% block body %}
     <main class="landing">
-        <h1 class="logo">{{ game_name }}</h1>
+        <h1 class="logo-hero"><img src="{{ asset('pictures/brand/logo.webp') }}" alt="{{ game_name }}" width="446" height="180"></h1>
         <p class="tagline">Baue dein Imperium zwischen den Sternen.</p>
         <div class="panel landing-panel">
             {{ include('_flashes.html.twig') }}

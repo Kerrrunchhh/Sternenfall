@@ -46,6 +46,10 @@ class ShipyardOrder implements QueueItem
     #[ORM\Column(options: ['default' => 0])]
     private int $position = 0;
 
+    /** Build rate in percent (100–200): higher rates cost more and build faster. */
+    #[ORM\Column(options: ['default' => 100])]
+    private int $percent = 100;
+
     /** Work already done on the current ship before the order was moved back in the queue. */
     #[ORM\Column(options: ['default' => 0])]
     private int $progressSeconds = 0;
@@ -63,8 +67,10 @@ class ShipyardOrder implements QueueItem
         Resources $unitCost = new Resources(),
         float $unitCredits = 0,
         int $position = 0,
+        int $percent = 100,
     ) {
         $this->position = $position;
+        $this->percent = $percent;
         $this->unitCost = $unitCost->toArray();
         $this->unitCredits = $unitCredits;
         $this->planet = $planet;
@@ -108,6 +114,11 @@ class ShipyardOrder implements QueueItem
     public function getUnitCost(): Resources
     {
         return Resources::fromArray($this->unitCost);
+    }
+
+    public function getPercent(): int
+    {
+        return $this->percent;
     }
 
     public function getUnitCredits(): float

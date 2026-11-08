@@ -10,6 +10,7 @@
         <div class="grid">
             {{ include('game/_queue.html.twig', {queue_planet: entry.planet, kind: enum('App\\Game\\QueueKind').Buildings, entries: entry.buildings, back: 'app_queues'}) }}
             {{ include('game/_queue.html.twig', {queue_planet: entry.planet, kind: enum('App\\Game\\QueueKind').Shipyard, entries: entry.shipyard, back: 'app_queues'}) }}
+            {{ include('game/_queue.html.twig', {queue_planet: entry.planet, kind: enum('App\\Game\\QueueKind').Defense, entries: entry.defense, back: 'app_queues'}) }}
         </div>
     {% endfor %}
 {% endblock %}

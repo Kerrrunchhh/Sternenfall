@@ -102,4 +102,41 @@ class NavigationTest extends TestCase
         self::assertSame(32.0, $this->navigation->fuel($ships, 6000, oneWay: true));
         self::assertSame(1.0, $this->navigation->supplies($ships, 3600, oneWay: true)->food);
     }
+
+    public function testSlowerSpeedStretchesTheFlight(): void
+    {
+        // 6000 distance at speed 6000 = 1 hour at 100 %.
+        self::assertSame(3600, $this->navigation->flightSeconds(6000, 6000));
+        self::assertSame(7200, $this->navigation->flightSeconds(6000, 6000, 50));
+        self::assertSame(9600, $this->navigation->flightSeconds(6000, 6000, 37.5));
+        self::assertSame(3600 * 1000, $this->navigation->flightSeconds(6000, 6000, 0.1));
+        self::assertSame(3600, $this->navigation->flightSeconds(6000, 6000, 500), 'clamped to 100 %');
+    }
+
+    public function testParsesPercentWithCommaOrDot(): void
+    {
+        self::assertSame(37.5, Navigation::parsePercent('37,5'));
+        self::assertSame(2.25, Navigation::parsePercent(' 2.25 '));
+        self::assertSame(100.0, Navigation::parsePercent(''));
+        self::assertSame(0.1, Navigation::parsePercent('0,1'));
+
+        foreach (['0', '0,05', '100,5', 'schnell', '-3'] as $invalid) {
+            try {
+                Navigation::parsePercent($invalid);
+                self::fail("'$invalid' should be rejected");
+            } catch (\App\Game\GameException) {
+                self::addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function testSlowFlightNeedsMoreProvisionsButSameFuel(): void
+    {
+        $ships = ['freighter' => 2];
+        $fast = $this->navigation->flightSeconds(6000, 6000);
+        $slow = $this->navigation->flightSeconds(6000, 6000, 10);
+
+        self::assertGreaterThan($this->navigation->supplies($ships, $fast)->food, $this->navigation->supplies($ships, $slow)->food);
+        self::assertSame($this->navigation->fuel($ships, 6000), $this->navigation->fuel($ships, 6000), 'fuel depends on distance only');
+    }
 }

@@ -79,6 +79,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $researchFinishesAt = null;
 
+    /**
+     * Planet the running research was started on (the top planet of a fusion). It keeps
+     * running while planets break off; it ends when this planet itself is invaded.
+     */
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?Planet $researchPlanet = null;
+
     /** @var Collection<int, Planet> */
     #[ORM\OneToMany(targetEntity: Planet::class, mappedBy: 'owner')]
     #[ORM\OrderBy(['id' => 'ASC'])]
@@ -286,11 +294,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return null !== $this->researchType;
     }
 
-    public function startResearch(ResearchType $type, int $targetLevel, \DateTimeImmutable $finishesAt): void
+    public function startResearch(ResearchType $type, int $targetLevel, \DateTimeImmutable $finishesAt, ?Planet $planet = null): void
     {
         $this->researchType = $type;
         $this->researchTargetLevel = $targetLevel;
         $this->researchFinishesAt = $finishesAt;
+        $this->researchPlanet = $planet;
+    }
+
+    public function getResearchPlanet(): ?Planet
+    {
+        return $this->researchPlanet;
     }
 
     public function clearResearch(): void
@@ -298,6 +312,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->researchType = null;
         $this->researchTargetLevel = null;
         $this->researchFinishesAt = null;
+        $this->researchPlanet = null;
     }
 
     /**

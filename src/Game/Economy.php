@@ -29,7 +29,15 @@ final readonly class Economy
     public function __construct(
         #[Autowire('%env(float:GAME_SPEED)%')]
         private float $speed,
+        /** Extra factor for research only, on top of the game speed (1 = no extra). */
+        #[Autowire('%env(float:RESEARCH_SPEED)%')]
+        private float $researchSpeed = 1.0,
     ) {
+    }
+
+    public function researchSpeed(): float
+    {
+        return $this->researchSpeed;
     }
 
     public function speed(): float
@@ -49,10 +57,11 @@ final readonly class Economy
         }
 
         $factor = $this->speed * $planet->getOwner()->getLifeForm()->productionFactor();
+        $type = $planet->getType();
 
         return Resources::fromCallback(fn (ResourceType $resource): float => (
             $resource->baseProduction() + ($buildingOutput[$resource->value] ?? 0)
-        ) * $factor);
+        ) * $factor * $type->productionFactor($resource));
     }
 
     /** Maximum population, limited by the bio cell. */
@@ -66,7 +75,7 @@ final readonly class Economy
     /** Inhabitants added per hour while food and water are available and capacity is left. */
     public function populationGrowthPerHour(Planet $planet): float
     {
-        return self::GROWTH_RATE * $this->populationCapacity($planet) * $this->speed;
+        return self::GROWTH_RATE * $this->populationCapacity($planet) * $this->speed * $planet->getType()->growthFactor();
     }
 
     /** Food and water the given population consumes per hour. */
@@ -89,6 +98,45 @@ final readonly class Economy
         return $type->spec()->cost->multiply($player->getLifeForm()->shipResourceFactor())->ceil();
     }
 
+    /** Build rates for ships and defenses: more resources, shorter build time (resources stay safe in the queue). */
+    public const array BUILD_PERCENTS = [100, 125, 150, 175, 200];
+
+    public static function assertBuildPercent(int $percent): void
+    {
+        if (!\in_array($percent, self::BUILD_PERCENTS, true)) {
+            throw new GameException('Gebaut werden kann nur mit 100, 125, 150, 175 oder 200 %.');
+        }
+    }
+
+    /**
+     * Resources for one ship built at a rate above 100 %: the normal cost times the rate,
+     * plus as much food and water as the extra iron, and a tenth of that as hydrogen.
+     * Paid into the queue, all of it is safe from plundering until the ship is built.
+     */
+    public function shipOrderCost(ShipType $type, User $player, int $percent): Resources
+    {
+        $base = $this->shipCost($type, $player);
+        $extraIron = $base->iron * ($percent - 100) / 100;
+
+        return $base->multiply($percent / 100)
+            ->add(new Resources(food: $extraIron, water: $extraIron, hydrogen: $extraIron / 10))
+            ->ceil();
+    }
+
+    /** Credits per unit: unchanged for ships, multiplied by the rate for defenses. */
+    public function shipOrderCredits(ShipType $type, User $player, int $percent): float
+    {
+        $credits = $this->shipCredits($type, $player);
+
+        return $type->isStationary() ? ceil($credits * $percent / 100) : $credits;
+    }
+
+    /** Build time per unit shrinks with the rate: 200 % = half the time. */
+    public function shipOrderSeconds(ShipType $type, Planet $planet, int $percent): int
+    {
+        return max(1, (int) round($this->shipSeconds($type, $planet) * 100 / $percent));
+    }
+
     /** Credit cost of one ship for this player (settlers build ships without credits). */
     public function shipCredits(ShipType $type, User $player): float
     {
@@ -108,6 +156,30 @@ final readonly class Economy
     }
 
     /** Inhabitants that are safe from bombardment. */
+    /** Planetary shield per level of the shield generator (levels add up in a fusion). */
+    public const int SHIELD_PER_LEVEL = 20_000;
+
+    public function planetShield(Planet $planet): int
+    {
+        return self::SHIELD_PER_LEVEL * $planet->getBuildingLevel(BuildingType::ShieldGenerator);
+    }
+
+    /** One invasion ship is enough for about this many inhabitants. */
+    public const int INHABITANTS_PER_INVADER = 20_000;
+    public const float INVASION_MIN_CHANCE = 0.01;
+    public const float INVASION_MAX_CHANCE = 0.99;
+
+    /**
+     * Chance that an invasion succeeds: 90 % with exactly enough invasion ships,
+     * linear in their number, never below 1 % and never above 99 %.
+     */
+    public static function invasionChance(int $invaders, float $population): float
+    {
+        $ratio = $invaders * self::INHABITANTS_PER_INVADER / max(1.0, $population);
+
+        return max(self::INVASION_MIN_CHANCE, min(self::INVASION_MAX_CHANCE, 0.9 * $ratio));
+    }
+
     public function bunkerCapacity(Planet $planet): float
     {
         $level = $planet->getBuildingLevel(BuildingType::Bunker);
@@ -124,9 +196,20 @@ final readonly class Economy
         return floor(10000 * 1.5 ** $planet->getBuildingLevel(BuildingType::Storage));
     }
 
+    /** Surcharge for a building upgrade queued behind one that is already waiting. */
+    public const float SECOND_BUILD_SURCHARGE = 0.3;
+
     public function buildCost(BuildingType $type, int $targetLevel): Resources
     {
         return $type->baseCost()->multiply($type->costFactor() ** ($targetLevel - 1))->floor();
+    }
+
+    /** What queuing an upgrade costs: the second entry of the building queue costs 30 % more. */
+    public function queuedBuildCost(BuildingType $type, int $targetLevel, int $alreadyQueued): Resources
+    {
+        $cost = $this->buildCost($type, $targetLevel);
+
+        return $alreadyQueued > 0 ? $cost->multiply(1 + self::SECOND_BUILD_SURCHARGE)->ceil() : $cost;
     }
 
     public function buildSeconds(BuildingType $type, int $targetLevel, Planet $planet): int
@@ -139,16 +222,31 @@ final readonly class Economy
 
     public function researchCost(ResearchType $type, int $targetLevel): Resources
     {
-        return $type->baseCost()->multiply(2 ** ($targetLevel - 1))->floor();
+        $factor = $type->isLongTerm() ? $targetLevel ** 1.5 : 2 ** ($targetLevel - 1);
+
+        return $type->baseCost()->multiply($factor)->floor();
     }
+
+    /**
+     * Lab hours of the top level of a long-term research: about two months for a player
+     * who fuses 49 planets with research labs at level 20 to research it.
+     */
+    public const int LONG_RESEARCH_LAB_HOURS = 1_412_640;
+    /** Steepness of the long-term curve: level n needs LONG_RESEARCH_LAB_HOURS × (n/50)^2.6 lab hours. */
+    public const float LONG_RESEARCH_EXPONENT = 2.6;
 
     /** Research time depends on the research lab of the planet it is started on. */
     public function researchSeconds(ResearchType $type, int $targetLevel, Planet $planet): int
     {
-        $cost = $this->researchCost($type, $targetLevel);
-        $hours = ($cost->iron + $cost->titanium) / (1000 * (1 + $planet->getBuildingLevel(BuildingType::ResearchLab)));
+        $labs = 1 + $planet->getBuildingLevel(BuildingType::ResearchLab);
+        if ($type->isLongTerm()) {
+            $labHours = self::LONG_RESEARCH_LAB_HOURS * ($targetLevel / $type->maxLevel()) ** self::LONG_RESEARCH_EXPONENT;
+        } else {
+            $cost = $this->researchCost($type, $targetLevel);
+            $labHours = ($cost->iron + $cost->titanium) / 1000;
+        }
 
-        return max(1, (int) round($hours * 3600 / $this->speed));
+        return max(1, (int) round($labHours / $labs * 3600 / ($this->speed * $this->researchSpeed)));
     }
 
     /** Build time of a single ship, depending on the shipyard level. */
@@ -195,6 +293,18 @@ final readonly class Economy
     }
 
     /** How many planets one fusionator can weld together. */
+    /** Planet slots a player may hold through colonization: research level + 1 (welded slots count one by one). */
+    public function colonySlots(User $player): int
+    {
+        return 1 + $player->getResearchLevel(ResearchType::Colonization);
+    }
+
+    public static function ownedSlots(User $player): int
+    {
+        return array_sum(array_map(static fn (Planet $p): int => $p->getFusionSize(), $player->getPlanets()->toArray()));
+    }
+
+    /** Largest fusion allowed (and planets one fusionator welds): the fusion research level, at most 50. */
     public function fusionCapacity(User $player): int
     {
         return min(50, $player->getResearchLevel(ResearchType::FusionTech));

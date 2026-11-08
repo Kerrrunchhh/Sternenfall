@@ -85,8 +85,10 @@ class LifeFormTest extends TestCase
 
     public function testTradersProduceTwiceAsMuch(): void
     {
-        $settler = new Planet($this->player(LifeForm::Settler), 'A', 1, 1, 1, $this->start);
-        $trader = new Planet($this->player(LifeForm::Trader), 'B', 1, 1, 2, $this->start);
+        // Same slot type for both, so only the life form makes the difference.
+        $slot = PlanetUpdaterTest::slotOf(\App\Game\PlanetType::Blue);
+        $settler = new Planet($this->player(LifeForm::Settler), 'A', 1, 1, $slot, $this->start);
+        $trader = new Planet($this->player(LifeForm::Trader), 'B', 1, 1, $slot, $this->start);
         foreach ([$settler, $trader] as $planet) {
             $planet->setBuildingLevel(BuildingType::IronMine, 3)->setBuildingLevel(BuildingType::Farm, 2);
         }

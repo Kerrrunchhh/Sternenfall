@@ -6,6 +6,8 @@ enum FleetMission: string
 {
     case Transport = 'transport';
     case Station = 'station';
+    /** Named fleet flies to any settled planet and waits there; unseen unless it carries cargo. */
+    case Jump = 'jump';
     case Colonize = 'colonize';
     case Spy = 'spy';
     case Fuse = 'fuse';
@@ -17,13 +19,15 @@ enum FleetMission: string
     case Intercept = 'intercept';
     /** Piraten: attack a visible fleet transporting resources. */
     case Raid = 'raid';
+    /** Hovering in place, invisible; duration given by a fusionator elsewhere. */
+    case Hover = 'hover';
     /** Internal: ships flying to join a fleet ("Schiffe zusammenziehen"). */
     case Gather = 'gather';
 
     /** @return list<self> missions a player can choose when sending ships */
     public static function selectable(): array
     {
-        return array_values(array_filter(self::cases(), static fn (self $m): bool => !\in_array($m, [self::Gather, self::Intercept, self::Raid], true)));
+        return array_values(array_filter(self::cases(), static fn (self $m): bool => !\in_array($m, [self::Gather, self::Intercept, self::Raid, self::Hover, self::Spy], true)));
     }
 
     public function label(): string
@@ -31,6 +35,7 @@ enum FleetMission: string
         return match ($this) {
             self::Transport => 'Transport',
             self::Station => 'Stationieren',
+            self::Jump => 'Springen',
             self::Colonize => 'Kolonisieren',
             self::Spy => 'Spionieren',
             self::Fuse => 'Fusionieren',
@@ -40,6 +45,7 @@ enum FleetMission: string
             self::Salvage => 'Bergen',
             self::Intercept => 'Abfangen',
             self::Raid => 'Überfallen',
+            self::Hover => 'Schweben',
             self::Gather => 'Zusammenziehen',
         };
     }
@@ -49,14 +55,16 @@ enum FleetMission: string
         return match ($this) {
             self::Transport => 'Liefert die Ladung an einen besiedelten Planeten ab und kehrt zurück.',
             self::Station => 'Verlegt Schiffe und Ladung dauerhaft auf einen deiner Planeten.',
+            self::Jump => 'Springt mit normaler Flugzeit zu einem besiedelten Planeten (auch fremd) und wartet dort auf Befehle. Ohne Fracht unsichtbar und unangreifbar; mit Fracht sichtbar und von Piraten abfangbar.',
             self::Colonize => 'Gründet mit einem Kolonieschiff eine Kolonie auf einem freien Platz. Die übrigen Schiffe kehren zurück.',
-            self::Spy => 'Späht mit Spähern einen Planeten aus und kehrt mit einem Bericht zurück.',
+            self::Spy => 'Eine Sonde fliegt direkt aus dem Hangar (🔭 in Universum oder Radar), schickt einen Bericht und verglüht danach. Wie viel du erfährst, hängt von deiner Spionagetechnik ab.',
             self::Fuse => 'Ein Fusionator verschweißt den Zielplaneten mit deinen Planeten darunter und wird dabei verbraucht.',
             self::Gather => 'Schiffe fliegen zu einer Flotte und schließen sich ihr an.',
             self::Supply => 'Bringt Ladung und Fusionatoren der Flotte in das Lager deines Handelsstützpunkts.',
-            self::Attack => 'Greift einen fremden Planeten an. Gewinnst du, plünderst du alle ungeschützten Rohstoffe; Bomber töten ungeschützte Einwohner, Invasionsschiffe übernehmen den Planeten.',
+            self::Attack => 'Greift einen fremden Planeten an. Gewinnst du, plünderst du alle ungeschützten Rohstoffe; Bomber töten ungeschützte Einwohner, Invasionsschiffe übernehmen den Planeten mit einer Chance je nach Einwohnerzahl. Durchbricht die Flotte den Schild einer Fusion, wird deren unterster Planet abgesprengt.',
             self::Salvage => 'Bergungsschiffe sammeln ein Trümmerfeld ein.',
             self::Intercept => 'Fängt eine sichtbare angreifende Flotte kurz vor ihrem Ziel ab.',
+            self::Hover => 'Die Flotte schwebt unsichtbar über ihrem Standort und landet danach wieder dort.',
             self::Raid => 'Überfällt eine sichtbare Flotte, die Rohstoffe transportiert. Ohne Bomber bleiben Transportschiffe und Ladung verschont.',
             self::Trade => 'Kauft an einem Handelsstützpunkt die bestellte Ware und bringt sie mit. Gekaufte Fusionatoren schließen sich sofort der Flotte an.',
         };

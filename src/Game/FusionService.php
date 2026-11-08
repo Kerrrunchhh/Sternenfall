@@ -70,7 +70,7 @@ final readonly class FusionService
                 $work[] = \sprintf('Bau von %s Stufe %d auf %s', $order->getBuildingType()->label(), $order->getTargetLevel(), $planet->getName());
             }
             if ($i > 0) {
-                foreach ($planet->getShipyardQueue() as $order) {
+                foreach ($planet->getShipyardOrders()->toArray() as $order) {
                     $work[] = \sprintf('%d × %s in der Werft von %s', $order->getRemaining(), $order->getShipType()->label(), $planet->getName());
                 }
             }
@@ -170,7 +170,8 @@ final readonly class FusionService
     {
         $now = $this->clock->now();
         $perFusionator = $this->economy->fusionCapacity($top->getOwner());
-        $capacity = $perFusionator * $fusionators;
+        // Each fusionator welds up to the research level; the whole fusion may not grow beyond it either.
+        $capacity = max(0, min($perFusionator * $fusionators, $perFusionator - $top->getFusionSize()));
         $chain = [];
         $welded = 0;
         $next = $top->getLastPosition() + 1;
@@ -191,9 +192,11 @@ final readonly class FusionService
                 break;
             }
             if ($welded + $planet->getFusionSize() > $capacity) {
-                $reason = 0 === $perFusionator
-                    ? 'Für eine Fusion wird Fusionstechnik benötigt.'
-                    : \sprintf('%d Fusionator(en) reichen bei deiner Fusionstechnik für %d Planeten.', $fusionators, $capacity);
+                $reason = match (true) {
+                    0 === $perFusionator => 'Für eine Fusion wird Fusionstechnik benötigt.',
+                    $top->getFusionSize() + $welded + $planet->getFusionSize() > $perFusionator => \sprintf('Deine Fusionstechnik (Stufe %d) erlaubt Fusionen aus höchstens %d Planeten – die Fusion endet hier.', $perFusionator, $perFusionator),
+                    default => \sprintf('%d Fusionator(en) reichen bei deiner Fusionstechnik für %d Planeten.', $fusionators, $capacity),
+                };
                 break;
             }
             $chain[] = $planet;
@@ -216,7 +219,7 @@ final readonly class FusionService
     /** Refunds resources and crew of every queued ship. */
     private function cancelShipyard(Planet $planet): void
     {
-        foreach ($planet->getShipyardQueue() as $order) {
+        foreach ($planet->getShipyardOrders()->toArray() as $order) {
             $remaining = $order->getRemaining();
             $planet->setResources($planet->getResources()->add($order->getUnitCost()->multiply($remaining)));
             $planet->getOwner()->addCredits($order->getUnitCredits() * $remaining);

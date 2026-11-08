@@ -35,12 +35,20 @@
         <article class="panel fleet-card {{ c.attacking ? 'moving' }}">
             <div class="building-head">
                 <h2>{{ ui.player(f.owner) }} <small class="muted">{{ c.ally ? '(verbündet)' }}</small></h2>
-                <span class="small">{{ f.mission.label }}{{ f.returning ? ' (Rückflug)' }} → [{{ c.stop }}] · Ankunft in {{ ui.countdown(f.nextEventAt, now) }}</span>
+                <span class="small">{{ f.mission.label }}{{ f.returning ? ' (Rückflug)' }} → {{ ui.coords(c.stop) }} · Ankunft in {{ ui.countdown(f.nextEventAt, now) }} · {{ ui.at(f.nextEventAt, now) }}</span>
             </div>
             <p class="small">
-                {{ c.ships|number_format(0, ',', '.') }} Schiffe{{ f.cargo.total >= 1 ? ' · beladen' }}
+                {% if c.intel %}
+                    Erspäht {{ c.intel.scoutedAt|date('H:i') }}: {% for s in c.intel.shipList %}{{ s.count|number_format(0, ',', '.') }} × {{ s.type.label }}{{ not loop.last ? ', ' }}{% endfor %}{{ c.intel.cargo >= 1 ? ' · Ladung ' ~ c.intel.cargo|number_format(0, ',', '.') }}
+                {% else %}
+                    Zusammensetzung unbekannt{{ f.cargo.total >= 1 ? ' · beladen' }}
+                {% endif %}
                 <span class="muted">· gesehen von {{ c.seen_by|map(p => p.name)|join(', ') }}</span>
             </p>
+            <form method="post" action="{{ path('app_radar_spy', {id: f.id}) }}" class="inline">
+                <input type="hidden" name="_token" value="{{ csrf_token('radar') }}">
+                <button class="btn btn-small btn-secondary" type="submit" id="spy-{{ f.id }}" title="Die nächste Sonde aus deinen Hangars fliegt der Flotte entgegen (verglüht danach)">🔭 Ausspionieren</button>
+            </form>
             {% if not c.ally and (c.can_intercept or c.can_raid) %}
                 {% if own_fleets is empty %}
                     <p class="muted small">Du hast keine wartende Flotte, die du losschicken könntest.</p>
@@ -50,6 +58,7 @@
                         <select name="fleet" aria-label="Eigene Flotte">
                             {% for own in own_fleets %}<option value="{{ own.id }}">{{ own.label }} [{{ own.coordinates }}]</option>{% endfor %}
                         </select>
+                        <label class="inline-action small">mit <input type="text" name="speed" value="100" inputmode="decimal" class="short" aria-label="Geschwindigkeit in Prozent"> %</label>
                         <button class="btn btn-small btn-danger" type="submit" id="hunt-{{ f.id }}">{{ c.can_intercept ? 'Abfangen' : 'Überfallen' }}</button>
                     </form>
                 {% endif %}

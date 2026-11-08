@@ -30,18 +30,21 @@
                 <article class="panel building">
                     <div class="building-head">
                         <h2>{{ r.type.label }}</h2>
-                        <span class="level">Stufe {{ r.level }}</span>
+                        <span class="level">Stufe {{ r.level }}{% if r.type.maxLevel %} / {{ r.type.maxLevel }}{% endif %}</span>
                     </div>
                     <p class="building-desc">
                         {{ r.type.description }}
-                        {% if r.type.value == 'fusion_tech' and r.level > 0 %}<br>Aktuell: {{ fusion_capacity }} Planeten pro Fusionator.{% endif %}
+                        {% if r.type.value == 'fusion_tech' and r.level > 0 %}<br>Aktuell: Fusionen aus höchstens {{ fusion_capacity }} Planeten.{% endif %}
+                        {% if r.type.value == 'colonization' %}<br>Aktuell: {{ owned_slots }} von {{ colony_slots }} Planetenplätzen belegt.{% endif %}
                     </p>
                     <div class="building-foot">
                         <div class="cost">
                             {{ ui.cost(r.cost, planet) }}
                             <span class="duration">Dauer {{ r.seconds|format_duration }}</span>
                         </div>
-                        {% if r.missing is not empty %}
+                        {% if r.maxed %}
+                            <span class="muted">Höchste Stufe erreicht</span>
+                        {% elseif r.missing is not empty %}
                             <span class="requirement">Benötigt: {{ r.missing|join(', ') }}</span>
                         {% elseif player.researching %}
                             <button class="btn btn-small" disabled>Labor belegt</button>

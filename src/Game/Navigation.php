@@ -36,10 +36,34 @@ final readonly class Navigation
         return [] === $speeds ? 0 : min($speeds);
     }
 
-    /** One-way flight time in seconds. */
-    public function flightSeconds(int $distance, int $speed): int
+    public const float MIN_SPEED_PERCENT = 0.1;
+    public const float MAX_SPEED_PERCENT = 100.0;
+
+    /** One-way flight time in seconds; fleets may fly at a fraction of their speed (in percent). */
+    public function flightSeconds(int $distance, int $speed, float $percent = 100.0): int
     {
-        return max(5, (int) round(3600 * $distance / max(1, $speed) / $this->economy->speed()));
+        $effective = max(1, $speed) * self::clampPercent($percent) / 100;
+
+        return max(5, (int) round(3600 * $distance / $effective / $this->economy->speed()));
+    }
+
+    public static function clampPercent(float $percent): float
+    {
+        return max(self::MIN_SPEED_PERCENT, min(self::MAX_SPEED_PERCENT, $percent));
+    }
+
+    /** Parses "37,5" or "37.5"; throws for anything outside 0.1–100. */
+    public static function parsePercent(string $input): float
+    {
+        $input = trim(str_replace(',', '.', $input));
+        if ('' === $input) {
+            return self::MAX_SPEED_PERCENT;
+        }
+        if (!is_numeric($input) || (float) $input < self::MIN_SPEED_PERCENT || (float) $input > self::MAX_SPEED_PERCENT) {
+            throw new GameException('Die Geschwindigkeit muss zwischen 0,1 und 100 % liegen.');
+        }
+
+        return round((float) $input, 2);
     }
 
     /**
@@ -78,12 +102,16 @@ final readonly class Navigation
         return $crew;
     }
 
-    /** @param array<string, int> $ships */
+    /**
+     * Cargo space of the trade ships among them (no other ship carries cargo).
+     *
+     * @param array<string, int> $ships
+     */
     public function cargoCapacity(array $ships): int
     {
         $capacity = 0;
         foreach ($this->each($ships) as [$type, $count]) {
-            $capacity += $type->spec()->cargo * $count;
+            $capacity += $type->cargo() * $count;
         }
 
         return $capacity;
