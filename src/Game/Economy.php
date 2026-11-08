@@ -45,6 +45,8 @@ final readonly class Economy
         return $this->speed;
     }
 
+    public const float FUSION_PRODUCTION_FACTOR = 1.5;
+
     public function productionPerHour(Planet $planet): Resources
     {
         $buildingOutput = [];
@@ -56,7 +58,8 @@ final readonly class Economy
             }
         }
 
-        $factor = $this->speed * $planet->getOwner()->getLifeForm()->productionFactor();
+        // Fusions are more lucrative than single planets: every resource ×1.5.
+        $factor = $this->speed * $planet->getOwner()->getLifeForm()->productionFactor() * ($planet->isFused() ? self::FUSION_PRODUCTION_FACTOR : 1.0);
         $type = $planet->getType();
 
         return Resources::fromCallback(fn (ResourceType $resource): float => (

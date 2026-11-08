@@ -1,4 +1,5 @@
 {% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
 
 {% block title %}Fusion – {{ game_name }}{% endblock %}
 
@@ -30,27 +31,28 @@
     {% endif %}
 
     <section class="panel">
-        <h2>Planeten verschweißen</h2>
+        <h2>An den Planeten darüber anschweißen</h2>
         <p class="muted">
-            Schicke eine Flotte mit Fusionatoren mit dem Auftrag <a href="{{ path('app_fleet', {galaxy: planet.galaxy, system: planet.system, position: planet.position, mission: 'fuse'}) }}">„Fusionieren“</a> hierher.
-            Sie verschweißt diesen Planeten mit deinen Planeten direkt darunter. Die Fusion endet am Systemrand, an einem freien Platz oder an einem fremden Planeten.
-            Jeder Fusionator schafft so viele Planeten, wie deine Fusionstechnik erlaubt. Verbraucht werden nur die benötigten Fusionatoren, der Rest fliegt zurück.
-            Gebäudestufen, Rohstoffe, Bevölkerung und Schiffe werden zusammengelegt. Laufende Gebäudebauten und die laufende Forschung werden abgebrochen.
+            Ein Fusionator wird immer zu dem Planeten geschickt, der angeschweißt werden soll – also zum unteren.
+            Er verschweißt ihn mit deinem Planeten direkt darüber (auch mit einer bestehenden Fusion, die dann wächst).
+            Schicke dazu eine Flotte mit Fusionator mit dem Auftrag <a href="{{ path('app_fleet', {galaxy: planet.galaxy, system: planet.system, position: planet.position, mission: 'fuse'}) }}">„Fusionieren“</a> zu diesem Planeten;
+            steht sie schon hier, geht es sofort. Pro Fusion wird ein Fusionator verbraucht, weitere fliegen zurück.
+            <strong>Fusionen lohnen sich:</strong> Sie zählen immer als blauer Planet (doppeltes Bevölkerungswachstum) und produzieren alle Rohstoffe ×1,5.
+            Gebäudestufen, Rohstoffe, Bevölkerung, Schiffe und Flotten werden zusammengelegt. Laufende Gebäudebauten und die laufende Forschung werden abgebrochen.
             Invadierte Planeten können erst nach 4 Wochen fusioniert werden. Fusionatoren bauen nur Händler.
         </p>
         <table class="table">
-            <tr><td>Planeten pro Fusionator (Fusionstechnik)</td><td class="num">{{ capacity }}</td></tr>
-            <tr><td>Verschweißbar von hier aus</td><td class="num">{{ chain|length }} Planet{{ chain|length == 1 ? '' : 'en' }}</td></tr>
-            <tr><td>Benötigte Fusionatoren für alle</td><td class="num">{{ needed }}</td></tr>
+            <tr><td>Größte erlaubte Fusion (Fusionstechnik)</td><td class="num">{{ capacity }} Planet{{ capacity == 1 ? '' : 'en' }}</td></tr>
+            <tr><td>{{ planet.name }} würde angeschweißt an</td><td class="num">{% if top %}{{ top.name }} {{ ui.coords(top.coordinates) }}{% else %}–{% endif %}</td></tr>
         </table>
 
-        {% if chain is not empty %}
+        {% if top %}
             <h3>Vorschau</h3>
             <table class="table">
                 <tr class="table-head">
                     <td>Gebäude</td>
-                    <td class="num">{{ planet.name }}</td>
-                    {% for p in chain %}<td class="num">{{ p.name }} [{{ p.position }}{{ p.fused ? '-' ~ p.lastPosition }}]</td>{% endfor %}
+                    <td class="num">{{ top.name }} [{{ top.position }}{{ top.fused ? '-' ~ top.lastPosition }}]</td>
+                    <td class="num">{{ planet.name }} [{{ planet.position }}{{ planet.fused ? '-' ~ planet.lastPosition }}]</td>
                     <td class="num">Nach Fusion</td>
                 </tr>
                 {% for row in preview %}
@@ -65,7 +67,7 @@
 
         {% if stop_reason %}<p class="muted">{{ stop_reason }}</p>{% endif %}
         {% if integrating %}
-            <p class="warning">{{ planet.name }} wurde invadiert und geht erst am {{ planet.integratedAt|date('d.m.Y H:i') }} in deinen Besitz über. Bis dahin kann von hier aus nicht fusioniert werden.</p>
+            <p class="warning">{{ planet.name }} wurde invadiert und geht erst am {{ planet.integratedAt|date('d.m.Y H:i') }} in deinen Besitz über. Bis dahin kann er nicht fusioniert werden.</p>
         {% endif %}
         {% if pending is not empty %}
             <div class="warning">

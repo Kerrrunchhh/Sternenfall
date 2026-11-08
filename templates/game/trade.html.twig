@@ -27,97 +27,46 @@
     </section>
 
     <h2 class="section-title">Alle Handelsstützpunkte ({{ posts|filter(p => p.active)|length }})</h2>
-    {% for post in posts|filter(p => p.active or p.owner.id == player.id) %}
-        {% set access = post.accessibleTo(player) %}
-        <article class="panel trade-card {{ access ? '' : 'locked' }}">
-            <div class="building-head">
-                <h2>{{ post.name }} <small class="muted">[{{ post.coordinates }}] · {{ ui.player(post.owner) }}</small></h2>
-                <span class="small {{ access ? '' : 'negative' }}">
-                    {% if not post.active %}aufgegeben – nur noch Ware abholen
-                    {% elseif not post.restricted %}offen für alle
-                    {% else %}nur für {{ (post.allowedLifeForms|map(l => l.label)|merge(post.allowedAlliances|map(a => '[' ~ a.tag ~ ']')))|join(', ') }}{% endif %}
-                    {{ access ? '' : '· für dich gesperrt' }}
-                </span>
-            </div>
+    {% set listed = posts|filter(p => p.active or p.owner.id == player.id) %}
+    {% if listed is empty %}
+        <p class="panel muted">Noch gibt es keine Handelsstützpunkte.</p>
+    {% else %}
+        <div class="panel">
             <table class="table">
-                <tr class="table-head"><td>Ware</td><td class="num">Preis</td><td class="num">Lager</td></tr>
-                {% for good in goods %}
-                    {% if post.price(good) > 0 or post.stock(good) > 0 %}
-                        <tr>
-                            <td>{{ good|good_label }}</td>
-                            <td class="num">{{ post.price(good) > 0 ? post.price(good)|number_format(2, ',', '.') : 'nicht im Verkauf' }}</td>
-                            <td class="num">{{ post.stock(good)|number_format(0, ',', '.') }}</td>
-                        </tr>
-                    {% endif %}
+                {% for post in listed %}
+                    {% set access = post.accessibleTo(player) %}
+                    <tr class="{{ access ? '' : 'muted' }}">
+                        <td><a href="{{ path('app_trade_post', {id: post.id}) }}">⚖ {{ post.name }}</a></td>
+                        <td>{{ ui.coords(post.coordinates) }}</td>
+                        <td>{{ ui.player(post.owner) }}</td>
+                        <td class="small">
+                            {% if not post.active %}aufgegeben
+                            {% elseif not post.restricted %}offen für alle
+                            {% else %}nur für {{ (post.allowedLifeForms|map(l => l.label)|merge(post.allowedAlliances|map(a => '[' ~ a.tag ~ ']')))|join(', ') }}{% endif %}
+                            {{ access ? '' : '· gesperrt' }}
+                            {% if post.buysAnything %}· kauft an{% endif %}
+                        </td>
+                    </tr>
                 {% endfor %}
             </table>
-            {% if access %}
-                <a class="btn btn-small" href="{{ path('app_fleet', {galaxy: post.galaxy, system: post.system, position: post.position, mission: post.owner.id == player.id and post.active ? 'supply' : 'trade'}) }}">
-                    {{ post.owner.id != player.id ? 'Flotte zum Handeln schicken' : (post.active ? 'Flotte zum Beliefern schicken' : 'Flotte zum Abholen schicken') }}
-                </a>
-            {% endif %}
-        </article>
-    {% else %}
-        <p class="panel muted">Noch gibt es keine Handelsstützpunkte.</p>
-    {% endfor %}
+        </div>
+    {% endif %}
 
     {% if is_trader %}
         <h2 class="section-title">Deine Handelsstützpunkte ({{ mine|filter(p => p.active)|length }} / {{ allowed_posts }})</h2>
-        {% for post in mine|filter(p => p.active) %}
-            <article class="panel">
-                <form method="post" action="{{ path('app_trade_configure', {id: post.id}) }}" class="fleet-form">
-                    <input type="hidden" name="_token" value="{{ csrf_token('trade') }}">
-                    <label>Name <input type="text" name="name" value="{{ post.name }}" maxlength="40" required></label>
-                    <h3>Verkaufspreise (Credits pro Stück, 0 = nicht im Verkauf)</h3>
-                    <div class="coords">
-                        {% for good in goods %}
-                            <label>{{ good|good_label }} <input type="number" name="prices[{{ good }}]" min="0" step="0.01" value="{{ post.price(good) }}"></label>
-                        {% endfor %}
-                    </div>
-                    <h3>Zugang (nichts angehakt = offen für alle)</h3>
-                    <div class="type-checks">
-                        {% for lf in life_forms %}
-                            <label><input type="checkbox" name="life_forms[]" value="{{ lf.value }}" {{ lf in post.allowedLifeForms ? 'checked' }}> {{ lf.label }}</label>
-                        {% endfor %}
-                        {% for a in alliances %}
-                            <label><input type="checkbox" name="alliances[]" value="{{ a.id }}" {{ post.allowedAlliances.contains(a) ? 'checked' }}> [{{ a.tag }}] {{ a.name }}</label>
-                        {% endfor %}
-                    </div>
-                    <button class="btn btn-small" type="submit" id="trade-{{ post.id }}-save">Speichern</button>
-                </form>
-                <h3>Fremde Flotten an diesem Stützpunkt</h3>
-                {% if visitors[post.id] is defined %}
-                    <table class="table">
-                        {% for v in visitors[post.id] %}
-                            <tr>
-                                <td>
-                                    {{ v.fleet.label }} <span class="muted small">von {{ ui.player(v.fleet.owner) }}</span><br>
-                                    <span class="small">{% for s in v.fleet.shipList %}{{ s.count|number_format(0, ',', '.') }} × {{ s.type.label }}{{ not loop.last ? ', ' }}{% endfor %}</span>
-                                </td>
-                                <td class="num small">
-                                    {% if v.plan %}
-                                        nach {{ v.plan.home.name }} [{{ v.plan.home.coordinates }}], {{ v.plan.seconds|format_duration }}<br>
-                                        aus dem Lager: {{ v.plan.cost.hydrogen|number_format(0, ',', '.') }} Wasserstoff, {{ v.plan.cost.food|number_format(0, ',', '.') }} Nahrung, {{ v.plan.cost.water|number_format(0, ',', '.') }} Wasser
-                                    {% endif %}
-                                </td>
-                                <td class="num">
-                                    <form method="post" action="{{ path('app_trade_send_away', {id: post.id, fleet: v.fleet.id}) }}">
-                                        <input type="hidden" name="_token" value="{{ csrf_token('trade') }}">
-                                        <button class="btn btn-small btn-danger" type="submit" id="send-away-{{ v.fleet.id }}">Zurückschicken</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </table>
-                {% else %}
-                    <p class="muted small">Keine.</p>
-                {% endif %}
-                <form method="post" action="{{ path('app_trade_close', {id: post.id}) }}">
-                    <input type="hidden" name="_token" value="{{ csrf_token('trade') }}">
-                    <button class="btn btn-small btn-danger" type="submit" data-confirm="Stützpunkt schließen? Das geht nur, wenn das Lager leer ist." data-confirm-label="Schließen">Schließen</button>
-                </form>
-            </article>
-        {% endfor %}
+        {% if mine|filter(p => p.active) is not empty %}
+            <div class="panel">
+                <table class="table">
+                    {% for post in mine|filter(p => p.active) %}
+                        <tr>
+                            <td>⚖ {{ post.name }} {{ ui.coords(post.coordinates) }}</td>
+                            <td class="small muted">{{ visitors[post.id] is defined ? visitors[post.id]|length ~ ' fremde Flotte(n) warten' : '' }}</td>
+                            <td class="num"><a class="btn btn-small" href="{{ path('app_trade_post', {id: post.id}) }}">Verwalten</a></td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        {% endif %}
         {% if mine|filter(p => p.active)|length < allowed_posts %}
             <section class="panel">
                 <h2>Neuen Stützpunkt eröffnen</h2>

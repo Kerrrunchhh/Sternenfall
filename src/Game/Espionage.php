@@ -46,6 +46,7 @@ final readonly class Espionage
                 for ($position = $planet->getPosition(); $position <= $planet->getLastPosition(); ++$position) {
                     $known[$position] = Universe::planetType($galaxy, $system, $position);
                 }
+                $known[$planet->getPosition()] = $planet->getType();
             }
         }
 

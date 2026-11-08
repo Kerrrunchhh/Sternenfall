@@ -58,6 +58,28 @@ class FleetRepository extends ServiceEntityRepository
      * Deletes a fleet. Fleets that were heading for it (interceptors, gathering
      * groups) lose their target first; they notice on arrival and turn back.
      */
+    /**
+     * Fleets that stand at, start from or fly to one of the given slots of a system.
+     *
+     * @param list<int> $positions
+     *
+     * @return list<Fleet>
+     */
+    public function findTouchingSlots(int $galaxy, int $system, array $positions): array
+    {
+        if ([] === $positions) {
+            return [];
+        }
+
+        return $this->createQueryBuilder('f')
+            ->where('(f.galaxy = :g AND f.system = :s AND f.position IN (:p)) OR (f.targetGalaxy = :g AND f.targetSystem = :s AND f.targetPosition IN (:p))')
+            ->setParameter('g', $galaxy)
+            ->setParameter('s', $system)
+            ->setParameter('p', $positions)
+            ->getQuery()
+            ->getResult();
+    }
+
     /** Colony ships of a player that are on their way to found a colony. */
     public function countColonyShipsUnderway(User $owner): int
     {

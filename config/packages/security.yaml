@@ -27,6 +27,8 @@ security:
                 target: app_home
             login_throttling:
                 max_attempts: 5
+            # Account switcher for testing: only users with ROLE_ALLOWED_TO_SWITCH may use it.
+            switch_user: true
 
     # Note: Only the *first* matching rule is applied
     access_control:

@@ -35,6 +35,20 @@
             <span class="res-label">Serverzeit</span>
             <time data-server-clock data-server-ms="{{ server_time_ms() }}">{{ 'now'|date('H:i:s') }}</time>
         </div>
+        {% if is_granted('ROLE_ALLOWED_TO_SWITCH') or is_granted('IS_IMPERSONATOR') %}
+            {# Only visible to accounts allowed to switch (and while switched). #}
+            <form method="get" class="account-switch" title="Konto wechseln (nur für dich sichtbar)">
+                <select name="_switch_user" aria-label="Konto wechseln" onchange="this.form.submit()">
+                    {% for name in switchable_accounts() %}
+                        <option value="{{ name }}" {{ name == app.user.userIdentifier ? 'selected' }}>{{ name }}</option>
+                    {% endfor %}
+                </select>
+                <noscript><button class="btn btn-small" type="submit">Wechseln</button></noscript>
+                {% if is_granted('IS_IMPERSONATOR') %}
+                    <a href="?_switch_user=_exit" class="account-switch-exit" title="Zurück zu {{ app.token.originalToken.userIdentifier }}">↩ {{ app.token.originalToken.userIdentifier }}</a>
+                {% endif %}
+            </form>
+        {% endif %}
         <div class="user">
             {% if player.alliance %}<a class="alliance-tag" href="{{ path('app_alliance_public', {id: player.alliance.id}) }}">[{{ player.alliance.tag }}]</a> {% endif %}<a href="{{ path('app_player', {id: player.id}) }}" title="Dein Profil">{{ player.lifeForm.icon }} {{ app.user.username }}</a> <span class="muted">({{ player.lifeForm.label }})</span> · <a href="{{ path('app_logout') }}">Abmelden</a>
         </div>
@@ -67,6 +81,19 @@
                     </a>
                 {% endfor %}
             </div>
+            {% if own_trade_posts is not empty %}
+                <h2 class="sidebar-title">Handelsstützpunkte <small>{{ own_trade_posts|length }}</small></h2>
+                <div class="planet-list">
+                    {% for tp in own_trade_posts %}
+                        <a href="{{ path('app_trade_post', {id: tp.id}) }}" class="planet-badge {{ app.request.attributes.get('_route') == 'app_trade_post' and app.request.attributes.get('id') == tp.id ~ '' ? 'current' }}" title="{{ tp.name }} [{{ tp.coordinates }}]{{ tp.active ? '' : ' – aufgegeben' }}">
+                            <span class="pb-icon" aria-hidden="true">⚖</span>
+                            <span class="pb-name">{{ tp.name }}</span>
+                            <span class="pb-coords">{{ tp.coordinates }}</span>
+                            {% if not tp.active %}<span class="planet-status" title="aufgegeben">✕</span>{% endif %}
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
         </nav>
         <main class="content">
             {{ include('_flashes.html.twig') }}
@@ -78,8 +105,9 @@
             <a href="{{ path('app_fleet') }}" class="{{ route == 'app_fleet' ? 'active' }}">Flotten</a>
             <a href="{{ path('app_galaxy') }}" class="{{ route == 'app_galaxy' ? 'active' }}">Galaxie</a>
             <a href="{{ path('app_radar') }}" class="{{ route == 'app_radar' ? 'active' }}">Radar</a>
+            <a href="{{ path('app_bookmarks') }}" class="{{ route == 'app_bookmarks' ? 'active' }}">Koordinaten</a>
             <a href="{{ path('app_fusion') }}" class="{{ route == 'app_fusion' ? 'active' }}">Fusion</a>
-            <a href="{{ path('app_trade') }}" class="{{ route in ['app_trade', 'app_trade_fusionators'] ? 'active' }}">Handel</a>
+            <a href="{{ path('app_trade') }}" class="{{ route in ['app_trade', 'app_trade_fusionators', 'app_trade_post'] ? 'active' }}">Handel</a>
             <a href="{{ path('app_messages') }}" class="{{ route == 'app_messages' ? 'active' }}">
                 Nachrichten{% if unread_messages > 0 %} <span class="badge">{{ unread_messages }}</span>{% endif %}
             </a>

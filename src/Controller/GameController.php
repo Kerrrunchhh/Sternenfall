@@ -8,6 +8,7 @@ use App\Game\BuildingType;
 use App\Game\Espionage;
 use App\Game\Radar;
 use App\Repository\FleetRepository;
+use App\Repository\TradePostRepository;
 use App\Game\QueueKind;
 use App\Game\QueueTimeline;
 use Symfony\Component\HttpFoundation\Request;
@@ -20,10 +21,18 @@ use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 class GameController extends AbstractGameController
 {
     #[Route('/overview', name: 'app_overview', methods: ['GET'])]
-    public function overview(QueueTimeline $timeline, FleetRepository $fleets, Radar $radar, Espionage $espionage): Response
+    public function overview(QueueTimeline $timeline, FleetRepository $fleets, Radar $radar, Espionage $espionage, TradePostRepository $tradePosts): Response
     {
         $planet = $this->currentPlanet();
         $player = $this->player();
+
+        // Own fleets waiting at a trade post (shown at the very top, they want to trade).
+        $atTradePosts = [];
+        foreach ($fleets->findByOwner($player) as $fleet) {
+            if ($fleet->isIdle() && null !== $post = $tradePosts->findAt($fleet->getGalaxy(), $fleet->getSystem(), $fleet->getPosition())) {
+                $atTradePosts[] = ['fleet' => $fleet, 'post' => $post];
+            }
+        }
 
         // Fleet movements: own fleets in flight and foreign fleets heading here that the radar sees.
         $own = array_values(array_filter($fleets->findByOwner($player), static fn (Fleet $f): bool => $f->isMoving()));
@@ -31,6 +40,7 @@ class GameController extends AbstractGameController
         $incoming = array_values(array_filter($fleets->findIncoming($player), static fn (Fleet $f): bool => $radar->sees($player, $f)));
 
         return $this->renderGame('game/overview.html.twig', $planet, [
+            'at_trade_posts' => $atTradePosts,
             'own_movements' => $own,
             'incoming' => $incoming,
             'incoming_intel' => $espionage->fleetIntel($player, $incoming),

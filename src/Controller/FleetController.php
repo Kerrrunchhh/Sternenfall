@@ -10,6 +10,7 @@ use App\Game\GameException;
 use App\Game\Resources;
 use App\Game\ResourceType;
 use App\Game\ShipType;
+use App\Repository\BookmarkRepository;
 use App\Repository\FleetRepository;
 use App\Repository\PlanetRepository;
 use App\Repository\UserRepository;
@@ -23,7 +24,7 @@ use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 class FleetController extends AbstractGameController
 {
     #[Route('/fleet', name: 'app_fleet', methods: ['GET'])]
-    public function index(Request $request, FleetRepository $fleets, PlanetRepository $planets, Radar $radar, Navigation $navigation): Response
+    public function index(Request $request, FleetRepository $fleets, PlanetRepository $planets, Radar $radar, Navigation $navigation, BookmarkRepository $bookmarks): Response
     {
         $planet = $this->currentPlanet();
         $player = $planet->getOwner();
@@ -47,6 +48,7 @@ class FleetController extends AbstractGameController
                 }
             }
             $entries[] = [
+                'own' => true,
                 'speed' => $navigation->slowestSpeed($fleet->getShips(), $player),
                 'hover' => $hover,
                 'fleet' => $fleet,
@@ -61,6 +63,9 @@ class FleetController extends AbstractGameController
         foreach ($fleets->findControllableBy($player) as $fleet) {
             $at = $planets->findAt($fleet->getGalaxy(), $fleet->getSystem(), $fleet->getPosition());
             $shared[] = [
+                'own' => false,
+                'hover' => [],
+                'capacity' => 0,
                 'speed' => $navigation->slowestSpeed($fleet->getShips(), $fleet->getOwner()),
                 'fleet' => $fleet,
                 'at' => $at,
@@ -74,6 +79,9 @@ class FleetController extends AbstractGameController
         ));
 
         return $this->renderGame('game/fleet.html.twig', $planet, [
+            'bulk_actions' => self::BULK_ACTIONS,
+            'hover_sources' => $hoverSources,
+            'bookmarks' => $bookmarks->findByOwner($player),
             'game_speed' => $this->economy->speed(),
             'hangar' => $hangar,
             'entries' => $entries,
@@ -87,7 +95,8 @@ class FleetController extends AbstractGameController
                 'galaxy' => $request->query->getInt('galaxy', $planet->getGalaxy()),
                 'system' => $request->query->getInt('system', $planet->getSystem()),
                 'position' => $request->query->getInt('position', $planet->getPosition()),
-                'mission' => FleetMission::tryFrom($request->query->getString('mission')) ?? FleetMission::Transport,
+                // Preselected in the action dropdown when coming from the universe view.
+                'mission' => FleetMission::tryFrom($request->query->getString('mission')),
             ],
         ]);
     }
@@ -254,13 +263,126 @@ class FleetController extends AbstractGameController
 
     #[Route('/fleet/{id}/recall', name: 'app_fleet_recall', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
-    public function recall(Fleet $fleet): Response
+    public function recall(Fleet $fleet, Request $request): Response
     {
         $this->currentPlanet();
         $hovering = FleetMission::Hover === $fleet->getMission();
-        $this->attempt(fn () => $this->fleetService->recall($fleet, $this->player()), $hovering ? 'Die Flotte ist wieder gelandet.' : 'Die Flotte kehrt um.');
+        $this->attempt(fn () => $this->fleetService->recall($fleet, $this->player()), \sprintf($hovering ? '%s ist wieder gelandet.' : '%s kehrt um.', $fleet->getLabel()));
+
+        return $this->backTo($request, 'app_fleet');
+    }
+
+    /** Actions of the fleet table for the selected fleets. */
+    public const array BULK_ACTIONS = [
+        'recall' => 'Zurückrufen / sofort landen',
+        'merge' => 'Zusammenlegen (am selben Ort)',
+        'hover' => 'Schweben',
+        'gather' => 'Schiffe zusammenziehen (eine Flotte)',
+        'load' => 'Schiffe aus dem Hangar aufnehmen (eine Flotte)',
+        'drop' => 'Schiffe in den Hangar abgeben (eine Flotte)',
+        'split' => 'Aufteilen (eine Flotte)',
+        'rename' => 'Umbenennen (eine Flotte)',
+        'unload' => 'Ladung abladen',
+        'dissolve' => 'Auflösen (Schiffe in den Hangar)',
+        'release_alliance' => 'Für die Allianz freigeben',
+        'unrelease_alliance' => 'Allgemeine Freigabe zurücknehmen',
+        'release_member' => 'Einzeln für ein Mitglied freigeben',
+        'revoke_member' => 'Einzelfreigabe zurücknehmen',
+    ];
+
+    /** Runs one action for every selected fleet; each result becomes a flash message. */
+    #[Route('/fleets/bulk', name: 'app_fleets_bulk', methods: ['POST'])]
+    #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
+    public function bulk(Request $request, FleetRepository $fleets, UserRepository $users): Response
+    {
+        $this->currentPlanet();
+        $player = $this->player();
+        $form = $request->request;
+        $action = $form->getString('action');
+        $selected = array_values(array_filter(array_map(
+            static fn (mixed $id): ?Fleet => $fleets->find((int) $id),
+            array_unique($form->all('fleets')),
+        )));
+
+        if ([] === $selected) {
+            $this->addFlash('error', 'Wähle mindestens eine Flotte aus.');
+
+            return $this->redirectToRoute('app_fleet');
+        }
+        // "send:<mission>" sends the fleets on that mission.
+        $mission = str_starts_with($action, 'send:') ? FleetMission::tryFrom(substr($action, 5)) : null;
+        if (null !== $mission) {
+            if (!\in_array($mission, FleetMission::selectable(), true)) {
+                $mission = null;
+            }
+            $action = null === $mission ? '' : 'send';
+        }
+        if ('send' !== $action && !isset(self::BULK_ACTIONS[$action])) {
+            $this->addFlash('error', 'Wähle eine Aktion aus.');
+
+            return $this->redirectToRoute('app_fleet');
+        }
+        $single = \in_array($action, ['gather', 'load', 'drop', 'split', 'rename'], true);
+        if ($single && 1 !== \count($selected)) {
+            $this->addFlash('error', \sprintf('„%s“ geht nur mit genau einer ausgewählten Flotte.', self::BULK_ACTIONS[$action]));
+
+            return $this->redirectToRoute('app_fleet');
+        }
+
+        if ('merge' === $action) {
+            $this->attempt(fn () => $this->fleetService->merge($selected, $player), \sprintf('%d Flotten zu „%s“ zusammengelegt.', \count($selected), $selected[0]->getLabel()));
+
+            return $this->redirectToRoute('app_fleet');
+        }
+
+        $cargo = $this->cargo($request);
+        if ('send' === $action && \count($selected) > 1 && !$cargo->isEmpty()) {
+            $this->addFlash('error', 'Ladung kann nur eine einzelne Flotte mitnehmen. Wähle nur eine Flotte aus oder lass die Ladung leer.');
+
+            return $this->redirectToRoute('app_fleet');
+        }
+        $member = \in_array($action, ['release_member', 'revoke_member'], true) ? $users->find($form->getInt('member')) : null;
+
+        foreach ($selected as $fleet) {
+            $label = $fleet->getLabel();
+            $id = (string) $fleet->getId();
+            try {
+                $message = match ($action) {
+                    'send' => $this->fleetService->sendFleet($fleet, $player, $form->getInt('galaxy'), $form->getInt('system'), $form->getInt('position'),
+                        $mission, $cargo,
+                        [], Navigation::parsePercent($form->getString('speed'))),
+                    'recall' => $this->run(fn () => $this->fleetService->recall($fleet, $player), FleetMission::Hover === $fleet->getMission() ? 'ist wieder gelandet' : 'kehrt um', $label),
+                    'hover' => $this->fleetService->hover($fleet, $player, $form->getString('source')),
+                    'gather' => 'Schiffe werden zusammengezogen: '.implode('; ', $this->fleetService->gather($fleet, $player, $form->getInt('minutes'), array_values(array_filter(array_map(
+                        static fn (mixed $v): ?ShipType => ShipType::tryFrom((string) $v), $form->all('types')))))).'.',
+                    'load' => $this->run(fn () => $this->fleetService->transfer($fleet, $player, array_map('intval', $form->all('load')[$id] ?? []), true), 'hat Schiffe aus dem Hangar aufgenommen', $label),
+                    'drop' => $this->run(fn () => $this->fleetService->transfer($fleet, $player, array_map('intval', $form->all('drop')[$id] ?? []), false), 'hat Schiffe in den Hangar abgegeben', $label),
+                    'split' => $this->run(fn () => $this->fleetService->split($fleet, $player, $form->getString('name'), array_map('intval', $form->all('split')[$id] ?? [])), \sprintf('wurde aufgeteilt, neue Flotte „%s“', trim($form->getString('name'))), $label),
+                    'rename' => $this->run(fn () => $this->fleetService->rename($fleet, $player, $form->getString('name')), \sprintf('heißt jetzt „%s“', trim($form->getString('name'))), $label),
+                    'unload' => $this->run(fn () => $this->fleetService->unloadCargo($fleet, $player), 'hat die Ladung abgeladen', $label),
+                    'dissolve' => $this->run(fn () => $this->fleetService->dissolve($fleet, $player), 'wurde aufgelöst, die Schiffe stehen im Hangar', $label),
+                    'release_alliance' => $this->run(fn () => $this->fleetService->releaseToAlliance($fleet, $player, true), 'ist für die Allianz freigegeben', $label),
+                    'unrelease_alliance' => $this->run(fn () => $this->fleetService->releaseToAlliance($fleet, $player, false), 'ist nicht mehr allgemein freigegeben', $label),
+                    'release_member' => null === $member ? throw new GameException('Bitte wähle ein Mitglied aus.')
+                        : $this->run(fn () => $this->fleetService->releaseTo($fleet, $player, $member), 'ist für '.$member->getUsername().' freigegeben', $label),
+                    'revoke_member' => null === $member ? throw new GameException('Bitte wähle ein Mitglied aus.')
+                        : $this->run(fn () => $this->fleetService->revokeFrom($fleet, $player, $member), 'ist für '.$member->getUsername().' nicht mehr freigegeben', $label),
+                };
+                $this->addFlash('success', $message);
+            } catch (GameException $e) {
+                $this->addFlash('error', \count($selected) > 1 ? $label.': '.$e->getMessage() : $e->getMessage());
+            }
+        }
 
         return $this->redirectToRoute('app_fleet');
+    }
+
+    /** Runs a service call and returns "<fleet> <what happened>." for the flash message. */
+    private function run(callable $operation, string $outcome, string $label): string
+    {
+        $operation();
+
+        return \sprintf('%s %s.', $label, $outcome);
     }
 
     /** @return array<string, int> */

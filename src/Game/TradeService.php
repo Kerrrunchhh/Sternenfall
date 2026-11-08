@@ -63,20 +63,23 @@ final readonly class TradeService
     }
 
     /**
-     * @param array<string, float> $prices
+     * @param array<string, float> $prices     selling prices per good
      * @param list<LifeForm>       $lifeForms
      * @param list<int>            $allianceIds
+     * @param array<string, float> $buyPrices  what the trader pays per resource
+     * @param array<string, float> $buyLimits  how much of each resource he still buys
      */
-    public function configure(TradePost $post, User $actor, string $name, array $prices, array $lifeForms, array $allianceIds): void
+    public function configure(TradePost $post, User $actor, string $name, array $prices, array $lifeForms, array $allianceIds, array $buyPrices = [], array $buyLimits = []): void
     {
         $name = $this->validName($name);
-        $this->withEventLock(function () use ($post, $actor, $name, $prices, $lifeForms, $allianceIds): void {
+        $this->withEventLock(function () use ($post, $actor, $name, $prices, $lifeForms, $allianceIds, $buyPrices, $buyLimits): void {
             $this->assertOwner($post, $actor);
             if (!$post->isActive()) {
                 throw new GameException('Dieser Stützpunkt ist aufgegeben. Du kannst nur noch die Ware abholen.');
             }
             $post->setName($name);
             $post->setPrices($prices);
+            $post->setPurchase($buyPrices, $buyLimits);
             $post->setAllowedLifeForms($lifeForms);
             $post->setAllowedAlliances([] === $allianceIds ? [] : $this->alliances->findBy(['id' => $allianceIds]));
             $this->em->flush();
@@ -165,7 +168,7 @@ final readonly class TradeService
     }
 
     /**
-     * Arrival of a "Beliefern" fleet: cargo and fusionators go into stock.
+     * Arrival of a "Beliefern" fleet: the cargo goes into stock (fusionators are no trade post goods).
      * The caller holds the fleet event lock.
      */
     public function supply(TradePost $post, Fleet $fleet): string
@@ -179,86 +182,117 @@ final readonly class TradeService
         }
         $fleet->setCargo(new Resources());
 
-        $fusionators = $fleet->getShipCount(ShipType::Fusionator);
-        if ($fusionators > 0) {
-            $post->addStock(TradeDeal::FUSIONATOR, $fusionators);
-            $fleet->removeShips(ShipType::Fusionator, $fusionators);
-            $delivered[] = 'Fusionator '.$fusionators;
-        }
-
         return [] === $delivered ? 'nichts' : implode(', ', $delivered);
     }
 
     /**
-     * Arrival of a "Handeln" fleet: buys what the order, the stock, the credits and the
-     * cargo space allow. The trader is paid; bought fusionators join the fleet.
-     * The caller holds the fleet event lock.
+     * Trading with a fleet that waits at the trade post: first it sells resources from its
+     * cargo to the trader (at his purchase prices, up to the amounts he still buys and his
+     * credits), then it buys resources (as far as stock, credits and cargo space allow).
+     * The owner of the post stores and collects for free.
+     *
+     * @param array<string, float> $buy  goods => wanted amount
+     * @param array<string, float> $sell resources => offered amount
      */
-    public function buy(TradePost $post, Fleet $fleet): TradeDeal
-    {
-        $buyer = $fleet->getOwner();
-        $trader = $post->getOwner();
-        $own = $buyer->isSameAs($trader);
-        $deal = new TradeDeal([], 0);
-
-        $this->asPlayer($buyer, function () use ($post, $fleet, $buyer, $own, &$deal): void {
-            $capacity = 0;
-            foreach ($fleet->getShipList() as $entry) {
-                $capacity += $entry['type']->cargo() * $entry['count'];
-            }
-            $deal = TradeDeal::compute(
-                $fleet->getTradeOrder(),
-                $post->getStockList(),
-                $post->getPrices(),
-                $buyer->getCredits(),
-                max(0, $capacity - $fleet->getCargo()->total()),
-                $own,
-            );
-            if ($deal->isEmpty()) {
-                return;
-            }
-
-            $buyer->addCredits(-$deal->price);
-            $cargo = $fleet->getCargo();
-            foreach ($deal->bought as $good => $amount) {
-                $post->addStock($good, -$amount);
-                if (TradeDeal::FUSIONATOR === $good) {
-                    $fleet->addShips(ShipType::Fusionator, (int) $amount);
-                } else {
-                    $cargo = $cargo->add(Resources::fromArray([$good => $amount]));
-                }
-            }
-            $fleet->setCargo($cargo);
-        });
-
-        // An abandoned post disappears once its owner has collected everything.
-        if (!$post->isActive() && $post->isEmpty()) {
-            $this->em->remove($post);
-        }
-
-        if (!$deal->isEmpty() && $deal->price > 0) {
-            $this->asPlayer($trader, static fn () => $trader->addCredits($deal->price));
-            $this->inbox->send($trader, \sprintf('Verkauf an %s', $buyer->getUsername()), \sprintf(
-                "%s hat an %s [%s] gekauft:\n%s\n\nEinnahme: %s Credits",
-                $buyer->getUsername(),
-                $post->getName(),
-                $post->getCoordinates(),
-                self::describe($deal),
-                number_format($deal->price, 0, ',', '.'),
-            ));
-        }
-
-        return $deal;
-    }
-
-    public static function describe(TradeDeal $deal): string
+    public function trade(TradePost $post, Fleet $fleet, User $actor, array $buy, array $sell): string
     {
         $lines = [];
-        foreach ($deal->bought as $good => $amount) {
-            $lines[] = \sprintf('  %s: %s', TradeDeal::label($good), number_format($amount, 0, ',', '.'));
-        }
+        $this->withEventLock(function () use ($post, $fleet, $actor, $buy, $sell, &$lines): void {
+            $this->em->refresh($post);
+            $this->em->refresh($fleet);
+            if (!$fleet->getOwner()->isSameAs($actor)) {
+                throw new GameException('Das ist nicht deine Flotte.');
+            }
+            if (!$fleet->isIdle() || !$fleet->isAt($post->getGalaxy(), $post->getSystem(), $post->getPosition())) {
+                throw new GameException(\sprintf('%s wartet nicht an diesem Handelsstützpunkt.', $fleet->getLabel()));
+            }
+            if (!$post->isAccessibleTo($actor)) {
+                throw new GameException('Dieser Handelsstützpunkt ist für dich gesperrt.');
+            }
+            $trader = $post->getOwner();
+            $own = $actor->isSameAs($trader);
 
-        return [] === $lines ? '  nichts' : implode("\n", $lines);
+            // 1. Selling to the trader (the owner just stores his goods).
+            $sold = [];
+            $income = 0.0;
+            $this->asPlayer($trader, function () use ($post, $fleet, $sell, $own, $trader, &$sold, &$income): void {
+                $cargo = $fleet->getCargo();
+                foreach (ResourceType::cases() as $type) {
+                    $offered = floor(max(0, (float) ($sell[$type->value] ?? 0)));
+                    $amount = min($offered, floor($cargo->get($type)));
+                    $price = $own ? 0.0 : $post->getBuyPrice($type->value);
+                    if (!$own) {
+                        if ($price <= 0) {
+                            continue;
+                        }
+                        $amount = min($amount, $post->getBuyLimit($type->value), floor(($trader->getCredits() - $income) / $price));
+                    }
+                    if ($amount <= 0) {
+                        continue;
+                    }
+                    $sold[$type->value] = $amount;
+                    $income += $amount * $price;
+                    $cargo = $cargo->subtract(Resources::fromArray([$type->value => $amount]));
+                    $post->addStock($type->value, $amount);
+                    if (!$own) {
+                        $post->bought($type->value, $amount);
+                    }
+                }
+                $fleet->setCargo($cargo);
+                $trader->addCredits(-$income);
+            });
+
+            // 2. Buying (with the fresh credits from the sale).
+            $deal = new TradeDeal([], 0);
+            $this->asPlayer($actor, function () use ($post, $fleet, $actor, $buy, $own, $income, &$deal): void {
+                $actor->addCredits($income);
+                $capacity = 0;
+                foreach ($fleet->getShipList() as $entry) {
+                    $capacity += $entry['type']->cargo() * $entry['count'];
+                }
+                $deal = TradeDeal::compute($buy, $post->getStockList(), $post->getPrices(), $actor->getCredits(), max(0, $capacity - $fleet->getCargo()->total()), $own);
+                if ($deal->isEmpty()) {
+                    return;
+                }
+                $actor->addCredits(-$deal->price);
+                $cargo = $fleet->getCargo();
+                foreach ($deal->bought as $good => $amount) {
+                    $post->addStock($good, -$amount);
+                    $cargo = $cargo->add(Resources::fromArray([$good => $amount]));
+                }
+                $fleet->setCargo($cargo);
+            });
+            if (!$deal->isEmpty() && $deal->price > 0) {
+                $this->asPlayer($trader, static fn () => $trader->addCredits($deal->price));
+            }
+
+            if ([] !== $sold) {
+                $lines[] = \sprintf('%s: %s%s.', $own ? 'Eingelagert' : 'Verkauft', self::summary($sold), $own ? '' : \sprintf(' für %s Credits', number_format($income, 0, ',', '.')));
+            }
+            if (!$deal->isEmpty()) {
+                $lines[] = \sprintf('%s: %s%s.', $own ? 'Abgeholt' : 'Gekauft', self::summary($deal->bought), $own ? '' : \sprintf(' für %s Credits', number_format($deal->price, 0, ',', '.')));
+            }
+            if ([] === $lines) {
+                throw new GameException('Es wurde nichts gehandelt: Lager, Preise, Ankaufsmengen, Credits oder Frachtraum reichten nicht.');
+            }
+
+            if (!$own) {
+                $this->inbox->send($trader, \sprintf('Handel mit %s an %s', $actor->getUsername(), $post->getName()), implode("\n", $lines));
+            }
+            // An abandoned post disappears once its owner has collected everything.
+            if (!$post->isActive() && $post->isEmpty()) {
+                $this->em->remove($post);
+            }
+            $this->em->flush();
+        });
+
+        return implode(' ', $lines);
+    }
+
+    /** @param array<string, float> $goods "Eisen 1.000, Fusionator 2" */
+    public static function summary(array $goods): string
+    {
+        return implode(', ', array_map(static fn (string $good, float $amount): string => TradeDeal::label($good).' '.number_format($amount, 0, ',', '.'), array_keys($goods), $goods));
     }
 
     /** Runs a credit change under the player's lock (all planets synchronized first). */

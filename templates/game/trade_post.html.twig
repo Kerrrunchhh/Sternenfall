@@ -1,0 +1,177 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}{{ post.name }} – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h1>⚖ {{ post.name }} <small>{{ ui.coords(post.coordinates) }}</small></h1>
+    <p class="muted">
+        Handelsstützpunkt von {{ ui.player(post.owner) }} ·
+        {% if not post.active %}aufgegeben – nur der Besitzer kann die Ware noch abholen
+        {% elseif not post.restricted %}offen für alle
+        {% else %}nur für {{ (post.allowedLifeForms|map(l => l.label)|merge(post.allowedAlliances|map(a => '[' ~ a.tag ~ ']')))|join(', ') }}{% endif %}
+        {% if not access %}<strong class="negative">· für dich gesperrt</strong>{% endif %}
+    </p>
+
+    {% if own %}
+        <section class="panel docked">
+            <div class="building-head">
+                <h2>Angedockte Flotten <small class="muted">{{ visitors|length + waiting|length }}</small></h2>
+                {% if can_send_away and visitors is not empty %}
+                    <form method="post" action="{{ path('app_trade_send_away_all', {id: post.id}) }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('trade') }}">
+                        <button class="btn btn-small btn-danger" type="submit" id="send-away-all"
+                                data-confirm="Alle {{ visitors|length }} fremden Flotten nach Hause schicken? Treibstoff und Proviant kommen aus dem Lager des Stützpunkts." data-confirm-label="Alle zurückschicken">Alle zurückschicken</button>
+                    </form>
+                {% endif %}
+            </div>
+            {% if visitors is empty and waiting is empty %}
+                <p class="muted small">Zurzeit ist keine Flotte angedockt.</p>
+            {% else %}
+                <table class="table">
+                    {% for v in visitors %}
+                        <tr>
+                            <td>{{ v.fleet.label }} <span class="muted small">von {{ ui.player(v.fleet.owner) }}</span><br>
+                                <span class="small">{% for s in v.fleet.shipList %}{{ s.count|number_format(0, ',', '.') }} × {{ s.type.label }}{{ not loop.last ? ', ' }}{% endfor %}</span></td>
+                            <td class="num small">
+                                {% if v.plan %}nach {{ v.plan.home.name }} {{ ui.coords(v.plan.home.coordinates) }}, {{ v.plan.seconds|format_duration }}<br>
+                                    aus dem Lager: {{ v.plan.cost.hydrogen|number_format(0, ',', '.') }} Wasserstoff, {{ v.plan.cost.food|number_format(0, ',', '.') }} Nahrung, {{ v.plan.cost.water|number_format(0, ',', '.') }} Wasser{% endif %}
+                            </td>
+                            <td class="num">
+                                {% if can_send_away %}
+                                    <form method="post" action="{{ path('app_trade_send_away', {id: post.id, fleet: v.fleet.id}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('trade') }}">
+                                        <button class="btn btn-small btn-danger" type="submit" id="send-away-{{ v.fleet.id }}">Zurückschicken</button>
+                                    </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    {% for f in waiting %}
+                        <tr>
+                            <td>{{ f.label }} <span class="muted small">(deine Flotte)</span><br>
+                                <span class="small">{% for s in f.shipList %}{{ s.count|number_format(0, ',', '.') }} × {{ s.type.label }}{{ not loop.last ? ', ' }}{% endfor %}</span></td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                    {% endfor %}
+                </table>
+                {% if visitors is not empty %}<p class="muted small">Zurückgeschickte Flotten fliegen zum Heimatplaneten ihres Besitzers. Treibstoff und Proviant für den Heimflug kommen aus dem Lager dieses Stützpunkts – reicht es nicht, bleibt die Flotte stehen.</p>{% endif %}
+            {% endif %}
+        </section>
+    {% endif %}
+
+    <section class="panel">
+        <h2>Preise und Lager</h2>
+        <table class="table trade-prices">
+            <tr class="table-head">
+                <td>Ware</td>
+                <td class="num">Lager</td>
+                <td class="num">Verkauf<br><span class="small">Credits/Stück</span></td>
+                <td class="num">Ankauf<br><span class="small">Credits/Stück</span></td>
+                <td class="num">kauft noch an</td>
+            </tr>
+            {% for good in goods %}
+                {% set resource = true %}
+                <tr>
+                    <td>{{ good|good_label }}</td>
+                    <td class="num">{{ post.stock(good)|number_format(0, ',', '.') }}</td>
+                    <td class="num">{{ post.price(good) > 0 ? post.price(good)|number_format(2, ',', '.') : '–' }}</td>
+                    <td class="num">{{ resource and post.buyPrice(good) > 0 and post.buyLimit(good) > 0 ? post.buyPrice(good)|number_format(2, ',', '.') : '–' }}</td>
+                    <td class="num">{{ resource and post.buyPrice(good) > 0 and post.buyLimit(good) > 0 ? post.buyLimit(good)|number_format(0, ',', '.') : '–' }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+        {% if not post.buysAnything %}<p class="muted small">Dieser Stützpunkt kauft zurzeit nichts an.</p>{% endif %}
+    </section>
+
+    {% if access %}
+        <section class="panel">
+            <h2>Handeln</h2>
+            {% if waiting is empty %}
+                <p class="muted">Keine deiner Flotten wartet hier. Schicke Handelsschiffe mit „Transport“ (mit Ware zum Verkaufen) oder „Stationieren“ (leer) hierher – sie warten dann am Stützpunkt.</p>
+                <a class="btn btn-small" href="{{ path('app_fleet', {galaxy: post.galaxy, system: post.system, position: post.position, mission: 'transport'}) }}">Flotte herschicken</a>
+            {% else %}
+                <form method="post" action="{{ path('app_trade_post_trade', {id: post.id}) }}" class="fleet-form" data-trade-form data-credits="{{ player.credits }}" data-own="{{ own ? 1 : 0 }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('trade') }}">
+                    <label>Flotte
+                        <select name="fleet">
+                            {% for f in waiting %}
+                                {% set capacity = 0 %}{% for s in f.shipList %}{% set capacity = capacity + s.type.cargo * s.count %}{% endfor %}
+                                <option value="{{ f.id }}" data-free-cargo="{{ max(0, capacity - f.cargo.total) }}">{{ f.label }} – {% for s in f.shipList %}{{ s.count|number_format(0, ',', '.') }} × {{ s.type.label }}{{ not loop.last ? ', ' }}{% endfor %}{% if not f.cargo.empty %} – Ladung: {% for r in resources %}{% if f.cargo.get(r) > 0 %}{{ r.label }} {{ f.cargo.get(r)|number_format(0, ',', '.') }} {% endif %}{% endfor %}{% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <table class="table">
+                        <tr class="table-head"><td>Ware</td><td class="num">{{ own ? 'Abholen' : 'Kaufen' }}</td><td class="num">{{ own ? 'Einlagern' : 'Verkaufen' }}</td></tr>
+                        {% for good in goods %}
+                            {% set resource = true %}
+                            {% set can_buy = (own or post.price(good) > 0) and post.stock(good) > 0 %}
+                            {% set can_sell = resource and (own or (post.buyPrice(good) > 0 and post.buyLimit(good) > 0)) %}
+                            {% if can_buy or can_sell %}
+                                <tr>
+                                    <td>{{ good|good_label }}</td>
+                                    <td class="num">{% if can_buy %}<input type="number" name="buy[{{ good }}]" min="0" max="{{ post.stock(good)|round(0, 'floor') }}" value="0" aria-label="{{ good|good_label }} kaufen" class="short"
+                                            data-buy-good="{{ good }}" data-stock="{{ post.stock(good)|round(0, 'floor') }}" data-price="{{ own ? 0 : post.price(good) }}" data-cargo="{{ resource ? 1 : 0 }}">
+                                        <button type="button" class="btn btn-small btn-secondary" data-buy-max title="So viel, wie Frachtraum, Lager und Credits erlauben">max</button>{% else %}–{% endif %}</td>
+                                    <td class="num">{% if can_sell %}<input type="number" name="sell[{{ good }}]" min="0" value="0" data-sell-good="{{ good }}" aria-label="{{ good|good_label }} verkaufen" class="short">{% else %}–{% endif %}</td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </table>
+                    <p class="muted small">
+                        {% if own %}Als Besitzer lagerst du Ware kostenlos ein und holst sie kostenlos ab.
+                        {% else %}Erst wird verkauft, dann gekauft. Gehandelt wird höchstens so viel, wie Lager, Ankaufsmenge, Credits und Frachtraum hergeben.{% endif %}
+                    </p>
+                    <div class="inline-action">
+                        <button class="btn" type="submit" id="trade-post-trade">{{ own ? 'Ausführen' : 'Handeln' }}</button>
+                        <button class="btn btn-secondary" type="submit" name="return" value="1" id="trade-post-trade-return" title="Danach fliegt die Flotte zu dem Planeten zurück, von dem sie hergeschickt wurde (sonst zu deinem Hauptplaneten), und lädt dort die Ware ab. Treibstoff und Proviant kommen aus ihrer Ladung.">{{ own ? 'Ausführen' : 'Handeln' }} und zurückfliegen</button>
+                    </div>
+                </form>
+            {% endif %}
+        </section>
+    {% endif %}
+
+    {% if own and post.active %}
+        <section class="panel">
+            <h2>Stützpunkt verwalten</h2>
+            <form method="post" action="{{ path('app_trade_configure', {id: post.id}) }}" class="fleet-form">
+                <input type="hidden" name="_token" value="{{ csrf_token('trade') }}">
+                <label>Name <input type="text" name="name" value="{{ post.name }}" maxlength="40" required></label>
+                <table class="table trade-config">
+                    <tr class="table-head">
+                        <td>Ware</td>
+                        <td class="num">Verkaufspreis<br><span class="small">0 = nicht im Verkauf</span></td>
+                        <td class="num">Ankaufspreis</td>
+                        <td class="num">Ankaufen bis zu<br><span class="small">0 = nichts ankaufen</span></td>
+                    </tr>
+                    {% for good in goods %}
+                        {% set resource = true %}
+                        <tr>
+                            <td>{{ good|good_label }}</td>
+                            <td class="num"><input type="number" name="prices[{{ good }}]" min="0" step="0.01" value="{{ post.price(good) }}" class="short" aria-label="Verkaufspreis {{ good|good_label }}"></td>
+                            <td class="num">{% if resource %}<input type="number" name="buy_prices[{{ good }}]" min="0" step="0.01" value="{{ post.buyPrice(good) }}" class="short" aria-label="Ankaufspreis {{ good|good_label }}">{% else %}–{% endif %}</td>
+                            <td class="num">{% if resource %}<input type="number" name="buy_limits[{{ good }}]" min="0" step="1" value="{{ post.buyLimit(good)|round(0, 'floor') }}" class="short" aria-label="Ankaufsmenge {{ good|good_label }}">{% else %}–{% endif %}</td>
+                        </tr>
+                    {% endfor %}
+                </table>
+                <p class="muted small">Die Ankaufsmenge ist die Menge, die du noch kaufst: Jeder Ankauf zieht davon ab. Bezahlt wird mit deinen Credits; reichen sie nicht, kaufst du entsprechend weniger.</p>
+                <h3>Zugang (nichts angehakt = offen für alle)</h3>
+                <div class="type-checks">
+                    {% for lf in life_forms %}
+                        <label><input type="checkbox" name="life_forms[]" value="{{ lf.value }}" {{ lf in post.allowedLifeForms ? 'checked' }}> {{ lf.label }}</label>
+                    {% endfor %}
+                    {% for a in alliances %}
+                        <label><input type="checkbox" name="alliances[]" value="{{ a.id }}" {{ post.allowedAlliances.contains(a) ? 'checked' }}> [{{ a.tag }}] {{ a.name }}</label>
+                    {% endfor %}
+                </div>
+                <button class="btn btn-small" type="submit" id="trade-{{ post.id }}-save">Speichern</button>
+            </form>
+
+            <form method="post" action="{{ path('app_trade_close', {id: post.id}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('trade') }}">
+                <button class="btn btn-small btn-danger" type="submit" data-confirm="Stützpunkt schließen? Das geht nur, wenn das Lager leer ist." data-confirm-label="Schließen">Stützpunkt schließen</button>
+            </form>
+        </section>
+    {% endif %}
+{% endblock %}

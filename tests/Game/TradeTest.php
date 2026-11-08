@@ -22,8 +22,8 @@ class TradeTest extends TestCase
             freeCargo: 4000,
         );
 
-        // 2 fusionators (stock) = 200, iron limited by cargo 4000 = 4000 > credits left 2800 → 2800, water: no cargo left.
-        self::assertSame(['fusionator' => 2.0, 'iron' => 2800.0], $deal->bought);
+        // Iron limited by cargo 4000 and credits 3000 → 3000; water: no credits left. Fusionators are no trade post goods.
+        self::assertSame(['iron' => 3000.0], $deal->bought);
         self::assertSame(3000.0, $deal->price);
     }
 
@@ -37,9 +37,9 @@ class TradeTest extends TestCase
 
     public function testOwnerPicksUpForFree(): void
     {
-        $deal = TradeDeal::compute(['titanium' => 100, 'fusionator' => 1], ['titanium' => 500, 'fusionator' => 1], [], 0, 1000, free: true);
+        $deal = TradeDeal::compute(['titanium' => 100], ['titanium' => 500], [], 0, 1000, free: true);
 
-        self::assertSame(['fusionator' => 1.0, 'titanium' => 100.0], $deal->bought);
+        self::assertSame(['titanium' => 100.0], $deal->bought);
         self::assertSame(0.0, $deal->price);
     }
 
@@ -93,7 +93,7 @@ class TradeTest extends TestCase
         $post = new TradePost(new User('t'), 'Basar', 1, 1, 7, new \DateTimeImmutable());
         $post->setPrices(['iron' => 1.234, 'water' => 0, 'fusionator' => 50_000, 'bogus' => 5]);
 
-        self::assertSame(['fusionator' => 50000.0, 'iron' => 1.23], $post->getPrices());
+        self::assertSame(['iron' => 1.23], $post->getPrices(), 'only resources, no fusionators');
 
         $post->addStock('iron', 500);
         $post->addStock('iron', -500);

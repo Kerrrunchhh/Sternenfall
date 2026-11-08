@@ -3,6 +3,7 @@
 namespace App\Game;
 
 use App\Entity\Planet;
+use App\Repository\FleetRepository;
 use App\Repository\PlanetRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -21,6 +22,7 @@ final readonly class FusionService
         private EntityManagerInterface $em,
         private PlanetService $planets,
         private PlanetRepository $planetRepository,
+        private FleetRepository $fleets,
         private Economy $economy,
         private LockFactory $lockFactory,
         private Inbox $inbox,
@@ -28,31 +30,41 @@ final readonly class FusionService
     ) {
     }
 
+    /** The planet the target would be welded onto: the one covering the slot directly above it. */
+    public function above(Planet $target): ?Planet
+    {
+        foreach ($this->planetRepository->findInSystem($target->getGalaxy(), $target->getSystem()) as $planet) {
+            if ($planet->covers($target->getPosition() - 1)) {
+                return $planet;
+            }
+        }
+
+        return null;
+    }
+
     /**
-     * The planets a fusion from $top would absorb: own planets directly below,
-     * without gaps, up to the fusion capacity of the player's research.
-     * Freshly invaded planets (integration period not over) can't be welded.
+     * Whether a fusionator at $target can weld it onto the own planet directly above.
      *
-     * @return list<Planet>
+     * @return array{top: ?Planet, reason: ?string} the planet it would join, or why not
      */
-    public function chain(Planet $top, int $fusionators = 1): array
+    public function plan(Planet $target): array
     {
-        return $this->scan($top, $fusionators)['chain'];
-    }
+        $now = $this->clock->now();
+        $player = $target->getOwner();
+        $capacity = $this->economy->fusionCapacity($player);
+        $top = $this->above($target);
+        $reason = match (true) {
+            1 === $target->getPosition() => 'Über diesem Planeten liegt kein Platz mehr – angeschweißt wird immer an den Planeten direkt darüber.',
+            null === $top => \sprintf('Platz %d direkt darüber ist frei – angeschweißt wird immer an den Planeten direkt darüber.', $target->getPosition() - 1),
+            !$top->getOwner()->isSameAs($player) => \sprintf('%s [%s] direkt darüber gehört %s.', $top->getName(), $top->getCoordinates(), $top->getOwner()->getUsername()),
+            $target->isIntegrating($now) => \sprintf('%s wurde invadiert und geht erst am %s in deinen Besitz über.', $target->getName(), $target->getIntegratedAt()->format('d.m.Y H:i')),
+            $top->isIntegrating($now) => \sprintf('%s wurde invadiert und geht erst am %s in deinen Besitz über.', $top->getName(), $top->getIntegratedAt()->format('d.m.Y H:i')),
+            0 === $capacity => 'Für eine Fusion wird Fusionstechnik benötigt.',
+            $top->getFusionSize() + $target->getFusionSize() > $capacity => \sprintf('Deine Fusionstechnik (Stufe %d) erlaubt Fusionen aus höchstens %d Planeten – zusammen wären es %d.', $capacity, $capacity, $top->getFusionSize() + $target->getFusionSize()),
+            default => null,
+        };
 
-    /** How many fusionators a chain of planets needs (each welds as many planets as the research allows). */
-    public function fusionatorsNeeded(Planet $top, array $chain): int
-    {
-        $capacity = $this->economy->fusionCapacity($top->getOwner());
-        $welded = array_sum(array_map(static fn (Planet $p): int => $p->getFusionSize(), $chain));
-
-        return 0 === $capacity ? 0 : (int) ceil($welded / $capacity);
-    }
-
-    /** Why the chain ends where it ends (null if it simply ran out of capacity or system). */
-    public function stopReason(Planet $top, int $fusionators = 1): ?string
-    {
-        return $this->scan($top, $fusionators)['reason'];
+        return ['top' => null === $reason ? $top : null, 'reason' => $reason];
     }
 
     /**
@@ -84,38 +96,33 @@ final readonly class FusionService
     }
 
     /**
-     * Fusion by fusionators that just arrived with a fleet. Each fusionator welds
-     * as many planets as the research allows; only the ones needed are used up.
+     * Fusion by fusionators that just arrived at the planet to weld: it joins the own
+     * planet directly above. One fusionator is used up, the others fly back.
      * The caller (fleet processing) already holds the fleet event lock.
      *
-     * @return int number of fusionators used up (the rest fly back)
+     * @return int number of fusionators used up
      */
-    public function fuseOnArrival(Planet $top, int $fusionators): int
+    public function fuseOnArrival(Planet $target, int $fusionators): int
     {
-        $used = 0;
-        $this->planets->transaction($top, function (Planet $top, \DateTimeImmutable $now) use ($fusionators, &$used): void {
-            $used = $this->weld($top, $now, $fusionators);
+        if ($fusionators < 1) {
+            throw new GameException('Zum Fusionieren wird ein Fusionator benötigt.');
+        }
+        $this->planets->transaction($target, function (Planet $target, \DateTimeImmutable $now): void {
+            $this->weld($target, $now);
         });
 
-        return $used;
+        return 1;
     }
 
-    /**
-     * Validates and performs the fusion; the crews of the used fusionators join the population.
-     *
-     * @return int fusionators used
-     */
-    private function weld(Planet $top, \DateTimeImmutable $now, int $fusionators): int
+    /** Welds $target onto the planet above; the crew of the fusionator joins the population. */
+    private function weld(Planet $target, \DateTimeImmutable $now): void
     {
-        if ($top->isIntegrating($now)) {
-            throw new GameException(\sprintf('%s geht erst am %s in deinen Besitz über und kann bis dahin nicht fusioniert werden.', $top->getName(), $top->getIntegratedAt()->format('d.m.Y H:i')));
+        ['top' => $top, 'reason' => $reason] = $this->plan($target);
+        if (null === $top) {
+            throw new GameException($reason ?? 'Dieser Planet kann nicht angeschweißt werden.');
         }
-
-        $chain = $this->chain($top, $fusionators);
-        if ([] === $chain) {
-            throw new GameException($this->stopReason($top, $fusionators) ?? 'Direkt unter diesem Planeten liegt kein eigener Planet, der verschweißt werden kann.');
-        }
-        $used = $this->fusionatorsNeeded($top, $chain);
+        $chain = [$target];
+        $used = 1;
 
         // All planets of the player are already up to date (the transaction synchronizes them).
         $cancelled = $this->pendingWork([$top, ...$chain]);
@@ -129,18 +136,25 @@ final readonly class FusionService
         Fusion::merge($top, $chain);
         $top->setPopulation($top->getPopulation() + $used * ShipType::Fusionator->spec()->crew);
 
-        // Fleets keep coordinates, not planets: whatever returns to a welded slot lands on the fused planet.
+        // Fleets at, from or to a welded slot move to the top planet of the fusion.
+        $welded = [];
+        foreach ($chain as $planet) {
+            foreach (range($planet->getPosition(), $planet->getLastPosition()) as $position) {
+                $welded[] = $position;
+            }
+        }
+        foreach ($this->fleets->findTouchingSlots($top->getGalaxy(), $top->getSystem(), $welded) as $fleet) {
+            $fleet->followFusion($top->getGalaxy(), $top->getSystem(), $welded, $top->getPosition());
+        }
         foreach ($chain as $planet) {
             $top->getOwner()->getPlanets()->removeElement($planet);
             $this->em->remove($planet);
         }
 
         $this->inbox->send($top->getOwner(), \sprintf('Fusion von %s [%s]', $top->getName(), $top->getCoordinates()), implode("\n", [
-            \sprintf('%d Planeten wurden mit %s verschweißt, dabei wurden %d Fusionator(en) verbraucht.', \count($chain), $top->getName(), $used),
+            \sprintf('%s wurde an %s angeschweißt. Die Fusion umfasst jetzt %d Planeten (Plätze %d–%d). Dabei wurde %d Fusionator verbraucht.', $chain[0]->getName(), $top->getName(), $top->getFusionSize(), $top->getPosition(), $top->getLastPosition(), $used),
             ...([] === $cancelled ? [] : ['', 'Abgebrochen (Rohstoffe erstattet):', ...array_map(static fn (string $w) => '  '.$w, $cancelled)]),
         ]));
-
-        return $used;
     }
 
     public function split(Planet $top): void
@@ -163,48 +177,6 @@ final readonly class FusionService
                 $this->em->persist($planet);
             }
         }));
-    }
-
-    /** @return array{chain: list<Planet>, reason: ?string} */
-    private function scan(Planet $top, int $fusionators): array
-    {
-        $now = $this->clock->now();
-        $perFusionator = $this->economy->fusionCapacity($top->getOwner());
-        // Each fusionator welds up to the research level; the whole fusion may not grow beyond it either.
-        $capacity = max(0, min($perFusionator * $fusionators, $perFusionator - $top->getFusionSize()));
-        $chain = [];
-        $welded = 0;
-        $next = $top->getLastPosition() + 1;
-        $reason = null;
-
-        while ($next <= Universe::planetsInSystem($top->getGalaxy(), $top->getSystem())) {
-            $planet = $this->planetRepository->findOneBy(['galaxy' => $top->getGalaxy(), 'system' => $top->getSystem(), 'position' => $next]);
-            if (null === $planet) {
-                $reason = \sprintf('Platz %d ist frei – die Fusion endet dort.', $next);
-                break;
-            }
-            if ($planet->getOwner()->getId() !== $top->getOwner()->getId()) {
-                $reason = \sprintf('Platz %d gehört %s – die Fusion endet dort.', $next, $planet->getOwner()->getUsername());
-                break;
-            }
-            if ($planet->isIntegrating($now)) {
-                $reason = \sprintf('%s [%s] wurde invadiert und geht erst am %s in deinen Besitz über – die Fusion endet dort.', $planet->getName(), $planet->getCoordinates(), $planet->getIntegratedAt()->format('d.m.Y H:i'));
-                break;
-            }
-            if ($welded + $planet->getFusionSize() > $capacity) {
-                $reason = match (true) {
-                    0 === $perFusionator => 'Für eine Fusion wird Fusionstechnik benötigt.',
-                    $top->getFusionSize() + $welded + $planet->getFusionSize() > $perFusionator => \sprintf('Deine Fusionstechnik (Stufe %d) erlaubt Fusionen aus höchstens %d Planeten – die Fusion endet hier.', $perFusionator, $perFusionator),
-                    default => \sprintf('%d Fusionator(en) reichen bei deiner Fusionstechnik für %d Planeten.', $fusionators, $capacity),
-                };
-                break;
-            }
-            $chain[] = $planet;
-            $welded += $planet->getFusionSize();
-            $next = $planet->getLastPosition() + 1;
-        }
-
-        return ['chain' => $chain, 'reason' => $reason];
     }
 
     /** Refunds and removes every queued building upgrade. */

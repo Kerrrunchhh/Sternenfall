@@ -154,6 +154,49 @@ class FusionTest extends TestCase
         self::assertSame(0.99, \App\Game\Economy::invasionChance(1, 0), 'empty planet');
     }
 
+    public function testFleetsOfWeldedSlotsFollowTheFusion(): void
+    {
+        $waiting = new \App\Entity\Fleet($this->owner, 'Wache', 1, 1, 6, ['pfeil' => 4]);
+        $returning = new \App\Entity\Fleet($this->owner, 'Heimkehrer', 1, 1, 5, ['pfeil' => 2]);
+        $returning->depart(\App\Game\FleetMission::Transport, 2, 2, 2, $this->now, 60);
+        $incoming = new \App\Entity\Fleet($this->owner, 'Lieferung', 2, 2, 2, ['freighter' => 1]);
+        $incoming->depart(\App\Game\FleetMission::Transport, 1, 1, 6, $this->now, 60);
+        $elsewhere = new \App\Entity\Fleet($this->owner, 'Fern', 1, 2, 6, ['pfeil' => 1]);
+
+        foreach ([$waiting, $returning, $incoming, $elsewhere] as $fleet) {
+            $fleet->followFusion(1, 1, [5, 6], 4);
+        }
+
+        self::assertSame('1:1:4', $waiting->getCoordinates());
+        self::assertSame('1:1:4', $returning->getCoordinates(), 'returns to the fusion');
+        self::assertSame('1:1:4', $incoming->getTargetCoordinates(), 'arrives at the fusion');
+        self::assertSame('1:2:6', $elsewhere->getCoordinates(), 'other systems are untouched');
+    }
+
+    public function testFusionIsABluePlanetAndProducesHalfAsMuchAgain(): void
+    {
+        $economy = new \App\Game\Economy(1.0);
+        // A desert slot: low food and water as a single planet.
+        $slot = PlanetUpdaterTest::slotOf(\App\Game\PlanetType::Desert);
+        $single = new Planet($this->owner, 'Wüste', 1, 1, $slot, $this->now);
+        $single->setBuildingLevel(BuildingType::Farm, 5)->setBuildingLevel(BuildingType::IronMine, 5);
+        self::assertSame(\App\Game\PlanetType::Desert, $single->getType());
+        $alone = $economy->productionPerHour($single);
+
+        $fused = new Planet($this->owner, 'Wüste', 1, 1, $slot, $this->now);
+        $fused->setBuildingLevel(BuildingType::Farm, 5)->setBuildingLevel(BuildingType::IronMine, 5);
+        Fusion::merge($fused, [new Planet($this->owner, 'Leer', 1, 1, $slot + 1, $this->now)]);
+
+        self::assertSame(\App\Game\PlanetType::Blue, $fused->getType(), 'a fusion counts as a blue planet');
+        $together = $economy->productionPerHour($fused);
+        self::assertEqualsWithDelta(1.5 * $alone->iron, $together->iron, 0.001, 'every resource ×1.5');
+        self::assertEqualsWithDelta(1.5 * 2 * $alone->food, $together->food, 0.001, 'and no desert malus any more');
+        self::assertSame(2.0, $fused->getType()->growthFactor());
+
+        Fusion::split($fused, $this->now);
+        self::assertSame(\App\Game\PlanetType::Desert, $fused->getType(), 'blown apart it is its slot again');
+    }
+
     public function testHomeworldStatusSurvivesFusion(): void
     {
         $top = $this->planet(5, 'Kolonie');

@@ -91,9 +91,7 @@ final readonly class Colonizer
 
     public function isValidSlot(int $galaxy, int $system, int $position): bool
     {
-        return $galaxy >= 1 && $galaxy <= Universe::GALAXIES
-            && $system >= 1 && $system <= Universe::SYSTEMS_PER_GALAXY
-            && $position >= 1 && $position <= Universe::planetsInSystem($galaxy, $system);
+        return Universe::isValidSlot($galaxy, $system, $position);
     }
 
     /** @return array{int, int, int} */

@@ -71,6 +71,16 @@ class Fleet
     #[ORM\Column(type: Types::SMALLINT, nullable: true)]
     private ?int $targetPosition = null;
 
+    /** Own planet the fleet was sent to a trade post from; "trade and fly back" returns there. */
+    #[ORM\Column(type: Types::SMALLINT, nullable: true)]
+    private ?int $homeGalaxy = null;
+
+    #[ORM\Column(type: Types::SMALLINT, nullable: true)]
+    private ?int $homeSystem = null;
+
+    #[ORM\Column(type: Types::SMALLINT, nullable: true)]
+    private ?int $homePosition = null;
+
     /** @var array<string, float>|null for trade missions: goods => amount to buy */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $tradeOrder = null;
@@ -288,6 +298,40 @@ class Fleet
     }
 
     /** Ends the movement at the target, which becomes the new position. */
+    /**
+     * A slot was welded into the fusion at $toPosition: the fleet's place and target follow.
+     *
+     * @param list<int> $fromPositions
+     */
+    public function followFusion(int $galaxy, int $system, array $fromPositions, int $toPosition): void
+    {
+        if ($this->galaxy === $galaxy && $this->system === $system && \in_array($this->position, $fromPositions, true)) {
+            $this->position = $toPosition;
+        }
+        if ($this->targetGalaxy === $galaxy && $this->targetSystem === $system && \in_array($this->targetPosition, $fromPositions, true)) {
+            $this->targetPosition = $toPosition;
+        }
+        if ($this->homeGalaxy === $galaxy && $this->homeSystem === $system && \in_array($this->homePosition, $fromPositions, true)) {
+            $this->homePosition = $toPosition;
+        }
+    }
+
+    public function rememberHome(int $galaxy, int $system, int $position): void
+    {
+        [$this->homeGalaxy, $this->homeSystem, $this->homePosition] = [$galaxy, $system, $position];
+    }
+
+    public function forgetHome(): void
+    {
+        $this->homeGalaxy = $this->homeSystem = $this->homePosition = null;
+    }
+
+    /** @return array{int, int, int}|null */
+    public function getHome(): ?array
+    {
+        return null === $this->homeGalaxy ? null : [$this->homeGalaxy, $this->homeSystem, $this->homePosition];
+    }
+
     public function settleAtTarget(): void
     {
         [$this->galaxy, $this->system, $this->position] = [$this->targetGalaxy, $this->targetSystem, $this->targetPosition];

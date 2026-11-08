@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Game\BuyerAccess;
 use App\Game\LifeForm;
+use App\Game\ResourceType;
 use App\Game\TradeDeal;
 use App\Repository\TradePostRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -12,7 +13,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * A trader's station on a free slot. Sells resources and fusionators from its
+ * A trader's station on a free slot. Sells (and buys) resources from its
  * stock at prices (credits per unit) set by the trader.
  */
 #[ORM\Entity(repositoryClass: TradePostRepository::class)]
@@ -43,6 +44,14 @@ class TradePost
     /** @var array<string, float> goods => credits per unit */
     #[ORM\Column(type: Types::JSON)]
     private array $prices = [];
+
+    /** @var array<string, float> resource => credits the trader pays per unit when buying */
+    #[ORM\Column(type: Types::JSON)]
+    private array $buyPrices = [];
+
+    /** @var array<string, float> resource => amount the trader still buys (0 or missing: buys nothing) */
+    #[ORM\Column(type: Types::JSON)]
+    private array $buyLimits = [];
 
     /** @var array<string, float> goods => amount in stock */
     #[ORM\Column(type: Types::JSON)]
@@ -138,6 +147,61 @@ class TradePost
         }
     }
 
+    public function getBuyPrice(string $resource): float
+    {
+        return (float) ($this->buyPrices[$resource] ?? 0);
+    }
+
+    /** How much of a resource the trader still buys. */
+    public function getBuyLimit(string $resource): float
+    {
+        return (float) ($this->buyLimits[$resource] ?? 0);
+    }
+
+    public function buysAnything(): bool
+    {
+        foreach ($this->buyLimits as $resource => $limit) {
+            if ($limit > 0 && $this->getBuyPrice($resource) > 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * What the trader buys: price per unit and the amount he still takes (0 = nothing).
+     *
+     * @param array<string, float> $prices
+     * @param array<string, float> $limits
+     */
+    public function setPurchase(array $prices, array $limits): void
+    {
+        $this->buyPrices = [];
+        $this->buyLimits = [];
+        foreach (ResourceType::cases() as $type) {
+            $price = round(max(0, (float) ($prices[$type->value] ?? 0)), 2);
+            $limit = floor(max(0, (float) ($limits[$type->value] ?? 0)));
+            if ($price > 0) {
+                $this->buyPrices[$type->value] = $price;
+            }
+            if ($limit > 0) {
+                $this->buyLimits[$type->value] = $limit;
+            }
+        }
+    }
+
+    /** Lowers the remaining purchase amount after the trader bought something. */
+    public function bought(string $resource, float $amount): void
+    {
+        $left = max(0, $this->getBuyLimit($resource) - $amount);
+        if ($left > 0) {
+            $this->buyLimits[$resource] = $left;
+        } else {
+            unset($this->buyLimits[$resource]);
+        }
+    }
+
     public function getStock(string $good): float
     {
         return (float) ($this->stock[$good] ?? 0);
@@ -197,6 +261,8 @@ class TradePost
     {
         $this->active = false;
         $this->prices = [];
+        $this->buyPrices = [];
+        $this->buyLimits = [];
     }
 
     public function isRestricted(): bool

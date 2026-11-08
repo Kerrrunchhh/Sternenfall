@@ -21,6 +21,13 @@ final class Universe
     }
 
     /** Number of planet slots in a system: fixed per system, between 30 and 50. */
+    public static function isValidSlot(int $galaxy, int $system, int $position): bool
+    {
+        return $galaxy >= 1 && $galaxy <= self::GALAXIES
+            && $system >= 1 && $system <= self::SYSTEMS_PER_GALAXY
+            && $position >= 1 && $position <= self::planetsInSystem($galaxy, $system);
+    }
+
     public static function planetsInSystem(int $galaxy, int $system): int
     {
         $spread = self::MAX_PLANETS_PER_SYSTEM - self::MIN_PLANETS_PER_SYSTEM + 1;

@@ -76,6 +76,128 @@ const serverClock = (() => {
     tick();
     setInterval(tick, 1000);
 
+    // Fleet table: select fleets, pick one action; only the fields of that action are shown and sent.
+    document.querySelectorAll('[data-fleet-bulk]').forEach((form) => {
+        const boxes = [...form.querySelectorAll('input[name="fleets[]"]')];
+        const all = form.querySelector('[data-select-all]');
+        const action = form.querySelector('[data-bulk-action]');
+        const count = form.querySelector('[data-selected-count]');
+        const submit = form.querySelector('#fleet-bulk-submit');
+        const panels = [...form.querySelectorAll('.bulk-panel')];
+        // "send:attack" opens the "send" fields plus everything marked for that mission.
+        const matches = (el, value) => {
+            const panels = (el.dataset.panel || '').split(' ');
+            return panels.includes(value) || (value.startsWith('send:') && panels.includes('send'));
+        };
+        const help = form.querySelector('[data-action-help]');
+        const setEnabled = (el, enabled) => el.querySelectorAll('input, select, textarea, button[data-fill-max]').forEach((input) => { input.disabled = !enabled; });
+
+        const update = () => {
+            const picked = boxes.filter((box) => box.checked);
+            const value = action.value;
+            const single = picked.length === 1 ? picked[0].value : null;
+            count.textContent = picked.length === 0 ? 'Keine Flotte ausgewählt' : (picked.length === 1 ? '1 Flotte ausgewählt' : `${picked.length} Flotten ausgewählt`);
+            if (all) {
+                all.checked = picked.length > 0 && picked.length === boxes.length;
+                all.indeterminate = picked.length > 0 && picked.length < boxes.length;
+            }
+
+            let fleetPanelShown = false;
+            panels.forEach((panel) => {
+                let show = value !== '' && matches(panel, value);
+                if (show && panel.dataset.forFleet) {
+                    show = panel.dataset.forFleet === single;
+                    fleetPanelShown = fleetPanelShown || (show && matches(panel, 'load'));
+                }
+                panel.hidden = !show;
+                setEnabled(panel, show);
+                // Parts inside a panel that belong to only some of its actions.
+                panel.querySelectorAll('[data-panel]').forEach((part) => {
+                    const own = matches(part, value);
+                    part.hidden = !own;
+                    if (show) {
+                        setEnabled(part, own);
+                    }
+                });
+            });
+            const noHangar = form.querySelector('[data-no-hangar]');
+            if (noHangar) {
+                noHangar.hidden = !(value === 'load' && single && !fleetPanelShown);
+            }
+
+            // Flight preview: from the first selected fleet at the speed of the slowest one.
+            if (picked.length > 0) {
+                form.dataset.from = picked[0].dataset.from;
+                form.dataset.speed = Math.min(...picked.map((box) => parseFloat(box.dataset.speed) || Infinity));
+            } else {
+                delete form.dataset.from;
+            }
+            form.dispatchEvent(new Event('flight-origin'));
+            submit.disabled = picked.length === 0 || value === '';
+            if (help) {
+                help.textContent = action.selectedOptions[0]?.dataset.help ?? '';
+            }
+        };
+
+        boxes.forEach((box) => box.addEventListener('change', update));
+        if (all) {
+            all.addEventListener('change', () => {
+                boxes.forEach((box) => { box.checked = all.checked; });
+                update();
+            });
+        }
+        action.addEventListener('change', update);
+        update();
+    });
+
+    // Trade post: "max" buys as much as the free cargo space, the stock and the credits allow,
+    // after what is already entered for other goods (selling first frees cargo space).
+    document.querySelectorAll('[data-trade-form]').forEach((form) => {
+        const fleet = form.querySelector('select[name="fleet"]');
+        const credits = parseFloat(form.dataset.credits) || 0;
+        const number = (input) => Math.max(0, Math.floor(parseFloat(input.value) || 0));
+        form.querySelectorAll('[data-buy-max]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const input = button.previousElementSibling;
+                const others = [...form.querySelectorAll('[data-buy-good]')].filter((other) => other !== input);
+                let free = parseFloat(fleet.selectedOptions[0]?.dataset.freeCargo) || 0;
+                form.querySelectorAll('[data-sell-good]').forEach((sell) => { free += number(sell); });
+                let money = credits;
+                for (const other of others) {
+                    if (other.dataset.cargo === '1') {
+                        free -= number(other);
+                    }
+                    money -= number(other) * (parseFloat(other.dataset.price) || 0);
+                }
+                const price = parseFloat(input.dataset.price) || 0;
+                let max = parseFloat(input.dataset.stock) || 0;
+                if (input.dataset.cargo === '1') {
+                    max = Math.min(max, free);
+                }
+                if (price > 0) {
+                    max = Math.min(max, money / price);
+                }
+                input.value = Math.max(0, Math.floor(max));
+            });
+        });
+    });
+
+    // Fleet forms: a remembered coordinate fills galaxy, system and position.
+    document.querySelectorAll('[data-bookmark-pick]').forEach((select) => {
+        select.addEventListener('change', () => {
+            const option = select.selectedOptions[0];
+            if (!option || !option.value) {
+                return;
+            }
+            const form = select.closest('form');
+            for (const field of ['galaxy', 'system', 'position']) {
+                const input = form.querySelector(`[name="${field}"]`);
+                input.value = option.dataset[field];
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        });
+    });
+
     // Shipyard build rate (100–200 %): highlight the cost row of the chosen rate and use its maximum.
     document.querySelectorAll('[data-build-rates]').forEach((box) => {
         const select = box.querySelector('select[name="percent"]');
@@ -182,11 +304,16 @@ const serverClock = (() => {
     };
     document.querySelectorAll('form[data-flight]').forEach((form) => {
         const preview = form.querySelector('[data-flight-preview]');
-        const from = form.dataset.from.split(':').map(Number);
-        const shipSpeed = parseFloat(form.dataset.speed);
         const gameSpeed = parseFloat(form.dataset.gameSpeed) || 1;
         const field = (name) => form.querySelector(`[name="${name}"]`);
+        // Start and speed may change (fleet selection), so they are read on every update.
         const update = () => {
+            if (!form.dataset.from) {
+                preview.textContent = 'Wähle eine Flotte aus.';
+                return;
+            }
+            const from = form.dataset.from.split(':').map(Number);
+            const shipSpeed = parseFloat(form.dataset.speed);
             const to = ['galaxy', 'system', 'position'].map((n) => parseInt(field(n).value, 10));
             const percent = parseFloat(String(field('speed').value).replace(',', '.'));
             if (to.some(Number.isNaN) || Number.isNaN(percent) || percent < 0.1 || percent > 100 || !shipSpeed) {
@@ -202,6 +329,7 @@ const serverClock = (() => {
             preview.textContent = `Flugdauer ${duration(seconds)} · Ankunft ${sameDay ? 'heute' : ''} ${when} Uhr · Rückkehr ${duration(2 * seconds)} nach Start`;
         };
         form.querySelectorAll('[data-flight-input]').forEach((input) => input.addEventListener('input', update));
+        form.addEventListener('flight-origin', update);
         update();
     });
 

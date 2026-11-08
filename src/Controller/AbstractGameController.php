@@ -10,6 +10,7 @@ use App\Game\GameException;
 use App\Game\PlanetService;
 use App\Game\ShipType;
 use App\Repository\AllianceRepository;
+use App\Repository\TradePostRepository;
 use App\Repository\MessageRepository;
 use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -28,7 +29,7 @@ abstract class AbstractGameController extends AbstractController
 
     /** Pages a form may send the player back to (no open redirects). */
     protected const array GAME_ROUTES = [
-        'app_overview', 'app_buildings', 'app_queues', 'app_research', 'app_shipyard', 'app_defense', 'app_fleet', 'app_galaxy', 'app_trade_fusionators',
+        'app_overview', 'app_buildings', 'app_queues', 'app_research', 'app_shipyard', 'app_defense', 'app_fleet', 'app_galaxy', 'app_trade_fusionators', 'app_bookmarks',
         'app_radar', 'app_fusion', 'app_trade', 'app_messages', 'app_lifeform', 'app_alliance',
     ];
 
@@ -39,6 +40,7 @@ abstract class AbstractGameController extends AbstractController
     private MessageRepository $messages;
     private RequestStack $requestStack;
     private AllianceRepository $allianceRepository;
+    private TradePostRepository $tradePosts;
 
     #[Required]
     public function setGameServices(
@@ -49,8 +51,10 @@ abstract class AbstractGameController extends AbstractController
         MessageRepository $messages,
         RequestStack $requestStack,
         AllianceRepository $allianceRepository,
+        TradePostRepository $tradePosts,
     ): void {
         $this->allianceRepository = $allianceRepository;
+        $this->tradePosts = $tradePosts;
         $this->planetService = $planetService;
         $this->fleetService = $fleetService;
         $this->economy = $economy;
@@ -133,6 +137,8 @@ abstract class AbstractGameController extends AbstractController
             'bunker_capacity' => $this->economy->bunkerCapacity($planet),
             'player' => $planet->getOwner(),
             'unread_messages' => $this->messages->countUnread($planet->getOwner()),
+            // Own trade posts are listed under the planets in the left column.
+            'own_trade_posts' => $this->tradePosts->findBy(['owner' => $planet->getOwner()], ['galaxy' => 'ASC', 'system' => 'ASC', 'position' => 'ASC']),
             // The alliance black board is shown on every page.
             'board_posts' => true === $planet->getOwner()->getAllianceRank()?->canSeeBoard()
                 ? $this->allianceRepository->findPosts($planet->getOwner()->getAlliance(), 20)

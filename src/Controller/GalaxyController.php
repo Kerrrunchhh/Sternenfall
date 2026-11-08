@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Game\Espionage;
 use App\Game\Universe;
 use App\Repository\DebrisFieldRepository;
+use App\Repository\BookmarkRepository;
 use App\Repository\PlanetRepository;
 use App\Repository\TradePostRepository;
 use Symfony\Component\HttpFoundation\Request;
@@ -32,7 +33,7 @@ class GalaxyController extends AbstractGameController
     }
 
     #[Route('/galaxy', name: 'app_galaxy', methods: ['GET'])]
-    public function index(Request $request, PlanetRepository $planets, TradePostRepository $tradePosts, DebrisFieldRepository $debris, Espionage $espionage): Response
+    public function index(Request $request, PlanetRepository $planets, TradePostRepository $tradePosts, DebrisFieldRepository $debris, Espionage $espionage, BookmarkRepository $bookmarks): Response
     {
         $planet = $this->currentPlanet();
         $galaxy = max(1, min(Universe::GALAXIES, $request->query->getInt('galaxy', $planet->getGalaxy())));
@@ -55,12 +56,19 @@ class GalaxyController extends AbstractGameController
         $known = $espionage->knownTypes($this->player(), $galaxy, $system);
         $slots = [];
         $types = [];
+        // A known fusion shows as what it is: a blue planet.
+        foreach ($occupied as $position => $p) {
+            if ($p->isFused() && $position === $p->getPosition() && isset($known[$position])) {
+                $known[$position] = $p->getType();
+            }
+        }
         for ($position = 1; $position <= Universe::planetsInSystem($galaxy, $system); ++$position) {
             $slots[$position] = $occupied[$position] ?? null;
             $types[$position] = $known[$position] ?? null;
         }
 
         return $this->renderGame('game/galaxy.html.twig', $planet, [
+            'bookmarks' => $bookmarks->findInSystem($this->player(), $galaxy, $system),
             'galaxy' => $galaxy,
             'system' => $system,
             'slots' => $slots,

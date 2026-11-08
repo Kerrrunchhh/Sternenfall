@@ -4,15 +4,11 @@ namespace App\Game;
 
 /**
  * What a buyer actually gets at a trade post: as much of the order as stock,
- * credits and free cargo space allow. Fusionators are bought first (they need
- * no cargo space), then the resources in their usual order.
- *
- * Goods are keyed like trade post stock: resource type values plus "fusionator".
+ * credits and free cargo space allow, resources in their usual order.
+ * Trade posts deal in resources only; fusionators have their own market and fly to the buyer.
  */
 final readonly class TradeDeal
 {
-    public const string FUSIONATOR = 'fusionator';
-
     /**
      * @param array<string, float> $bought goods => amount
      */
@@ -30,12 +26,12 @@ final readonly class TradeDeal
     /** @return list<string> all tradeable goods */
     public static function goods(): array
     {
-        return [self::FUSIONATOR, ...array_map(static fn (ResourceType $t): string => $t->value, ResourceType::cases())];
+        return array_map(static fn (ResourceType $t): string => $t->value, ResourceType::cases());
     }
 
     public static function label(string $good): string
     {
-        return self::FUSIONATOR === $good ? 'Fusionator' : ResourceType::from($good)->label();
+        return ResourceType::tryFrom($good)?->label() ?? $good;
     }
 
     /**
@@ -55,10 +51,7 @@ final readonly class TradeDeal
                 continue;
             }
 
-            $amount = min($wanted, floor($stock[$good] ?? 0));
-            if (self::FUSIONATOR !== $good) {
-                $amount = min($amount, floor($freeCargo));
-            }
+            $amount = min($wanted, floor($stock[$good] ?? 0), floor($freeCargo));
             if ($price > 0) {
                 $amount = min($amount, floor(($credits - $total) / $price));
             }
@@ -68,9 +61,7 @@ final readonly class TradeDeal
 
             $bought[$good] = $amount;
             $total += $amount * $price;
-            if (self::FUSIONATOR !== $good) {
-                $freeCargo -= $amount;
-            }
+            $freeCargo -= $amount;
         }
 
         return new self($bought, $total);

@@ -187,9 +187,10 @@ class Planet
     }
 
     /** The kind of world, given by the (topmost) slot the planet occupies. */
+    /** A fusion always counts as a blue planet; a single planet has the type of its slot. */
     public function getType(): PlanetType
     {
-        return Universe::planetType($this->galaxy, $this->system, $this->position);
+        return $this->isFused() ? PlanetType::Blue : Universe::planetType($this->galaxy, $this->system, $this->position);
     }
 
     public function isHiddenInProfile(): bool

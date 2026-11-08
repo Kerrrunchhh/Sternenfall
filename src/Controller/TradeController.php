@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\TradePost;
+use App\Game\GameException;
 use App\Game\LifeForm;
 use App\Game\TradeDeal;
 use App\Game\TradeService;
@@ -82,11 +83,36 @@ class TradeController extends AbstractGameController
                 array_map(static fn (mixed $v): float => (float) str_replace(',', '.', (string) $v), $form->all('prices')),
                 $lifeForms,
                 array_map('intval', $form->all('alliances')),
+                array_map(static fn (mixed $v): float => (float) str_replace(',', '.', (string) $v), $form->all('buy_prices')),
+                array_map(static fn (mixed $v): float => (float) str_replace(['.', ','], ['', '.'], (string) $v), $form->all('buy_limits')),
             ),
             'Handelsstützpunkt gespeichert.',
         );
 
-        return $this->redirectToRoute('app_trade');
+        return $this->redirectToRoute('app_trade_post', ['id' => $post->getId()]);
+    }
+
+    /** Sends every foreign fleet at the post home, e.g. when the post is about to be attacked. */
+    #[Route('/trade/{id}/send-away-all', name: 'app_trade_send_away_all', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    #[IsCsrfTokenValid('trade', tokenKey: '_token')]
+    public function sendAwayAll(TradePost $post, FleetRepository $fleets): Response
+    {
+        $this->currentPlanet();
+        $player = $this->player();
+        $visitors = $fleets->findForeignIdleAt($post->getGalaxy(), $post->getSystem(), $post->getPosition(), $player);
+        if ([] === $visitors) {
+            $this->addFlash('error', 'An diesem Stützpunkt wartet keine fremde Flotte.');
+        }
+        foreach ($visitors as $visitor) {
+            try {
+                $this->trade->sendAway($post, $player, $visitor);
+                $this->addFlash('success', \sprintf('%s von %s fliegt zurück zu ihrem Heimatplaneten.', $visitor->getLabel(), $visitor->getOwner()->getUsername()));
+            } catch (GameException $e) {
+                $this->addFlash('error', \sprintf('%s von %s: %s', $visitor->getLabel(), $visitor->getOwner()->getUsername(), $e->getMessage()));
+            }
+        }
+
+        return $this->redirectToRoute('app_trade_post', ['id' => $post->getId()]);
     }
 
     #[Route('/trade/{id}/send-away/{fleet}', name: 'app_trade_send_away', requirements: ['id' => Requirement::DIGITS, 'fleet' => Requirement::DIGITS], methods: ['POST'])]
@@ -101,7 +127,7 @@ class TradeController extends AbstractGameController
             $this->attempt(fn () => $this->trade->sendAway($post, $this->player(), $visitor), \sprintf('Die Flotte von %s fliegt zurück zu ihrem Heimatplaneten.', $visitor->getOwner()->getUsername()));
         }
 
-        return $this->redirectToRoute('app_trade');
+        return $this->redirectToRoute('app_trade_post', ['id' => $post->getId()]);
     }
 
     #[Route('/trade/{id}/close', name: 'app_trade_close', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]

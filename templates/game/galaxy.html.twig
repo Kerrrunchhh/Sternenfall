@@ -22,7 +22,26 @@
                 <tr id="slot-{{ position }}" class="{{ p and p.owner.id == player.id ? 'own' }} {{ not p and posts[position] is defined ? 'trade-post' }}">
                     {% set slot_type = types[position] %}
                     <td class="num pos">{{ position }}{% if debris[position] is defined %}<br><a class="debris" href="{{ path('app_fleet', coords|merge({mission: 'salvage'})) }}" title="Trümmerfeld: {{ debris[position].iron|number_format(0, ',', '.') }} Eisen, {{ debris[position].titanium|number_format(0, ',', '.') }} Titan – bergen">✦</a>{% endif %}</td>
+                    {% if p and position != p.position %}
+                        {# Welded into the fusion above: only its top planet is shown. #}
+                        <td colspan="5" class="muted welded" title="Einfusioniert in {{ p.name }}">–</td>
+                    {% else %}
                     <td class="spy-cell">
+                        {% if bookmarks[position] is defined %}
+                            <form method="post" action="{{ path('app_bookmark_delete', {id: bookmarks[position].id}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('bookmark') }}">
+                                <input type="hidden" name="from" value="galaxy">
+                                <button class="icon-button bookmarked" type="submit" title="Gemerkt als „{{ bookmarks[position].label }}“ – klicken zum Vergessen" aria-label="Platz {{ position }} vergessen">📌</button>
+                            </form>
+                        {% else %}
+                            <form method="post" action="{{ path('app_bookmark_add') }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('bookmark') }}">
+                                <input type="hidden" name="galaxy" value="{{ galaxy }}">
+                                <input type="hidden" name="system" value="{{ system }}">
+                                <input type="hidden" name="position" value="{{ position }}">
+                                <button class="icon-button bookmark-add" type="submit" title="Koordinaten merken" aria-label="Platz {{ position }} merken">📌</button>
+                            </form>
+                        {% endif %}
                         {% if not (p and p.owner.id == player.id) %}
                             <form method="post" action="{{ path('app_galaxy_spy') }}">
                                 <input type="hidden" name="_token" value="{{ csrf_token('galaxy') }}">
@@ -40,8 +59,7 @@
                     {% endif %}
                     {% if p %}
                         <td>
-                            {% if position == p.position %}{% if p.homeworld %}<span title="Heimatplanet – kann nicht invadiert werden">🏠</span> {% endif %}{{ p.name }}{% if p.fused %} <span class="muted small">(Fusion aus {{ p.fusionSize }} Planeten)</span>{% endif %}{% if p.integrating(now) %} <span class="muted small">(invadiert, Übergang am {{ p.integratedAt|date('d.m.Y') }})</span>{% endif %}
-                            {% else %}<span class="muted">↳ verschweißt mit {{ p.name }}</span>{% endif %}
+                            {% if p.homeworld %}<span title="Heimatplanet – kann nicht invadiert werden">🏠</span> {% endif %}{{ p.name }}{% if p.fused %} <span class="muted small">(Fusion aus {{ p.fusionSize }} Planeten, Plätze {{ p.position }}–{{ p.lastPosition }})</span>{% endif %}{% if p.integrating(now) %} <span class="muted small">(invadiert, Übergang am {{ p.integratedAt|date('d.m.Y') }})</span>{% endif %}
                         </td>
                         <td>{{ ui.player(p.owner) }}</td>
                         <td class="num actions">
@@ -56,12 +74,12 @@
                         </td>
                     {% elseif posts[position] is defined %}
                         {% set post = posts[position] %}
-                        <td>⚖ {{ post.name }} <span class="muted small">{{ post.active ? 'Handelsstützpunkt' : 'aufgegebener Handelsstützpunkt' }}</span></td>
+                        <td><a href="{{ path('app_trade_post', {id: post.id}) }}" title="Preise und Handel">⚖ {{ post.name }}</a> <span class="muted small">{{ post.active ? 'Handelsstützpunkt' : 'aufgegebener Handelsstützpunkt' }}</span></td>
                         <td>{{ ui.player(post.owner) }}</td>
                         <td class="num actions">
                             {% if post.owner.id == player.id and post.active %}<a href="{{ path('app_fleet', coords|merge({mission: 'supply'})) }}">Beliefern</a>{% endif %}
-                            {% if post.accessibleTo(player) %}<a href="{{ path('app_fleet', coords|merge({mission: 'trade'})) }}">Handeln</a>{% else %}<span class="muted small">gesperrt</span>{% endif %}
-                            <a href="{{ path('app_trade') }}">Preise</a>
+                            {% if post.accessibleTo(player) %}<a href="{{ path('app_fleet', coords|merge({mission: 'transport'})) }}" title="Handelsflotte hinschicken (Transport oder Stationieren) – sie wartet dort zum Handeln">Handeln</a>{% else %}<span class="muted small">gesperrt</span>{% endif %}
+                            <a href="{{ path('app_trade_post', {id: post.id}) }}">Preise</a>
                         </td>
                     {% else %}
                         <td class="muted">frei</td>
@@ -69,6 +87,7 @@
                         <td class="num actions">
                             <a href="{{ path('app_fleet', coords|merge({mission: 'colonize'})) }}">Kolonisieren</a>
                         </td>
+                    {% endif %}
                     {% endif %}
                 </tr>
             {% endfor %}

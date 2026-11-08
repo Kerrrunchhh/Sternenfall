@@ -197,7 +197,7 @@ enum ShipType: string
             self::ElectronTurret => 'Mittelschweres Abwehrgeschütz. Steht fest auf dem Planeten.',
             self::TachyonTurret => 'Schweres Abwehrgeschütz gegen Großkampfschiffe. Steht fest auf dem Planeten.',
             self::PlasmaTurret => 'Die stärkste planetare Verteidigung. Steht fest auf dem Planeten.',
-            self::Fusionator => 'Verschweißt Planeten miteinander. Fliegt zu jedem deiner Planeten und verschweißt ihn mit den eigenen Planeten darunter – wie viele, hängt von der Fusionstechnik ab (max. 50). Nach der Sonde das schnellste Schiff. Nur Händler können ihn bauen; alle anderen kaufen ihn bei Händlern. Eine Fusion kann nur mit genug Wasserstoff wieder gesprengt werden.',
+            self::Fusionator => 'Verschweißt Planeten miteinander. Fliegt zu dem Planeten, der angeschweißt werden soll, und verschweißt ihn mit deinem Planeten direkt darüber – wie groß eine Fusion werden darf, hängt von der Fusionstechnik ab (max. 50). Nach der Sonde das schnellste Schiff. Nur Händler können ihn bauen; alle anderen kaufen ihn bei Händlern. Eine Fusion kann nur mit genug Wasserstoff wieder gesprengt werden.',
         };
     }
 

@@ -30,12 +30,30 @@
         </section>
     {% endif %}
 
+    {% if own_visible is not empty %}
+        <section class="panel">
+            <h2>Deine sichtbaren Flotten <small class="muted">– andere sehen sie mit Radar</small></h2>
+            <table class="table">
+                {% for f in own_visible %}
+                    <tr>
+                        <td><strong>{{ f.label }}</strong> <span class="small muted">{{ f.mission.label }}{{ f.returning ? ' (Rückflug)' }} von {{ ui.coords(f.returning ? f.targetCoordinates : f.coordinates) }} nach {{ ui.coords(f.returning ? f.coordinates : f.targetCoordinates) }}</span></td>
+                        <td class="small">{{ f.mission.value == 'attack' and not f.returning ? 'greift an' : 'transportiert ' ~ f.cargo.total|number_format(0, ',', '.') ~ ' Rohstoffe' }}</td>
+                        <td class="num small">{{ f.returning ? 'Rückkehr' : 'Ankunft' }} in {{ ui.countdown(f.nextEventAt, now) }}</td>
+                    </tr>
+                {% endfor %}
+            </table>
+            <p class="muted small">Flotten mit Ladung können von Piraten überfallen werden, angreifende Flotten von Wächtern und Piraten abgefangen.</p>
+        </section>
+    {% endif %}
+
     {% for c in contacts %}
         {% set f = c.fleet %}
         <article class="panel fleet-card {{ c.attacking ? 'moving' }}">
             <div class="building-head">
                 <h2>{{ ui.player(f.owner) }} <small class="muted">{{ c.ally ? '(verbündet)' }}</small></h2>
-                <span class="small">{{ f.mission.label }}{{ f.returning ? ' (Rückflug)' }} → {{ ui.coords(c.stop) }} · Ankunft in {{ ui.countdown(f.nextEventAt, now) }} · {{ ui.at(f.nextEventAt, now) }}</span>
+                <span class="small">{{ f.mission.label }}{{ f.returning ? ' (Rückflug)' }}
+                    von {{ ui.coords(f.returning ? f.targetCoordinates : f.coordinates) }} nach {{ ui.coords(f.returning ? f.coordinates : f.targetCoordinates) }}
+                    · Ankunft in {{ ui.countdown(f.nextEventAt, now) }} · {{ ui.at(f.nextEventAt, now) }}</span>
             </div>
             <p class="small">
                 {% if c.intel %}

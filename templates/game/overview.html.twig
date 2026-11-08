@@ -4,6 +4,17 @@
 {% block title %}Übersicht – {{ game_name }}{% endblock %}
 
 {% block content %}
+    {% if at_trade_posts is not empty %}
+        <section class="panel trade-waiting">
+            {% for w in at_trade_posts %}
+                <a href="{{ path('app_trade_post', {id: w.post.id}) }}" class="trade-waiting-row">
+                    <span>⚖ <strong>{{ w.fleet.label }}</strong> wartet am Handelsstützpunkt <strong>{{ w.post.name }}</strong> [{{ w.post.coordinates }}]{% if not w.post.owner.sameAs(player) %} von {{ w.post.owner.username }}{% endif %}</span>
+                    <span class="trade-waiting-go">Zum Handel →</span>
+                </a>
+            {% endfor %}
+        </section>
+    {% endif %}
+
     <h1>{{ planet.name }} <small>[{{ planet.coordinates }}]</small></h1>
     <details class="rename">
         <summary>Umbenennen</summary>
@@ -56,6 +67,15 @@
                             {{ f.mission.label }}{% if f.mission.value != 'hover' %} {{ f.returning ? '← zurück nach' : '→' }} {{ ui.coords(f.returning ? f.coordinates : f.targetCoordinates) }}{% endif %}
                         </td>
                         <td class="num">{{ f.returning ? 'Rückkehr' : (f.mission.value == 'hover' ? 'landet' : 'Ankunft') }} in {{ ui.countdown(f.nextEventAt, now) }}<br><span class="small muted">{{ ui.at(f.nextEventAt, now) }}</span></td>
+                        <td class="num">
+                            {% if not f.returning and f.owner.id == player.id %}
+                                <form method="post" action="{{ path('app_fleet_recall', {id: f.id}) }}" class="inline">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
+                                    <input type="hidden" name="to" value="app_overview">
+                                    <button type="submit" class="link-button recall-link" id="recall-{{ f.id }}">{{ f.mission.value == 'hover' ? '↓ landen' : '↩ zurückrufen' }}</button>
+                                </form>
+                            {% endif %}
+                        </td>
                     </tr>
                 {% endfor %}
             </table>
@@ -107,7 +127,7 @@
             <h2>Planet</h2>
             <table class="table">
                 <tr><td>Koordinaten</td><td class="num">{{ planet.coordinates }}</td></tr>
-                <tr><td>Planetentyp</td><td class="num">{{ planet.type.icon }} {{ planet.type.label }}<br><span class="muted small">{{ planet.type.effect }}</span></td></tr>
+                <tr><td>Planetentyp</td><td class="num">{{ planet.type.icon }} {{ planet.type.label }}<br><span class="muted small">{{ planet.type.effect }}{% if planet.fused %}<br>Fusion: zählt als blauer Planet, alle Rohstoffe ×1,5{% endif %}</span></td></tr>
                 <tr><td>Vor Plünderung geschützt</td><td class="num">{{ protected|number_format(0, ',', '.') }} je Rohstoff</td></tr>
             </table>
         </section>
