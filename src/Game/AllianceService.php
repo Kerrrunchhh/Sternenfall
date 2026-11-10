@@ -320,6 +320,60 @@ final readonly class AllianceService
         }
         $this->em->persist(new AlliancePost($alliance, $author, $body, $this->now()));
         $this->em->flush();
+        $this->trimBoard($alliance);
+    }
+
+    public function setTax(User $actor, int $rate): void
+    {
+        $this->locked(function () use ($actor, $rate): void {
+            $alliance = $this->managedAlliance($actor);
+            if ($rate < 0 || $rate > Alliance::MAX_TAX) {
+                throw new GameException(\sprintf('Der Steuersatz liegt zwischen 0 und %d %%.', Alliance::MAX_TAX));
+            }
+            $alliance->setTaxRate($rate);
+            foreach ($alliance->getMembers() as $member) {
+                if (!$member->isSameAs($actor)) {
+                    $this->inbox->send($member, 'Allianzsteuer: '.$rate.' %', \sprintf('%s hat die Steuer auf %d %% eures Credit-Einkommens gesetzt. Sie fließt in die Allianzkasse.', $actor->getUsername(), $rate));
+                }
+            }
+            $this->em->flush();
+        });
+    }
+
+    /** The founder pays credits from the treasury to a member. */
+    public function payOut(User $actor, User $member, float $amount, string $note): void
+    {
+        $this->locked(function () use ($actor, $member, $amount, $note): void {
+            $alliance = $this->managedAlliance($actor);
+            $this->assertMember($alliance, $member);
+            $amount = floor($amount);
+            if ($amount < 1) {
+                throw new GameException('Gib einen Betrag von mindestens 1 Credit an.');
+            }
+            $paid = $this->em->getConnection()->executeStatement('UPDATE alliance SET treasury = treasury - ? WHERE id = ? AND treasury >= ?', [$amount, $alliance->getId(), $amount]);
+            if (0 === $paid) {
+                $this->em->refresh($alliance);
+                throw new GameException(\sprintf('In der Allianzkasse sind nur %s Credits.', number_format($alliance->getTreasury(), 0, ',', '.')));
+            }
+            $this->em->getConnection()->executeStatement('UPDATE `user` SET credits = credits + ? WHERE id = ?', [$amount, $member->getId()]);
+            $this->inbox->send($member, 'Auszahlung aus der Allianzkasse', trim(\sprintf("%s hat dir %s Credits aus der Kasse von „%s“ ausgezahlt.\n%s", $actor->getUsername(), number_format($amount, 0, ',', '.'), $alliance->getName(), trim($note))));
+            $this->em->flush();
+        });
+    }
+
+    /** The black board keeps at most 20 posts and none older than a month. */
+    public const int BOARD_MAX_POSTS = 20;
+
+    public function trimBoard(Alliance $alliance): void
+    {
+        $posts = $this->em->getRepository(AlliancePost::class)->findBy(['alliance' => $alliance], ['createdAt' => 'DESC', 'id' => 'DESC']);
+        $limit = $this->now()->modify('-1 month');
+        foreach ($posts as $i => $post) {
+            if ($i >= self::BOARD_MAX_POSTS || $post->getCreatedAt() < $limit) {
+                $this->em->remove($post);
+            }
+        }
+        $this->em->flush();
     }
 
     public function deletePost(User $actor, AlliancePost $post): void

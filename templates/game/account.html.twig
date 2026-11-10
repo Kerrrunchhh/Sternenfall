@@ -1,6 +1,25 @@
 {% extends 'game/_layout.html.twig' %}
 
-{% block title %}Konto – {{ game_name }}
+{% block title %}Konto – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h1>Konto</h1>
+
+    <section class="panel" id="urlaub">
+        <h2>🌴 Urlaubsmodus</h2>
+        <p class="muted small">
+            Im Urlaub ruht alles: keine Produktion, kein Bau, keine Forschung, keine Flotten. Deine Planeten können nicht angegriffen werden – außer invadierten Planeten, die dir noch nicht ganz gehören –, ausspioniert werden aber schon.
+            Schreiben, lesen und schauen geht weiter: Post, Ticker, schwarzes Brett, Galaxie, Allianz und Diplomatie. Urlaub dauert {{ vacation_min|number_format(0) }} bis {{ vacation_max|number_format(0) }} Tage; Kommazahlen sind erlaubt (2,5 Tage = 60 Stunden), so endet er genau zu deiner Wunschzeit.
+            Vorzeitig beenden kannst du ihn frühestens nach einem Tag. Alle Flotten müssen gelandet sein.
+        </p>
+        <form method="post" action="{{ path('app_account_vacation') }}" class="inline-action">
+            <input type="hidden" name="_token" value="{{ csrf_token('account') }}">
+            <label>Tage <input type="text" name="days" inputmode="decimal" pattern="[0-9]+([.,][0-9]+)?" required class="short" placeholder="z. B. 2,5" data-vacation-days></label>
+            <span class="muted small" data-vacation-end></span>
+            <button class="btn btn-small" type="submit" id="vacation-start" data-confirm="Urlaub jetzt beginnen? Du kannst bis zum Ende nicht spielen (vorzeitig frühestens nach einem Tag)." data-confirm-label="Urlaub beginnen">Urlaub beginnen</button>
+        </form>
+    </section>
+
     <section class="panel" id="email">
         <h2>✉ E-Mail-Benachrichtigungen</h2>
         <form method="post" action="{{ path('app_account_email') }}" class="mail-form">
@@ -19,6 +38,7 @@
                     <label class="radio"><input type="checkbox" name="topics[]" value="{{ key }}" {{ key in player.mailTopics ? 'checked' }}> {{ label }}</label>
                 {% endfor %}
             </fieldset>
+            <label class="inline-action">Höchstens <input type="number" name="attack_limit" min="0" max="60" value="{{ player.attackMailsPerMinute }}" class="short"> Angriffswarnungen pro Minute <span class="muted small">(0 = unbegrenzt)</span></label>
             <button class="btn btn-small" type="submit" id="email-save">Speichern</button>
         </form>
     </section>
@@ -33,25 +53,6 @@
             <label class="radio"><input type="radio" name="planets" value="destroy"> Gebäude zerstören – die Planeten bleiben ohne Gebäude zurück</label>
             <label>Passwort zur Bestätigung <input type="password" name="password" required autocomplete="current-password"></label>
             <button class="btn btn-danger" type="submit" id="account-delete" data-confirm="Konto wirklich löschen? Du wirst abgemeldet; nach 48 Stunden ist das Konto weg. Meldest du dich vorher wieder an, bleibt es erhalten." data-confirm-label="Konto löschen">Konto löschen</button>
-        </form>
-    </section>
-{% endblock %}
-
-{% block content %}
-    <h1>Konto</h1>
-
-    <section class="panel" id="urlaub">
-        <h2>🌴 Urlaubsmodus</h2>
-        <p class="muted small">
-            Im Urlaub ruht alles: keine Produktion, kein Bau, keine Forschung, und deine Planeten können weder angegriffen noch ausspioniert werden – außer invadierten Planeten, die dir noch nicht ganz gehören.
-            Du kannst in dieser Zeit nicht spielen. Urlaub dauert {{ vacation_min|number_format(0) }} bis {{ vacation_max|number_format(0) }} Tage; Kommazahlen sind erlaubt (2,5 Tage = 60 Stunden), so endet er genau zu deiner Wunschzeit.
-            Vorzeitig beenden kannst du ihn frühestens nach einem Tag. Alle Flotten müssen gelandet sein.
-        </p>
-        <form method="post" action="{{ path('app_account_vacation') }}" class="inline-action">
-            <input type="hidden" name="_token" value="{{ csrf_token('account') }}">
-            <label>Tage <input type="text" name="days" inputmode="decimal" pattern="[0-9]+([.,][0-9]+)?" required class="short" placeholder="z. B. 2,5" data-vacation-days></label>
-            <span class="muted small" data-vacation-end></span>
-            <button class="btn btn-small" type="submit" id="vacation-start" data-confirm="Urlaub jetzt beginnen? Du kannst bis zum Ende nicht spielen (vorzeitig frühestens nach einem Tag)." data-confirm-label="Urlaub beginnen">Urlaub beginnen</button>
         </form>
     </section>
 {% endblock %}

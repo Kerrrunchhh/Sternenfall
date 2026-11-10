@@ -1,0 +1,96 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}Transportgesuche – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h1>Transportgesuche</h1>
+    <p class="muted small">Dir fehlen Rohstoffe? Stelle ein Gesuch über höchstens eine Frachterladung ({{ max_load|number_format(0, ',', '.') }} Rohstoffe) und biete Credits dafür. Händler liefern; bezahlt wird erst, wenn die Ladung ankommt – bis dahin sind deine Credits verwahrt. Als Richtwert gilt ein Zehntel der Menge in Credits.</p>
+
+    {% if is_trader %}
+        <section class="panel">
+            <h2>Gesuche beliefern</h2>
+            <p class="muted small">Geliefert wird von <strong>{{ planet.name }}</strong> {{ ui.coords(planet.coordinates) }}: je Gesuch eine leere, dort wartende Flotte nur aus Frachtern. Stationiere dafür viele kleine Handelsflotten an diesem Planeten. Bereit: <strong>{{ ready_fleets|length }}</strong> {{ ready_fleets|length == 1 ? 'Flotte' : 'Flotten' }}.</p>
+            {% if open is empty %}
+                <p class="muted">Gerade sucht niemand Rohstoffe.</p>
+            {% else %}
+                <form method="post" action="{{ path('app_transport_request_serve') }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('transport_requests') }}">
+                    <table class="table">
+                        <thead><tr><th><input type="checkbox" data-check-all="requests[]" aria-label="Alle auswählen"></th><th>Ziel</th><th>Ware</th><th>Angebot</th><th>Von</th></tr></thead>
+                        <tbody>
+                        {% for r in open %}
+                            <tr>
+                                <td><input type="checkbox" name="requests[]" value="{{ r.id }}" aria-label="Gesuch {{ r.planetName }}"></td>
+                                <td>{{ r.planetName }} {{ ui.coords(r.coordinates) }}</td>
+                                <td class="small">{% for type in resource_types %}{% set n = r.goods.get(type) %}{% if n > 0 %}{{ type.label }} {{ n|number_format(0, ',', '.') }}{% if not loop.last %} · {% endif %}{% endif %}{% endfor %}</td>
+                                <td><strong>{{ r.offer|number_format(0, ',', '.') }}</strong> Cr</td>
+                                <td>{{ ui.player(r.requester) }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    <button class="btn" type="submit" id="serve-requests">Ausgewählte beliefern</button>
+                </form>
+            {% endif %}
+        </section>
+    {% else %}
+        <section class="panel">
+            <h2>Offene Gesuche</h2>
+            {% if open is empty %}
+                <p class="muted">Keine.</p>
+            {% else %}
+                {% for r in open %}
+                    <div class="proposal"><div>{{ r.planetName }} {{ ui.coords(r.coordinates) }} · {{ r.goods.total|number_format(0, ',', '.') }} Rohstoffe für <strong>{{ r.offer|number_format(0, ',', '.') }} Credits</strong> · {{ ui.player(r.requester) }}</div></div>
+                {% endfor %}
+                <p class="muted small">Beliefern können nur Händler.</p>
+            {% endif %}
+        </section>
+    {% endif %}
+
+    <section class="panel">
+        <h2>Deine Gesuche und Lieferungen</h2>
+        {% if mine is empty %}
+            <p class="muted">Noch keine.</p>
+        {% else %}
+            {% for r in mine %}
+                <div class="proposal">
+                    <div>
+                        {{ r.planetName }} {{ ui.coords(r.coordinates) }} · {{ r.goods.total|number_format(0, ',', '.') }} Rohstoffe · {{ r.offer|number_format(0, ',', '.') }} Credits
+                        <div class="muted small">
+                            {{ {open: 'offen', assigned: 'wird geliefert', done: 'geliefert', cancelled: 'zurückgezogen'}[r.status] }}
+                            {% if r.requester.id == player.id %}{% if r.trader %} · Händler {{ ui.player(r.trader) }}{% endif %}{% else %} · du lieferst an {{ ui.player(r.requester) }}{% endif %}
+                            · {{ r.createdAt|date('d.m.Y H:i') }}
+                        </div>
+                    </div>
+                    {% if r.requester.id == player.id and r.status == 'open' %}
+                        <form method="post" action="{{ path('app_transport_request_cancel', {id: r.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('transport_requests') }}">
+                            <button class="btn btn-small btn-secondary" type="submit">Zurückziehen</button>
+                        </form>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% endif %}
+    </section>
+
+    <section class="panel">
+        <h2>Neues Gesuch</h2>
+        <form method="post" action="{{ path('app_transport_request_create') }}" class="mail-form" data-transport-offer>
+            <input type="hidden" name="_token" value="{{ csrf_token('transport_requests') }}">
+            <label>Lieferung an
+                <select name="planet">
+                    {% for p in player.planets %}<option value="{{ p.id }}" {{ p.id == planet.id ? 'selected' }}>{{ p.name }} [{{ p.coordinates }}]</option>{% endfor %}
+                </select>
+            </label>
+            <div class="coords">
+                {% for type in resource_types %}
+                    <label>{{ type.label }} <input type="number" name="goods[{{ type.value }}]" min="0" max="{{ max_load }}" value="0" data-goods></label>
+                {% endfor %}
+            </div>
+            <label>Angebot (Credits) <input type="number" name="offer" min="1" required data-offer></label>
+            <p class="muted small">Summe: <span data-goods-total>0</span> von {{ max_load|number_format(0, ',', '.') }} · Richtwert: <span data-offer-hint>0</span> Credits</p>
+            <button class="btn" type="submit" id="transport-request-create">Gesuch einstellen</button>
+        </form>
+    </section>
+{% endblock %}

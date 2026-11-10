@@ -26,6 +26,12 @@
             {% else %}
                 <p class="muted">{{ own ? 'Du hast noch nichts über dich geschrieben.' : profile.username ~ ' hat noch nichts über sich geschrieben.' }}</p>
             {% endif %}
+            {% if own %}
+                <div class="profile-actions">
+                    <a class="btn" href="{{ path('app_account') }}" id="profile-account" title="Urlaubsmodus, E-Mail-Benachrichtigungen, Account löschen">⚙ Konto</a>
+                    <a class="btn btn-secondary" href="{{ path('app_extended') }}" id="profile-extended">{{ player.isExtended(now) ? '✨ Erweitert' : '✨ Erweitern' }}</a>
+                </div>
+            {% endif %}
             {% if not own %}
                 <div class="profile-actions">
                     <a class="btn" href="{{ path('app_mail_compose', {to: profile.username}) }}" id="profile-write">✉ Nachricht schreiben</a>
@@ -70,7 +76,7 @@
             <table class="table">
                 {% for p in listed_planets %}
                     <tr class="{{ p.hiddenInProfile ? 'muted' }}">
-                        <td>{% if own %}<span title="{{ p.type.label }}">{{ p.type.icon }}</span> {% endif %}{{ p.name }}{% if p.homeworld %} <span title="Heimatplanet">🏠</span>{% endif %}{% if p.fused %} <span class="muted small">Fusion aus {{ p.fusionSize }} Planeten</span>{% endif %}</td>
+                        <td>{% if own %}<img class="planet-pic planet-pic-tiny" src="{{ asset(p.type.picture) }}" alt="{{ p.type.label }}" title="{{ p.type.label }}" width="22" height="22"> {% endif %}{{ p.name }}{% if p.homeworld %} <span title="Heimatplanet">🏠</span>{% endif %}{% if p.fused %} <span class="muted small">Fusion aus {{ p.fusionSize }} Planeten</span>{% endif %}</td>
                         <td class="num">{{ ui.coords(p.coordinates) }}</td>
                         {% if own %}
                             <td class="num">

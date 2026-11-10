@@ -1,0 +1,31 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}Spieler suchen – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h1>Spieler suchen</h1>
+    <form method="get" action="{{ path('app_player_search') }}" class="panel inline-action">
+        <input type="text" name="q" value="{{ query }}" minlength="2" required placeholder="Name oder Teil des Namens" aria-label="Spielername" autofocus>
+        <button class="btn btn-small" type="submit" id="player-search">Suchen</button>
+    </form>
+    {% if query|length >= 2 %}
+        <section class="panel">
+            {% if found is empty %}
+                <p class="muted">Kein Spieler gefunden.</p>
+            {% else %}
+                <table class="table">
+                    {% for u in found %}
+                        <tr>
+                            <td>{{ ui.player(u) }}{% if u.onVacation(now) %} <span class="vacation-tag">🌴 Urlaub</span>{% endif %} {{ ui.presence(u) }}</td>
+                            <td class="small muted">{{ u.lifeForm.label }}</td>
+                            <td class="num small">{{ player_points(u)|number_format(0, ',', '.') }} Punkte</td>
+                            <td class="num"><a class="btn btn-small btn-secondary" href="{{ path('app_mail_compose', {to: u.username}) }}">✉</a></td>
+                        </tr>
+                    {% endfor %}
+                </table>
+                {% if found|length == 50 %}<p class="muted small">Nur die ersten 50 Treffer – grenze die Suche weiter ein.</p>{% endif %}
+            {% endif %}
+        </section>
+    {% endif %}
+{% endblock %}

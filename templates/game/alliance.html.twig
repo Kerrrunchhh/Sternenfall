@@ -7,6 +7,7 @@
     <h1>{{ alliance.name }} <small>[{{ alliance.tag }}] · {{ alliance.type }}</small></h1>
     <p class="muted">Dein Rang: <strong>{{ rank.label }}</strong>
         {% if rank.hasFleetRights %} · du siehst und steuerst die für die {{ alliance.type }} freigegebenen Flotten unter <a href="{{ path('app_fleet') }}">Flotten</a>{% endif %}
+        · Steuer {{ alliance.taxRate }} % · Allianzkasse {{ alliance.treasury|number_format(0, ',', '.') }} Credits
     </p>
     <section class="panel profile">
         {{ ui.picture(alliance.image, 'alliances', alliance.name) }}
@@ -63,6 +64,19 @@
         {% if rank.canManage %}
             <section class="panel">
                 <h2>Verwaltung</h2>
+                <h3 class="small muted">Allianzkasse: {{ alliance.treasury|number_format(0, ',', '.') }} Credits</h3>
+                <form method="post" action="{{ path('app_alliance_tax') }}" class="inline-action">
+                    <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
+                    <label>Steuer auf das Credit-Einkommen <input type="number" name="rate" min="0" max="{{ constant('App\\Entity\\Alliance::MAX_TAX') }}" value="{{ alliance.taxRate }}" class="short"> %</label>
+                    <button class="btn btn-small btn-secondary" type="submit" id="alliance-tax">Setzen</button>
+                </form>
+                <form method="post" action="{{ path('app_alliance_payout') }}" class="inline-action payout-form">
+                    <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
+                    <select name="member" aria-label="Mitglied">{% for m in alliance.members %}<option value="{{ m.id }}">{{ m.username }}</option>{% endfor %}</select>
+                    <input type="text" name="amount" inputmode="numeric" class="short" placeholder="Credits" required aria-label="Betrag">
+                    <input type="text" name="note" maxlength="200" placeholder="Notiz (optional)" aria-label="Notiz">
+                    <button class="btn btn-small" type="submit" id="alliance-payout">Auszahlen</button>
+                </form>
                 <form method="post" action="{{ path('app_alliance_invite') }}" class="inline-action">
                     <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
                     <input type="text" name="username" placeholder="Spielername" required aria-label="Spielername">

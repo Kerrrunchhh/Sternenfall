@@ -4,6 +4,7 @@ namespace App\Game;
 
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Clock\ClockInterface;
 
 /**
  * Named, coloured fleet filters a player saves for the fleet page. The rules are checked
@@ -12,10 +13,19 @@ use Doctrine\ORM\EntityManagerInterface;
 final readonly class FleetFilters
 {
     public const int MAX_FILTERS = 20;
+    /** Normal accounts; extended accounts may save MAX_FILTERS. */
+    public const int MAX_FILTERS_NORMAL = 2;
     public const int MAX_RULES = 20;
 
-    public function __construct(private EntityManagerInterface $em)
+    public function __construct(
+        private EntityManagerInterface $em,
+        private ClockInterface $clock,
+    ) {
+    }
+
+    public function limitFor(User $player): int
     {
+        return $player->isExtended($this->clock->now()) ? self::MAX_FILTERS : self::MAX_FILTERS_NORMAL;
     }
 
     /** Saves the filter under its name (an existing one with that name is replaced). */
@@ -43,8 +53,11 @@ final readonly class FleetFilters
             'rules' => array_map(self::rule(...), array_values($data['rules'])),
         ];
         $filters = array_values(array_filter($player->getFleetFilters(), static fn (array $f): bool => $f['name'] !== $name));
-        if (\count($filters) >= self::MAX_FILTERS) {
-            throw new GameException(\sprintf('Du kannst höchstens %d Filter speichern.', self::MAX_FILTERS));
+        $limit = $this->limitFor($player);
+        if (\count($filters) >= $limit) {
+            throw new GameException(self::MAX_FILTERS === $limit
+                ? \sprintf('Du kannst höchstens %d Filter speichern.', $limit)
+                : \sprintf('Ohne erweiterten Account kannst du %d Filter speichern (erweitert: %d).', $limit, self::MAX_FILTERS));
         }
         $filters[] = $filter;
         usort($filters, static fn (array $a, array $b): int => strcasecmp($a['name'], $b['name']));

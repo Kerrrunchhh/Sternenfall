@@ -1,0 +1,57 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}Benutzer – Admin – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h1>🛡 Benutzer</h1>
+    <form method="get" action="{{ path('app_admin_users') }}" class="panel inline-action admin-user-search">
+        <input type="text" name="q" value="{{ query }}" placeholder="Name oder E-Mail" aria-label="Suche">
+        <select name="role" aria-label="Rolle">
+            <option value="">Alle Rollen</option>
+            {% for key, label in roles %}<option value="{{ key }}" {{ role == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+        </select>
+        <button class="btn btn-small" type="submit">Suchen</button>
+    </form>
+
+    {% for u in users %}
+        {% set current = u.roles|filter(r => r == 'ROLE_ADMIN')|length > 0 ? 'ROLE_ADMIN' : (u.roles|filter(r => r == 'ROLE_MODERATOR')|length > 0 ? 'ROLE_MODERATOR' : 'player') %}
+        <details class="panel admin-user">
+            <summary>
+                {{ ui.player(u) }}
+                <span class="ticket-status">{{ roles[current] }}</span>
+                {% if u.onVacation(now) %}<span class="vacation-tag">🌴 bis {{ u.vacationUntil|date('d.m. H:i') }}</span>{% endif %}
+                {% if u.deleteAt %}<span class="small" style="color: var(--bad)">wird am {{ u.deleteAt|date('d.m. H:i') }} gelöscht</span>{% endif %}
+                <span class="muted small">{{ u.email ?? 'keine E-Mail' }} · seit {{ u.createdAt|date('d.m.Y') }} · {{ u.planets|length }} Planeten</span>
+            </summary>
+            <div class="admin-user-actions">
+                <form method="post" action="{{ path('app_admin_user', {id: u.id}) }}" class="inline-action">
+                    <input type="hidden" name="_token" value="{{ csrf_token('admin_users') }}"><input type="hidden" name="do" value="role"><input type="hidden" name="q" value="{{ query }}">
+                    <label>Rolle <select name="role">{% for key, label in roles %}<option value="{{ key }}" {{ key == current ? 'selected' }}>{{ label }}</option>{% endfor %}</select></label>
+                    <button class="btn btn-small btn-secondary" type="submit">Setzen</button>
+                </form>
+                <form method="post" action="{{ path('app_admin_user', {id: u.id}) }}" class="inline-action">
+                    <input type="hidden" name="_token" value="{{ csrf_token('admin_users') }}"><input type="hidden" name="do" value="vacation"><input type="hidden" name="q" value="{{ query }}">
+                    <label>Urlaub <input type="text" name="days" value="1" class="short" inputmode="decimal" required> Tage</label>
+                    <input type="text" name="reason" required maxlength="200" placeholder="Grund (bekommt der Spieler)">
+                    <button class="btn btn-small btn-secondary" type="submit">In Urlaub schicken</button>
+                </form>
+                <form method="post" action="{{ path('app_admin_user', {id: u.id}) }}" class="mail-form">
+                    <input type="hidden" name="_token" value="{{ csrf_token('admin_users') }}"><input type="hidden" name="do" value="message"><input type="hidden" name="q" value="{{ query }}">
+                    <textarea name="body" rows="2" required placeholder="Nachricht der Spielleitung an {{ u.username }}"></textarea>
+                    <button class="btn btn-small btn-secondary" type="submit">Nachricht senden</button>
+                </form>
+                {% if u.id != player.id %}
+                    <form method="post" action="{{ path('app_admin_user', {id: u.id}) }}" class="inline-action admin-delete">
+                        <input type="hidden" name="_token" value="{{ csrf_token('admin_users') }}"><input type="hidden" name="do" value="delete"><input type="hidden" name="q" value="{{ query }}">
+                        <select name="planets"><option value="leave">Planeten verlassen (Gebäude bleiben)</option><option value="destroy">Gebäude zerstören</option></select>
+                        <input type="text" name="confirm" required placeholder="Name zur Bestätigung" aria-label="Spielername zur Bestätigung">
+                        <button class="btn btn-small btn-danger" type="submit" data-confirm="{{ u.username }} sofort löschen? Das lässt sich nicht rückgängig machen." data-confirm-label="Löschen">Sofort löschen</button>
+                    </form>
+                {% endif %}
+            </div>
+        </details>
+    {% else %}
+        <p class="panel muted">Keine Benutzer gefunden.</p>
+    {% endfor %}
+{% endblock %}

@@ -20,7 +20,7 @@ final readonly class GameMailer
 {
     /** @var array<string, string> topic => label */
     public const array TOPICS = [
-        'attack' => 'Angriff auf einen meiner Planeten (sobald mein Radar ihn sieht)',
+        'attack' => 'Angriff auf einen meiner Planeten',
         'research' => 'Forschung abgeschlossen',
         'mail' => 'Neue Nachricht in der Post',
         'battle' => 'Kampfbericht (ich war an einer Schlacht beteiligt)',
@@ -34,7 +34,7 @@ final readonly class GameMailer
         #[Autowire(env: 'MAILER_FROM')]
         private string $from = 'noreply@example.org',
         #[Autowire(env: 'GAME_NAME')]
-        private string $gameName = 'Sternenfall',
+        private string $gameName = 'Starfall: New Horizons',
     ) {
     }
 

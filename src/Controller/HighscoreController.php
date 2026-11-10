@@ -14,7 +14,7 @@ class HighscoreController extends AbstractGameController
     private const int TOP = 100;
 
     #[Route('/highscores', name: 'app_highscores', methods: ['GET'])]
-    public function index(Request $request, Highscores $highscores): Response
+    public function index(Request $request, Highscores $highscores, \App\Game\GameStats $stats): Response
     {
         $planet = $this->currentPlanet();
         $player = $this->player();
@@ -39,6 +39,7 @@ class HighscoreController extends AbstractGameController
             'own' => $own,
             'own_outside' => null !== $own && $own['rank'] > self::TOP,
             'top' => self::TOP,
+            'top_today' => $stats->topExperienceToday(),
         ]);
     }
 }

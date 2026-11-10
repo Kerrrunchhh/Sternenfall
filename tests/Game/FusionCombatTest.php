@@ -43,6 +43,7 @@ final class FixedEngine implements Engine
 class FusionCombatTest extends TestCase
 {
     private \DateTimeImmutable $now;
+    private ?Planet $startPlanet = null;
     private User $defender;
     private User $attacker;
     /** @var list<object> */
@@ -173,16 +174,19 @@ class FusionCombatTest extends TestCase
     }
 
     /** @param array<string, int> $ships */
-    public function testSalvageShipsCarryTheLootAndFreightersStayHome(): void
+    public function testSalvageShipsBringTheLootStraightToTheStartPlanet(): void
     {
         $planet = new Planet($this->defender, 'Speicher', 1, 1, 5, $this->now);
         $planet->setResources(new Resources(iron: 500000, titanium: 500000));
+        $this->startPlanet = new Planet($this->attacker, 'Basis', 1, 2, 1, $this->now);
+        $before = $this->startPlanet->getResources()->total();
 
         $withoutSalvager = $this->attack($planet, ['leviathan' => 1]);
-        self::assertSame(0.0, $withoutSalvager->getCargo()->total(), 'no salvage ship, no loot');
+        self::assertSame($before, $this->startPlanet->getResources()->total(), 'no salvage ship, no loot');
 
         $withSalvager = $this->attack($planet, ['leviathan' => 1, 'salvager' => 2]);
-        self::assertEqualsWithDelta(2 * ShipType::Salvager->salvageCapacity(), $withSalvager->getCargo()->total(), 2);
+        self::assertSame(0.0, $withSalvager->getCargo()->total(), 'salvagers never carry anything');
+        self::assertEqualsWithDelta($before + 2 * ShipType::Salvager->salvageCapacity(), $this->startPlanet->getResources()->total(), 2, 'the loot is at the start planet');
 
         self::assertNotNull(\App\Game\FleetService::freightersInWarfleet(['pfeil' => 5, 'large_freighter' => 1]));
         self::assertNull(\App\Game\FleetService::freightersInWarfleet(['pfeil' => 5, 'salvager' => 1]));
@@ -260,6 +264,9 @@ class FusionCombatTest extends TestCase
         $debris = $this->createStub(DebrisFieldRepository::class);
         $debris->method('findAt')->willReturn(null);
 
+        $planets = $this->createStub(\App\Repository\PlanetRepository::class);
+        $planets->method('findAt')->willReturnCallback(fn (): ?Planet => $this->startPlanet);
+
         return new CombatService(
             $em,
             new PlanetService($em, new LockFactory(new InMemoryStore()), $clock, new PlanetUpdater($economy), $economy),
@@ -269,6 +276,7 @@ class FusionCombatTest extends TestCase
             new Inbox($em, $clock),
             $clock,
             new Randomizer(new FixedEngine($lucky)),
+            planetRepository: $planets,
         );
     }
 

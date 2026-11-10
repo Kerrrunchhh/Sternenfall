@@ -41,6 +41,21 @@ final class GameExtension
         return ['planets' => $planets, 'points' => $points, 'experience' => $experience, 'avg_experience' => $experience / $count, 'avg_points' => $points / $count];
     }
 
+    /** Until when a moving fleet can still be recalled (Radartechnik), null if no more. */
+    #[AsTwigFunction('recall_until')]
+    public static function recallUntil(\App\Entity\Fleet $fleet): ?\DateTimeImmutable
+    {
+        if (!$fleet->isMoving() || $fleet->isReturning() || null === $fleet->getDepartAt()) {
+            return null;
+        }
+        if (\App\Game\FleetMission::Hover === $fleet->getMission()) {
+            return $fleet->getNextEventAt();
+        }
+        $until = $fleet->getDepartAt()->modify('+'.\App\Game\Economy::recallWindow($fleet->getOwner()).' seconds');
+
+        return $until > new \DateTimeImmutable() ? $until : null;
+    }
+
     /** Points of one planet (building levels × points rate). */
     #[AsTwigFunction('planet_points')]
     public static function planetPoints(\App\Entity\Planet $planet): int

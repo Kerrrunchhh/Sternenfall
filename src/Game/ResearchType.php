@@ -30,6 +30,7 @@ enum ResearchType: string
     case Colonization = 'colonization';
     case TradeNetwork = 'trade_network';
     case Radar = 'radar';
+    case RadarTech = 'radar_tech';
 
     public function label(): string
     {
@@ -53,6 +54,7 @@ enum ResearchType: string
             self::Colonization => 'Kolonisationstechnik',
             self::TradeNetwork => 'Handelsnetz',
             self::Radar => 'Radar',
+            self::RadarTech => 'Radartechnik',
         };
     }
 
@@ -62,7 +64,7 @@ enum ResearchType: string
             self::SolidDrive, self::IonDrive, self::PlasmaDrive, self::WarpDrive => 'Antriebe',
             self::ImpulseLaser, self::HeavyLaser, self::ElectronCannon, self::TachyonLauncher, self::PlasmaLauncher => 'Waffen',
             self::RotationShield, self::PhaseShield, self::QuantumShield, self::GravitonShield => 'Schilde',
-            self::Espionage, self::InvasionTech, self::FusionTech, self::Colonization, self::TradeNetwork, self::Radar => 'Zusatztechnologien',
+            self::Espionage, self::InvasionTech, self::FusionTech, self::Colonization, self::TradeNetwork, self::Radar, self::RadarTech => 'Zusatztechnologien',
         };
     }
 
@@ -88,6 +90,7 @@ enum ResearchType: string
             self::Colonization => 'Ohne diese Forschung hast du nur deinen Heimatplaneten. Jede Stufe erlaubt 10 Planetenplätze: Stufe 1 = 10, Stufe 2 = 20 usw., ohne Obergrenze (nach rund 10 Jahren sind 500 Plätze möglich); verschweißte Plätze zählen einzeln. Langzeitforschung: jede Stufe dauert sehr lange – die Dauer hängt ganz von den Forschungslaboren ab.',
             self::TradeNetwork => 'Logistik für den Fernhandel. Jede Stufe erlaubt Händlern einen weiteren Handelsstützpunkt.',
             self::Radar => 'Macht angreifende und Rohstoffe transportierende Flotten sichtbar: ab Stufe 1 im eigenen System, je 5 Stufen ein System weiter nach links und rechts.',
+            self::RadarTech => 'Hält die Funkverbindung zu startenden Flotten: Nur so lange nach dem Start kannst du sie zurückrufen. Ohne Radartechnik gar nicht, Stufe 1: 5 Sekunden, Stufe 10: knapp 1 Minute, Stufe 20: 5 Minuten – und weiter steigend.',
         };
     }
 
@@ -140,6 +143,7 @@ enum ResearchType: string
             self::Colonization => new Resources(iron: 2000, titanium: 4000, hydrogen: 1000),
             self::TradeNetwork => new Resources(iron: 2000, titanium: 3000, hydrogen: 500),
             self::Radar => new Resources(iron: 1000, titanium: 2000, hydrogen: 500),
+            self::RadarTech => new Resources(iron: 600, titanium: 1200, hydrogen: 300),
         };
     }
 
@@ -167,6 +171,7 @@ enum ResearchType: string
             self::Colonization => [$lab(1)],
             self::TradeNetwork => [$lab(2), $tech(self::SolidDrive, 1)],
             self::Radar => [$lab(2)],
+            self::RadarTech => [$lab(1)],
         };
     }
 }

@@ -6,7 +6,7 @@
 
 {% block body %}
     <main class="public-report">
-        <a href="{{ path(app.user ? 'app_overview' : 'app_home') }}" class="public-report-logo"><img src="{{ asset('pictures/brand/logo.webp') }}" alt="{{ game_name }}" width="223" height="90"></a>
+        <a href="{{ path(app.user ? 'app_overview' : 'app_home') }}" class="public-report-logo"><img src="{{ asset('pictures/brand/logo.webp') }}" alt="{{ game_name }}" width="223" height="131"></a>
         {% if report %}
             <article class="panel battle-report">
                 <h1>{{ report.subject }}</h1>

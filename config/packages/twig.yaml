@@ -3,6 +3,7 @@ twig:
     form_themes: ['form/theme.html.twig']
     globals:
         game_name: '%env(GAME_NAME)%'
+        ad_html: '%env(AD_HTML)%'
     # Game times are stored in UTC and shown in German time.
     date:
         timezone: Europe/Berlin

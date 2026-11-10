@@ -26,7 +26,8 @@
         </table>
     </section>
 
-    <h2 class="section-title">Alle Handelsstützpunkte ({{ posts|filter(p => p.active)|length }})</h2>
+    <h2 class="section-title">Alle Handelsstützpunkte ({{ posts|filter(p => p.active)|length }})
+        <label class="inline-check small"><input type="checkbox" data-only-accessible> nur für mich zugängliche</label></h2>
     {% set listed = posts|filter(p => p.active or p.owner.id == player.id) %}
     {% if listed is empty %}
         <p class="panel muted">Noch gibt es keine Handelsstützpunkte.</p>
@@ -35,7 +36,7 @@
             <table class="table">
                 {% for post in listed %}
                     {% set access = post.accessibleTo(player) %}
-                    <tr class="{{ access ? '' : 'muted' }}">
+                    <tr class="{{ access ? '' : 'muted' }}" data-post-row data-accessible="{{ access and post.active ? 1 : 0 }}">
                         <td><a href="{{ path('app_trade_post', {id: post.id}) }}">⚖ {{ post.name }}</a></td>
                         <td>{{ ui.coords(post.coordinates) }}</td>
                         <td>{{ ui.player(post.owner) }}</td>

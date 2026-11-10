@@ -70,7 +70,7 @@ h2 { font-size: 1.1rem; margin: 0 0 .75rem; color: var(--accent); }
 .hint { color: var(--muted); font-size: .9rem; }
 
 label { display: block; margin: .75rem 0 .25rem; color: var(--muted); font-size: .9rem; }
-input[type=text], input[type=password] {
+input[type=text], input[type=password], input[type=email] {
     width: 100%;
     padding: .55rem .7rem;
     background: var(--bg-2);
@@ -645,3 +645,30 @@ label.checkbox { display: flex; gap: .4rem; align-items: center; color: var(--te
 .status-stats { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
 .imprint h2 { font-size: 1rem; margin-top: 1rem; }
 .topic-list { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .3rem; }
+
+.vacation-tag { font-size: .75rem; color: var(--ok); white-space: nowrap; }
+/* Alliance members: name, status and scores on one line */
+.member-table .member-name + .muted.small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.member-table td:first-child { max-width: 0; width: 100%; }
+
+.queue-toggle-all { display: flex; gap: .5rem; margin-bottom: .5rem; }
+.queue-planet > summary { cursor: pointer; list-style: revert; }
+.inline-check { display: inline-flex; align-items: center; gap: .35rem; margin: 0 0 0 .75rem; font-weight: normal; color: var(--muted); }
+.vacation-banner { border-color: var(--ok); background: rgba(102, 187, 106, .1); }
+.place-chips { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .5rem; }
+.place-chips .filter-chip { cursor: pointer; color: var(--text); font: inherit; font-size: .85rem; }
+.payout-form { flex-wrap: wrap; gap: .4rem; margin-top: .5rem; }
+.admin-user summary { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; cursor: pointer; }
+.admin-user-actions { display: flex; flex-direction: column; gap: .6rem; margin-top: .75rem; }
+.admin-user-actions .inline-action { flex-wrap: wrap; gap: .4rem; }
+.admin-user-search { flex-wrap: wrap; gap: .5rem; }
+
+/* Ad slot on the start pages (none for extended accounts). */
+.ad-slot { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .25rem; min-height: 90px; margin: 1rem 0; padding: .5rem; border: 1px dashed var(--border, #334); border-radius: 8px; text-align: center; overflow: hidden; }
+.ad-slot-off { opacity: .8; }
+#paypal-button { max-width: 400px; margin-top: .75rem; }
+
+/* Planet pictures by planet type. */
+.planet-pic { display: inline-block; vertical-align: middle; border-radius: 50%; filter: drop-shadow(0 0 6px rgba(120, 170, 255, .35)); }
+.planet-pic-tiny { filter: none; }
+.planet-title { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }

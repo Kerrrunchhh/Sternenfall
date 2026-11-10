@@ -1,0 +1,8 @@
+<aside class="ad-slot" aria-label="Werbung">
+    {% if ad_html %}
+        {{ ad_html|raw }}
+    {% else %}
+        <span class="muted small">Werbefläche</span>
+    {% endif %}
+    {% if app.user %}<a class="ad-slot-off small" href="{{ path('app_extended') }}">Werbefrei mit erweitertem Account</a>{% endif %}
+</aside>

@@ -69,7 +69,7 @@ final readonly class AccountDeletion
         $this->leaveAlliance($user);
 
         foreach ($user->getPlanets()->toArray() as $planet) {
-            if ($user->getResearchPlanet() === $planet) {
+            if ($user->isResearchingOn($planet)) {
                 $user->clearResearch();
             }
             $planet->leaveToNobody($nobody, $user->isDeleteDestroyingBuildings());

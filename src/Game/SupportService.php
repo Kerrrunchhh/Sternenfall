@@ -138,7 +138,7 @@ final readonly class SupportService
     /** @return list<User> */
     public function admins(): array
     {
-        return array_values(array_filter($this->users->findAll(), static fn (User $u): bool => \in_array('ROLE_ADMIN', $u->getRoles(), true)));
+        return array_values(array_filter($this->users->findAll(), static fn (User $u): bool => [] !== array_intersect(['ROLE_ADMIN', 'ROLE_MODERATOR'], $u->getRoles())));
     }
 
     private function notifyAuthor(Ticket $ticket, string $body): void

@@ -47,6 +47,8 @@ final readonly class FleetService
         private ?AttackRules $attackRules = null,
         private ?AccountDeletion $accountDeletion = null,
         private ?GameMailer $gameMailer = null,
+        private ?ContractService $contracts = null,
+        private ?TransportRequests $transportRequests = null,
     ) {
     }
 
@@ -95,9 +97,14 @@ final readonly class FleetService
             $this->withEventLock(fn () => $this->assertAttackShare($fleets, $lead));
         }
         $loads = $this->shareCargo($fleets, $cargo);
+        // All or nothing: if one fleet can't start (e.g. can't pay fuel and provisions), none does.
+        $this->withEventLock(fn () => $this->preflight($fleets, $actor, $galaxy, $system, $position, $mission, $loads, $speedPercent, $lead));
 
         $results = [];
         if (null === $lead) {
+            if ([] === array_filter($fleets, static fn (Fleet $f): bool => !$f->isAt($galaxy, $system, $position))) {
+                throw new GameException('Alle ausgewählten Flotten stehen schon an diesem Ziel.');
+            }
             // The slowest fleet leads, the others wait for it.
             usort($fleets, fn (Fleet $a, Fleet $b): int => $this->flightTo($b, $galaxy, $system, $position, $speedPercent) <=> $this->flightTo($a, $galaxy, $system, $position, $speedPercent));
             $lead = array_shift($fleets);
@@ -169,6 +176,51 @@ final readonly class FleetService
         ));
     }
 
+    /**
+     * Checks every fleet of a group before any starts: control, ready, mission and whether
+     * its start planet (or its cargo) pays fuel and provisions.
+     *
+     * @param list<Fleet>           $fleets
+     * @param array<int, Resources> $loads
+     */
+    private function preflight(array $fleets, User $actor, int $galaxy, int $system, int $position, FleetMission $mission, array $loads, float $speedPercent, ?Fleet $lead): void
+    {
+        $target = $this->planetRepository->findAt($galaxy, $system, $position);
+        $post = $this->tradePosts->findAt($galaxy, $system, $position);
+        foreach ($fleets as $fleet) {
+            $this->em->refresh($fleet);
+            $label = $fleet->getLabel();
+            try {
+                if (!$fleet->isIdle()) {
+                    throw new GameException('Sie ist bereits unterwegs.');
+                }
+                $this->assertReadyToLeave($fleet);
+                if ($fleet->isAt($galaxy, $system, $position)) {
+                    continue; // hovers at the target, costs nothing
+                }
+                $this->validateMission($mission, $fleet->getOwner(), $target, $fleet->getShips(), $fleet->isNamed(), $post);
+                $ships = $fleet->getShips();
+                $distance = $this->navigation->distance($fleet->getGalaxy(), $fleet->getSystem(), $fleet->getPosition(), $galaxy, $system, $position);
+                $seconds = $this->navigation->flightSeconds($distance, $this->navigation->slowestSpeed($ships, $fleet->getOwner()), $speedPercent);
+                if (null !== $lead && $this->now()->modify("+{$seconds} seconds") > $lead->getArriveAt()) {
+                    throw new GameException(\sprintf('Zu langsam: %s ist %s am Ziel.', $lead->getLabel(), $this->localTime($lead->getArriveAt())));
+                }
+                $travel = $this->navigation->supplies($ships, $seconds, false)->add(new Resources(hydrogen: $this->navigation->fuel($ships, $distance, false)));
+                $base = $this->ownPlanetAt($fleet);
+                if (null !== $base) {
+                    $needed = ($loads[spl_object_id($fleet)] ?? new Resources())->add($travel);
+                    if (!$base->getResources()->covers($needed)) {
+                        throw new GameException(\sprintf('%s hat nicht genug für Ladung, Treibstoff (%s Wasserstoff) und Proviant.', $base->getName(), number_format($travel->hydrogen, 0, ',', '.')));
+                    }
+                } elseif (null === $this->tradePosts->findAt($fleet->getGalaxy(), $fleet->getSystem(), $fleet->getPosition()) && !$fleet->getCargo()->covers($travel)) {
+                    throw new GameException(\sprintf('Ihre Ladung reicht nicht für Treibstoff (%s Wasserstoff) und Proviant.', number_format($travel->hydrogen, 0, ',', '.')));
+                }
+            } catch (GameException $e) {
+                throw new GameException(\sprintf('%s kann nicht starten: %s Der ganze Verband bleibt stehen.', $label, $e->getMessage()));
+            }
+        }
+    }
+
     private function flightTo(Fleet $fleet, int $galaxy, int $system, int $position, float $speedPercent): int
     {
         $distance = $this->navigation->distance($fleet->getGalaxy(), $fleet->getSystem(), $fleet->getPosition(), $galaxy, $system, $position);
@@ -227,8 +279,8 @@ final readonly class FleetService
     }
 
     /**
-     * Planets of a player on vacation can be neither attacked nor spied on – except
-     * invaded planets that don't fully belong to him yet.
+     * Planets of a player on vacation can't be attacked – except invaded planets that
+     * don't fully belong to him yet. Spying on them is allowed.
      */
     private function vacationProtects(?Planet $target): ?string
     {
@@ -257,9 +309,6 @@ final readonly class FleetService
     {
         if (!$this->colonizer->isValidSlot($galaxy, $system, $position)) {
             throw new GameException('Diese Koordinaten gibt es nicht.');
-        }
-        if (null !== $reason = $this->vacationProtects($this->planetRepository->findAt($galaxy, $system, $position))) {
-            throw new GameException($reason);
         }
 
         // Nearest planet with a scout in the hangar (all scouts of a player are equally fast).
@@ -642,6 +691,14 @@ final readonly class FleetService
                     throw new GameException('Weitere Flotten schickt nur, wer den Angriff führt – die anderen geben ihm ihre Flotten frei.');
                 }
             }
+            // Already at the target of its group: hover there until the others arrive.
+            if (null !== $lead && $fleet->isAt($galaxy, $system, $position)) {
+                $fleet->hoverUntil($lead, $this->now());
+                $this->em->flush();
+                $result = \sprintf('Flotte „%s“ steht schon am Ziel und schwebt dort, bis %s ankommt.', $fleet->getName(), $lead->getLabel());
+
+                return;
+            }
             $launch = function (?Planet $base, \DateTimeImmutable $now) use ($fleet, $mission, $galaxy, $system, $position, $cargo, $order, $speedPercent, $lead): void {
                 $this->launch($fleet, $base, $mission, $galaxy, $system, $position, $cargo, $now, $order, $speedPercent);
                 if (null !== $lead) {
@@ -661,7 +718,7 @@ final readonly class FleetService
             $launch(null, $this->now());
             $this->em->flush();
         });
-        if (null !== $lead && $fleet->isMoving()) {
+        if (null !== $lead && $fleet->isMoving() && !$fleet->isAt($galaxy, $system, $position)) {
             $result = FleetMission::Attack === $mission
                 ? \sprintf('Flotte „%s“ tritt dem Angriff von %s auf [%s] bei.', $fleet->getName(), $lead->getOwner()->getUsername(), $lead->getTargetCoordinates())
                 : \sprintf('Flotte „%s“ fliegt im Konvoi mit %s nach [%s].', $fleet->getName(), $lead->getLabel(), $lead->getTargetCoordinates());
@@ -698,7 +755,7 @@ final readonly class FleetService
     private function mailAttackWarning(Fleet $attacker): void
     {
         $target = $this->planetRepository->findAt((int) $attacker->getTargetGalaxy(), (int) $attacker->getTargetSystem(), (int) $attacker->getTargetPosition());
-        if (null === $target || null === $this->gameMailer || !$this->radar->sees($target->getOwner(), $attacker)) {
+        if (null === $target || null === $this->gameMailer || !$target->getOwner()->wantsMail('attack') || !$target->getOwner()->allowAttackMail($this->now())) {
             return;
         }
         $this->gameMailer->notify($target->getOwner(), 'attack', 'Angriff auf '.$target->getName(), \sprintf(
@@ -994,6 +1051,13 @@ final readonly class FleetService
             if ($fleet->isIdle() || $fleet->isReturning() || $fleet->getArriveAt() <= $now) {
                 throw new GameException('Die Flotte ist nicht auf dem Hinflug.');
             }
+            // Radartechnik: only shortly after the start the fleet still hears the recall.
+            $window = Economy::recallWindow($fleet->getOwner());
+            if ($now->getTimestamp() - $fleet->getDepartAt()->getTimestamp() > $window) {
+                throw new GameException(0 === $window
+                    ? 'Ohne Radartechnik lässt sich eine gestartete Flotte nicht zurückrufen.'
+                    : \sprintf('Zu spät: Mit deiner Radartechnik lässt sich eine Flotte nur in den ersten %s nach dem Start zurückrufen.', GameExtension::formatDuration($window)));
+            }
 
             $fleet->recall($now);
             $this->em->flush();
@@ -1019,6 +1083,8 @@ final readonly class FleetService
             $this->sendOverstayersHome();
             $this->giveUpAbandonedPlanets();
             $this->accountDeletion?->deleteDue();
+            $this->contracts?->settleDue();
+            $this->transportRequests?->reopenOrphans();
             $this->em->flush();
         });
     }
@@ -1045,7 +1111,8 @@ final readonly class FleetService
             $planet = null === $post ? $this->planetRepository->findAt($g, $s, $p) : null;
             $owner = $fleet->getOwner();
             $limited = null !== $post
-                || (null !== $planet && !($this->diplomacy?->mayStay($owner, $planet->getOwner()) ?? ($owner->isSameAs($planet->getOwner()) || $owner->isAllyOf($planet->getOwner()))));
+                || (null !== $planet && !($this->diplomacy?->mayStay($owner, $planet->getOwner()) ?? ($owner->isSameAs($planet->getOwner()) || $owner->isAllyOf($planet->getOwner())))
+                    && !($this->contracts?->protects($owner, $planet) ?? false));
 
             // Allowed to stay (own planet, alliance, bond, free slot): look again in a day.
             if (!$limited || null === $fleet->getParkedAt()) {
@@ -1318,7 +1385,6 @@ final readonly class FleetService
             },
             FleetMission::Spy => match (true) {
                 $owned => 'Deine eigenen Planeten musst du nicht ausspionieren.',
-                null !== $this->vacationProtects($target) => $this->vacationProtects($target),
                 ($ships[ShipType::Scout->value] ?? 0) < 1 => 'Zum Spionieren wird mindestens eine Sonde benötigt.',
                 default => null,
             },
@@ -1341,6 +1407,8 @@ final readonly class FleetService
                 default => null,
             },
             FleetMission::Attack => match (true) {
+                null === $target && null !== $post && !$this->mayAttack($player, $post->getOwner()) => \sprintf('Dort steht der Handelsstützpunkt „%s“ von %s – mit ihm habt ihr ein %s, Angriffe sind ausgeschlossen. Handelsstützpunkte lassen sich ohnehin nicht angreifen.', $post->getName(), $post->getOwner()->getUsername(), $this->diplomacy?->kindBetween($player, $post->getOwner())?->label() ?? 'Abkommen'),
+                null === $target && null !== $post => \sprintf('Dort steht der Handelsstützpunkt „%s“ – Handelsstützpunkte können nicht angegriffen werden.', $post->getName()),
                 null === $target => 'Dort gibt es keinen Planeten.',
                 null !== self::freightersInWarfleet($ships) => self::freightersInWarfleet($ships),
                 // A fused home planet can lose its lower planets, only a single one is untouchable.
@@ -1378,6 +1446,7 @@ final readonly class FleetService
                 $cargo = $fleet->getCargo();
                 $this->planets->transaction($target, static fn (Planet $t) => $t->setResources($t->getResources()->add($cargo)));
                 $fleet->setCargo(new Resources());
+                $this->transportRequests?->delivered($fleet, $target);
                 $this->inbox->send($player, "Transport nach $where angekommen", "$name hat folgende Ladung bei {$target->getName()} $where abgeliefert:\n".$this->formatResources($cargo));
                 if ($target->getOwner()->getId() !== $player->getId()) {
                     $this->inbox->send($target->getOwner(), "Lieferung von {$player->getUsername()}", "{$player->getUsername()} hat dir auf {$target->getName()} $where Rohstoffe geliefert:\n".$this->formatResources($cargo));

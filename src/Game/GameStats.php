@@ -20,14 +20,14 @@ final readonly class GameStats
     }
 
     /**
-     * @return array{players: int, planets: int, slots: int, colonized_slots: int, ownerless: int, transports: int, attacks: int, signups: int, signoffs: int}
+     * @return array{players: int, planets: int, slots: int, colonized_slots: int, free_slots: int, ownerless: int, transports: int, attacks: int, signups: int, signoffs: int}
      */
     public function status(): array
     {
         $since = $this->now()->modify('-24 hours');
         $scalar = fn (string $dql, array $params = []): int => (int) $this->em->createQuery($dql)->setParameters($params)->getSingleScalarResult();
 
-        return [
+        $status = [
             'players' => $scalar('SELECT COUNT(u.id) FROM '.User::class.' u WHERE u.system = false'),
             'planets' => $scalar('SELECT COUNT(p.id) FROM '.Planet::class.' p'),
             'colonized_slots' => $scalar('SELECT COALESCE(SUM(p.fusionSize), 0) FROM '.Planet::class.' p'),
@@ -38,6 +38,10 @@ final readonly class GameStats
             'signups' => $scalar('SELECT COUNT(u.id) FROM '.User::class.' u WHERE u.createdAt >= :since AND u.system = false', ['since' => $since]),
             'signoffs' => $scalar('SELECT COUNT(d.id) FROM '.DeletedAccount::class.' d WHERE d.deletedAt >= :since', ['since' => $since]),
         ];
+        // Planet slots nobody has colonized yet.
+        $status['free_slots'] = max(0, $status['slots'] - $status['colonized_slots']);
+
+        return $status;
     }
 
     /**

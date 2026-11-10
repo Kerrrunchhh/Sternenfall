@@ -18,6 +18,7 @@
                 <div><dt>Ø Kampferfahrung</dt><dd>{{ stats.avg_experience|number_format(0, ',', '.') }}</dd></div>
             </dl>
             {# Members stay private: the public page shows no member list. #}
+            <p><a class="btn btn-small btn-secondary" href="{{ path('app_mail_compose', {to: '[' ~ alliance.tag ~ ']'}) }}" id="write-alliance">✉ Nachricht an {{ alliance.type == 'Allianz' ? 'die Allianz' : (alliance.type == 'Orden' ? 'den Orden' : (alliance.type == 'Syndikat' ? 'das Syndikat' : 'die Handelsgilde')) }}</a> <span class="muted small">geht an die Gründerin bzw. den Gründer</span></p>
             <div class="apply-box">
                 {% if player.alliance and player.alliance.id == alliance.id %}
                     <a class="btn btn-small btn-secondary" href="{{ path('app_alliance') }}">Zur Allianzverwaltung</a>

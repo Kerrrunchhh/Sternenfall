@@ -8,6 +8,7 @@
         <a class="btn" href="{{ path('app_register') }}">Jetzt registrieren</a>
         <a class="btn btn-secondary" href="{{ path('app_login') }}">Anmelden</a>
     </div>
+    {{ include('_ad.html.twig') }}
     <div class="landing-top">{{ include('_top_experience.html.twig') }}</div>
     <p class="muted small landing-links"><a href="{{ path('app_status') }}">Status des Universums</a> · <a href="{{ path('app_imprint') }}">Impressum</a></p>
 {% endblock %}

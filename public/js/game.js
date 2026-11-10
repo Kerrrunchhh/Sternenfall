@@ -224,6 +224,88 @@ const serverClock = (() => {
         kind.addEventListener('change', () => { only.hidden = kind.value !== 'report'; });
     });
 
+    // Extended account: PayPal subscription button (the SDK script loads deferred).
+    document.querySelectorAll('[data-extended-subscribe]').forEach((box) => {
+        const error = document.querySelector('[data-paypal-error]');
+        const show = (message) => { error.textContent = message; error.hidden = false; };
+        const render = () => {
+            if (!window.paypal) { show('PayPal konnte nicht geladen werden.'); return; }
+            window.paypal.Buttons({
+                style: { label: 'subscribe' },
+                createSubscription: (data, actions) => actions.subscription.create({ plan_id: box.dataset.plan, custom_id: box.dataset.custom }),
+                onApprove: (data) => {
+                    const body = new FormData();
+                    body.append('_token', box.dataset.token);
+                    body.append('subscription', data.subscriptionID);
+                    return fetch(box.dataset.url, { method: 'POST', body, credentials: 'same-origin' })
+                        .then((response) => response.json())
+                        .then((result) => { if (result.ok) { window.location.reload(); } else { show(result.error); } })
+                        .catch(() => show('Die Bestätigung ist fehlgeschlagen. Lade die Seite neu – das Abo wird über PayPal nachgetragen.'));
+                },
+                onError: () => show('PayPal meldet einen Fehler. Bitte versuche es später noch einmal.'),
+            }).render(box);
+        };
+        if (window.paypal) { render(); } else { window.addEventListener('load', render); }
+    });
+
+    // "Select all" checkbox for a list of checkboxes with the given name.
+    document.querySelectorAll('[data-check-all]').forEach((all) => {
+        all.addEventListener('change', () => {
+            document.querySelectorAll(`input[type=checkbox][name="${all.dataset.checkAll}"]`).forEach((box) => { box.checked = all.checked; });
+        });
+    });
+
+    // Transport request form: running total and suggested offer (a tenth of the amount).
+    document.querySelectorAll('[data-transport-offer]').forEach((form) => {
+        const offer = form.querySelector('[data-offer]');
+        let touched = false;
+        offer.addEventListener('input', () => { touched = true; });
+        const update = () => {
+            const total = [...form.querySelectorAll('[data-goods]')].reduce((sum, input) => sum + Math.max(0, Number(input.value) || 0), 0);
+            const hint = Math.ceil(total / 10);
+            form.querySelector('[data-goods-total]').textContent = total.toLocaleString('de-DE');
+            form.querySelector('[data-offer-hint]').textContent = hint.toLocaleString('de-DE');
+            if (!touched) { offer.value = hint > 0 ? hint : ''; }
+        };
+        form.querySelectorAll('[data-goods]').forEach((input) => input.addEventListener('input', update));
+        update();
+    });
+
+    // Buttons that open or close all fold-out sections of a page (e.g. queues per planet).
+    document.querySelectorAll('[data-details-all]').forEach((button) => {
+        button.addEventListener('click', () => {
+            document.querySelectorAll('details[data-details-group]').forEach((details) => {
+                details.open = 'open' === button.dataset.detailsAll;
+            });
+        });
+    });
+
+    // Trade posts: show only those accessible for the own life form and alliance.
+    document.querySelectorAll('[data-only-accessible]').forEach((box) => {
+        const key = 'sternenfall.tradeOnlyAccessible';
+        const apply = () => {
+            document.querySelectorAll('[data-post-row]').forEach((row) => { row.hidden = box.checked && row.dataset.accessible !== '1'; });
+            try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) { /* ignore */ }
+        };
+        try { box.checked = localStorage.getItem(key) === '1'; } catch (e) { /* ignore */ }
+        box.addEventListener('change', apply);
+        apply();
+    });
+
+    // Fleet places: a click selects all visible waiting fleets there, a second click deselects them.
+    document.querySelectorAll('[data-select-place]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const boxes = [...document.querySelectorAll('input[name="fleets[]"]')]
+                .filter((box) => box.dataset.from === button.dataset.selectPlace && !box.closest('tr').hidden && !box.closest('tr').classList.contains('moving'));
+            const select = !boxes.every((box) => box.checked);
+            boxes.forEach((box) => {
+                box.checked = select;
+                box.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+            button.classList.toggle('active', select);
+        });
+    });
+
     // Mail list: one checkbox selects all letters.
     document.querySelectorAll('[data-mail-list]').forEach((form) => {
         const all = form.querySelector('[data-select-all]');

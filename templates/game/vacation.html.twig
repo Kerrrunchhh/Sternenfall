@@ -1,0 +1,26 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}Urlaub – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h1>🌴 Du bist im Urlaub</h1>
+    <section class="panel">
+        {% if player.vacationForced %}
+            <p class="warning">Die Spielleitung hat dich in den Urlaub geschickt{% if player.vacationReason %}: {{ player.vacationReason }}{% endif %}.</p>
+        {% endif %}
+        <p>Der Urlaub endet am <strong>{{ player.vacationUntil|date('d.m.Y H:i') }}</strong> – in {{ ui.countdown(player.vacationUntil, now) }}.</p>
+        <p class="muted small">Bis dahin ruht alles: keine Produktion, kein Bau, keine Forschung, keine Flotten. Deine Planeten können nicht angegriffen werden – außer invadierten Planeten, die dir noch nicht ganz gehören –, ausspionieren können andere sie aber schon.</p>
+        <p class="small">Möglich sind: <a href="{{ path('app_mail') }}">Post</a>, <a href="{{ path('app_tickers') }}">Ticker</a>, das schwarze Brett, <a href="{{ path('app_galaxy') }}">Galaxie</a>, <a href="{{ path('app_alliance') }}">Allianz</a>, <a href="{{ path('app_diplomacy') }}">Diplomatie</a>, <a href="{{ path('app_messages') }}">Nachrichten</a> und <a href="{{ path('app_notes') }}">Notizblock</a>.</p>
+        {% if can_end_at %}
+            {% if can_end_at <= now %}
+                <form method="post" action="{{ path('app_vacation_end') }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('vacation') }}">
+                    <button class="btn" type="submit" id="vacation-end">Urlaub jetzt beenden</button>
+                </form>
+            {% else %}
+                <p class="muted small">Vorzeitig beenden kannst du ihn ab {{ can_end_at|date('d.m.Y H:i') }} (Urlaub dauert mindestens einen Tag).</p>
+            {% endif %}
+        {% endif %}
+    </section>
+{% endblock %}

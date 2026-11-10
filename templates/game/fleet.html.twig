@@ -134,6 +134,23 @@
             <p class="muted small">„UND“ bindet stärker als „ODER“: <em>A UND B ODER C</em> heißt <em>(A UND B) ODER C</em>. „genau 0 × Falke“ findet Flotten ohne Falken. Ausgefilterte Flotten werden abgewählt. „Filter anwenden“ aus zeigt alle Flotten des Reiters, die Regeln bleiben erhalten.</p>
         </details>
 
+        {# Every place where waiting fleets are: one click selects (or deselects) all fleets there. #}
+        {% set places = {} %}
+        {% for e in rows|filter(e => e.fleet.idle) %}
+            {% set key = e.fleet.galaxy ~ ':' ~ e.fleet.system ~ ':' ~ e.fleet.position %}
+            {% set places = places|merge({(key): {count: (places[key].count ?? 0) + 1, name: e.at ? e.at.name : 'freier Platz'}}) %}
+        {% endfor %}
+        <details class="panel fleet-places" data-remember-open="fleet-places">
+            <summary>Standorte <span class="muted small">{{ places|length }}</span></summary>
+            <div class="place-chips">
+                {% for key, place in places %}
+                    <button type="button" class="filter-chip" data-select-place="{{ key }}" title="Alle Flotten bei [{{ key }}] aus- oder abwählen">[{{ key }}] {{ place.name }} <span class="muted">{{ place.count }}</span></button>
+                {% else %}
+                    <span class="muted small">Keine wartenden Flotten.</span>
+                {% endfor %}
+            </div>
+        </details>
+
         <form method="post" action="{{ path('app_fleets_bulk') }}" class="panel fleet-bulk" data-fleet-bulk
               data-flight data-game-speed="{{ game_speed }}">
             <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
@@ -189,8 +206,8 @@
                                     {{ f.mission.label }} {{ f.returning ? '← zurück nach' : '→' }} {{ ui.coords(f.returning ? f.coordinates : f.targetCoordinates) }}
                                     · {{ ui.countdown(f.nextEventAt, now) }} ({{ ui.at(f.nextEventAt, now) }})
                                 {% endif %}
-                                {% if f.moving and not f.returning %}
-                                    <button type="submit" class="link-button recall-link" formaction="{{ path('app_fleet_recall', {id: f.id}) }}" formnovalidate
+                                {% if f.moving and not f.returning and recall_until(f) %}
+                                    <button type="submit" class="link-button recall-link" title="Zurückrufen möglich bis {{ recall_until(f)|date('H:i:s') }} (Radartechnik)" formaction="{{ path('app_fleet_recall', {id: f.id}) }}" formnovalidate
                                             name="to" value="app_fleet" id="recall-{{ f.id }}">{{ f.mission.value == 'hover' ? '↓ landen' : '↩ zurückrufen' }}</button>
                                 {% endif %}
                             </span>
@@ -256,16 +273,6 @@
                     <p class="muted small">Jede ausgewählte Flotte lädt am Ziel diese Mengen ein – höchstens, was dort im Lager liegt und in ihren Frachtraum passt – und bringt sie ins Lager ihres Startplaneten. Oben eingetragene Ladung liefert sie vorher am Ziel ab.</p>
                 </div>
                 <p class="muted small">Treibstoff und Proviant zahlt der Planet, an dem eine Flotte steht, sonst ihre eigene Ladung. Mehrere Flotten zum Angreifen oder als Transport (auch mit Kriegsflotten als Geleitschutz) fliegen gemeinsam und kommen zusammen an; die Ladung wird auf die Flotten mit Frachtraum verteilt. Bei anderen Aufträgen fliegt jede Flotte einzeln.</p>
-            </div>
-            <div class="bulk-panel" data-panel="hover" hidden>
-                {% if hover_sources is empty %}
-                    <p class="muted small">Zum Schweben brauchst du einen Fusionator in einem Hangar oder in einer wartenden Flotte.</p>
-                {% else %}
-                    <label>Fusionator für die Sprungdauer
-                        <select name="source">{% for key, h in hover_sources %}<option value="{{ key }}">{{ h.label }}</option>{% endfor %}</select>
-                    </label>
-                    <p class="muted small">Die Flotten schweben so lange, wie der gewählte Fusionator bis zu ihnen bräuchte – unsichtbar, aber ohne den Planeten zu verteidigen. Rückruf landet sie sofort.</p>
-                {% endif %}
             </div>
             <div class="bulk-panel" data-panel="gather" hidden>
                 <p class="muted small">Schiffe der gewählten Typen fliegen von allen deinen Planeten zu der Flotte, wenn sie sie innerhalb der Höchstflugzeit erreichen.</p>

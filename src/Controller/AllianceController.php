@@ -181,6 +181,34 @@ class AllianceController extends AbstractGameController
         ]);
     }
 
+    #[Route('/alliance/steuer', name: 'app_alliance_tax', methods: ['POST'])]
+    #[IsCsrfTokenValid('alliance', tokenKey: '_token')]
+    public function tax(Request $request): Response
+    {
+        $this->currentPlanet();
+        $rate = $request->request->getInt('rate');
+        $this->attempt(fn () => $this->alliances->setTax($this->player(), $rate), \sprintf('Steuersatz: %d %%.', $rate));
+
+        return $this->redirectToRoute('app_alliance');
+    }
+
+    #[Route('/alliance/auszahlung', name: 'app_alliance_payout', methods: ['POST'])]
+    #[IsCsrfTokenValid('alliance', tokenKey: '_token')]
+    public function payout(Request $request, \App\Repository\UserRepository $users): Response
+    {
+        $this->currentPlanet();
+        $form = $request->request;
+        $member = $users->find($form->getInt('member'));
+        if (null === $member) {
+            $this->addFlash('error', 'Wähle ein Mitglied aus.');
+        } else {
+            $amount = (float) str_replace(['.', ','], ['', '.'], $form->getString('amount'));
+            $this->attempt(fn () => $this->alliances->payOut($this->player(), $member, $amount, $form->getString('note')), \sprintf('%s Credits an %s ausgezahlt.', number_format(floor($amount), 0, ',', '.'), $member->getUsername()));
+        }
+
+        return $this->redirectToRoute('app_alliance');
+    }
+
     #[Route('/alliance/presentation', name: 'app_alliance_present', methods: ['POST'])]
     #[IsCsrfTokenValid('alliance', tokenKey: '_token')]
     public function present(Request $request): Response

@@ -4,6 +4,7 @@
 {% block title %}Übersicht – {{ game_name }}{% endblock %}
 
 {% block content %}
+    {% if not player.isExtended(now) %}{{ include('_ad.html.twig') }}{% endif %}
     {% if attacks is not empty %}
         <section class="panel attack-alarm-panel" role="alert">
             <h2>🚨 Angriff{{ attacks|length > 1 ? 'e' }} auf deine Planeten</h2>
@@ -42,7 +43,7 @@
         </section>
     {% endif %}
 
-    <h1>{{ planet.name }} <small>[{{ planet.coordinates }}]</small></h1>
+    <h1 class="planet-title"><img class="planet-pic" src="{{ asset(planet.type.picture) }}" alt="{{ planet.type.label }}" width="64" height="64"> {{ planet.name }} <small>[{{ planet.coordinates }}]</small></h1>
     <details class="rename">
         <summary>Umbenennen{{ planet.homeworld ? '' : ' oder verlassen' }}</summary>
         <form method="post" action="{{ path('app_planet_rename', {id: planet.id}) }}" class="inline-action">
@@ -107,8 +108,8 @@
                         <td class="num movement-time" title="{{ f.returning ? 'Rückkehr' : (f.mission.value == 'hover' ? 'landet' : 'Ankunft') }}">{{ ui.countdown(f.nextEventAt, now) }}</td>
                         <td class="num small muted movement-time">{{ ui.at(f.nextEventAt, now) }}</td>
                         <td class="num movement-time">
-                            {% if not f.returning and f.owner.id == player.id %}
-                                <form method="post" action="{{ path('app_fleet_recall', {id: f.id}) }}" class="inline">
+                            {% if not f.returning and f.owner.id == player.id and recall_until(f) %}
+                                <form method="post" action="{{ path('app_fleet_recall', {id: f.id}) }}" class="inline" title="Zurückrufen möglich bis {{ recall_until(f)|date('H:i:s') }} (Radartechnik)">
                                     <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
                                     <input type="hidden" name="to" value="app_overview">
                                     <button type="submit" class="link-button recall-link" id="recall-{{ f.id }}">{{ f.mission.value == 'hover' ? '↓ landen' : '↩ zurückrufen' }}</button>
@@ -182,7 +183,7 @@
             <table class="table">
                 <tr><td>Koordinaten</td><td class="num">{{ planet.coordinates }}</td></tr>
                 <tr><td title="Jede Gebäudestufe zählt mit dem Punktesatz des Gebäudes">Punkte</td><td class="num">{{ planet_points(planet)|number_format(0, ',', '.') }}</td></tr>
-                <tr><td>Planetentyp</td><td class="num">{{ planet.type.icon }} {{ planet.type.label }}<br><span class="muted small">{{ planet.type.effect }}{% if planet.fused %}<br>Fusion: zählt als blauer Planet, alle Rohstoffe ×1,5{% endif %}</span></td></tr>
+                <tr><td>Planetentyp</td><td class="num">{{ planet.type.icon }} {{ planet.type.label }}<br><span class="muted small">{{ planet.type.effect }}{% if planet.fused %}<br>Fusion: zählt als blauer Planet, alle Rohstoffe ×1,5{% endif %}</span><br><a class="small" href="{{ path('app_fusion') }}">🔗 {{ planet.fused ? 'Fusion ansehen / sprengen' : 'Fusion: Vorschau anschweißen' }}</a></td></tr>
                 <tr><td>Vor Plünderung geschützt</td><td class="num">{{ protected|number_format(0, ',', '.') }} je Rohstoff</td></tr>
             </table>
         </section>

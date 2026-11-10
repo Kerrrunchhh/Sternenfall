@@ -46,6 +46,7 @@
         {% endif %}
         {% if view == 'alliances' %}<p class="muted small">Allianzen zählen die Summe ihrer Mitglieder. Der Lebensform-Filter richtet sich nach der Art der Allianz.</p>{% endif %}
     </section>
+    <section class="panel">{{ include('_top_experience.html.twig', {top: top_today}) }}</section>
 {% endblock %}
 
 {% macro row(r, view, own) %}

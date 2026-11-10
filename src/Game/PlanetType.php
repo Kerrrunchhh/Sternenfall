@@ -25,6 +25,12 @@ enum PlanetType: string
         };
     }
 
+    /** Picture under public/ (for asset()). */
+    public function picture(): string
+    {
+        return 'pictures/planets/'.$this->value.'.webp';
+    }
+
     public function icon(): string
     {
         return match ($this) {

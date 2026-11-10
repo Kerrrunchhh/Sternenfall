@@ -16,8 +16,8 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-/** Admin area: reports, suggestions and bug reports. */
-#[IsGranted('ROLE_ADMIN')]
+/** Admin area: reports, suggestions and bug reports (moderators and admins). */
+#[IsGranted('ROLE_MODERATOR')]
 class AdminController extends AbstractGameController
 {
     public function __construct(

@@ -24,6 +24,16 @@ final readonly class Mailbox
     public function send(User $sender, string $recipientName, string $subject, string $body): PlayerMessage
     {
         $recipientName = trim($recipientName);
+        // "[TAG]" writes to an alliance: its founder gets the letter and answers it.
+        if (preg_match('/^\[([A-Za-z0-9]{2,6})\]$/', $recipientName, $m)) {
+            $alliance = $this->em->getRepository(\App\Entity\Alliance::class)->findOneBy(['tag' => strtoupper($m[1])]);
+            $founder = null === $alliance ? null : $alliance->getMembers()->findFirst(static fn (int $k, User $u): bool => \App\Game\AllianceRank::Founder === $u->getAllianceRank());
+            if (null === $founder) {
+                throw new GameException(\sprintf('Eine Allianz %s gibt es nicht.', $recipientName));
+            }
+            $recipientName = $founder->getUsername();
+            $subject = '['.$alliance->getTag().'] '.$subject;
+        }
         $recipient = '' === $recipientName ? null : $this->users->findOneBy(['username' => $recipientName]);
         if (null === $recipient) {
             throw new GameException(\sprintf('Einen Spieler „%s“ gibt es nicht.', $recipientName));

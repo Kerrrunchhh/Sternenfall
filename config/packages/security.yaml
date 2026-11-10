@@ -1,4 +1,7 @@
 security:
+    # Admins can do everything moderators can.
+    role_hierarchy:
+        ROLE_ADMIN: [ROLE_MODERATOR]
     # https://symfony.com/doc/current/security.html#registering-the-user-hashing-passwords
     password_hashers:
         Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
@@ -38,6 +41,7 @@ security:
         - { path: ^/kampfbericht/, roles: PUBLIC_ACCESS }
         - { path: ^/(status|impressum)$, roles: PUBLIC_ACCESS }
         - { path: ^/email/, roles: PUBLIC_ACCESS }
+        - { path: ^/paypal/webhook$, roles: PUBLIC_ACCESS }
         - { path: ^/, roles: ROLE_USER }
 
 when@test:

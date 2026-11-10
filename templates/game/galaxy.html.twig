@@ -57,7 +57,7 @@
                         {% endif %}
                     </td>
                     {% if slot_type %}
-                        <td class="slot-type" title="{{ slot_type.label }}: {{ slot_type.effect }}">{{ slot_type.icon }}</td>
+                        <td class="slot-type" title="{{ slot_type.label }}: {{ slot_type.effect }}"><img class="planet-pic planet-pic-tiny" src="{{ asset(slot_type.picture) }}" alt="{{ slot_type.label }}" width="22" height="22" loading="lazy"></td>
                     {% else %}
                         <td class="slot-type unknown" title="Planetentyp unbekannt – schicke eine Sonde hin">❔</td>
                     {% endif %}
@@ -65,7 +65,7 @@
                         <td>
                             {% if p.homeworld %}<span title="Heimatplanet – kann nicht invadiert werden">🏠</span> {% endif %}{{ p.name }}{% if p.fused %} <span class="muted small" title="Fusion aus {{ p.fusionSize }} Planeten, Plätze {{ p.position }}–{{ p.lastPosition }}">🔗 {{ p.fusionSize }} Planeten</span>{% endif %}{% if p.integrating(now) %} <span class="muted small">(invadiert, Übergang am {{ p.integratedAt|date('d.m.Y') }})</span>{% endif %}
                         </td>
-                        <td>{{ ui.player(p.owner) }}</td>
+                        <td>{{ ui.player(p.owner) }}{% if p.owner.onVacation(now) %} <span class="vacation-tag" title="Im Urlaub bis {{ p.owner.vacationUntil|date('d.m.Y H:i') }}">🌴 Urlaub</span>{% endif %}</td>
                         <td class="num actions">
                             {% if p.owner.id == player.id %}
                                 <a href="{{ path('app_fleet', coords|merge({mission: 'transport'})) }}">Transport</a>

@@ -11,9 +11,9 @@ use Symfony\Component\Lock\LockFactory;
 
 /**
  * Vacation: 1 to 30 days (fractions allowed). Meanwhile everything rests – production,
- * building, research, stay limits – and nobody can attack or spy on the player's planets,
- * except invaded planets that don't fully belong to him yet. The player can't play until
- * it is over; he may end it early after one day. Admins impose vacation as a penalty,
+ * building, research, stay limits – and nobody can attack the player's planets (spying is
+ * allowed), except invaded planets that don't fully belong to him yet. The player can only
+ * talk and look around (see VacationListener); he may end it early after one day. Admins impose vacation as a penalty,
  * which can't be ended early.
  */
 final readonly class VacationService

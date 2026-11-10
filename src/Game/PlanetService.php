@@ -158,7 +158,7 @@ final readonly class PlanetService
                 return;
             }
             $owner = $planet->getOwner();
-            if ($owner->isResearching() && $owner->getResearchPlanet() === $planet) {
+            if ($owner->isResearchingOn($planet)) {
                 $owner->clearResearch();
             }
             $owner->getPlanets()->removeElement($planet);
@@ -378,6 +378,13 @@ final readonly class PlanetService
             $this->updater->completeResearch($planet->getOwner(), $at);
             $operation($planet, $now);
             $this->em->flush();
+            // Alliance tax: added in one statement, so concurrent members don't overwrite each other.
+            if (null !== $alliance = $planet->getOwner()->getAlliance()) {
+                $tax = $alliance->takePendingTax();
+                if ($tax > 0) {
+                    $this->em->getConnection()->executeStatement('UPDATE alliance SET treasury = treasury + ? WHERE id = ?', [$tax, $alliance->getId()]);
+                }
+            }
         } finally {
             $lock->release();
         }

@@ -44,6 +44,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $mailTopics = null;
 
+    /** At most this many attack warnings per minute (0 = no limit). */
+    #[ORM\Column(options: ['default' => 3])]
+    private int $attackMailsPerMinute = 3;
+
+    /** @var list<int> timestamps of the attack warnings sent in the last minute */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $attackMailTimes = null;
+
     /** The finished research was already announced by e-mail. */
     #[ORM\Column(options: ['default' => false])]
     private bool $researchMailSent = false;
@@ -105,6 +113,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $vacationReason = null;
 
+    /** Extended account (paid subscription) runs until then. */
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $extendedUntil = null;
+
+    /** PayPal subscription that keeps the extended account running. */
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $subscriptionId = null;
+
+    /** Last known state of that subscription (ACTIVE, CANCELLED, SUSPENDED, …). */
+    #[ORM\Column(length: 20, nullable: true)]
+    private ?string $subscriptionStatus = null;
+
     /** Private notepad of the player. */
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $notes = null;
@@ -148,12 +168,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?\DateTimeImmutable $researchFinishesAt = null;
 
     /**
-     * Planet the running research was started on (the top planet of a fusion). It keeps
-     * running while planets break off; it ends when this planet itself is invaded.
+     * Slot ("g:s:p") of the planet the running research was started on. It keeps running
+     * there even when that planet is welded into a bigger fusion or other planets break
+     * off; it ends when the planet on this slot is invaded (or given up).
      */
-    #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
-    private ?Planet $researchPlanet = null;
+    #[ORM\Column(length: 20, nullable: true)]
+    private ?string $researchSlot = null;
 
     /** @var Collection<int, Planet> */
     #[ORM\OneToMany(targetEntity: Planet::class, mappedBy: 'owner')]
@@ -398,6 +418,32 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->isEmailVerified() && \in_array($topic, $this->getMailTopics(), true);
     }
 
+    public function getAttackMailsPerMinute(): int
+    {
+        return $this->attackMailsPerMinute;
+    }
+
+    public function setAttackMailsPerMinute(int $limit): void
+    {
+        $this->attackMailsPerMinute = max(0, min(60, $limit));
+    }
+
+    /** Counts an attack warning; false if the player's limit for this minute is reached. */
+    public function allowAttackMail(\DateTimeImmutable $now): bool
+    {
+        $since = $now->getTimestamp() - 60;
+        $times = array_values(array_filter($this->attackMailTimes ?? [], static fn (int $t): bool => $t > $since));
+        if ($this->attackMailsPerMinute > 0 && \count($times) >= $this->attackMailsPerMinute) {
+            $this->attackMailTimes = $times;
+
+            return false;
+        }
+        $times[] = $now->getTimestamp();
+        $this->attackMailTimes = $times;
+
+        return true;
+    }
+
     public function isResearchMailSent(): bool
     {
         return $this->researchMailSent;
@@ -517,6 +563,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->combatExperience += max(0.0, $experience);
     }
 
+    /** Credit income of the population: the alliance takes its tax into its treasury. */
+    public function earnCredits(float $amount): void
+    {
+        $tax = null === $this->alliance ? 0.0 : $this->alliance->collectTax($amount);
+        $this->credits += $amount - $tax;
+    }
+
     public function getCredits(): float
     {
         return $this->credits;
@@ -567,12 +620,23 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->researchTargetLevel = $targetLevel;
         $this->researchFinishesAt = $finishesAt;
         $this->researchMailSent = false;
-        $this->researchPlanet = $planet;
+        $this->researchSlot = null === $planet ? null : \sprintf('%d:%d:%d', $planet->getGalaxy(), $planet->getSystem(), $planet->getPosition());
     }
 
-    public function getResearchPlanet(): ?Planet
+    public function getResearchSlot(): ?string
     {
-        return $this->researchPlanet;
+        return $this->researchSlot;
+    }
+
+    /** Whether the running research runs on a slot of this planet (fusions cover several slots). */
+    public function isResearchingOn(Planet $planet): bool
+    {
+        if (!$this->isResearching() || null === $this->researchSlot) {
+            return false;
+        }
+        [$g, $s, $p] = array_map('intval', explode(':', $this->researchSlot));
+
+        return $planet->getGalaxy() === $g && $planet->getSystem() === $s && $planet->covers($p);
     }
 
     public function clearResearch(): void
@@ -580,7 +644,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->researchType = null;
         $this->researchTargetLevel = null;
         $this->researchFinishesAt = null;
-        $this->researchPlanet = null;
+        $this->researchSlot = null;
     }
 
     /**
@@ -608,5 +672,39 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->roles = $get('roles') ?? [];
         $this->password = (string) $get('password');
         $this->planets = new ArrayCollection();
+    }
+
+    public function isExtended(\DateTimeInterface $now): bool
+    {
+        return null !== $this->extendedUntil && $this->extendedUntil > $now;
+    }
+
+    public function getExtendedUntil(): ?\DateTimeImmutable
+    {
+        return $this->extendedUntil;
+    }
+
+    /** Extends the account up to the given moment (never shortens it). */
+    public function extendUntil(\DateTimeImmutable $until): void
+    {
+        if (null === $this->extendedUntil || $until > $this->extendedUntil) {
+            $this->extendedUntil = $until;
+        }
+    }
+
+    public function getSubscriptionId(): ?string
+    {
+        return $this->subscriptionId;
+    }
+
+    public function getSubscriptionStatus(): ?string
+    {
+        return $this->subscriptionStatus;
+    }
+
+    public function setSubscription(?string $id, ?string $status): void
+    {
+        $this->subscriptionId = $id;
+        $this->subscriptionStatus = $status;
     }
 }

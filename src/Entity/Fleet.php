@@ -502,6 +502,24 @@ class Fleet
     }
 
     /**
+     * Already at the target of its group: the fleet hovers there (out of reach) until the
+     * others arrive, then acts with them; afterwards it is back at once.
+     */
+    public function hoverUntil(self $lead, \DateTimeImmutable $now): void
+    {
+        $this->mission = $lead->getMission();
+        $this->targetGalaxy = $lead->getTargetGalaxy();
+        $this->targetSystem = $lead->getTargetSystem();
+        $this->targetPosition = $lead->getTargetPosition();
+        $this->targetFleet = $lead;
+        $this->departAt = $now;
+        $this->arriveAt = $lead->getArriveAt();
+        $this->returnAt = $lead->getArriveAt();
+        $this->returning = false;
+        $this->parkedAt = null;
+    }
+
+    /**
      * Joining an attack: the fleet arrives together with the leading fleet (it waits
      * for it), the way back takes as long as its own flight.
      */

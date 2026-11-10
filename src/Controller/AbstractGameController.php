@@ -186,7 +186,7 @@ abstract class AbstractGameController extends AbstractController
             'diplomacy_votes' => $this->diplomacy->pendingVotes($planet->getOwner()),
             // Own planets with an attack on its way (seen by the radar): red in the planet list.
             'attacked_planets' => $this->attackedPlanets($planet->getOwner()),
-            'open_tickets' => $this->isGranted('ROLE_ADMIN') ? $this->tickets2->countOpen() : 0,
+            'open_tickets' => $this->isGranted('ROLE_MODERATOR') ? $this->tickets2->countOpen() : 0,
             'forum_url' => $this->forumUrl,
             // Own trade posts are listed under the planets in the left column.
             'own_trade_posts' => $this->tradePosts->findBy(['owner' => $planet->getOwner()], ['galaxy' => 'ASC', 'system' => 'ASC', 'position' => 'ASC']),

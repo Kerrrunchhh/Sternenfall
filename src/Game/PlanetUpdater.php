@@ -120,7 +120,7 @@ final readonly class PlanetUpdater
 
         for ($remaining = $seconds / 3600; $remaining > 1e-9; $remaining -= $step) {
             $step = min(self::STEP_HOURS, $remaining);
-            $owner->addCredits($this->economy->creditsPerHour($planet->getPopulation()) * $step);
+            $owner->earnCredits($this->economy->creditsPerHour($planet->getPopulation()) * $step);
             $stock = $planet->getResources()->add($production->multiply($step));
             $population = $planet->getPopulation();
 

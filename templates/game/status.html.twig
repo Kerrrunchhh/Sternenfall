@@ -1,0 +1,9 @@
+{% extends 'game/_layout.html.twig' %}
+
+{% block title %}Status – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h1>Status des Universums</h1>
+    <section class="panel">{{ include('_status_stats.html.twig') }}</section>
+    <section class="panel">{{ include('_top_experience.html.twig') }}</section>
+{% endblock %}

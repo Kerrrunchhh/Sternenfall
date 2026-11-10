@@ -2,33 +2,26 @@
 
 namespace App\Controller;
 
-use App\Entity\User;
 use App\Game\GameException;
 use App\Game\VacationService;
-use Psr\Clock\ClockInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-/** The only page a player on vacation sees. */
-#[IsGranted('ROLE_USER')]
-class VacationController extends AbstractController
+/** What a player on vacation sees instead of the pages he can't use right now. */
+class VacationController extends AbstractGameController
 {
     #[Route('/urlaub', name: 'app_vacation', methods: ['GET'])]
-    public function show(ClockInterface $clock): Response
+    public function show(): Response
     {
-        $user = $this->getUser();
-        \assert($user instanceof User);
-        $now = \DateTimeImmutable::createFromInterface($clock->now());
+        $planet = $this->currentPlanet();
+        $user = $this->player();
+        $now = \DateTimeImmutable::createFromInterface($this->clock->now());
         if (!$user->isOnVacation($now)) {
             return $this->redirectToRoute('app_overview');
         }
 
-        return $this->render('vacation.html.twig', [
-            'player' => $user,
-            'now' => $now,
+        return $this->renderGame('game/vacation.html.twig', $planet, [
             'can_end_at' => $user->isVacationForced() ? null : $user->getVacationSince()->modify('+1 day'),
         ]);
     }
@@ -37,10 +30,9 @@ class VacationController extends AbstractController
     #[IsCsrfTokenValid('vacation', tokenKey: '_token')]
     public function end(VacationService $vacations): Response
     {
-        $user = $this->getUser();
-        \assert($user instanceof User);
+        $this->currentPlanet();
         try {
-            $vacations->endEarly($user);
+            $vacations->endEarly($this->player());
             $this->addFlash('success', 'Willkommen zurück! Dein Urlaub ist beendet, alles läuft weiter.');
 
             return $this->redirectToRoute('app_overview');

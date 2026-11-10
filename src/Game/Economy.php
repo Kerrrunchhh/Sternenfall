@@ -276,6 +276,17 @@ final readonly class Economy
         return range(($targetLevel - 1) * $per + 1, $targetLevel * $per);
     }
 
+    /**
+     * Seconds after the start during which a fleet can be recalled (Radartechnik):
+     * none without it, 5 s at level 1, 5 minutes at level 20, growing further.
+     */
+    public static function recallWindow(User $player): int
+    {
+        $level = $player->getResearchLevel(ResearchType::RadarTech);
+
+        return 0 === $level ? 0 : (int) round(5 * 60 ** (($level - 1) / 19));
+    }
+
     /** Research time depends on the research lab of the planet it is started on. */
     public function researchSeconds(ResearchType $type, int $targetLevel, Planet $planet): int
     {

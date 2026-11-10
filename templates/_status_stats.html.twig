@@ -1,0 +1,11 @@
+{# Figures of the universe. Needs: stats #}
+<dl class="stats status-stats">
+    <div><dt>Spieler</dt><dd>{{ stats.players|number_format(0, ',', '.') }}</dd></div>
+    <div><dt>Planeten</dt><dd>{{ stats.planets|number_format(0, ',', '.') }}</dd></div>
+    <div><dt>Besiedelte Plätze</dt><dd>{{ stats.colonized_slots|number_format(0, ',', '.') }}</dd></div>
+    <div><dt>Unbesiedelte Planeten</dt><dd>{{ stats.free_slots|number_format(0, ',', '.') }}</dd></div>
+    <div><dt>Laufende Transporte</dt><dd>{{ stats.transports|number_format(0, ',', '.') }}</dd></div>
+    <div><dt>Laufende Angriffe</dt><dd>{{ stats.attacks|number_format(0, ',', '.') }}</dd></div>
+    <div><dt>Anmeldungen (24 h)</dt><dd>{{ stats.signups|number_format(0, ',', '.') }}</dd></div>
+    <div><dt>Abmeldungen (24 h)</dt><dd>{{ stats.signoffs|number_format(0, ',', '.') }}</dd></div>
+</dl>

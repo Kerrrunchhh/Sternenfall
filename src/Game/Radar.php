@@ -93,6 +93,13 @@ final readonly class Radar
         if ($fleet->getOwner()->isSameAs($player)) {
             return true;
         }
+        // An attack on one of the own planets is seen at once, radar or not.
+        if (FleetMission::Attack === $fleet->getMission() && !$fleet->isReturning()) {
+            [$g, $s, $p] = self::nextStop($fleet);
+            if (true === $this->planets->findAt($g, $s, $p)?->getOwner()->isSameAs($player)) {
+                return true;
+            }
+        }
         if (FleetMission::Spy === $fleet->getMission()) {
             // Probes are silent; only top espionage notices those heading for the own planets.
             [$g, $s, $p] = self::nextStop($fleet);

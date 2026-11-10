@@ -86,6 +86,50 @@ class Alliance
         return $user->getLifeForm() === $this->lifeForm;
     }
 
+    public const int MAX_TAX = 10;
+
+    /** Tax on the members' credit income, 0–10 %, set by the founder. */
+    #[ORM\Column(options: ['default' => 0])]
+    private int $taxRate = 0;
+
+    /** The alliance treasury; the founder pays out of it. */
+    #[ORM\Column(options: ['default' => 0])]
+    private float $treasury = 0.0;
+
+    public function getTaxRate(): int
+    {
+        return $this->taxRate;
+    }
+
+    public function setTaxRate(int $rate): void
+    {
+        $this->taxRate = max(0, min(self::MAX_TAX, $rate));
+    }
+
+    public function getTreasury(): float
+    {
+        return $this->treasury;
+    }
+
+    /** Tax collected in this request, written to the treasury atomically (see PlanetService). */
+    private float $pendingTax = 0.0;
+
+    /** Takes the tax share of a member's income; returns it. */
+    public function collectTax(float $income): float
+    {
+        $tax = $income * $this->taxRate / 100;
+        $this->pendingTax += $tax;
+
+        return $tax;
+    }
+
+    public function takePendingTax(): float
+    {
+        [$tax, $this->pendingTax] = [$this->pendingTax, 0.0];
+
+        return $tax;
+    }
+
     public function getType(): string
     {
         return $this->lifeForm->allianceType();

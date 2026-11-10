@@ -29,6 +29,7 @@ class AccountController extends AbstractGameController
         $this->currentPlanet();
         $player = $this->player();
         $player->setMailTopics(array_values(array_intersect(array_keys(\App\Game\GameMailer::TOPICS), $request->request->all('topics'))));
+        $player->setAttackMailsPerMinute($request->request->getInt('attack_limit', $player->getAttackMailsPerMinute()));
         $address = trim($request->request->getString('email'));
         $changed = '' !== $address && $address !== $player->getEmail();
         if ($changed) {

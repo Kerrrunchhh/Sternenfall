@@ -312,7 +312,6 @@ class FleetController extends AbstractGameController
     public const array BULK_ACTIONS = [
         'recall' => 'Zurückrufen / sofort landen',
         'merge' => 'Zusammenlegen (am selben Ort)',
-        'hover' => 'Schweben',
         'gather' => 'Schiffe zusammenziehen (eine Flotte)',
         'load' => 'Schiffe aus dem Hangar aufnehmen (eine Flotte)',
         'drop' => 'Schiffe aus der Flotte entfernen (eine Flotte)',
@@ -422,7 +421,6 @@ class FleetController extends AbstractGameController
                         $mission, $cargo,
                         FleetMission::Pickup === $mission ? $this->pickupOrder($request) : [], Navigation::parsePercent($form->getString('speed'))),
                     'recall' => $this->run(fn () => $this->fleetService->recall($fleet, $player), FleetMission::Hover === $fleet->getMission() ? 'ist wieder gelandet' : 'kehrt um', $label),
-                    'hover' => $this->fleetService->hover($fleet, $player, $form->getString('source')),
                     'gather' => 'Schiffe werden zusammengezogen: '.implode('; ', $this->fleetService->gather($fleet, $player, $form->getInt('minutes'), array_values(array_filter(array_map(
                         static fn (mixed $v): ?ShipType => ShipType::tryFrom((string) $v), $form->all('types')))))).'.',
                     'load' => $this->run(fn () => $this->fleetService->transfer($fleet, $player, array_map('intval', $form->all('load')[$id] ?? []), true), 'hat Schiffe aus dem Hangar aufgenommen', $label),
