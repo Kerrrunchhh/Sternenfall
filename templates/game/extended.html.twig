@@ -32,7 +32,7 @@
             <p class="muted">Der erweiterte Account wird gerade noch vorbereitet und kann bald gebucht werden.</p>
         {% else %}
             {% if paypal.sandbox %}<p class="muted small">Testbetrieb (PayPal-Sandbox): es wird kein echtes Geld abgebucht.</p>{% endif %}
-            <p class="small">Mit dem Abschluss akzeptierst du die <a href="{{ path('app_imprint') }}">Nutzungsbedingungen und die Widerrufsbelehrung</a>.</p>
+            <p class="small">Mit dem Abschluss akzeptierst du die <a href="{{ path('app_imprint') }}">Nutzungsbedingungen und die Widerrufsbelehrung</a>. Wie wir deine Daten bei der Zahlung verarbeiten, steht in der <a href="{{ path('app_privacy') }}">Datenschutzerklärung</a>.</p>
             <div id="paypal-button" data-extended-subscribe data-plan="{{ paypal.planId }}" data-custom="{{ player.id }}" data-url="{{ path('app_extended_activate') }}" data-token="{{ csrf_token('extended') }}"></div>
             <p class="flash flash-error" data-paypal-error hidden></p>
             <script src="https://www.paypal.com/sdk/js?client-id={{ paypal.clientId|url_encode }}&vault=true&intent=subscription&currency=EUR&locale=de_DE" defer></script>

@@ -1,0 +1,95 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Datenschutz – {{ game_name }}{% endblock %}
+
+{% block body %}
+    <main class="public-report">
+        <a href="{{ path(app.user ? 'app_overview' : 'app_home') }}" class="public-report-logo"><img src="{{ asset('pictures/brand/logo.webp') }}" alt="{{ game_name }}" width="223" height="131"></a>
+        <article class="panel imprint privacy">
+            <h1>Datenschutzerklärung</h1>
+            <p>Diese Erklärung beschreibt, welche personenbezogenen Daten bei der Nutzung von {{ game_name }} verarbeitet werden, wozu und wie lange. Wir verwenden keine Analyse- oder Tracking-Werkzeuge und geben keine Daten zu Werbezwecken weiter.</p>
+
+            <h2>1. Verantwortlicher</h2>
+            <p>Markus Döbele<br>Herdweg 130<br>71032 Böblingen<br>Deutschland<br>E-Mail: markus.doebele@posteo.de</p>
+            <p>Weitere Angaben findest du im <a href="{{ path('app_imprint') }}">Impressum</a>.</p>
+
+            <h2>2. Hosting</h2>
+            <p>Das Spiel läuft auf einem Server der Hetzner Online GmbH, Industriestr. 25, 91710 Gunzenhausen, Deutschland. Der Server steht in einem Rechenzentrum in Helsinki (Finnland), also innerhalb der EU. Hetzner verarbeitet die Daten nur in unserem Auftrag auf Grundlage eines Vertrags zur Auftragsverarbeitung (Art. 28 DSGVO).</p>
+
+            <h2>3. Server-Logdateien</h2>
+            <p>Bei jedem Aufruf der Seite speichert der Webserver automatisch: IP-Adresse, Datum und Uhrzeit, aufgerufene Adresse, Statuscode, übertragene Datenmenge, die zuvor besuchte Seite (Referrer) und Browserkennung (User-Agent). Das ist nötig, um den Betrieb sicherzustellen, Fehler zu finden und Angriffe abzuwehren (berechtigtes Interesse, Art. 6 Abs. 1 lit. f DSGVO). Die Logdateien werden nach 14 Tagen automatisch gelöscht.</p>
+            <p>Zum Schutz vor dem Erraten von Passwörtern werden fehlgeschlagene Anmeldeversuche zusammen mit Benutzername und IP-Adresse für wenige Minuten zwischengespeichert.</p>
+
+            <h2>4. Registrierung und Spielkonto</h2>
+            <p>Für ein Spielkonto speichern wir:</p>
+            <ul>
+                <li>Benutzername, E-Mail-Adresse und Passwort. Das Passwort wird nur als nicht umkehrbarer Hash gespeichert.</li>
+                <li>Zeitpunkt der Registrierung und der letzten Aktivität.</li>
+                <li>Alle Spieldaten wie Planeten, Flotten, Forschung, Handel, Kämpfe, Allianz und Einstellungen.</li>
+            </ul>
+            <p>An die E-Mail-Adresse schicken wir einen Bestätigungslink. Die Verarbeitung ist nötig, um dir das Spiel bereitzustellen (Vertrag, Art. 6 Abs. 1 lit. b DSGVO).</p>
+            <p>Deinen Online-Status (online oder offline und seit wann) sehen nur Mitglieder deiner Allianz und deine bestätigten Schnellkontakte.</p>
+
+            <h2>5. Was andere Spieler sehen</h2>
+            <p>Ein Browserspiel lebt davon, dass Spieler einander sehen. Für alle Spieler sichtbar sind:</p>
+            <ul>
+                <li>dein Benutzername, deine Lebensform und deine Allianz,</li>
+                <li>deine Planeten im Universum und in deinem Profil (bis zu drei Planeten kannst du ausblenden),</li>
+                <li>Punkte und Kampferfahrung in den Highscores,</li>
+                <li>dein Profiltext und dein Profilbild.</li>
+            </ul>
+            <p>Die zehn Spieler mit der meisten Kampferfahrung der letzten 24 Stunden erscheinen auch öffentlich auf der Startseite und der Statusseite.</p>
+            <p>Kampfberichte erscheinen 24 Stunden nach der Schlacht in der Zeitung, mit den Namen der Beteiligten. Teilst du einen Kampfbericht per Link, kann ihn jeder mit diesem Link lesen.</p>
+
+            <h2>6. Nachrichten und Inhalte von Spielern</h2>
+            <p>Was du im Spiel schreibst oder hochlädst, speichern wir, damit es die vorgesehenen Empfänger lesen können:</p>
+            <ul>
+                <li>Post an andere Spieler,</li>
+                <li>Beiträge im Langstreckenticker und am Schwarzen Brett deiner Allianz,</li>
+                <li>Allianztexte und Allianzbilder,</li>
+                <li>deinen Notizblock (nur für dich).</li>
+            </ul>
+            <p>Post sehen nur Absender und Empfänger. Gelöscht wird sie endgültig, wenn beide sie gelöscht haben. Am Schwarzen Brett bleiben höchstens die letzten 20 Beiträge und höchstens einen Monat lang.</p>
+            <p>Meldungen, Vorschläge und Fehlerberichte unter „Hilfe & Meldungen“ lesen die Moderatoren und Administratoren. Bei einer Meldung über einen Spieler prüfen sie dazu die gemeldeten Inhalte. Vorschläge und Fehlerberichte können per E-Mail an den Entwickler weitergeleitet werden.</p>
+
+            <h2>7. E-Mail-Benachrichtigungen</h2>
+            <p>Wenn du sie in deinem Konto einschaltest, schicken wir dir E-Mails, zum Beispiel bei Angriffen, abgeschlossener Forschung, neuer Post oder Kampfberichten. Du kannst sie dort jederzeit wieder abschalten. Für den Versand nutzen wir den Mailserver unseres E-Mail-Anbieters.</p>
+            {# TODO Betreiber: Mail-Anbieter nennen, sobald MAILER_DSN eingerichtet ist (z. B. Hetzner Online GmbH). #}
+
+            <h2>8. Cookies und Speicher im Browser</h2>
+            <p>Wir setzen nur ein technisch notwendiges Cookie: das Sitzungs-Cookie, das dich nach der Anmeldung angemeldet hält. Es wird beim Abmelden oder Schließen des Browsers ungültig.</p>
+            <p>Einige Anzeigeeinstellungen, etwa welche Abschnitte auf- oder zugeklappt sind, speichert das Spiel im lokalen Speicher deines Browsers (localStorage). Diese Angaben verlassen deinen Rechner nicht.</p>
+            <p>Für beides ist keine Einwilligung nötig, weil es für den angefragten Dienst unbedingt erforderlich ist (§ 25 Abs. 2 TDDDG).</p>
+
+            <h2>9. Erweiterter Account und Zahlung über PayPal</h2>
+            <p>Den erweiterten Account bezahlst du per Abo über PayPal (Europe) S.à r.l. et Cie, S.C.A., 22–24 Boulevard Royal, L-2449 Luxemburg. Erst wenn du die Seite „Erweiterter Account“ öffnest, lädt dein Browser die Schaltfläche von PayPal. Dabei erfährt PayPal deine IP-Adresse.</p>
+            <p>Deine Zahlungsdaten gibst du nur bei PayPal ein. Wir erhalten und speichern lediglich die Kennung des Abos, seinen Status und bis wann dein Account erweitert ist (Vertrag, Art. 6 Abs. 1 lit. b DSGVO). Für Rechnungen gelten die gesetzlichen Aufbewahrungsfristen.</p>
+            <p>Mehr dazu in der <a href="https://www.paypal.com/de/legalhub/privacy-full" target="_blank" rel="noopener">Datenschutzerklärung von PayPal</a>.</p>
+
+            <h2>10. Speicherdauer und Löschung</h2>
+            <p>Deine Daten speichern wir, solange dein Konto besteht. Unter „Konto“ kannst du es jederzeit löschen. Die Löschung wird nach 48 Stunden wirksam, und meldest du dich in dieser Zeit an, wird sie abgebrochen. Dabei geschieht Folgendes:</p>
+            <ul>
+                <li>Deine Kontodaten, E-Mail-Adresse und Profildaten werden gelöscht.</li>
+                <li>Deine Planeten gehen an „Herrenlos“ über und bleiben ohne Bezug zu dir im Universum.</li>
+                <li>Um Missbrauch nachvollziehen zu können, protokollieren wir den Benutzernamen und den Zeitpunkt der Löschung.</li>
+            </ul>
+            <p>Kampfberichte werden nach 30 Tagen gelöscht.</p>
+
+            <h2>11. Deine Rechte</h2>
+            <p>Du hast das Recht auf:</p>
+            <ul>
+                <li>Auskunft (Art. 15 DSGVO),</li>
+                <li>Berichtigung (Art. 16 DSGVO),</li>
+                <li>Löschung (Art. 17 DSGVO),</li>
+                <li>Einschränkung der Verarbeitung (Art. 18 DSGVO),</li>
+                <li>Datenübertragbarkeit (Art. 20 DSGVO),</li>
+                <li>Widerspruch gegen Verarbeitungen auf Grundlage berechtigter Interessen (Art. 21 DSGVO).</li>
+            </ul>
+            <p>Schreib uns dazu an die oben genannte E-Mail-Adresse.</p>
+            <p>Du kannst dich außerdem bei einer Datenschutz-Aufsichtsbehörde beschweren. Für uns zuständig ist der Landesbeauftragte für den Datenschutz und die Informationsfreiheit Baden-Württemberg, Lautenschlagerstraße 20, 70173 Stuttgart.</p>
+
+            <p class="muted small">Stand: November 2026</p>
+        </article>
+        <p class="muted small"><a href="{{ path(app.user ? 'app_overview' : 'app_home') }}">{{ app.user ? 'Zurück ins Spiel' : 'Zur Startseite' }}</a> · <a href="{{ path('app_imprint') }}">Impressum</a></p>
+    </main>
+{% endblock %}

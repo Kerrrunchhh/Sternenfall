@@ -101,6 +101,7 @@
             {% if player.onVacation(now) %}<p class="panel vacation-banner">🌴 Du bist im Urlaub bis {{ player.vacationUntil|date('d.m.Y H:i') }} – <a href="{{ path('app_vacation') }}">Details</a></p>{% endif %}
             {{ include('_flashes.html.twig') }}
             {% block content %}{% endblock %}
+            <footer class="game-footer muted small"><a href="{{ path('app_imprint') }}">Impressum</a> · <a href="{{ path('app_privacy') }}">Datenschutz</a></footer>
         </main>
         <aside class="sidebar sidebar-right board-column" aria-label="Schwarzes Brett">
             <nav class="empire-nav" aria-label="Imperium">

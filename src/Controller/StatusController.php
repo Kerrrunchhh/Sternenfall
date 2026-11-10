@@ -21,4 +21,10 @@ class StatusController extends AbstractController
     {
         return $this->render('imprint.html.twig');
     }
+
+    #[Route('/datenschutz', name: 'app_privacy', methods: ['GET'])]
+    public function privacy(): Response
+    {
+        return $this->render('privacy.html.twig');
+    }
 }

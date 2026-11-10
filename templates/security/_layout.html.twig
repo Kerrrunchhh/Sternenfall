@@ -8,5 +8,6 @@
             {{ include('_flashes.html.twig') }}
             {% block content %}{% endblock %}
         </div>
+        <p class="muted small landing-links"><a href="{{ path('app_imprint') }}">Impressum</a> · <a href="{{ path('app_privacy') }}">Datenschutz</a></p>
     </main>
 {% endblock %}

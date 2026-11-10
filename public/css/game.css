@@ -672,3 +672,7 @@ label.checkbox { display: flex; gap: .4rem; align-items: center; color: var(--te
 .planet-pic { display: inline-block; vertical-align: middle; border-radius: 50%; filter: drop-shadow(0 0 6px rgba(120, 170, 255, .35)); }
 .planet-pic-tiny { filter: none; }
 .planet-title { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+
+.game-footer { margin-top: 2rem; padding-top: .75rem; border-top: 1px solid var(--border); text-align: center; }
+.privacy h2 { margin-top: 1.5rem; }
+.privacy li { margin-bottom: .35rem; }
