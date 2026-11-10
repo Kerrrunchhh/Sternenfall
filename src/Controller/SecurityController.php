@@ -13,6 +13,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 
+use function Symfony\Component\Translation\t;
+
 class SecurityController extends AbstractController
 {
     #[Route('/', name: 'app_home')]
@@ -54,13 +56,13 @@ class SecurityController extends AbstractController
     {
         $user = ctype_digit($id = $request->query->getString('id')) ? $users->find((int) $id) : null;
         if (!$signer->checkRequest($request) || null === $user || $user->getEmail() !== $request->query->getString('email')) {
-            $this->addFlash('error', 'Der Bestätigungslink ist ungültig oder abgelaufen. Fordere unten einen neuen an.');
+            $this->addFlash('error', t('Der Bestätigungslink ist ungültig oder abgelaufen. Fordere unten einen neuen an.'));
 
             return $this->redirectToRoute('app_resend_email');
         }
         $user->verifyEmail(new \DateTimeImmutable());
         $em->flush();
-        $this->addFlash('success', 'Danke! Deine E-Mail-Adresse ist bestätigt. Melde dich jetzt an – deine Heimatwelt wartet.');
+        $this->addFlash('success', t('Danke! Deine E-Mail-Adresse ist bestätigt. Melde dich jetzt an – deine Heimatwelt wartet.'));
 
         return $this->redirectToRoute('app_login');
     }
@@ -76,7 +78,7 @@ class SecurityController extends AbstractController
                 $devLink = 'dev' === $this->getParameter('kernel.environment') ? $link : null;
             }
             // Same answer either way: nobody learns which addresses are registered.
-            $this->addFlash('success', 'Falls zu dieser Adresse ein unbestätigtes Konto gehört, ist ein neuer Link unterwegs.');
+            $this->addFlash('success', t('Falls zu dieser Adresse ein unbestätigtes Konto gehört, ist ein neuer Link unterwegs.'));
         }
 
         return $this->render('security/resend_email.html.twig', ['dev_link' => $devLink]);
@@ -100,6 +102,8 @@ class SecurityController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $user->setPassword($hasher->hashPassword($user, $form->get('plainPassword')->getData()));
+            // Messages and e-mails go out in the language the player signed up in.
+            $user->setLocale($request->getLocale());
             $em->persist($user);
             $colonizer->createHomePlanet($user);
             $em->flush();

@@ -9,55 +9,53 @@
         <div class="profile-info">
             <h1>{{ profile.lifeForm.icon }} {{ profile.username }}</h1>
             <p class="muted">
-                {{ profile.lifeForm.label }}
+                {{ profile.lifeForm.label|trans }}
                 {% if profile.alliance %}
-                    · {{ profile.allianceRank.label }} in <a href="{{ path('app_alliance_public', {id: profile.alliance.id}) }}">{{ profile.alliance.name }} [{{ profile.alliance.tag }}]</a>
+                    {{ '· {label} in'|trans({'{label}': profile.allianceRank.label|trans}) }} <a href="{{ path('app_alliance_public', {id: profile.alliance.id}) }}">{{ profile.alliance.name }} [{{ profile.alliance.tag }}]</a>
                 {% endif %}
-                · {{ listed_planets|length }} Planet{{ listed_planets|length == 1 ? '' : 'en' }}
-                · dabei seit {{ profile.createdAt|date('d.m.Y') }}
+                {{ (listed_planets|length == 1 ? '· {count} Planet · dabei seit {createdAt}' : '· {count} Planeten · dabei seit {createdAt}')|trans({'{count}': listed_planets|length, '{createdAt}': profile.createdAt|date('d.m.Y')}) }}
             </p>
             <p class="player-scores">
-                <span title="Wie weit die Planeten ausgebaut sind: jede Gebäudestufe zählt mit dem Punktesatz des Gebäudes"><strong>{{ player_points(profile)|number_format(0, ',', '.') }}</strong> Punkte</span>
-                <span title="Nur aus Schlachten: zerstörte Schildpunkte gegnerischer Einheiten, aufgeteilt nach der Bauzeit der eigenen Einheiten"><strong>{{ profile.combatExperience|number_format(0, ',', '.') }}</strong> Kampferfahrung</span>
+                {{ '<span title="Wie weit die Planeten ausgebaut sind: jede Gebäudestufe zählt mit dem Punktesatz des Gebäudes"><strong>{player_points}</strong> Punkte</span> <span title="Nur aus Schlachten: zerstörte Schildpunkte gegnerischer Einheiten, aufgeteilt nach der Bauzeit der eigenen Einheiten"><strong>{combatExperience}</strong> Kampferfahrung</span>'|trans({'{player_points}': player_points(profile)|num|e, '{combatExperience}': profile.combatExperience|num|e})|raw }}
                 {% if not own %}{{ ui.presence(profile) }}{% endif %}
             </p>
             {% if profile.profileText %}
                 <div class="message-body">{{ profile.profileText }}</div>
             {% else %}
-                <p class="muted">{{ own ? 'Du hast noch nichts über dich geschrieben.' : profile.username ~ ' hat noch nichts über sich geschrieben.' }}</p>
+                <p class="muted">{{ own ? ('Du hast noch nichts über dich geschrieben.'|trans) : profile.username ~ (' ' ~ 'hat noch nichts über sich geschrieben.'|trans) }}</p>
             {% endif %}
             {% if own %}
                 <div class="profile-actions">
-                    <a class="btn" href="{{ path('app_account') }}" id="profile-account" title="Urlaubsmodus, E-Mail-Benachrichtigungen, Account löschen">⚙ Konto</a>
+                    <a class="btn" href="{{ path('app_account') }}" id="profile-account" title="{{ 'Urlaubsmodus, E-Mail-Benachrichtigungen, Account löschen'|trans }}">{{ '⚙ Konto'|trans }}</a>
                     <a class="btn btn-secondary" href="{{ path('app_extended') }}" id="profile-extended">{{ player.isExtended(now) ? '✨ Erweitert' : '✨ Erweitern' }}</a>
                 </div>
             {% endif %}
             {% if not own %}
                 <div class="profile-actions">
-                    <a class="btn" href="{{ path('app_mail_compose', {to: profile.username}) }}" id="profile-write">✉ Nachricht schreiben</a>
-                    <a class="btn btn-secondary" href="{{ path('app_support', {kind: 'report', report: profile.username}) }}" id="profile-report" title="Zum Beispiel bei Beleidigungen">🚩 Melden</a>
+                    <a class="btn" href="{{ path('app_mail_compose', {to: profile.username}) }}" id="profile-write">{{ '✉ Nachricht schreiben'|trans }}</a>
+                    <a class="btn btn-secondary" href="{{ path('app_support', {kind: 'report', report: profile.username}) }}" id="profile-report" title="{{ 'Zum Beispiel bei Beleidigungen'|trans }}">{{ '🚩 Melden'|trans }}</a>
                     {% if contact is null %}
                         <form method="post" action="{{ path('app_contact_request', {id: profile.id}) }}">
                             <input type="hidden" name="_token" value="{{ csrf_token('contact') }}">
-                            <button class="btn btn-secondary" type="submit" id="profile-contact-request">★ Als Schnellkontakt anfragen</button>
+                            <button class="btn btn-secondary" type="submit" id="profile-contact-request">{{ '★ Als Schnellkontakt anfragen'|trans }}</button>
                         </form>
                     {% elseif contact.accepted %}
-                        <span class="muted small">★ In deinen Schnellkontakten</span>
+                        <span class="muted small">{{ '★ In deinen Schnellkontakten'|trans }}</span>
                         <form method="post" action="{{ path('app_contact_remove', {id: contact.id}) }}">
                             <input type="hidden" name="_token" value="{{ csrf_token('contact') }}">
-                            <button class="btn btn-small btn-secondary" type="submit" id="profile-contact-remove" data-confirm="{{ profile.username }} aus den Schnellkontakten entfernen? Du verschwindest auch aus seiner Liste." data-confirm-label="Entfernen">Entfernen</button>
+                            <button class="btn btn-small btn-secondary" type="submit" id="profile-contact-remove" data-confirm="{{ '{username} aus den Schnellkontakten entfernen? Du verschwindest auch aus seiner Liste.'|trans({'{username}': profile.username}) }}" data-confirm-label="{{ 'Entfernen'|trans }}">{{ 'Entfernen'|trans }}</button>
                         </form>
                     {% elseif contact.requester.sameAs(player) %}
-                        <span class="muted small">Kontaktanfrage gesendet – wartet auf Antwort.</span>
+                        <span class="muted small">{{ 'Kontaktanfrage gesendet – wartet auf Antwort.'|trans }}</span>
                         <form method="post" action="{{ path('app_contact_remove', {id: contact.id}) }}">
                             <input type="hidden" name="_token" value="{{ csrf_token('contact') }}">
-                            <button class="btn btn-small btn-secondary" type="submit" id="profile-contact-withdraw">Zurückziehen</button>
+                            <button class="btn btn-small btn-secondary" type="submit" id="profile-contact-withdraw">{{ 'Zurückziehen'|trans }}</button>
                         </form>
                     {% else %}
-                        <span class="muted small">{{ profile.username }} möchte dein Schnellkontakt werden.</span>
+                        <span class="muted small">{{ '{username} möchte dein Schnellkontakt werden.'|trans({'{username}': profile.username}) }}</span>
                         <form method="post" action="{{ path('app_contact_accept', {id: contact.id}) }}">
                             <input type="hidden" name="_token" value="{{ csrf_token('contact') }}">
-                            <button class="btn btn-small" type="submit" id="profile-contact-accept">Annehmen</button>
+                            <button class="btn btn-small" type="submit" id="profile-contact-accept">{{ 'Annehmen'|trans }}</button>
                         </form>
                     {% endif %}
                 </div>
@@ -66,27 +64,27 @@
     </section>
 
     <section class="panel">
-        <h2>Planeten</h2>
+        <h2>{{ 'Planeten'|trans }}</h2>
         {% if own %}
-            <p class="muted small">Bis zu {{ max_hidden }} Planeten kannst du hier verbergen, z. B. Kampfkolonien – andere sehen sie dann nicht in dieser Liste. Verborgen: {{ hidden_count }} von {{ max_hidden }}.</p>
+            <p class="muted small">{{ 'Bis zu {max_hidden} Planeten kannst du hier verbergen, z. B. Kampfkolonien – andere sehen sie dann nicht in dieser Liste. Verborgen: {hidden_count} von {max_hidden}.'|trans({'{max_hidden}': max_hidden, '{hidden_count}': hidden_count}) }}</p>
         {% endif %}
         {% if listed_planets is empty %}
-            <p class="muted">Keine Planeten.</p>
+            <p class="muted">{{ 'Keine Planeten.'|trans }}</p>
         {% else %}
             <table class="table">
                 {% for p in listed_planets %}
                     <tr class="{{ p.hiddenInProfile ? 'muted' }}">
-                        <td>{% if own %}<img class="planet-pic planet-pic-tiny" src="{{ asset(p.type.picture) }}" alt="{{ p.type.label }}" title="{{ p.type.label }}" width="22" height="22"> {% endif %}{{ p.name }}{% if p.homeworld %} <span title="Heimatplanet">🏠</span>{% endif %}{% if p.fused %} <span class="muted small">Fusion aus {{ p.fusionSize }} Planeten</span>{% endif %}</td>
+                        <td>{% if own %}<img class="planet-pic planet-pic-tiny" src="{{ asset(p.type.picture) }}" alt="{{ p.type.label|trans }}" title="{{ p.type.label|trans }}" width="22" height="22"> {% endif %}{{ p.name }}{% if p.homeworld %} <span title="{{ 'Heimatplanet'|trans }}">🏠</span>{% endif %}{% if p.fused %} <span class="muted small">{{ 'Fusion aus {fusionSize} Planeten'|trans({'{fusionSize}': p.fusionSize}) }}</span>{% endif %}</td>
                         <td class="num">{{ ui.coords(p.coordinates) }}</td>
                         {% if own %}
                             <td class="num">
                                 <form method="post" action="{{ path('app_profile_planet_visibility', {id: p.id}) }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('profile') }}">
                                     {% if p.hiddenInProfile %}
-                                        <span class="small">verborgen</span>
-                                        <button class="btn btn-small btn-secondary" type="submit" name="hidden" value="0" id="show-planet-{{ p.id }}">Zeigen</button>
+                                        <span class="small">{{ 'verborgen'|trans }}</span>
+                                        <button class="btn btn-small btn-secondary" type="submit" name="hidden" value="0" id="show-planet-{{ p.id }}">{{ 'Zeigen'|trans }}</button>
                                     {% else %}
-                                        <button class="btn btn-small btn-secondary" type="submit" name="hidden" value="1" id="hide-planet-{{ p.id }}" {% if hidden_count >= max_hidden %}disabled title="Schon {{ max_hidden }} Planeten verborgen"{% endif %}>Verbergen</button>
+                                        <button class="btn btn-small btn-secondary" type="submit" name="hidden" value="1" id="hide-planet-{{ p.id }}" {% if hidden_count >= max_hidden %}disabled title="{{ 'Schon {max_hidden} Planeten verborgen'|trans({'{max_hidden}': max_hidden}) }}"{% endif %}>{{ 'Verbergen'|trans }}</button>
                                     {% endif %}
                                 </form>
                             </td>
@@ -99,17 +97,17 @@
 
     {% if own %}
         <section class="panel">
-            <h2>Profil bearbeiten</h2>
+            <h2>{{ 'Profil bearbeiten'|trans }}</h2>
             <form method="post" action="{{ path('app_profile_update') }}" enctype="multipart/form-data" class="fleet-form">
                 <input type="hidden" name="_token" value="{{ csrf_token('profile') }}">
-                <label for="profile-text">Über dich (sehen alle, die auf deinen Namen klicken)</label>
+                <label for="profile-text">{{ 'Über dich (sehen alle, die auf deinen Namen klicken)'|trans }}</label>
                 <textarea id="profile-text" name="text" rows="6" maxlength="5000">{{ profile.profileText }}</textarea>
-                <label for="profile-image">Bild (JPEG, PNG, WebP oder GIF, max. 2 MB – wird auf 400 × 400 Pixel verkleinert)</label>
+                <label for="profile-image">{{ 'Bild (JPEG, PNG, WebP oder GIF, max. 2 MB – wird auf 400 × 400 Pixel verkleinert)'|trans }}</label>
                 <input id="profile-image" type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif">
                 {% if profile.avatar %}
-                    <label class="checkbox"><input type="checkbox" name="remove_image" value="1"> Bild entfernen</label>
+                    <label class="checkbox"><input type="checkbox" name="remove_image" value="1"> {{ 'Bild entfernen'|trans }}</label>
                 {% endif %}
-                <button class="btn btn-small" type="submit" id="profile-save">Speichern</button>
+                <button class="btn btn-small" type="submit" id="profile-save">{{ 'Speichern'|trans }}</button>
             </form>
         </section>
     {% endif %}

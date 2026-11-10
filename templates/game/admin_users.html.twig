@@ -1,17 +1,17 @@
 {% extends 'game/_layout.html.twig' %}
 {% import 'game/_macros.html.twig' as ui %}
 
-{% block title %}Benutzer – Admin – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Benutzer – Admin – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    <h1>🛡 Benutzer</h1>
+    <h1>{{ '🛡 Benutzer'|trans }}</h1>
     <form method="get" action="{{ path('app_admin_users') }}" class="panel inline-action admin-user-search">
-        <input type="text" name="q" value="{{ query }}" placeholder="Name oder E-Mail" aria-label="Suche">
-        <select name="role" aria-label="Rolle">
-            <option value="">Alle Rollen</option>
-            {% for key, label in roles %}<option value="{{ key }}" {{ role == key ? 'selected' }}>{{ label }}</option>{% endfor %}
+        <input type="text" name="q" value="{{ query }}" placeholder="{{ 'Name oder E-Mail'|trans }}" aria-label="{{ 'Suche'|trans }}">
+        <select name="role" aria-label="{{ 'Rolle'|trans }}">
+            <option value="">{{ 'Alle Rollen'|trans }}</option>
+            {% for key, label in roles %}<option value="{{ key }}" {{ role == key ? 'selected' }}>{{ label|trans }}</option>{% endfor %}
         </select>
-        <button class="btn btn-small" type="submit">Suchen</button>
+        <button class="btn btn-small" type="submit">{{ 'Suchen'|trans }}</button>
     </form>
 
     {% for u in users %}
@@ -20,38 +20,38 @@
             <summary>
                 {{ ui.player(u) }}
                 <span class="ticket-status">{{ roles[current] }}</span>
-                {% if u.onVacation(now) %}<span class="vacation-tag">🌴 bis {{ u.vacationUntil|date('d.m. H:i') }}</span>{% endif %}
-                {% if u.deleteAt %}<span class="small" style="color: var(--bad)">wird am {{ u.deleteAt|date('d.m. H:i') }} gelöscht</span>{% endif %}
-                <span class="muted small">{{ u.email ?? 'keine E-Mail' }} · seit {{ u.createdAt|date('d.m.Y') }} · {{ u.planets|length }} Planeten</span>
+                {% if u.onVacation(now) %}<span class="vacation-tag">{{ '🌴 bis {vacationUntil}'|trans({'{vacationUntil}': u.vacationUntil|date('d.m. H:i')}) }}</span>{% endif %}
+                {% if u.deleteAt %}<span class="small" style="color: var(--bad)">{{ 'wird am {deleteAt} gelöscht'|trans({'{deleteAt}': u.deleteAt|date('d.m. H:i')}) }}</span>{% endif %}
+                <span class="muted small">{{ '{Mail} · seit {createdAt} · {planets} Planeten'|trans({'{Mail}': u.email ?? 'keine E-Mail'|trans, '{createdAt}': u.createdAt|date('d.m.Y'), '{planets}': u.planets|length}) }}</span>
             </summary>
             <div class="admin-user-actions">
                 <form method="post" action="{{ path('app_admin_user', {id: u.id}) }}" class="inline-action">
                     <input type="hidden" name="_token" value="{{ csrf_token('admin_users') }}"><input type="hidden" name="do" value="role"><input type="hidden" name="q" value="{{ query }}">
-                    <label>Rolle <select name="role">{% for key, label in roles %}<option value="{{ key }}" {{ key == current ? 'selected' }}>{{ label }}</option>{% endfor %}</select></label>
-                    <button class="btn btn-small btn-secondary" type="submit">Setzen</button>
+                    <label>{{ 'Rolle'|trans }} <select name="role">{% for key, label in roles %}<option value="{{ key }}" {{ key == current ? 'selected' }}>{{ label }}</option>{% endfor %}</select></label>
+                    <button class="btn btn-small btn-secondary" type="submit">{{ 'Setzen'|trans }}</button>
                 </form>
                 <form method="post" action="{{ path('app_admin_user', {id: u.id}) }}" class="inline-action">
                     <input type="hidden" name="_token" value="{{ csrf_token('admin_users') }}"><input type="hidden" name="do" value="vacation"><input type="hidden" name="q" value="{{ query }}">
-                    <label>Urlaub <input type="text" name="days" value="1" class="short" inputmode="decimal" required> Tage</label>
-                    <input type="text" name="reason" required maxlength="200" placeholder="Grund (bekommt der Spieler)">
-                    <button class="btn btn-small btn-secondary" type="submit">In Urlaub schicken</button>
+                    <label>{{ 'Urlaub'|trans }} <input type="text" name="days" value="1" class="short" inputmode="decimal" required> {{ 'Tage'|trans }}</label>
+                    <input type="text" name="reason" required maxlength="200" placeholder="{{ 'Grund (bekommt der Spieler)'|trans }}">
+                    <button class="btn btn-small btn-secondary" type="submit">{{ 'In Urlaub schicken'|trans }}</button>
                 </form>
                 <form method="post" action="{{ path('app_admin_user', {id: u.id}) }}" class="mail-form">
                     <input type="hidden" name="_token" value="{{ csrf_token('admin_users') }}"><input type="hidden" name="do" value="message"><input type="hidden" name="q" value="{{ query }}">
-                    <textarea name="body" rows="2" required placeholder="Nachricht der Spielleitung an {{ u.username }}"></textarea>
-                    <button class="btn btn-small btn-secondary" type="submit">Nachricht senden</button>
+                    <textarea name="body" rows="2" required placeholder="{{ 'Nachricht der Spielleitung an {username}'|trans({'{username}': u.username}) }}"></textarea>
+                    <button class="btn btn-small btn-secondary" type="submit">{{ 'Nachricht senden'|trans }}</button>
                 </form>
                 {% if u.id != player.id %}
                     <form method="post" action="{{ path('app_admin_user', {id: u.id}) }}" class="inline-action admin-delete">
                         <input type="hidden" name="_token" value="{{ csrf_token('admin_users') }}"><input type="hidden" name="do" value="delete"><input type="hidden" name="q" value="{{ query }}">
-                        <select name="planets"><option value="leave">Planeten verlassen (Gebäude bleiben)</option><option value="destroy">Gebäude zerstören</option></select>
-                        <input type="text" name="confirm" required placeholder="Name zur Bestätigung" aria-label="Spielername zur Bestätigung">
-                        <button class="btn btn-small btn-danger" type="submit" data-confirm="{{ u.username }} sofort löschen? Das lässt sich nicht rückgängig machen." data-confirm-label="Löschen">Sofort löschen</button>
+                        <select name="planets"><option value="leave">{{ 'Planeten verlassen (Gebäude bleiben)'|trans }}</option><option value="destroy">{{ 'Gebäude zerstören'|trans }}</option></select>
+                        <input type="text" name="confirm" required placeholder="{{ 'Name zur Bestätigung'|trans }}" aria-label="{{ 'Spielername zur Bestätigung'|trans }}">
+                        <button class="btn btn-small btn-danger" type="submit" data-confirm="{{ '{username} sofort löschen? Das lässt sich nicht rückgängig machen.'|trans({'{username}': u.username}) }}" data-confirm-label="{{ 'Löschen'|trans }}">{{ 'Sofort löschen'|trans }}</button>
                     </form>
                 {% endif %}
             </div>
         </details>
     {% else %}
-        <p class="panel muted">Keine Benutzer gefunden.</p>
+        <p class="panel muted">{{ 'Keine Benutzer gefunden.'|trans }}</p>
     {% endfor %}
 {% endblock %}

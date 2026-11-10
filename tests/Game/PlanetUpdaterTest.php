@@ -18,6 +18,8 @@ use PHPUnit\Framework\TestCase;
 
 class PlanetUpdaterTest extends TestCase
 {
+    use RendersMessages;
+
     private Economy $economy;
     private PlanetUpdater $updater;
     private \DateTimeImmutable $start;
@@ -292,7 +294,7 @@ class PlanetUpdaterTest extends TestCase
         $planet = $this->planet();
         $planet->setBuildingLevel(BuildingType::CommandCenter, 1);
 
-        self::assertSame(['Kommandozentrale Stufe 3'], $this->economy->missingRequirements(BuildingType::Shipyard->requirements(), $planet));
+        self::assertSame(['Kommandozentrale Stufe 3'], array_map(self::text(...), $this->economy->missingRequirements(BuildingType::Shipyard->requirements(), $planet)));
 
         $planet->setBuildingLevel(BuildingType::CommandCenter, 3);
         self::assertSame([], $this->economy->missingRequirements(BuildingType::Shipyard->requirements(), $planet));

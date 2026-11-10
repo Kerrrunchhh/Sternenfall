@@ -10,6 +10,8 @@ use PHPUnit\Framework\TestCase;
 /** Pin-prick attacks are not allowed: 1 % of the fleet strength or 10 % of a ship class. */
 final class AttackRulesTest extends TestCase
 {
+    use RendersMessages;
+
     public function testEveryWarshipHasAClassAndCivilShipsNone(): void
     {
         foreach (ShipType::cases() as $type) {
@@ -35,7 +37,7 @@ final class AttackRulesTest extends TestCase
     {
         $all = ['leviathan' => 100, 'pfeil' => 20];
         $reason = AttackRules::rejection(['pfeil' => 1], $all);
-        self::assertStringContainsString('Zu kleiner Angriff', (string) $reason);
+        self::assertStringContainsString('Zu kleiner Angriff', self::text($reason));
 
         self::assertNull(AttackRules::rejection(['pfeil' => 2], $all), '2 of 20 fighters = 10 %');
     }

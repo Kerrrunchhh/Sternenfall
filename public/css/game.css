@@ -676,3 +676,5 @@ label.checkbox { display: flex; gap: .4rem; align-items: center; color: var(--te
 .game-footer { margin-top: 2rem; padding-top: .75rem; border-top: 1px solid var(--border); text-align: center; }
 .privacy h2 { margin-top: 1.5rem; }
 .privacy li { margin-bottom: .35rem; }
+
+.lang-switch a, .lang-switch strong { text-decoration: none; letter-spacing: .03em; }

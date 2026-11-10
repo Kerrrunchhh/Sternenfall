@@ -3,6 +3,11 @@
 namespace App\Game;
 
 use App\Entity\User;
+use App\I18n\Lines;
+use App\I18n\Num;
+use Symfony\Contracts\Translation\TranslatableInterface;
+
+use function Symfony\Component\Translation\t;
 
 final readonly class BattleResult
 {
@@ -120,11 +125,11 @@ final readonly class BattleResult
      * units are marked "Du" and those of his alliance "Allianz"; without a viewer (shared
      * link, newspaper) it is neutral.
      */
-    public function report(?User $viewer = null): string
+    public function report(?User $viewer = null): TranslatableInterface
     {
         $lines = [];
-        foreach ([BattleGroup::ATTACKER => 'Angreifer', BattleGroup::DEFENDER => 'Verteidiger'] as $side => $title) {
-            $lines[] = $title.':';
+        foreach ([BattleGroup::ATTACKER => t('Angreifer:'), BattleGroup::DEFENDER => t('Verteidiger:')] as $side => $title) {
+            $lines[] = $title;
             $byOwner = [];
             foreach ($this->side($side) as $group) {
                 $byOwner[$group->owner->getId() ?? spl_object_id($group->owner)][] = $group;
@@ -140,11 +145,11 @@ final readonly class BattleResult
             foreach ($byOwner as $groups) {
                 $owner = $groups[0]->owner;
                 $tag = null !== $owner->getAlliance() ? ' ['.$owner->getAlliance()->getTag().']' : '';
-                $lines[] = '  '.match ($rank($owner)) {
-                    0 => 'Du ('.$owner->getUsername().')',
-                    1 => $owner->getUsername().$tag.' · Allianz',
-                    default => $owner->getUsername().$tag,
-                }.':';
+                $lines[] = match ($rank($owner)) {
+                    0 => t('  Du ({player}):', ['{player}' => $owner->getUsername()]),
+                    1 => t('  {player}{tag} · Allianz:', ['{player}' => $owner->getUsername(), '{tag}' => $tag]),
+                    default => '  '.$owner->getUsername().$tag.':',
+                };
                 // Units of one type from several fleets of a player are counted together.
                 $types = [];
                 foreach ($groups as $group) {
@@ -156,22 +161,20 @@ final readonly class BattleResult
                 usort($types, static fn (array $a, array $b): int => $a['type']->firingOrder() <=> $b['type']->firingOrder());
                 foreach ($types as $t) {
                     $lost = $t['count'] - $t['alive'];
-                    $lines[] = \sprintf(
-                        '    %s: %s → %s%s%s',
-                        $t['type']->label(),
-                        number_format($t['count'], 0, ',', '.'),
-                        number_format($t['alive'], 0, ',', '.'),
-                        $lost > 0 ? ' (−'.number_format($lost, 0, ',', '.').')' : '',
-                        $this->transportsSpared && BattleGroup::DEFENDER === $side && $t['type']->isTransport() ? ' (verschont)' : '',
-                    );
+                    $lines[] = new Lines([
+                        t('    {ship}: {count} → {alive}', ['{ship}' => t($t['type']->label()), '{count}' => new Num($t['count']), '{alive}' => new Num($t['alive'])]),
+                        $lost > 0 ? t(' (−{lost})', ['{lost}' => new Num($lost)]) : null,
+                        $this->transportsSpared && BattleGroup::DEFENDER === $side && $t['type']->isTransport() ? t(' (verschont)') : null,
+                    ], '');
                 }
             }
             if ([] === $byOwner) {
-                $lines[] = '  keine Einheiten';
+                $lines[] = t('  keine Einheiten');
             }
             $lines[] = '';
         }
+        array_pop($lines);
 
-        return rtrim(implode("\n", $lines));
+        return new Lines($lines);
     }
 }

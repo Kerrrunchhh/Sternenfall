@@ -1,11 +1,11 @@
 {% extends 'game/_layout.html.twig' %}
 
-{% block title %}Neue Nachricht – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Neue Nachricht – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    <h1>Neue Nachricht</h1>
+    <h1>{{ 'Neue Nachricht'|trans }}</h1>
     <section class="panel">
         {{ include('game/_mail_form.html.twig') }}
     </section>
-    <p><a href="{{ path('app_mail') }}">← Zur Post</a></p>
+    <p><a href="{{ path('app_mail') }}">{{ '← Zur Post'|trans }}</a></p>
 {% endblock %}

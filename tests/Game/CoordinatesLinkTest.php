@@ -12,7 +12,7 @@ class CoordinatesLinkTest extends TestCase
     {
         $urls = $this->createStub(UrlGeneratorInterface::class);
         $urls->method('generate')->willReturnCallback(static fn (string $route, array $p): string => "/galaxy?galaxy={$p['galaxy']}&system={$p['system']}");
-        $filter = new CoordinatesExtension($urls);
+        $filter = new CoordinatesExtension($urls, new \Symfony\Component\Translation\IdentityTranslator());
 
         $html = $filter->link('Kolonie auf [3:195:9] <b>gegründet</b>, Fusion [2:7:4-6].');
 
@@ -25,7 +25,7 @@ class CoordinatesLinkTest extends TestCase
     {
         $urls = $this->createStub(UrlGeneratorInterface::class);
         $urls->method('generate')->willReturnCallback(static fn (string $route, array $p): string => 'app_battle_report' === $route ? '/kampfbericht/'.$p['hash'] : '/galaxy');
-        $filter = new CoordinatesExtension($urls);
+        $filter = new CoordinatesExtension($urls, new \Symfony\Component\Translation\IdentityTranslator());
 
         $html = $filter->link("Schau: https://sternenfall.example/kampfbericht/382fbad51317459736883b82 und [3:1:2]\nnoch einer /kampfbericht/0123456789abcdef01234567");
 

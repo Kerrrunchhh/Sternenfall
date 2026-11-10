@@ -14,6 +14,9 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\EnumRequirement;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
+use App\I18n\Num;
+
+use function Symfony\Component\Translation\t;
 
 class ShipyardController extends AbstractGameController
 {
@@ -103,7 +106,7 @@ class ShipyardController extends AbstractGameController
         $percent = $request->request->getInt('percent', 100);
         $this->attempt(
             fn () => $this->planetService->orderShips($planet, $type, $quantity, $percent),
-            \sprintf('%s × %s in Auftrag gegeben%s.', number_format($quantity, 0, ',', '.'), $type->label(), 100 === $percent ? '' : " ($percent %)"),
+            t('{quantity} × {type} in Auftrag gegeben{value}.', ['{quantity}' => new Num($quantity), '{type}' => t($type->label()), '{value}' => 100 === $percent ? '' : " ($percent %)"]),
         );
 
         return match (true) {

@@ -2,6 +2,7 @@
 
 namespace App\Game;
 
+use App\I18n\Lines;
 use App\Entity\Alliance;
 use App\Entity\AlliancePost;
 use App\Entity\AllianceRequest;
@@ -14,6 +15,9 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\Lock\LockFactory;
+use App\I18n\Num;
+
+use function Symfony\Component\Translation\t;
 
 /**
  * Alliances: founding, invitations and applications, ranks, the black board,
@@ -40,19 +44,19 @@ final readonly class AllianceService
         $name = trim($name);
         $tag = strtoupper(trim($tag));
         if (mb_strlen($name) < 3 || mb_strlen($name) > 40) {
-            throw new GameException('Der Name muss 3 bis 40 Zeichen lang sein.');
+            throw new GameException(t('Der Name muss 3 bis 40 Zeichen lang sein.'));
         }
         if (!preg_match('/^[A-Z0-9]{2,6}$/', $tag)) {
-            throw new GameException('Das Kürzel muss aus 2 bis 6 Buchstaben oder Ziffern bestehen.');
+            throw new GameException(t('Das Kürzel muss aus 2 bis 6 Buchstaben oder Ziffern bestehen.'));
         }
 
         return $this->locked(function () use ($founder, $name, $tag): Alliance {
             $this->em->refresh($founder);
             if (null !== $founder->getAlliance()) {
-                throw new GameException('Du bist bereits in einer Allianz.');
+                throw new GameException(t('Du bist bereits in einer Allianz.'));
             }
             if (null !== $this->alliances->findOneBy(['name' => $name]) || null !== $this->alliances->findOneBy(['tag' => $tag])) {
-                throw new GameException('Name oder Kürzel ist bereits vergeben.');
+                throw new GameException(t('Name oder Kürzel ist bereits vergeben.'));
             }
 
             $alliance = new Alliance($name, $tag, $founder->getLifeForm(), $this->now());
@@ -69,9 +73,9 @@ final readonly class AllianceService
     {
         $this->locked(function () use ($actor, $username): void {
             $alliance = $this->managedAlliance($actor);
-            $user = $this->users->findOneBy(['username' => trim($username)]) ?? throw new GameException('Diesen Spieler gibt es nicht.');
+            $user = $this->users->findOneBy(['username' => trim($username)]) ?? throw new GameException(t('Diesen Spieler gibt es nicht.'));
             if (null !== $user->getAlliance()) {
-                throw new GameException(\sprintf('%s ist bereits in einer Allianz.', $user->getUsername()));
+                throw new GameException(t('{player} ist bereits in einer Allianz.', ['{player}' => $user->getUsername()]));
             }
             $this->assertSameLifeForm($alliance, $user);
 
@@ -83,11 +87,11 @@ final readonly class AllianceService
                 return;
             }
             if (null !== $existing) {
-                throw new GameException(\sprintf('%s wurde bereits eingeladen.', $user->getUsername()));
+                throw new GameException(t('{player} wurde bereits eingeladen.', ['{player}' => $user->getUsername()]));
             }
 
             $this->em->persist(new AllianceRequest($alliance, $user, true, $this->now()));
-            $this->inbox->send($user, \sprintf('Einladung: %s [%s]', $alliance->getName(), $alliance->getTag()), \sprintf('%s lädt dich in „%s“ (%s) ein. Du kannst die Einladung auf der Allianzseite annehmen oder ablehnen.', $actor->getUsername(), $alliance->getName(), $alliance->getType()));
+            $this->inbox->send($user, t('Einladung: {name} [{tag}]', ['{name}' => $alliance->getName(), '{tag}' => $alliance->getTag()]), t('{player} lädt dich in „{name}“ ({type}) ein. Du kannst die Einladung auf der Allianzseite annehmen oder ablehnen.', ['{player}' => $actor->getUsername(), '{name}' => $alliance->getName(), '{type}' => t($alliance->getType())]));
             $this->em->flush();
         });
     }
@@ -97,7 +101,7 @@ final readonly class AllianceService
         $this->locked(function () use ($user, $alliance): void {
             $this->em->refresh($user);
             if (null !== $user->getAlliance()) {
-                throw new GameException('Du bist bereits in einer Allianz.');
+                throw new GameException(t('Du bist bereits in einer Allianz.'));
             }
             $this->assertSameLifeForm($alliance, $user);
             $existing = $this->alliances->findRequest($alliance, $user);
@@ -107,13 +111,13 @@ final readonly class AllianceService
                 return;
             }
             if (null !== $existing) {
-                throw new GameException('Du hast dich dort bereits beworben.');
+                throw new GameException(t('Du hast dich dort bereits beworben.'));
             }
 
             $this->em->persist(new AllianceRequest($alliance, $user, false, $this->now()));
             foreach ($alliance->getMembers() as $member) {
                 if ($member->getAllianceRank()?->canManage()) {
-                    $this->inbox->send($member, 'Neue Bewerbung von '.$user->getUsername(), \sprintf('%s möchte „%s“ beitreten. Du kannst die Bewerbung auf der Allianzseite annehmen oder ablehnen.', $user->getUsername(), $alliance->getName()));
+                    $this->inbox->send($member, t('Neue Bewerbung von {player}', ['{player}' => $user->getUsername()]), t('{player} möchte „{name}“ beitreten. Du kannst die Bewerbung auf der Allianzseite annehmen oder ablehnen.', ['{player}' => $user->getUsername(), '{name}' => $alliance->getName()]));
                 }
             }
             $this->em->flush();
@@ -144,11 +148,11 @@ final readonly class AllianceService
             $alliance = $this->managedAlliance($actor);
             $this->assertMember($alliance, $member);
             if ($member->isSameAs($actor) || !\in_array($rank, AllianceRank::assignable(), true)) {
-                throw new GameException('Dieser Rang kann so nicht vergeben werden.');
+                throw new GameException(t('Dieser Rang kann so nicht vergeben werden.'));
             }
             $this->assertNoRunningVote($alliance, 'Solange über deine Absetzung abgestimmt wird, kannst du keine Ränge ändern.');
             $member->setAllianceRank($rank);
-            $this->inbox->send($member, 'Neuer Rang: '.$rank->label(), \sprintf('Du bist jetzt %s in „%s“.', $rank->label(), $alliance->getName()));
+            $this->inbox->send($member, t('Neuer Rang: {rank}', ['{rank}' => t($rank->label())]), t('Du bist jetzt {rank} in „{name}“.', ['{rank}' => t($rank->label()), '{name}' => $alliance->getName()]));
             $this->em->flush();
             $this->cleanVotes($alliance);
         });
@@ -161,11 +165,11 @@ final readonly class AllianceService
             $alliance = $this->managedAlliance($actor);
             $this->assertMember($alliance, $member);
             if ($member->isSameAs($actor)) {
-                throw new GameException('Du bist bereits Gründer.');
+                throw new GameException(t('Du bist bereits Gründer.'));
             }
             $member->setAllianceRank(AllianceRank::Founder);
             $actor->setAllianceRank(AllianceRank::Commander);
-            $this->inbox->send($member, 'Du bist jetzt Gründer', \sprintf('%s hat dir die Führung von „%s“ übergeben.', $actor->getUsername(), $alliance->getName()));
+            $this->inbox->send($member, t('Du bist jetzt Gründer'), t('{player} hat dir die Führung von „{name}“ übergeben.', ['{player}' => $actor->getUsername(), '{name}' => $alliance->getName()]));
             // A new founder ends any running vote.
             foreach ($this->em->getRepository(AllianceVote::class)->findBy(['alliance' => $alliance]) as $vote) {
                 $this->em->remove($vote);
@@ -180,13 +184,13 @@ final readonly class AllianceService
             $alliance = $this->managedAlliance($actor);
             $this->assertMember($alliance, $member);
             if ($member->isSameAs($actor)) {
-                throw new GameException('Du kannst dich nicht selbst ausschließen.');
+                throw new GameException(t('Du kannst dich nicht selbst ausschließen.'));
             }
             if ($member->getAllianceRank()?->canVoteOnFounder()) {
                 $this->assertNoRunningVote($alliance, 'Solange über deine Absetzung abgestimmt wird, kannst du keine Kommandanten ausschließen.');
             }
             $this->removeMember($member);
-            $this->inbox->send($member, 'Aus der Allianz ausgeschlossen', \sprintf('Du wurdest aus „%s“ ausgeschlossen.', $alliance->getName()));
+            $this->inbox->send($member, t('Aus der Allianz ausgeschlossen'), t('Du wurdest aus „{name}“ ausgeschlossen.', ['{name}' => $alliance->getName()]));
             $this->em->flush();
             $this->cleanVotes($alliance);
         });
@@ -196,9 +200,9 @@ final readonly class AllianceService
     {
         $this->locked(function () use ($actor): void {
             $this->em->refresh($actor);
-            $alliance = $actor->getAlliance() ?? throw new GameException('Du bist in keiner Allianz.');
+            $alliance = $actor->getAlliance() ?? throw new GameException(t('Du bist in keiner Allianz.'));
             if ($actor->getAllianceRank()?->canManage() && $alliance->getMembers()->count() > 1) {
-                throw new GameException('Übergib zuerst die Gründerrolle oder löse die Allianz auf.');
+                throw new GameException(t('Übergib zuerst die Gründerrolle oder löse die Allianz auf.'));
             }
             $this->removeMember($actor);
             if ($alliance->getMembers()->isEmpty()) {
@@ -220,7 +224,7 @@ final readonly class AllianceService
             foreach ($alliance->getMembers()->toArray() as $member) {
                 $this->removeMember($member);
                 if (!$member->isSameAs($actor)) {
-                    $this->inbox->send($member, 'Allianz aufgelöst', \sprintf('„%s“ wurde von %s aufgelöst.', $alliance->getName(), $actor->getUsername()));
+                    $this->inbox->send($member, t('Allianz aufgelöst'), t('„{name}“ wurde von {player} aufgelöst.', ['{name}' => $alliance->getName(), '{player}' => $actor->getUsername()]));
                 }
             }
             $this->images->delete($alliance->getImage(), 'alliances');
@@ -238,9 +242,9 @@ final readonly class AllianceService
     {
         return $this->locked(function () use ($voter, $candidate): bool {
             $this->em->refresh($voter);
-            $alliance = $voter->getAlliance() ?? throw new GameException('Du bist in keiner Allianz.');
+            $alliance = $voter->getAlliance() ?? throw new GameException(t('Du bist in keiner Allianz.'));
             if (!$voter->getAllianceRank()?->canVoteOnFounder()) {
-                throw new GameException('Nur Kommandanten können über den Gründer abstimmen.');
+                throw new GameException(t('Nur Kommandanten können über den Gründer abstimmen.'));
             }
 
             $existing = $this->em->getRepository(AllianceVote::class)->findOneBy(['alliance' => $alliance, 'voter' => $voter]);
@@ -253,7 +257,7 @@ final readonly class AllianceService
                 return false;
             }
             if (!$candidate->isAllyOf($voter) || !$candidate->getAllianceRank()?->canVoteOnFounder()) {
-                throw new GameException('Zur Wahl stehen nur Kommandanten deiner Allianz.');
+                throw new GameException(t('Zur Wahl stehen nur Kommandanten deiner Allianz.'));
             }
 
             if (null === $existing) {
@@ -311,12 +315,12 @@ final readonly class AllianceService
     public function post(User $author, string $body): void
     {
         $body = trim($body);
-        $alliance = $author->getAlliance() ?? throw new GameException('Du bist in keiner Allianz.');
+        $alliance = $author->getAlliance() ?? throw new GameException(t('Du bist in keiner Allianz.'));
         if (!$author->getAllianceRank()?->canSeeBoard()) {
-            throw new GameException('Anwärter haben keinen Zugang zum schwarzen Brett.');
+            throw new GameException(t('Anwärter haben keinen Zugang zum schwarzen Brett.'));
         }
         if ('' === $body || mb_strlen($body) > AlliancePost::MAX_LENGTH) {
-            throw new GameException(\sprintf('Ein Beitrag muss 1 bis %d Zeichen lang sein.', AlliancePost::MAX_LENGTH));
+            throw new GameException(t('Ein Beitrag muss 1 bis {value} Zeichen lang sein.', ['{value}' => AlliancePost::MAX_LENGTH]));
         }
         $this->em->persist(new AlliancePost($alliance, $author, $body, $this->now()));
         $this->em->flush();
@@ -328,12 +332,12 @@ final readonly class AllianceService
         $this->locked(function () use ($actor, $rate): void {
             $alliance = $this->managedAlliance($actor);
             if ($rate < 0 || $rate > Alliance::MAX_TAX) {
-                throw new GameException(\sprintf('Der Steuersatz liegt zwischen 0 und %d %%.', Alliance::MAX_TAX));
+                throw new GameException(t('Der Steuersatz liegt zwischen 0 und {value} %.', ['{value}' => Alliance::MAX_TAX]));
             }
             $alliance->setTaxRate($rate);
             foreach ($alliance->getMembers() as $member) {
                 if (!$member->isSameAs($actor)) {
-                    $this->inbox->send($member, 'Allianzsteuer: '.$rate.' %', \sprintf('%s hat die Steuer auf %d %% eures Credit-Einkommens gesetzt. Sie fließt in die Allianzkasse.', $actor->getUsername(), $rate));
+                    $this->inbox->send($member, t('Allianzsteuer: {rate} %', ['{rate}' => $rate]), t('{player} hat die Steuer auf {rate} % eures Credit-Einkommens gesetzt. Sie fließt in die Allianzkasse.', ['{player}' => $actor->getUsername(), '{rate}' => $rate]));
                 }
             }
             $this->em->flush();
@@ -348,15 +352,15 @@ final readonly class AllianceService
             $this->assertMember($alliance, $member);
             $amount = floor($amount);
             if ($amount < 1) {
-                throw new GameException('Gib einen Betrag von mindestens 1 Credit an.');
+                throw new GameException(t('Gib einen Betrag von mindestens 1 Credit an.'));
             }
             $paid = $this->em->getConnection()->executeStatement('UPDATE alliance SET treasury = treasury - ? WHERE id = ? AND treasury >= ?', [$amount, $alliance->getId(), $amount]);
             if (0 === $paid) {
                 $this->em->refresh($alliance);
-                throw new GameException(\sprintf('In der Allianzkasse sind nur %s Credits.', number_format($alliance->getTreasury(), 0, ',', '.')));
+                throw new GameException(t('In der Allianzkasse sind nur {treasury} Credits.', ['{treasury}' => new Num($alliance->getTreasury())]));
             }
             $this->em->getConnection()->executeStatement('UPDATE `user` SET credits = credits + ? WHERE id = ?', [$amount, $member->getId()]);
-            $this->inbox->send($member, 'Auszahlung aus der Allianzkasse', trim(\sprintf("%s hat dir %s Credits aus der Kasse von „%s“ ausgezahlt.\n%s", $actor->getUsername(), number_format($amount, 0, ',', '.'), $alliance->getName(), trim($note))));
+            $this->inbox->send($member, t('Auszahlung aus der Allianzkasse'), new Lines([t('{player} hat dir {amount} Credits aus der Kasse von „{name}“ ausgezahlt.', ['{player}' => $actor->getUsername(), '{amount}' => new Num($amount), '{name}' => $alliance->getName()]), '' === trim($note) ? null : trim($note)]));
             $this->em->flush();
         });
     }
@@ -381,7 +385,7 @@ final readonly class AllianceService
         $sameAlliance = $actor->getAlliance()?->getId() === $post->getAlliance()->getId();
         $own = null !== $post->getAuthor() && $post->getAuthor()->isSameAs($actor);
         if (!$sameAlliance || (!$own && !$actor->getAllianceRank()?->canManage())) {
-            throw new GameException('Diesen Beitrag darfst du nicht löschen.');
+            throw new GameException(t('Diesen Beitrag darfst du nicht löschen.'));
         }
         $this->em->remove($post);
         $this->em->flush();
@@ -395,24 +399,24 @@ final readonly class AllianceService
         if (null !== $user->getAlliance()) {
             $this->em->remove($request);
             $this->em->flush();
-            throw new GameException(\sprintf('%s ist inzwischen in einer anderen Allianz.', $user->getUsername()));
+            throw new GameException(t('{player} ist inzwischen in einer anderen Allianz.', ['{player}' => $user->getUsername()]));
         }
         if (!$alliance->admits($user)) {
             $this->em->remove($request);
             $this->em->flush();
-            throw new GameException(\sprintf('%s gehört inzwischen zu den %s – in „%s“ sind nur %s.', $user->getUsername(), $user->getLifeForm()->label(), $alliance->getName(), $alliance->getLifeForm()->label()));
+            throw new GameException(t('{player} gehört inzwischen zu den {label} – in „{name}“ sind nur {label2}.', ['{player}' => $user->getUsername(), '{label}' => t($user->getLifeForm()->label()), '{name}' => $alliance->getName(), '{label2}' => t($alliance->getLifeForm()->label())]));
         }
 
         $user->joinAlliance($alliance, AllianceRank::Prospect);
         $this->removeRequestsOf($user);
-        $this->inbox->send($user, 'Willkommen in '.$alliance->getName(), \sprintf('Du bist „%s“ [%s] (%s) als Anwärter beigetreten.', $alliance->getName(), $alliance->getTag(), $alliance->getType()));
+        $this->inbox->send($user, t('Willkommen in {name}', ['{name}' => $alliance->getName()]), t('Du bist „{name}“ [{tag}] ({type}) als Anwärter beigetreten.', ['{name}' => $alliance->getName(), '{tag}' => $alliance->getTag(), '{type}' => t($alliance->getType())]));
         $this->em->flush();
     }
 
     private function assertSameLifeForm(Alliance $alliance, User $user): void
     {
         if (!$alliance->admits($user)) {
-            throw new GameException(\sprintf('In „%s“ (%s) sind nur %s. %s gehört zu den %s.', $alliance->getName(), $alliance->getType(), $alliance->getLifeForm()->label(), $user->getUsername(), $user->getLifeForm()->label()));
+            throw new GameException(t('In „{name}“ ({type}) sind nur {label}. {player} gehört zu den {label2}.', ['{name}' => $alliance->getName(), '{type}' => $alliance->getType(), '{label}' => t($alliance->getLifeForm()->label()), '{player}' => $user->getUsername(), '{label2}' => t($user->getLifeForm()->label())]));
         }
     }
 
@@ -460,7 +464,7 @@ final readonly class AllianceService
             if ($member->getAllianceRank()?->canManage()) {
                 $deposed[] = $member;
                 $member->setAllianceRank(AllianceRank::Member);
-                $this->inbox->send($member, 'Als Gründer abgesetzt', \sprintf('Die Mehrheit von „%s“ hat dich als Gründer abgesetzt. Neuer Gründer ist %s, du bist jetzt Mitglied.', $alliance->getName(), $successor->getUsername()));
+                $this->inbox->send($member, t('Als Gründer abgesetzt'), t('Die Mehrheit von „{name}“ hat dich als Gründer abgesetzt. Neuer Gründer ist {player}, du bist jetzt Mitglied.', ['{name}' => $alliance->getName(), '{player}' => $successor->getUsername()]));
             }
         }
         $successor->setAllianceRank(AllianceRank::Founder);
@@ -469,10 +473,10 @@ final readonly class AllianceService
         }
         foreach ($alliance->getMembers() as $member) {
             if (!$member->getAllianceRank()?->canManage() && !\in_array($member, $deposed, true)) {
-                $this->inbox->send($member, 'Neuer Gründer: '.$successor->getUsername(), \sprintf('Per Mehrheitsbeschluss ist %s jetzt Gründer von „%s“.', $successor->getUsername(), $alliance->getName()));
+                $this->inbox->send($member, t('Neuer Gründer: {player}', ['{player}' => $successor->getUsername()]), t('Per Mehrheitsbeschluss ist {player} jetzt Gründer von „{name}“.', ['{player}' => $successor->getUsername(), '{name}' => $alliance->getName()]));
             }
         }
-        $this->inbox->send($successor, 'Du bist jetzt Gründer', \sprintf('Die Mehrheit von „%s“ hat dich zum neuen Gründer gewählt.', $alliance->getName()));
+        $this->inbox->send($successor, t('Du bist jetzt Gründer'), t('Die Mehrheit von „{name}“ hat dich zum neuen Gründer gewählt.', ['{name}' => $alliance->getName()]));
         $this->em->flush();
 
         return true;
@@ -523,7 +527,7 @@ final readonly class AllianceService
             ? $request->getUser()->isSameAs($actor)
             : $actor->getAlliance()?->getId() === $request->getAlliance()->getId() && $actor->getAllianceRank()?->canManage();
         if (!$allowed) {
-            throw new GameException('Darauf kannst du nicht antworten.');
+            throw new GameException(t('Darauf kannst du nicht antworten.'));
         }
     }
 
@@ -532,7 +536,7 @@ final readonly class AllianceService
         $this->em->refresh($actor);
         $alliance = $actor->getAlliance();
         if (null === $alliance || !$actor->getAllianceRank()?->canManage()) {
-            throw new GameException('Das darf nur der Gründer.');
+            throw new GameException(t('Das darf nur der Gründer.'));
         }
 
         return $alliance;
@@ -541,7 +545,7 @@ final readonly class AllianceService
     private function assertMember(Alliance $alliance, User $member): void
     {
         if ($member->getAlliance()?->getId() !== $alliance->getId()) {
-            throw new GameException(\sprintf('%s ist nicht in deiner Allianz.', $member->getUsername()));
+            throw new GameException(t('{player} ist nicht in deiner Allianz.', ['{player}' => $member->getUsername()]));
         }
     }
 

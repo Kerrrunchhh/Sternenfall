@@ -2,12 +2,15 @@
 
 namespace App\Controller;
 
+use App\I18n\Lines;
 use App\Game\GameException;
 use App\Game\VacationService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
+
+use function Symfony\Component\Translation\t;
 
 /** Account settings: vacation, e-mail notifications, deleting the account. */
 class AccountController extends AbstractGameController
@@ -45,9 +48,9 @@ class AccountController extends AbstractGameController
         $em->flush();
         if ($changed || ('resend' === $request->request->getString('do') && $player->needsEmailConfirmation())) {
             $link = $mailer->sendConfirmation($player);
-            $this->addFlash('success', 'Gespeichert. Bitte bestätige die Adresse mit dem Link aus der Mail, erst dann bekommst du Benachrichtigungen.'.('dev' === $this->getParameter('kernel.environment') ? ' (Entwicklung: '.$link.')' : ''));
+            $this->addFlash('success', new Lines([t('Gespeichert. Bitte bestätige die Adresse mit dem Link aus der Mail, erst dann bekommst du Benachrichtigungen.'), 'dev' === $this->getParameter('kernel.environment') ? '(dev: '.$link.')' : null], ' '));
         } else {
-            $this->addFlash('success', 'Einstellungen gespeichert.');
+            $this->addFlash('success', t('Einstellungen gespeichert.'));
         }
 
         return $this->redirectToRoute('app_account');
@@ -60,7 +63,7 @@ class AccountController extends AbstractGameController
         $this->currentPlanet();
         $player = $this->player();
         if (!$hasher->isPasswordValid($player, $request->request->getString('password'))) {
-            $this->addFlash('error', 'Das Passwort stimmt nicht.');
+            $this->addFlash('error', t('Das Passwort stimmt nicht.'));
 
             return $this->redirectToRoute('app_account');
         }
@@ -77,11 +80,11 @@ class AccountController extends AbstractGameController
         $this->currentPlanet();
         try {
             $until = $vacations->start($this->player(), VacationService::parseDays($request->request->getString('days')));
-            $this->addFlash('success', 'Gute Erholung! Dein Urlaub dauert bis '.$until->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i').'.');
+            $this->addFlash('success', t('Gute Erholung! Dein Urlaub dauert bis {until}.', ['{until}' => $until->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i')]));
 
             return $this->redirectToRoute('app_vacation');
         } catch (GameException $e) {
-            $this->addFlash('error', $e->getMessage());
+            $this->addFlash('error', $e->translatable());
 
             return $this->redirectToRoute('app_account');
         }

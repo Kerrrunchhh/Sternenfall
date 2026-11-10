@@ -2,6 +2,7 @@
 
 namespace App\Game;
 
+use App\I18n\Lines;
 use App\Entity\Ticket;
 use App\Entity\User;
 use App\Repository\UserRepository;
@@ -10,6 +11,8 @@ use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
+
+use function Symfony\Component\Translation\t;
 
 /**
  * Reports about players, suggestions and bug reports. Admins ask questions, accept or
@@ -37,22 +40,22 @@ final readonly class SupportService
         $subject = trim($subject);
         $body = trim($body);
         if ('' === $subject || '' === $body) {
-            throw new GameException('Bitte gib einen Betreff und eine Beschreibung an.');
+            throw new GameException(t('Bitte gib einen Betreff und eine Beschreibung an.'));
         }
         $reported = null;
         if (TicketKind::Report === $kind) {
             $reported = $this->users->findOneBy(['username' => trim($reportedName)]);
             if (null === $reported) {
-                throw new GameException(\sprintf('Einen Spieler „%s“ gibt es nicht.', trim($reportedName)));
+                throw new GameException(t('Einen Spieler „{value}“ gibt es nicht.', ['{value}' => trim($reportedName)]));
             }
             if ($reported->isSameAs($author)) {
-                throw new GameException('Dich selbst kannst du nicht melden.');
+                throw new GameException(t('Dich selbst kannst du nicht melden.'));
             }
         }
         $ticket = new Ticket($kind, $author, $reported, $subject, $body, $this->now());
         $this->em->persist($ticket);
         foreach ($this->admins() as $admin) {
-            $this->inbox->send($admin, \sprintf('Neue Meldung: %s %s', $kind->icon(), $kind->label()), \sprintf('%s hat eine Meldung geschickt: „%s“. Bearbeiten im Adminbereich unter Meldungen.', $author->getUsername(), $ticket->getSubject()));
+            $this->inbox->send($admin, t('Neue Meldung: {icon} {kind}', ['{icon}' => $kind->icon(), '{kind}' => t($kind->label())]), t('{player} hat eine Meldung geschickt: „{subject}“. Bearbeiten im Adminbereich unter Meldungen.', ['{player}' => $author->getUsername(), '{subject}' => $ticket->getSubject()]));
         }
         $this->em->flush();
 
@@ -63,7 +66,7 @@ final readonly class SupportService
     public function reply(Ticket $ticket, User $author, string $body): void
     {
         if (!$ticket->isByAuthor($author)) {
-            throw new GameException('Das ist nicht deine Meldung.');
+            throw new GameException(t('Das ist nicht deine Meldung.'));
         }
         $body = $this->text($body);
         $ticket->comment($author, $body, false, $this->now());
@@ -71,7 +74,7 @@ final readonly class SupportService
             $ticket->setStatus(TicketStatus::Open, $this->now());
         }
         foreach ($this->admins() as $admin) {
-            $this->inbox->send($admin, 'Antwort auf Meldung: '.$ticket->getSubject(), \sprintf('%s hat geantwortet. Bearbeiten im Adminbereich unter Meldungen.', $author->getUsername()));
+            $this->inbox->send($admin, t('Antwort auf Meldung: {subject}', ['{subject}' => $ticket->getSubject()]), t('{player} hat geantwortet. Bearbeiten im Adminbereich unter Meldungen.', ['{player}' => $author->getUsername()]));
         }
         $this->em->flush();
     }
@@ -81,10 +84,10 @@ final readonly class SupportService
     {
         $body = trim($body);
         if ('' === $body && $status === $ticket->getStatus()) {
-            throw new GameException('Schreib eine Nachricht oder ändere den Status.');
+            throw new GameException(t('Schreib eine Nachricht oder ändere den Status.'));
         }
         if (TicketStatus::Question === $status && '' === $body) {
-            throw new GameException('Bei einer Rückfrage gehört die Frage dazu.');
+            throw new GameException(t('Bei einer Rückfrage gehört die Frage dazu.'));
         }
         if ('' !== $body) {
             $ticket->comment($admin, $body, true, $this->now());
@@ -120,13 +123,14 @@ final readonly class SupportService
     {
         $player = $ticket->getReported();
         if (TicketKind::Report !== $ticket->getKind() || null === $player) {
-            throw new GameException('Strafen gibt es nur bei gemeldeten Spielern.');
+            throw new GameException(t('Strafen gibt es nur bei gemeldeten Spielern.'));
         }
         $reason = trim($reason);
         if ('' === $reason) {
-            throw new GameException('Gib einen Grund für die Strafe an.');
+            throw new GameException(t('Gib einen Grund für die Strafe an.'));
         }
         $until = $this->vacations->impose($player, $days, $reason);
+        // Ticket comments are a record for the admins: kept in German.
         $ticket->comment($admin, \sprintf('Strafe verhängt: %s Tage Urlaub für %s. Grund: %s', str_replace('.', ',', (string) round($days, 2)), $player->getUsername(), $reason), true, $this->now());
         $ticket->setStatus(TicketStatus::Accepted, $this->now());
         $this->notifyAuthor($ticket, 'Der gemeldete Spieler wurde bestraft.');
@@ -146,14 +150,14 @@ final readonly class SupportService
         if (null === $author = $ticket->getAuthor()) {
             return;
         }
-        $this->inbox->send($author, \sprintf('%s „%s“: %s', $ticket->getKind()->label(), $ticket->getSubject(), $ticket->getStatus()->label()), trim(\sprintf("Deine Meldung hat jetzt den Status „%s“.\n\n%s\n\nDu findest sie unter Hilfe & Meldungen.", $ticket->getStatus()->label(), $body)));
+        $this->inbox->send($author, t('{label} „{subject}“: {label2}', ['{label}' => t($ticket->getKind()->label()), '{subject}' => $ticket->getSubject(), '{label2}' => t($ticket->getStatus()->label())]), new Lines([t('Deine Meldung hat jetzt den Status „{label}“.', ['{label}' => t($ticket->getStatus()->label())]), '' === trim($body) ? null : "\n".trim($body), t("\nDu findest sie unter Hilfe & Meldungen.")]));
     }
 
     private function text(string $body): string
     {
         $body = trim($body);
         if ('' === $body) {
-            throw new GameException('Die Nachricht ist leer.');
+            throw new GameException(t('Die Nachricht ist leer.'));
         }
 
         return $body;

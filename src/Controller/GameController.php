@@ -22,6 +22,8 @@ use Symfony\Component\Routing\Requirement\EnumRequirement;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 
+use function Symfony\Component\Translation\t;
+
 class GameController extends AbstractGameController
 {
     #[Route('/overview', name: 'app_overview', methods: ['GET'])]
@@ -96,7 +98,7 @@ class GameController extends AbstractGameController
     public function build(BuildingType $type): Response
     {
         $planet = $this->currentPlanet();
-        $this->attempt(fn () => $this->planetService->build($planet, $type), \sprintf('%s in die Bauschleife eingereiht.', $type->label()));
+        $this->attempt(fn () => $this->planetService->build($planet, $type), t('{type} in die Bauschleife eingereiht.', ['{type}' => t($type->label())]));
 
         return $this->redirectToRoute('app_buildings');
     }
@@ -107,7 +109,7 @@ class GameController extends AbstractGameController
     {
         $this->currentPlanet();
         $name = $request->request->getString('name');
-        $this->attempt(fn () => $this->planetService->rename($planet, $this->player(), $name), \sprintf('Planet umbenannt in „%s“.', trim($name)));
+        $this->attempt(fn () => $this->planetService->rename($planet, $this->player(), $name), t('Planet umbenannt in „{value}“.', ['{value}' => trim($name)]));
 
         return $this->backTo($request, 'app_overview');
     }
@@ -118,13 +120,13 @@ class GameController extends AbstractGameController
     {
         $this->currentPlanet();
         if ('stay' === $request->request->getString('do')) {
-            $this->attempt(fn () => $this->planetService->stayOn($planet, $this->player()), \sprintf('Du bleibst auf %s.', $planet->getName()));
+            $this->attempt(fn () => $this->planetService->stayOn($planet, $this->player()), t('Du bleibst auf {name}.', ['{name}' => $planet->getName()]));
         } else {
             try {
                 $at = $this->planetService->abandon($planet, $this->player());
-                $this->addFlash('success', \sprintf('%s wird am %s verlassen. Bring vorher Flotten, Schiffe und Rohstoffe in Sicherheit – oder brich ab.', $planet->getName(), $at->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i')));
+                $this->addFlash('success', t('{name} wird am {value} verlassen. Bring vorher Flotten, Schiffe und Rohstoffe in Sicherheit – oder brich ab.', ['{name}' => $planet->getName(), '{value}' => $at->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i')]));
             } catch (\App\Game\GameException $e) {
-                $this->addFlash('error', $e->getMessage());
+                $this->addFlash('error', $e->translatable());
             }
         }
 

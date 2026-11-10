@@ -5,6 +5,11 @@ namespace App\Game;
 use App\Entity\Fleet;
 use App\Entity\User;
 use App\Repository\FleetRepository;
+use App\I18n\Num;
+
+use Symfony\Contracts\Translation\TranslatableInterface;
+
+use function Symfony\Component\Translation\t;
 
 /**
  * No pin-prick attacks: the ships a player sends into an attack must be at least 1 % of
@@ -67,7 +72,7 @@ final readonly class AttackRules
      * @param array<string, int> $sent ships going into the attack
      * @param array<string, int> $all  all ships of the player (including those sent)
      */
-    public static function rejection(array $sent, array $all): ?string
+    public static function rejection(array $sent, array $all): ?TranslatableInterface
     {
         $total = self::strength($all);
         $share = $total > 0 ? self::strength($sent) / $total : 1.0;
@@ -92,10 +97,6 @@ final readonly class AttackRules
             }
         }
 
-        return \sprintf(
-            'Zu kleiner Angriff: Die Flotte macht nur %s %% deiner gesamten Flottenstärke aus%s. Nötig sind mindestens 1 %% deiner Flottenstärke oder 10 %% deiner Schiffe einer Klasse (Jäger, Fregatten, Kreuzer, Schlachtschiffe).',
-            number_format(100 * $share, 2, ',', '.'),
-            null === $best ? '' : \sprintf(' und höchstens %s %% einer Schiffsklasse', number_format(100 * $best, 1, ',', '.')),
-        );
+        return t('Zu kleiner Angriff: Die Flotte macht nur {share} % deiner gesamten Flottenstärke aus{value}. Nötig sind mindestens 1 % deiner Flottenstärke oder 10 % deiner Schiffe einer Klasse (Jäger, Fregatten, Kreuzer, Schlachtschiffe).', ['{share}' => new Num(100 * $share, 2), '{value}' => null === $best ? '' : t(' und höchstens {best} % einer Schiffsklasse', ['{best}' => new Num(100 * $best, 1)])]);
     }
 }

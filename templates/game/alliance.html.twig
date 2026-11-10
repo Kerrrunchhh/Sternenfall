@@ -4,53 +4,53 @@
 {% block title %}{{ alliance.name }} – {{ game_name }}{% endblock %}
 
 {% block content %}
-    <h1>{{ alliance.name }} <small>[{{ alliance.tag }}] · {{ alliance.type }}</small></h1>
-    <p class="muted">Dein Rang: <strong>{{ rank.label }}</strong>
-        {% if rank.hasFleetRights %} · du siehst und steuerst die für die {{ alliance.type }} freigegebenen Flotten unter <a href="{{ path('app_fleet') }}">Flotten</a>{% endif %}
-        · Steuer {{ alliance.taxRate }} % · Allianzkasse {{ alliance.treasury|number_format(0, ',', '.') }} Credits
+    <h1>{{ alliance.name }} <small>[{{ alliance.tag }}] · {{ alliance.type|trans }}</small></h1>
+    <p class="muted">{{ 'Dein Rang: <strong>{label}</strong>'|trans({'{label}': rank.label|trans|e})|raw }}
+        {% if rank.hasFleetRights %} {{ '· du siehst und steuerst die für die {type} freigegebenen Flotten unter'|trans({'{type}': alliance.type|trans}) }} <a href="{{ path('app_fleet') }}">{{ 'Flotten'|trans }}</a>{% endif %}
+        {{ '· Steuer {taxRate} % · Allianzkasse {treasury} Credits'|trans({'{taxRate}': alliance.taxRate, '{treasury}': alliance.treasury|num}) }}
     </p>
     <section class="panel profile">
         {{ ui.picture(alliance.image, 'alliances', alliance.name) }}
         <div class="profile-info">
             {% if rank.canSeeBoard %}
-                <h2>Intern</h2>
-                {% if alliance.internalText %}<div class="message-body">{{ alliance.internalText }}</div>{% else %}<p class="muted">Kein interner Text.</p>{% endif %}
+                <h2>{{ 'Intern'|trans }}</h2>
+                {% if alliance.internalText %}<div class="message-body">{{ alliance.internalText }}</div>{% else %}<p class="muted">{{ 'Kein interner Text.'|trans }}</p>{% endif %}
             {% endif %}
-            <h2>Öffentlich <a class="small" href="{{ path('app_alliance_public', {id: alliance.id}) }}">(so sehen es andere)</a></h2>
-            {% if alliance.externalText %}<div class="message-body">{{ alliance.externalText }}</div>{% else %}<p class="muted">Kein öffentlicher Text.</p>{% endif %}
+            <h2>{{ 'Öffentlich'|trans }} <a class="small" href="{{ path('app_alliance_public', {id: alliance.id}) }}">{{ '(so sehen es andere)'|trans }}</a></h2>
+            {% if alliance.externalText %}<div class="message-body">{{ alliance.externalText }}</div>{% else %}<p class="muted">{{ 'Kein öffentlicher Text.'|trans }}</p>{% endif %}
         </div>
     </section>
 
     <div class="grid">
         <section class="panel">
-            <h2>Mitglieder ({{ alliance.members|length }})</h2>
+            <h2>{{ 'Mitglieder ({members})'|trans({'{members}': alliance.members|length}) }}</h2>
             <table class="table member-table">
                 {# Grouped by rank, from the founder down; alphabetical inside a rank. #}
                 {% for group_rank in enum_cases('App\\Game\\AllianceRank') %}
                 {% set group = alliance.members|filter(m => m.allianceRank == group_rank)|sort((a, b) => a.username|lower <=> b.username|lower) %}
                 {% if group is not empty %}
-                    <tr class="rank-head"><td colspan="{{ rank.canManage ? 2 : 1 }}">{{ group_rank.pluralLabel }} <span class="muted">{{ group|length }}</span></td></tr>
+                    <tr class="rank-head"><td colspan="{{ rank.canManage ? 2 : 1 }}">{{ group_rank.pluralLabel|trans }} <span class="muted">{{ group|length }}</span></td></tr>
                 {% endif %}
                 {% for m in group %}
                     <tr>
                         <td>
                             <div class="member-name">{{ ui.player(m, false) }} {{ ui.presence(m) }}</div>
-                            <div class="muted small">{{ player_points(m)|number_format(0, ',', '.') }} Punkte · {{ m.combatExperience|number_format(0, ',', '.') }} Kampferfahrung</div>
+                            <div class="muted small">{{ '{player_points} Punkte · {combatExperience} Kampferfahrung'|trans({'{player_points}': player_points(m)|num, '{combatExperience}': m.combatExperience|num}) }}</div>
                         </td>
                         {% if rank.canManage %}
                             <td class="num member-manage">
                                 {% if m.id != player.id %}
                                     <form method="post" action="{{ path('app_alliance_rank', {id: m.id}) }}" class="inline-action">
                                         <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
-                                        <select name="rank" aria-label="Rang von {{ m.username }}">
-                                            {% for r in assignable_ranks %}<option value="{{ r.value }}" {{ r == m.allianceRank ? 'selected' }}>{{ r.label }}</option>{% endfor %}
-                                            <option value="founder">Gründer (übergeben)</option>
+                                        <select name="rank" aria-label="{{ 'Rang von {username}'|trans({'{username}': m.username}) }}">
+                                            {% for r in assignable_ranks %}<option value="{{ r.value }}" {{ r == m.allianceRank ? 'selected' }}>{{ r.label|trans }}</option>{% endfor %}
+                                            <option value="founder">{{ 'Gründer (übergeben)'|trans }}</option>
                                         </select>
-                                        <button class="btn btn-small btn-secondary" type="submit">Setzen</button>
+                                        <button class="btn btn-small btn-secondary" type="submit">{{ 'Setzen'|trans }}</button>
                                     </form>
                                     <form method="post" action="{{ path('app_alliance_kick', {id: m.id}) }}">
                                         <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
-                                        <button class="btn btn-small btn-danger" type="submit" data-confirm="{{ m.username }} ausschließen?" data-confirm-label="Ausschließen">Ausschließen</button>
+                                        <button class="btn btn-small btn-danger" type="submit" data-confirm="{{ '{username} ausschließen?'|trans({'{username}': m.username}) }}" data-confirm-label="{{ 'Ausschließen'|trans }}">{{ 'Ausschließen'|trans }}</button>
                                     </form>
                                 {% endif %}
                             </td>
@@ -63,40 +63,40 @@
 
         {% if rank.canManage %}
             <section class="panel">
-                <h2>Verwaltung</h2>
-                <h3 class="small muted">Allianzkasse: {{ alliance.treasury|number_format(0, ',', '.') }} Credits</h3>
+                <h2>{{ 'Verwaltung'|trans }}</h2>
+                <h3 class="small muted">{{ 'Allianzkasse: {treasury} Credits'|trans({'{treasury}': alliance.treasury|num}) }}</h3>
                 <form method="post" action="{{ path('app_alliance_tax') }}" class="inline-action">
                     <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
-                    <label>Steuer auf das Credit-Einkommen <input type="number" name="rate" min="0" max="{{ constant('App\\Entity\\Alliance::MAX_TAX') }}" value="{{ alliance.taxRate }}" class="short"> %</label>
-                    <button class="btn btn-small btn-secondary" type="submit" id="alliance-tax">Setzen</button>
+                    <label>{{ 'Steuer auf das Credit-Einkommen'|trans }} <input type="number" name="rate" min="0" max="{{ constant('App\\Entity\\Alliance::MAX_TAX') }}" value="{{ alliance.taxRate }}" class="short"> %</label>
+                    <button class="btn btn-small btn-secondary" type="submit" id="alliance-tax">{{ 'Setzen'|trans }}</button>
                 </form>
                 <form method="post" action="{{ path('app_alliance_payout') }}" class="inline-action payout-form">
                     <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
-                    <select name="member" aria-label="Mitglied">{% for m in alliance.members %}<option value="{{ m.id }}">{{ m.username }}</option>{% endfor %}</select>
-                    <input type="text" name="amount" inputmode="numeric" class="short" placeholder="Credits" required aria-label="Betrag">
-                    <input type="text" name="note" maxlength="200" placeholder="Notiz (optional)" aria-label="Notiz">
-                    <button class="btn btn-small" type="submit" id="alliance-payout">Auszahlen</button>
+                    <select name="member" aria-label="{{ 'Mitglied'|trans }}">{% for m in alliance.members %}<option value="{{ m.id }}">{{ m.username }}</option>{% endfor %}</select>
+                    <input type="text" name="amount" inputmode="numeric" class="short" placeholder="{{ 'Credits'|trans }}" required aria-label="{{ 'Betrag'|trans }}">
+                    <input type="text" name="note" maxlength="200" placeholder="{{ 'Notiz (optional)'|trans }}" aria-label="{{ 'Notiz'|trans }}">
+                    <button class="btn btn-small" type="submit" id="alliance-payout">{{ 'Auszahlen'|trans }}</button>
                 </form>
                 <form method="post" action="{{ path('app_alliance_invite') }}" class="inline-action">
                     <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
-                    <input type="text" name="username" placeholder="Spielername" required aria-label="Spielername">
-                    <button class="btn btn-small" type="submit" id="alliance-invite">Einladen</button>
+                    <input type="text" name="username" placeholder="{{ 'Spielername'|trans }}" required aria-label="{{ 'Spielername'|trans }}">
+                    <button class="btn btn-small" type="submit" id="alliance-invite">{{ 'Einladen'|trans }}</button>
                 </form>
                 {% if requests is not empty %}
-                    <h3>Offene Einladungen und Bewerbungen</h3>
+                    <h3>{{ 'Offene Einladungen und Bewerbungen'|trans }}</h3>
                     <table class="table">
                         {% for r in requests %}
                             <tr>
-                                <td>{{ r.user.username }} <span class="muted small">{{ r.invitation ? 'eingeladen' : 'bewirbt sich' }}</span></td>
+                                <td>{{ r.user.username }} <span class="muted small">{{ r.invitation ? 'eingeladen' : ('bewirbt sich'|trans) }}</span></td>
                                 <td class="num inline-action">
                                     {% if not r.invitation %}
                                         <form method="post" action="{{ path('app_alliance_answer', {id: r.id, answer: 'accept'}) }}">
                                             <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
-                                            <button class="btn btn-small" type="submit">Aufnehmen</button>
+                                            <button class="btn btn-small" type="submit">{{ 'Aufnehmen'|trans }}</button>
                                         </form>
                                         <form method="post" action="{{ path('app_alliance_answer', {id: r.id, answer: 'decline'}) }}">
                                             <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
-                                            <button class="btn btn-small btn-secondary" type="submit">Ablehnen</button>
+                                            <button class="btn btn-small btn-secondary" type="submit">{{ 'Ablehnen'|trans }}</button>
                                         </form>
                                     {% endif %}
                                 </td>
@@ -104,38 +104,35 @@
                         {% endfor %}
                     </table>
                 {% endif %}
-                <h3>Darstellung</h3>
+                <h3>{{ 'Darstellung'|trans }}</h3>
                 <form method="post" action="{{ path('app_alliance_present') }}" enctype="multipart/form-data" class="fleet-form">
                     <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
-                    <label for="alliance-internal">Interner Text (alle Ränge außer Anwärter)</label>
+                    <label for="alliance-internal">{{ 'Interner Text (alle Ränge außer Anwärter)'|trans }}</label>
                     <textarea id="alliance-internal" name="internal_text" rows="4" maxlength="5000">{{ alliance.internalText }}</textarea>
-                    <label for="alliance-external">Externer Text (sieht jeder, der auf eure Allianz klickt)</label>
+                    <label for="alliance-external">{{ 'Externer Text (sieht jeder, der auf eure Allianz klickt)'|trans }}</label>
                     <textarea id="alliance-external" name="external_text" rows="4" maxlength="5000">{{ alliance.externalText }}</textarea>
-                    <label for="alliance-image">Bild (JPEG, PNG, WebP oder GIF, max. 2 MB)</label>
+                    <label for="alliance-image">{{ 'Bild (JPEG, PNG, WebP oder GIF, max. 2 MB)'|trans }}</label>
                     <input id="alliance-image" type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif">
-                    {% if alliance.image %}<label class="checkbox"><input type="checkbox" name="remove_image" value="1"> Bild entfernen</label>{% endif %}
-                    <button class="btn btn-small btn-secondary" type="submit" id="alliance-present">Speichern</button>
+                    {% if alliance.image %}<label class="checkbox"><input type="checkbox" name="remove_image" value="1"> {{ 'Bild entfernen'|trans }}</label>{% endif %}
+                    <button class="btn btn-small btn-secondary" type="submit" id="alliance-present">{{ 'Speichern'|trans }}</button>
                 </form>
                 <form method="post" action="{{ path('app_alliance_dissolve') }}">
                     <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
-                    <button class="btn btn-small btn-danger" type="submit" data-confirm="{{ alliance.type }} wirklich auflösen? Alle Mitglieder werden entlassen." data-confirm-label="Auflösen">{{ alliance.type }} auflösen</button>
+                    <button class="btn btn-small btn-danger" type="submit" data-confirm="{{ '{type} wirklich auflösen? Alle Mitglieder werden entlassen.'|trans({'{type}': alliance.type|trans}) }}" data-confirm-label="{{ 'Auflösen'|trans }}">{{ '{type} auflösen'|trans({'{type}': alliance.type|trans}) }}</button>
                 </form>
             </section>
         {% endif %}
     </div>
 
     <section class="panel">
-        <h2>Gründer absetzen</h2>
+        <h2>{{ 'Gründer absetzen'|trans }}</h2>
         <p class="muted small">
-            Spielt der Gründer nicht mehr, können die Kommandanten ihn absetzen. Stimmt mehr als die Hälfte
-            der {{ election.eligible }} Kommandanten für denselben Nachfolger aus ihren Reihen ({{ election.needed }} Stimmen),
-            wird dieser Gründer und der bisherige Gründer Mitglied. Solange Stimmen vorliegen, kann der Gründer keine Ränge ändern
-            und keine Kommandanten ausschließen.
+            {{ 'Spielt der Gründer nicht mehr, können die Kommandanten ihn absetzen. Stimmt mehr als die Hälfte der {eligible} Kommandanten für denselben Nachfolger aus ihren Reihen ({needed} Stimmen), wird dieser Gründer und der bisherige Gründer Mitglied. Solange Stimmen vorliegen, kann der Gründer keine Ränge ändern und keine Kommandanten ausschließen.'|trans({'{eligible}': election.eligible, '{needed}': election.needed}) }}
         </p>
         {% if election.candidates is not empty %}
             <table class="table">
                 {% for c in election.candidates %}
-                    <tr><td>{{ c.user.username }}</td><td class="num">{{ c.votes }} / {{ election.needed }} Stimmen</td></tr>
+                    <tr><td>{{ c.user.username }}</td><td class="num">{{ '{votes} / {needed} Stimmen'|trans({'{votes}': c.votes, '{needed}': election.needed}) }}</td></tr>
                 {% endfor %}
             </table>
         {% endif %}
@@ -143,52 +140,52 @@
             {% set voters = alliance.members|filter(m => m.allianceRank.canVoteOnFounder) %}
             <form method="post" action="{{ path('app_alliance_vote') }}" class="inline-action">
                 <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
-                <select name="candidate" aria-label="Nachfolger">
-                    {% for m in voters %}<option value="{{ m.id }}" {{ election.myVote and election.myVote.id == m.id ? 'selected' }}>{{ m.username }} ({{ m.allianceRank.label }})</option>{% endfor %}
+                <select name="candidate" aria-label="{{ 'Nachfolger'|trans }}">
+                    {% for m in voters %}<option value="{{ m.id }}" {{ election.myVote and election.myVote.id == m.id ? 'selected' }}>{{ m.username }} ({{ m.allianceRank.label|trans }})</option>{% endfor %}
                 </select>
-                <button class="btn btn-small btn-secondary" type="submit" id="alliance-vote">{{ election.myVote ? 'Stimme ändern' : 'Für Absetzung stimmen' }}</button>
+                <button class="btn btn-small btn-secondary" type="submit" id="alliance-vote">{{ election.myVote ? ('Stimme ändern'|trans) : ('Für Absetzung stimmen'|trans) }}</button>
             </form>
             {% if election.myVote %}
                 <form method="post" action="{{ path('app_alliance_vote') }}">
                     <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
                     <input type="hidden" name="candidate" value="0">
-                    <button class="link-button" type="submit">Stimme zurückziehen (aktuell: {{ election.myVote.username }})</button>
+                    <button class="link-button" type="submit">{{ 'Stimme zurückziehen (aktuell: {username})'|trans({'{username}': election.myVote.username}) }}</button>
                 </form>
             {% endif %}
         {% endif %}
     </section>
 
     <section class="panel">
-        <h2>Schwarzes Brett</h2>
+        <h2>{{ 'Schwarzes Brett'|trans }}</h2>
         {% if not rank.canSeeBoard %}
-            <p class="muted">Als Anwärter hast du noch keinen Zugang zum schwarzen Brett.</p>
+            <p class="muted">{{ 'Als Anwärter hast du noch keinen Zugang zum schwarzen Brett.'|trans }}</p>
         {% else %}
             <form method="post" action="{{ path('app_alliance_post') }}" class="fleet-form">
                 <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
-                <textarea name="body" rows="3" maxlength="5000" required aria-label="Neuer Beitrag" placeholder="Nachricht an alle Mitglieder (außer Anwärter)"></textarea>
-                <button class="btn btn-small" type="submit" id="alliance-post">Anheften</button>
+                <textarea name="body" rows="3" maxlength="5000" required aria-label="{{ 'Neuer Beitrag'|trans }}" placeholder="{{ 'Nachricht an alle Mitglieder (außer Anwärter)'|trans }}"></textarea>
+                <button class="btn btn-small" type="submit" id="alliance-post">{{ 'Anheften'|trans }}</button>
             </form>
             {% for p in posts %}
                 <article class="board-post">
                     <div class="muted small">
-                        {{ p.author ? p.author.username : 'ehemaliges Mitglied' }} · {{ p.createdAt|date('d.m.Y H:i') }}
+                        {{ p.author ? p.author.username : ('ehemaliges Mitglied'|trans) }} · {{ p.createdAt|date('d.m.Y H:i') }}
                         {% if rank.canManage or (p.author and p.author.id == player.id) %}
                             <form method="post" action="{{ path('app_alliance_post_delete', {id: p.id}) }}" class="inline">
                                 <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
-                                <button class="link-button" type="submit">löschen</button>
+                                <button class="link-button" type="submit">{{ 'löschen'|trans }}</button>
                             </form>
                         {% endif %}
                     </div>
                     <div class="message-body">{{ p.body|link_coordinates }}</div>
                 </article>
             {% else %}
-                <p class="muted">Noch keine Beiträge.</p>
+                <p class="muted">{{ 'Noch keine Beiträge.'|trans }}</p>
             {% endfor %}
         {% endif %}
     </section>
 
     <form method="post" action="{{ path('app_alliance_leave') }}">
         <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
-        <button class="btn btn-small btn-secondary" type="submit" data-confirm="{{ alliance.type }} verlassen? Alle Flottenfreigaben enden." data-confirm-label="Verlassen">{{ alliance.type }} verlassen</button>
+        <button class="btn btn-small btn-secondary" type="submit" data-confirm="{{ '{type} verlassen? Alle Flottenfreigaben enden.'|trans({'{type}': alliance.type|trans}) }}" data-confirm-label="{{ 'Verlassen'|trans }}">{{ '{type} verlassen'|trans({'{type}': alliance.type|trans}) }}</button>
     </form>
 {% endblock %}

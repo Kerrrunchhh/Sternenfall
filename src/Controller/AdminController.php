@@ -16,6 +16,8 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
+use function Symfony\Component\Translation\t;
+
 /** Admin area: reports, suggestions and bug reports (moderators and admins). */
 #[IsGranted('ROLE_MODERATOR')]
 class AdminController extends AbstractGameController
@@ -56,7 +58,7 @@ class AdminController extends AbstractGameController
     {
         $this->currentPlanet();
         $status = TicketStatus::tryFrom($request->request->getString('status')) ?? $ticket->getStatus();
-        $this->attempt(fn () => $this->support->answer($ticket, $this->player(), $request->request->getString('body'), $status), 'Gespeichert, der Spieler wurde benachrichtigt.');
+        $this->attempt(fn () => $this->support->answer($ticket, $this->player(), $request->request->getString('body'), $status), t('Gespeichert, der Spieler wurde benachrichtigt.'));
 
         return $this->redirectToRoute('app_admin_ticket', ['id' => $ticket->getId()]);
     }
@@ -66,7 +68,7 @@ class AdminController extends AbstractGameController
     public function forwardTicket(Ticket $ticket, Request $request): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->support->forward($ticket, $this->player(), $request->request->getString('note')), 'An den Entwickler weitergeleitet.');
+        $this->attempt(fn () => $this->support->forward($ticket, $this->player(), $request->request->getString('note')), t('An den Entwickler weitergeleitet.'));
 
         return $this->redirectToRoute('app_admin_ticket', ['id' => $ticket->getId()]);
     }
@@ -78,9 +80,9 @@ class AdminController extends AbstractGameController
         $this->currentPlanet();
         try {
             $until = $this->support->penalize($ticket, $this->player(), VacationService::parseDays($request->request->getString('days')), $request->request->getString('reason'));
-            $this->addFlash('success', \sprintf('Strafe verhängt: %s ist bis %s im Urlaub.', $ticket->getReported()?->getUsername(), $until->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i')));
+            $this->addFlash('success', t('Strafe verhängt: {player} ist bis {value} im Urlaub.', ['{player}' => $ticket->getReported()?->getUsername(), '{value}' => $until->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i')]));
         } catch (GameException $e) {
-            $this->addFlash('error', $e->getMessage());
+            $this->addFlash('error', $e->translatable());
         }
 
         return $this->redirectToRoute('app_admin_ticket', ['id' => $ticket->getId()]);

@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\I18n\NumberInput;
 use App\Entity\Contract;
 use App\Game\ContractService;
 use App\Repository\ContractRepository;
@@ -10,6 +11,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
+
+use function Symfony\Component\Translation\t;
 
 /** Contracts: planet protection and invasions for a cash reward. */
 class ContractController extends AbstractGameController
@@ -40,8 +43,8 @@ class ContractController extends AbstractGameController
     {
         $this->currentPlanet();
         $f = $request->request;
-        $reward = (float) str_replace(['.', ','], ['', '.'], $f->getString('reward'));
-        $this->attempt(fn () => $this->service->create($this->player(), $f->getString('kind'), $f->getInt('galaxy'), $f->getInt('system'), $f->getInt('position'), $reward, $f->getInt('days'), $f->getString('note')), 'Auftrag angelegt – die Belohnung ist bis zum Ende verwahrt.');
+        $reward = NumberInput::amount($f->getString('reward'));
+        $this->attempt(fn () => $this->service->create($this->player(), $f->getString('kind'), $f->getInt('galaxy'), $f->getInt('system'), $f->getInt('position'), $reward, $f->getInt('days'), $f->getString('note')), t('Auftrag angelegt – die Belohnung ist bis zum Ende verwahrt.'));
 
         return $this->redirectToRoute('app_contracts');
     }
@@ -51,7 +54,7 @@ class ContractController extends AbstractGameController
     public function apply(Contract $contract, Request $request): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->service->apply($contract, $this->player(), $request->request->getString('message')), 'Bewerbung gesendet.');
+        $this->attempt(fn () => $this->service->apply($contract, $this->player(), $request->request->getString('message')), t('Bewerbung gesendet.'));
 
         return $this->redirectToRoute('app_contracts');
     }
@@ -61,7 +64,7 @@ class ContractController extends AbstractGameController
     public function accept(Contract $contract, Request $request): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->service->accept($contract, $this->player(), $request->request->getInt('application')), 'Auftrag vergeben.');
+        $this->attempt(fn () => $this->service->accept($contract, $this->player(), $request->request->getInt('application')), t('Auftrag vergeben.'));
 
         return $this->redirectToRoute('app_contracts');
     }
@@ -71,7 +74,7 @@ class ContractController extends AbstractGameController
     public function cancel(Contract $contract): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->service->cancel($contract, $this->player()), 'Auftrag zurückgezogen, die Belohnung ist wieder bei dir.');
+        $this->attempt(fn () => $this->service->cancel($contract, $this->player()), t('Auftrag zurückgezogen, die Belohnung ist wieder bei dir.'));
 
         return $this->redirectToRoute('app_contracts');
     }

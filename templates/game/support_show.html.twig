@@ -4,69 +4,69 @@
 {% block title %}{{ ticket.subject }} – {{ game_name }}{% endblock %}
 
 {% block content %}
-    <p><a href="{{ admin_view ? path('app_admin_tickets') : path('app_support') }}">← {{ admin_view ? 'Alle Meldungen' : 'Hilfe & Meldungen' }}</a></p>
+    <p><a href="{{ admin_view ? path('app_admin_tickets') : path('app_support') }}">← {{ admin_view ? ('Alle Meldungen'|trans) : 'Hilfe & Meldungen' }}</a></p>
     <article class="panel">
         <h1>{{ ticket.kind.icon }} {{ ticket.subject }}</h1>
         <p class="muted small">
-            {{ ticket.kind.label }} · von {% if ticket.author %}{{ ui.player(ticket.author) }}{% else %}gelöschter Spieler{% endif %}
-            {% if ticket.reported %} · gemeldet: {{ ui.player(ticket.reported) }}{% endif %}
-            · {{ ticket.createdAt|date('d.m.Y H:i') }} · <span class="ticket-status ticket-{{ ticket.status.value }}">{{ ticket.status.label }}</span>
+            {{ '{label} · von'|trans({'{label}': ticket.kind.label|trans}) }} {% if ticket.author %}{{ ui.player(ticket.author) }}{% else %}{{ 'gelöschter Spieler'|trans }}{% endif %}
+            {% if ticket.reported %} {{ '· gemeldet: {reported}'|trans({'{reported}': ui.player(ticket.reported)|e})|raw }}{% endif %}
+            · {{ ticket.createdAt|date('d.m.Y H:i') }} · <span class="ticket-status ticket-{{ ticket.status.value }}">{{ ticket.status.label|trans }}</span>
         </p>
         <pre class="message-body">{{ ticket.body|link_coordinates }}</pre>
     </article>
 
     {% for c in ticket.comments %}
         <div class="panel ticket-comment {{ c.fromAdmin ? 'from-admin' }}">
-            <div class="muted small">{{ c.fromAdmin ? '🛡 Admin' : 'Spieler' }}{% if c.author %} {{ c.author.username }}{% endif %} · {{ c.createdAt|date('d.m.Y H:i') }}</div>
+            <div class="muted small">{{ c.fromAdmin ? '🛡 Admin' : ('Spieler'|trans) }}{% if c.author %} {{ c.author.username }}{% endif %} · {{ c.createdAt|date('d.m.Y H:i') }}</div>
             <pre class="message-body">{{ c.body|link_coordinates }}</pre>
         </div>
     {% endfor %}
 
     {% if admin_view %}
         <section class="panel">
-            <h2>Bearbeiten</h2>
+            <h2>{{ 'Bearbeiten'|trans }}</h2>
             <form method="post" action="{{ path('app_admin_ticket_answer', {id: ticket.id}) }}" class="mail-form">
                 <input type="hidden" name="_token" value="{{ csrf_token('admin') }}">
-                <label>Nachricht an {{ ticket.author ? ticket.author.username : 'den Spieler' }} (Rückfrage oder Antwort)
+                <label>{{ 'Nachricht an {Spieler} (Rückfrage oder Antwort)'|trans({'{Spieler}': ticket.author ? ticket.author.username : ('den Spieler'|trans)}) }}
                     <textarea name="body" rows="4"></textarea>
                 </label>
-                <label>Status
+                <label>{{ 'Status'|trans }}
                     <select name="status">
-                        {% for s in statuses|filter(s => s.value != 'forwarded') %}<option value="{{ s.value }}" {{ s == ticket.status ? 'selected' }}>{{ s.label }}</option>{% endfor %}
+                        {% for s in statuses|filter(s => s.value != 'forwarded') %}<option value="{{ s.value }}" {{ s == ticket.status ? 'selected' }}>{{ s.label|trans }}</option>{% endfor %}
                     </select>
                 </label>
-                <button class="btn" type="submit" id="admin-answer">Senden / Status setzen</button>
+                <button class="btn" type="submit" id="admin-answer">{{ 'Senden / Status setzen'|trans }}</button>
             </form>
         </section>
         {% if ticket.kind.value != 'report' %}
             <section class="panel">
-                <h2>An den Entwickler weiterleiten</h2>
+                <h2>{{ 'An den Entwickler weiterleiten'|trans }}</h2>
                 <form method="post" action="{{ path('app_admin_ticket_forward', {id: ticket.id}) }}" class="mail-form">
                     <input type="hidden" name="_token" value="{{ csrf_token('admin') }}">
-                    <label>Anmerkung (optional) <textarea name="note" rows="2"></textarea></label>
-                    <button class="btn btn-secondary" type="submit" id="admin-forward">Weiterleiten</button>
-                    <p class="muted small">Ist DEVELOPER_EMAIL eingetragen, bekommt der Entwickler die Meldung per E-Mail.</p>
+                    <label>{{ 'Anmerkung (optional)'|trans }} <textarea name="note" rows="2"></textarea></label>
+                    <button class="btn btn-secondary" type="submit" id="admin-forward">{{ 'Weiterleiten'|trans }}</button>
+                    <p class="muted small">{{ 'Ist DEVELOPER_EMAIL eingetragen, bekommt der Entwickler die Meldung per E-Mail.'|trans }}</p>
                 </form>
             </section>
         {% elseif ticket.reported %}
             <section class="panel">
-                <h2>Strafe für {{ ticket.reported.username }}</h2>
+                <h2>{{ 'Strafe für {username}'|trans({'{username}': ticket.reported.username}) }}</h2>
                 <form method="post" action="{{ path('app_admin_ticket_penalty', {id: ticket.id}) }}" class="inline-action penalty-form">
                     <input type="hidden" name="_token" value="{{ csrf_token('admin') }}">
-                    <label>Urlaub (Tage) <input type="text" name="days" value="1" inputmode="decimal" class="short" required></label>
-                    <label>Grund <input type="text" name="reason" required maxlength="200" placeholder="z. B. Beleidigung im Ticker"></label>
-                    <button class="btn btn-danger" type="submit" id="admin-penalty" data-confirm="{{ ticket.reported.username }} bestrafen? Er wird sofort in den Urlaub geschickt und kann ihn nicht vorzeitig beenden." data-confirm-label="Strafe verhängen">Strafe verhängen</button>
+                    <label>{{ 'Urlaub (Tage)'|trans }} <input type="text" name="days" value="1" inputmode="decimal" class="short" required></label>
+                    <label>{{ 'Grund'|trans }} <input type="text" name="reason" required maxlength="200" placeholder="{{ 'z. B. Beleidigung im Ticker'|trans }}"></label>
+                    <button class="btn btn-danger" type="submit" id="admin-penalty" data-confirm="{{ '{username} bestrafen? Er wird sofort in den Urlaub geschickt und kann ihn nicht vorzeitig beenden.'|trans({'{username}': ticket.reported.username}) }}" data-confirm-label="{{ 'Strafe verhängen'|trans }}">{{ 'Strafe verhängen'|trans }}</button>
                 </form>
-                <p class="muted small">Üblich sind 1–3 Tage. Der Spieler kann so lange nicht spielen; seine Planeten sind in der Zeit geschützt.</p>
+                <p class="muted small">{{ 'Üblich sind 1–3 Tage. Der Spieler kann so lange nicht spielen; seine Planeten sind in der Zeit geschützt.'|trans }}</p>
             </section>
         {% endif %}
     {% else %}
         <section class="panel">
-            <h2>{{ ticket.status.value == 'question' ? 'Rückfrage beantworten' : 'Etwas ergänzen' }}</h2>
+            <h2>{{ ticket.status.value == 'question' ? ('Rückfrage beantworten'|trans) : ('Etwas ergänzen'|trans) }}</h2>
             <form method="post" action="{{ path('app_support_reply', {id: ticket.id}) }}" class="mail-form">
                 <input type="hidden" name="_token" value="{{ csrf_token('support') }}">
                 <textarea name="body" rows="4" required maxlength="{{ constant('App\\Entity\\Ticket::MAX_BODY') }}"></textarea>
-                <button class="btn" type="submit" id="support-reply">Senden</button>
+                <button class="btn" type="submit" id="support-reply">{{ 'Senden'|trans }}</button>
             </form>
         </section>
     {% endif %}

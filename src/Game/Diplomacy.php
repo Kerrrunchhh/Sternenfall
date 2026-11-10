@@ -9,6 +9,10 @@ use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Lock\LockFactory;
+use App\I18n\Lines;
+use Symfony\Contracts\Translation\TranslatableInterface;
+
+use function Symfony\Component\Translation\t;
 
 /**
  * Bonds, non-aggression pacts and wars between alliances. Founder and commanders
@@ -102,14 +106,14 @@ final class Diplomacy
         return $this->locked(function () use ($actor, $target, $kind, $message): DiplomacyProposal {
             $own = $this->leadAlliance($actor);
             if ($own->getId() === $target->getId()) {
-                throw new GameException('Mit der eigenen Allianz gibt es keine Verträge.');
+                throw new GameException(t('Mit der eigenen Allianz gibt es keine Verträge.'));
             }
             $current = $this->relation($own, $target);
             if ($current?->getKind() === $kind) {
-                throw new GameException(\sprintf('Mit „%s“ besteht bereits: %s.', $target->getName(), $kind->label()));
+                throw new GameException(t('Mit „{name}“ besteht bereits: {kind}.', ['{name}' => $target->getName(), '{kind}' => t($kind->label())]));
             }
             if (TreatyKind::War === $current?->getKind()) {
-                throw new GameException(\sprintf('Ihr seid mit „%s“ im Krieg. Schließt erst Frieden (Krieg beenden), dann sind Verträge möglich.', $target->getName()));
+                throw new GameException(t('Ihr seid mit „{name}“ im Krieg. Schließt erst Frieden (Krieg beenden), dann sind Verträge möglich.', ['{name}' => $target->getName()]));
             }
             $this->assertNoOpenProposal($own, $target);
 
@@ -122,7 +126,7 @@ final class Diplomacy
         return $this->locked(function () use ($actor, $relation, $message): DiplomacyProposal {
             $own = $this->leadAlliance($actor);
             if (!$relation->involves($own)) {
-                throw new GameException('Diese Beziehung betrifft deine Allianz nicht.');
+                throw new GameException(t('Diese Beziehung betrifft deine Allianz nicht.'));
             }
             $other = $relation->other($own);
             $this->assertNoOpenProposal($own, $other);
@@ -131,12 +135,12 @@ final class Diplomacy
         });
     }
 
-    public function vote(User $actor, DiplomacyProposal $proposal, bool $yes): string
+    public function vote(User $actor, DiplomacyProposal $proposal, bool $yes): TranslatableInterface
     {
-        return $this->locked(function () use ($actor, $proposal, $yes): string {
+        return $this->locked(function () use ($actor, $proposal, $yes): TranslatableInterface {
             $alliance = $proposal->votingAlliance();
             if (!self::canDecide($actor) || $actor->getAlliance()?->getId() !== $alliance->getId()) {
-                throw new GameException('Hierüber stimmen gerade Gründer und Kommandanten von „'.$alliance->getName().'“ ab.');
+                throw new GameException(t('Hierüber stimmen gerade Gründer und Kommandanten von „{name}“ ab.', ['{name}' => $alliance->getName()]));
             }
             $proposal->vote($actor, $yes);
 
@@ -186,14 +190,14 @@ final class Diplomacy
         $this->em->persist($proposal);
         // The one who proposes votes yes right away.
         $proposal->vote($actor, true);
-        $this->notify(self::voters($proposal->getProposer()), 'Abstimmung: '.$proposal->title().' mit '.$proposal->getTarget()->getName(), \sprintf('%s schlägt vor: %s mit „%s“ [%s]. Stimme unter Diplomatie ab.', $actor->getUsername(), $proposal->title(), $proposal->getTarget()->getName(), $proposal->getTarget()->getTag()).$proposal->quotedMessage(), $actor);
+        $this->notify(self::voters($proposal->getProposer()), t('Abstimmung: {title} mit {name}', ['{title}' => t($proposal->title()), '{name}' => $proposal->getTarget()->getName()]), new Lines([t('{player} schlägt vor: {title} mit „{name}“ [{tag}]. Stimme unter Diplomatie ab.', ['{player}' => $actor->getUsername(), '{title}' => t($proposal->title()), '{name}' => $proposal->getTarget()->getName(), '{tag}' => $proposal->getTarget()->getTag()]), $proposal->quotedMessage()], ''), $actor);
         $this->evaluate($proposal);
 
         return $proposal;
     }
 
     /** Applies the votes of the current stage: passed, rejected or still open. Returns a short result. */
-    private function evaluate(DiplomacyProposal $proposal): string
+    private function evaluate(DiplomacyProposal $proposal): TranslatableInterface
     {
         $voters = self::voters($proposal->votingAlliance());
         $ids = array_map(static fn (User $u): string => (string) $u->getId(), $voters);
@@ -206,16 +210,16 @@ final class Diplomacy
             $result = $this->pass($proposal);
         } elseif ($no >= \count($voters) - $needed + 1 || \count($votes) >= \count($voters)) {
             $this->reject($proposal);
-            $result = 'abgelehnt';
+            $result = t('abgelehnt');
         } else {
-            $result = \sprintf('Stimme gezählt (%d Ja, %d Nein, %d nötig).', $yes, $no, $needed);
+            $result = t('Stimme gezählt ({yes} Ja, {no} Nein, {needed} nötig).', ['{yes}' => $yes, '{no}' => $no, '{needed}' => $needed]);
         }
         $this->em->flush();
 
         return $result;
     }
 
-    private function pass(DiplomacyProposal $proposal): string
+    private function pass(DiplomacyProposal $proposal): TranslatableInterface
     {
         $own = $proposal->getProposer();
         $other = $proposal->getTarget();
@@ -224,10 +228,10 @@ final class Diplomacy
 
         if (DiplomacyProposal::STAGE_OWN === $proposal->getStage() && $bothSides) {
             $proposal->toOtherSide();
-            $this->notify(self::voters($other), \sprintf('%s: Vorschlag von %s', $proposal->title(), $own->getName()), \sprintf('„%s“ [%s] schlägt euch vor: %s. Gründer und Kommandanten stimmen unter Diplomatie ab.', $own->getName(), $own->getTag(), $proposal->title()).$proposal->quotedMessage());
-            $this->notify(self::voters($own), $proposal->title().': angenommen', \sprintf('Eure Führung hat zugestimmt: %s mit „%s“. Jetzt stimmt „%s“ ab.', $proposal->title(), $other->getName(), $other->getName()));
+            $this->notify(self::voters($other), t('{title}: Vorschlag von {name}', ['{title}' => t($proposal->title()), '{name}' => $own->getName()]), new Lines([t('„{name}“ [{tag}] schlägt euch vor: {title}. Gründer und Kommandanten stimmen unter Diplomatie ab.', ['{name}' => $own->getName(), '{tag}' => $own->getTag(), '{title}' => t($proposal->title())]), $proposal->quotedMessage()], ''));
+            $this->notify(self::voters($own), t('{title}: angenommen', ['{title}' => t($proposal->title())]), t('Eure Führung hat zugestimmt: {title} mit „{name}“. Jetzt stimmt „{name}“ ab.', ['{title}' => t($proposal->title()), '{name}' => $other->getName()]));
 
-            return 'Angenommen – jetzt stimmt „'.$other->getName().'“ ab.';
+            return t('Angenommen – jetzt stimmt „{name}“ ab.', ['{name}' => $other->getName()]);
         }
 
         $current = $this->relation($own, $other);
@@ -240,25 +244,26 @@ final class Diplomacy
         $this->cache = [];
         $this->em->remove($proposal);
         $text = $proposal->isEnding()
-            ? \sprintf('%s zwischen „%s“ und „%s“ ist beendet.', $kind->label(), $own->getName(), $other->getName())
-            : \sprintf('Ab sofort gilt zwischen „%s“ und „%s“: %s. %s', $own->getName(), $other->getName(), $kind->label(), $kind->effect());
-        $text .= $proposal->quotedMessage();
+            ? t('{kind} zwischen „{name}“ und „{name2}“ ist beendet.', ['{kind}' => t($kind->label()), '{name}' => $own->getName(), '{name2}' => $other->getName()])
+            : t('Ab sofort gilt zwischen „{name}“ und „{name2}“: {kind}. {effect}', ['{name}' => $own->getName(), '{name2}' => $other->getName(), '{kind}' => t($kind->label()), '{effect}' => t($kind->effect())]);
+        $text = new Lines([$text, $proposal->quotedMessage()], '');
         if (TreatyKind::War === $kind && !$proposal->isEnding()) {
-            $text = \sprintf('Kriegserklärung: „%s“ [%s] erklärt „%s“ [%s] den Krieg. %s', $own->getName(), $own->getTag(), $other->getName(), $other->getTag(), $kind->effect()).$proposal->quotedMessage();
+            $text = t('Kriegserklärung: „{name}“ [{tag}] erklärt „{name2}“ [{tag2}] den Krieg. {effect}', ['{name}' => $own->getName(), '{tag}' => $own->getTag(), '{name2}' => $other->getName(), '{tag2}' => $other->getTag(), '{effect}' => t($kind->effect())]);
+            $text = new Lines([$text, $proposal->quotedMessage()], '');
         }
         foreach ([$own, $other] as $alliance) {
             $partner = $alliance->getId() === $own->getId() ? $other : $own;
-            $subject = ($proposal->isEnding() ? $proposal->title() : $kind->label()).' – '.$partner->getName();
+            $subject = t('{title} – {name}', ['{title}' => t($proposal->isEnding() ? $proposal->title() : $kind->label()), '{name}' => $partner->getName()]);
             $this->notify($alliance->getMembers()->toArray(), $subject, $text);
         }
 
-        return $proposal->isEnding() ? 'Beendet.' : 'In Kraft: '.$kind->label().'.';
+        return $proposal->isEnding() ? t('Beendet.') : t('In Kraft: {kind}.', ['{kind}' => t($kind->label())]);
     }
 
     private function reject(DiplomacyProposal $proposal): void
     {
         $by = $proposal->votingAlliance();
-        $this->notify(self::voters($proposal->getProposer()), $proposal->title().': abgelehnt', \sprintf('„%s“ hat abgelehnt: %s zwischen „%s“ und „%s“.', $by->getName(), $proposal->title(), $proposal->getProposer()->getName(), $proposal->getTarget()->getName()));
+        $this->notify(self::voters($proposal->getProposer()), t('{title}: abgelehnt', ['{title}' => t($proposal->title())]), t('„{name}“ hat abgelehnt: {title} zwischen „{name2}“ und „{name3}“.', ['{name}' => $by->getName(), '{title}' => t($proposal->title()), '{name2}' => $proposal->getProposer()->getName(), '{name3}' => $proposal->getTarget()->getName()]));
         $this->em->remove($proposal);
     }
 
@@ -269,7 +274,7 @@ final class Diplomacy
             ->where('(p.proposer = :a AND p.target = :b) OR (p.proposer = :b AND p.target = :a)')
             ->setParameter('a', $a)->setParameter('b', $b)->getQuery()->getSingleScalarResult();
         if ($open > 0) {
-            throw new GameException(\sprintf('Mit „%s“ läuft bereits eine Abstimmung.', $b->getName()));
+            throw new GameException(t('Mit „{name}“ läuft bereits eine Abstimmung.', ['{name}' => $b->getName()]));
         }
     }
 
@@ -277,14 +282,14 @@ final class Diplomacy
     {
         $alliance = $actor->getAlliance();
         if (null === $alliance || !self::canDecide($actor)) {
-            throw new GameException('Diplomatie machen nur Gründer und Kommandanten einer Allianz.');
+            throw new GameException(t('Diplomatie machen nur Gründer und Kommandanten einer Allianz.'));
         }
 
         return $alliance;
     }
 
     /** @param iterable<User> $recipients */
-    private function notify(iterable $recipients, string $subject, string $body, ?User $except = null): void
+    private function notify(iterable $recipients, TranslatableInterface $subject, TranslatableInterface $body, ?User $except = null): void
     {
         foreach ($recipients as $user) {
             if (null === $except || !$user->isSameAs($except)) {

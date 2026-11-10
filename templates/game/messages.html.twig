@@ -1,16 +1,16 @@
 {% extends 'game/_layout.html.twig' %}
 
-{% block title %}Nachrichten – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Nachrichten – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
     <div class="page-head">
-        <h1>Nachrichten</h1>
+        <h1>{{ 'Nachrichten'|trans }}</h1>
         <form method="post" action="{{ path('app_messages_read_all') }}" data-read-all>
             <input type="hidden" name="_token" value="{{ csrf_token('messages') }}">
-            <button class="btn btn-small btn-secondary" type="submit" id="messages-read-all" {{ unread_messages > 0 ? '' : 'disabled title="Alles gelesen"' }}>Alle als gelesen markieren</button>
+            <button class="btn btn-small btn-secondary" type="submit" id="messages-read-all" {% if unread_messages == 0 %}disabled title="{{ 'Alles gelesen'|trans }}"{% endif %}>{{ 'Alle als gelesen markieren'|trans }}</button>
         </form>
     </div>
-    <p class="muted small">Nachrichten werden nach {{ keep_days }} Tagen automatisch gelöscht.</p>
+    <p class="muted small">{{ 'Nachrichten werden nach {keep_days} Tagen automatisch gelöscht.'|trans({'{keep_days}': keep_days}) }}</p>
     {% set token = csrf_token('messages') %}
     {% for m in messages %}
         {# Opening an unread message marks it read (and lowers the counter). #}
@@ -22,18 +22,18 @@
             <pre class="message-body">{{ m.body|link_coordinates }}</pre>
             <form method="post" action="{{ path('app_message_delete', {id: m.id}) }}" class="message-actions">
                 <input type="hidden" name="_token" value="{{ token }}">
-                <span class="muted small">wird am {{ m.createdAt|date_modify('+' ~ keep_days ~ ' days')|date('d.m.Y') }} automatisch gelöscht</span>
-                <button class="btn btn-small btn-danger" type="submit" id="message-delete-{{ m.id }}">Löschen</button>
+                <span class="muted small">{{ 'wird am {createdAt} automatisch gelöscht'|trans({'{createdAt}': m.createdAt|date_modify('+' ~ keep_days ~ ' days')|date('d.m.Y')}) }}</span>
+                <button class="btn btn-small btn-danger" type="submit" id="message-delete-{{ m.id }}">{{ 'Löschen'|trans }}</button>
             </form>
         </details>
     {% else %}
-        <p class="panel muted">Keine Nachrichten.</p>
+        <p class="panel muted">{{ 'Keine Nachrichten.'|trans }}</p>
     {% endfor %}
     {% if pages > 1 %}
-        <nav class="pager" aria-label="Seiten">
-            {% if page > 1 %}<a class="btn btn-small btn-secondary" href="{{ path('app_messages', {page: page - 1}) }}">← Neuere</a>{% endif %}
-            <span class="muted small">Seite {{ page }} von {{ pages }} · {{ total|number_format(0, ',', '.') }} Nachrichten</span>
-            {% if page < pages %}<a class="btn btn-small btn-secondary" href="{{ path('app_messages', {page: page + 1}) }}">Ältere →</a>{% endif %}
+        <nav class="pager" aria-label="{{ 'Seiten'|trans }}">
+            {% if page > 1 %}<a class="btn btn-small btn-secondary" href="{{ path('app_messages', {page: page - 1}) }}">{{ '← Neuere'|trans }}</a>{% endif %}
+            <span class="muted small">{{ 'Seite {page} von {pages} · {total} Nachrichten'|trans({'{page}': page, '{pages}': pages, '{total}': total|num}) }}</span>
+            {% if page < pages %}<a class="btn btn-small btn-secondary" href="{{ path('app_messages', {page: page + 1}) }}">{{ 'Ältere →'|trans }}</a>{% endif %}
         </nav>
     {% endif %}
 {% endblock %}

@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\I18n\NumberInput;
 use App\Entity\FusionatorOffer;
 use App\Game\FusionatorMarket;
 use App\Game\GameException;
@@ -14,6 +15,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
+
+use function Symfony\Component\Translation\t;
 
 /** Trade › Fusionatoren: traders offer fusionators, everybody allowed may buy them. */
 class FusionatorMarketController extends AbstractGameController
@@ -62,11 +65,11 @@ class FusionatorMarketController extends AbstractGameController
             fn () => $this->market->offer(
                 $planet,
                 $quantity,
-                (float) str_replace(',', '.', $form->getString('price')),
+                NumberInput::decimal($form->getString('price'), $request->getLocale()),
                 array_values(array_filter(array_map(static fn (mixed $v): ?LifeForm => LifeForm::tryFrom((string) $v), $form->all('life_forms')))),
                 array_map('intval', $form->all('alliances')),
             ),
-            \sprintf('%d Fusionator(en) eingestellt.', $quantity),
+            t('{quantity} Fusionator(en) eingestellt.', ['{quantity}' => $quantity]),
         );
 
         return $this->redirectToRoute('app_trade_fusionators');
@@ -77,7 +80,7 @@ class FusionatorMarketController extends AbstractGameController
     public function withdraw(FusionatorOffer $offer): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->market->withdraw($offer, $this->player()), 'Angebot zurückgezogen, die Fusionatoren stehen wieder im Hangar.');
+        $this->attempt(fn () => $this->market->withdraw($offer, $this->player()), t('Angebot zurückgezogen, die Fusionatoren stehen wieder im Hangar.'));
 
         return $this->redirectToRoute('app_trade_fusionators');
     }
@@ -92,7 +95,7 @@ class FusionatorMarketController extends AbstractGameController
         try {
             $this->addFlash('success', $this->market->buy($offer, $this->player(), $quantity));
         } catch (GameException $e) {
-            $this->addFlash('error', $e->getMessage());
+            $this->addFlash('error', $e->translatable());
         }
 
         return $this->redirectToRoute('app_trade_fusionators');

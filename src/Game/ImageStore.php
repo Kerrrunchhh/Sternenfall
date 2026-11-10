@@ -7,6 +7,8 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\Validator\Constraints\Image;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
+use function Symfony\Component\Translation\t;
+
 /**
  * Stores uploaded pictures for player profiles and alliances.
  *
@@ -44,7 +46,7 @@ final readonly class ImageStore
 
         $source = @imagecreatefromstring((string) file_get_contents($file->getPathname()));
         if (false === $source) {
-            throw new GameException('Das Bild konnte nicht gelesen werden.');
+            throw new GameException(t('Das Bild konnte nicht gelesen werden.'));
         }
 
         $width = imagesx($source);

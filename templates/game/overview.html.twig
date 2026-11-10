@@ -1,30 +1,29 @@
 {% extends 'game/_layout.html.twig' %}
 {% import 'game/_macros.html.twig' as ui %}
 
-{% block title %}Übersicht – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Übersicht – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
     {% if not player.isExtended(now) %}{{ include('_ad.html.twig') }}{% endif %}
     {% if attacks is not empty %}
         <section class="panel attack-alarm-panel" role="alert">
-            <h2>🚨 Angriff{{ attacks|length > 1 ? 'e' }} auf deine Planeten</h2>
+            <h2>{{ attacks|length > 1 ? '🚨 Angriffe auf deine Planeten'|trans : '🚨 Angriff auf deine Planeten'|trans }}</h2>
             <table class="table attack-table">
                 {% for a in attacks %}
                     {% set f = a.fleet %}
                     {% set intel = incoming_intel[f.id] ?? null %}
                     <tr>
                         <td>
-                            <strong>{{ ui.player(f.owner) }}</strong>
-                            von {% if a.origin %}{{ a.origin.name }} {% endif %}{{ ui.coords(f.coordinates) }}
-                            → <strong>{{ a.target ? a.target.name : 'Planet' }}</strong> {{ ui.coords(f.targetCoordinates) }}
-                            {% if intel %}<div class="small">erspäht {{ intel.scoutedAt|date('H:i') }}: {% for s in intel.shipList %}{{ s.count|number_format(0, ',', '.') }} × {{ s.type.label }}{{ not loop.last ? ', ' }}{% endfor %}</div>{% endif %}
+                            {{ '<strong>{owner}</strong> von'|trans({'{owner}': ui.player(f.owner)|e})|raw }} {% if a.origin %}{{ a.origin.name }} {% endif %}{{ ui.coords(f.coordinates) }}
+                            → <strong>{{ a.target ? a.target.name : ('Planet'|trans) }}</strong> {{ ui.coords(f.targetCoordinates) }}
+                            {% if intel %}<div class="small">{{ 'erspäht {scoutedAt}:'|trans({'{scoutedAt}': intel.scoutedAt|date('H:i')}) }} {% for s in intel.shipList %}{{ s.count|num }} × {{ s.type.label|trans }}{{ not loop.last ? ', ' }}{% endfor %}</div>{% endif %}
                         </td>
-                        <td class="num attack-time">Einschlag in {{ ui.countdown(f.arriveAt, now) }}<br><span class="small">{{ ui.at(f.arriveAt, now) }}</span></td>
+                        <td class="num attack-time">{{ 'Einschlag in {arriveAt}'|trans({'{arriveAt}': ui.countdown(f.arriveAt, now)|e})|raw }}<br><span class="small">{{ ui.at(f.arriveAt, now) }}</span></td>
                         <td class="num">
                             <form method="post" action="{{ path('app_radar_spy', {id: f.id}) }}">
                                 <input type="hidden" name="_token" value="{{ csrf_token('radar') }}">
                                 <input type="hidden" name="to" value="app_overview">
-                                <button class="btn btn-small" type="submit" id="spy-attack-{{ f.id }}" title="Die nächste Sonde fliegt der Flotte entgegen und meldet, woraus sie besteht">🔭 Spionieren</button>
+                                <button class="btn btn-small" type="submit" id="spy-attack-{{ f.id }}" title="{{ 'Die nächste Sonde fliegt der Flotte entgegen und meldet, woraus sie besteht'|trans }}">{{ '🔭 Spionieren'|trans }}</button>
                             </form>
                         </td>
                     </tr>
@@ -36,62 +35,61 @@
         <section class="panel trade-waiting">
             {% for w in at_trade_posts %}
                 <a href="{{ path('app_trade_post', {id: w.post.id}) }}" class="trade-waiting-row">
-                    <span>⚖ <strong>{{ w.fleet.label }}</strong> wartet am Handelsstützpunkt <strong>{{ w.post.name }}</strong> [{{ w.post.coordinates }}]{% if not w.post.owner.sameAs(player) %} von {{ w.post.owner.username }}{% endif %}</span>
-                    <span class="trade-waiting-go">Zum Handel →</span>
-                </a>
+                    <span>{{ '⚖ <strong>{label}</strong> wartet am Handelsstützpunkt <strong>{name}</strong> [{coordinates}]'|trans({'{label}': w.fleet.label|trans|e, '{name}': w.post.name|e, '{coordinates}': w.post.coordinates|e})|raw }}{% if not w.post.owner.sameAs(player) %} {{ 'von {username}'|trans({'{username}': w.post.owner.username}) }}{% endif %}</span>
+                    {{ '<span class="trade-waiting-go">Zum Handel →</span>'|trans|raw }} </a>
             {% endfor %}
         </section>
     {% endif %}
 
-    <h1 class="planet-title"><img class="planet-pic" src="{{ asset(planet.type.picture) }}" alt="{{ planet.type.label }}" width="64" height="64"> {{ planet.name }} <small>[{{ planet.coordinates }}]</small></h1>
+    <h1 class="planet-title"><img class="planet-pic" src="{{ asset(planet.type.picture) }}" alt="{{ planet.type.label|trans }}" width="64" height="64"> {{ planet.name }} <small>[{{ planet.coordinates }}]</small></h1>
     <details class="rename">
-        <summary>Umbenennen{{ planet.homeworld ? '' : ' oder verlassen' }}</summary>
+        <summary>{{ planet.homeworld ? 'Umbenennen'|trans : 'Umbenennen oder verlassen'|trans }}</summary>
         <form method="post" action="{{ path('app_planet_rename', {id: planet.id}) }}" class="inline-action">
             <input type="hidden" name="_token" value="{{ csrf_token('planet_rename') }}">
-            <input type="text" name="name" value="{{ planet.name }}" maxlength="30" required aria-label="Neuer Name für {{ planet.name }}">
-            <button class="btn btn-small" type="submit" id="planet-rename">Speichern</button>
+            <input type="text" name="name" value="{{ planet.name }}" maxlength="30" required aria-label="{{ 'Neuer Name für {name}'|trans({'{name}': planet.name}) }}">
+            <button class="btn btn-small" type="submit" id="planet-rename">{{ 'Speichern'|trans }}</button>
         </form>
         {% if not planet.homeworld and not planet.beingAbandoned %}
             <form method="post" action="{{ path('app_planet_abandon', {id: planet.id}) }}" class="abandon-form">
                 <input type="hidden" name="_token" value="{{ csrf_token('planet_abandon') }}">
                 <button class="btn btn-small btn-danger" type="submit" name="do" value="abandon" id="planet-abandon"
-                        data-confirm="{{ planet.name }} [{{ planet.coordinates }}] verlassen? Nach 48 Stunden ist der Planet weg – mit allen Gebäuden, Rohstoffen und den Schiffen im Hangar. Flotten, die hier warten, bleiben am freien Platz zurück. Bis dahin kannst du abbrechen."
-                        data-confirm-label="Planet verlassen">Planet verlassen</button>
+                        data-confirm="{{ '{name} [{coordinates}] verlassen? Nach 48 Stunden ist der Planet weg – mit allen Gebäuden, Rohstoffen und den Schiffen im Hangar. Flotten, die hier warten, bleiben am freien Platz zurück. Bis dahin kannst du abbrechen.'|trans({'{name}': planet.name, '{coordinates}': planet.coordinates}) }}"
+                        data-confirm-label="{{ 'Planet verlassen'|trans }}">{{ 'Planet verlassen'|trans }}</button>
             </form>
         {% endif %}
     </details>
 
     {% if planet.beingAbandoned %}
         <div class="panel warning abandon-warning">
-            <div><strong>{{ planet.name }} wird verlassen</strong> – in {{ ui.countdown(planet.abandonAt, now) }} ({{ ui.at(planet.abandonAt, now) }}). Gebäude, Rohstoffe und die Schiffe im Hangar gehen dann verloren; Flotten, die hier warten, bleiben am freien Platz zurück. Flotten ohne Treibstoff kommen nur weg, wenn du den Planeten vorher belieferst.</div>
+            <div>{{ '<strong>{name} wird verlassen</strong> – in {abandonAt} ({abandonAt2}). Gebäude, Rohstoffe und die Schiffe im Hangar gehen dann verloren; Flotten, die hier warten, bleiben am freien Platz zurück. Flotten ohne Treibstoff kommen nur weg, wenn du den Planeten vorher belieferst.'|trans({'{name}': planet.name|e, '{abandonAt}': ui.countdown(planet.abandonAt, now)|e, '{abandonAt2}': ui.at(planet.abandonAt, now)|e})|raw }}</div>
             <form method="post" action="{{ path('app_planet_abandon', {id: planet.id}) }}">
                 <input type="hidden" name="_token" value="{{ csrf_token('planet_abandon') }}">
-                <button class="btn btn-small" type="submit" name="do" value="stay" id="planet-stay">Doch bleiben</button>
+                <button class="btn btn-small" type="submit" name="do" value="stay" id="planet-stay">{{ 'Doch bleiben'|trans }}</button>
             </form>
         </div>
     {% endif %}
     {% if planet.integrating(now) %}
-        <p class="panel warning">{{ planet.name }} wurde invadiert und geht am {{ planet.integratedAt|date('d.m.Y H:i') }} vollständig in deinen Besitz über.</p>
+        <p class="panel warning">{{ '{name} wurde invadiert und geht am {integratedAt} vollständig in deinen Besitz über.'|trans({'{name}': planet.name, '{integratedAt}': planet.integratedAt|date('d.m.Y H:i')}) }}</p>
     {% endif %}
     <section class="panel quick-contacts">
-        <h2>Schnellkontakte <a class="small" href="{{ path('app_mail') }}">Post →</a></h2>
+        <h2>{{ 'Schnellkontakte'|trans }} <a class="small" href="{{ path('app_mail') }}">{{ 'Post →'|trans }}</a></h2>
         {{ include('game/_contacts.html.twig', {back: 'app_overview'}) }}
     </section>
 
     {% if incoming is not empty or own_movements is not empty %}
         <section class="panel movements">
-            <h2>Flottenbewegungen</h2>
+            <h2>{{ 'Flottenbewegungen'|trans }}</h2>
             {# One line per movement: what, where, countdown, arrival time, action. #}
             <table class="table movement-table">
                 {% for f in incoming %}
                     {% set intel = incoming_intel[f.id] ?? null %}
-                    {% set ships = intel ? intel.shipList|map(s => s.count|number_format(0, ',', '.') ~ ' × ' ~ s.type.label)|join(', ') : '' %}
+                    {% set ships = intel ? intel.shipList|map(s => s.count|num ~ ' × ' ~ s.type.label|trans)|join(', ') : '' %}
                     <tr class="{{ f.mission.value == 'attack' ? 'hostile' }}">
                         <td class="movement-what">
-                            {% if f.mission.value == 'attack' %}<strong>⚠ Angriff</strong>{% else %}{{ f.mission.label }}{% endif %}
-                            von {{ ui.player(f.owner) }} → {{ ui.coords(f.targetCoordinates) }}
-                            {% if intel %}<span class="small muted" title="erspäht {{ intel.scoutedAt|date('H:i') }}: {{ ships }}">· {{ ships }}</span>
-                            {% else %}<a class="small" href="{{ path('app_radar') }}" title="Zusammensetzung unbekannt – auf dem Radar ausspionieren">· 🔭 ausspionieren</a>{% endif %}
+                            {% if f.mission.value == 'attack' %}<strong>{{ '⚠ Angriff'|trans }}</strong>{% else %}{{ f.mission.label|trans }}{% endif %}
+                            {{ 'von {owner} → {targetCoordinates}'|trans({'{owner}': ui.player(f.owner)|e, '{targetCoordinates}': ui.coords(f.targetCoordinates)|e})|raw }}
+                            {% if intel %}<span class="small muted" title="{{ 'erspäht {scoutedAt}: {ships}'|trans({'{scoutedAt}': intel.scoutedAt|date('H:i'), '{ships}': ships}) }}">· {{ ships }}</span>
+                            {% else %}<a class="small" href="{{ path('app_radar') }}" title="{{ 'Zusammensetzung unbekannt – auf dem Radar ausspionieren'|trans }}">{{ '· 🔭 ausspionieren'|trans }}</a>{% endif %}
                         </td>
                         <td class="num movement-time">{{ ui.countdown(f.arriveAt, now) }}</td>
                         <td class="num small muted movement-time">{{ ui.at(f.arriveAt, now) }}</td>
@@ -102,17 +100,17 @@
                     {% set only = f.shipList|length == 1 ? f.shipList[0].type.value : null %}
                     <tr>
                         <td class="movement-what">
-                            {{ f.named ? f.name : (only == 'scout' ? 'Sonde' : (only == 'colony_ship' ? 'Kolonieschiff' : 'Flotte')) }}:
-                            {{ f.mission.label }}{% if f.mission.value != 'hover' %} {{ f.returning ? '← zurück nach' : '→' }} {{ ui.coords(f.returning ? f.coordinates : f.targetCoordinates) }}{% endif %}
+                            {{ f.named ? f.name : (only == 'scout' ? ('Sonde'|trans) : (only == 'colony_ship' ? ('Kolonieschiff'|trans) : ('Flotte'|trans))) }}:
+                            {{ f.mission.label|trans }}{% if f.mission.value != 'hover' %} {{ f.returning ? ('← zurück nach'|trans) : '→' }} {{ ui.coords(f.returning ? f.coordinates : f.targetCoordinates) }}{% endif %}
                         </td>
-                        <td class="num movement-time" title="{{ f.returning ? 'Rückkehr' : (f.mission.value == 'hover' ? 'landet' : 'Ankunft') }}">{{ ui.countdown(f.nextEventAt, now) }}</td>
+                        <td class="num movement-time" title="{{ f.returning ? 'Rückkehr'|trans : (f.mission.value == 'hover' ? 'landet'|trans : 'Ankunft'|trans) }}">{{ ui.countdown(f.nextEventAt, now) }}</td>
                         <td class="num small muted movement-time">{{ ui.at(f.nextEventAt, now) }}</td>
                         <td class="num movement-time">
                             {% if not f.returning and f.owner.id == player.id and recall_until(f) %}
-                                <form method="post" action="{{ path('app_fleet_recall', {id: f.id}) }}" class="inline" title="Zurückrufen möglich bis {{ recall_until(f)|date('H:i:s') }} (Radartechnik)">
+                                <form method="post" action="{{ path('app_fleet_recall', {id: f.id}) }}" class="inline" title="{{ 'Zurückrufen möglich bis {recall_until} (Radartechnik)'|trans({'{recall_until}': recall_until(f)|date('H:i:s')}) }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
                                     <input type="hidden" name="to" value="app_overview">
-                                    <button type="submit" class="link-button recall-link" id="recall-{{ f.id }}">{{ f.mission.value == 'hover' ? '↓ landen' : '↩ zurückrufen' }}</button>
+                                    <button type="submit" class="link-button recall-link" id="recall-{{ f.id }}">{{ f.mission.value == 'hover' ? '↓ landen' : ('↩ zurückrufen'|trans) }}</button>
                                 </form>
                             {% endif %}
                         </td>
@@ -132,23 +130,23 @@
     {% endif %}
     {% if player.researching %}
         <div class="panel construction">
-            <div><strong>Forschung:</strong> {{ player.researchType.label }} (Stufe {{ player.researchTargetLevel }})</div>
+            <div>{{ '<strong>Forschung:</strong> {label} (Stufe {researchTargetLevel})'|trans({'{label}': player.researchType.label|trans|e, '{researchTargetLevel}': player.researchTargetLevel|e})|raw }}</div>
             <div>{{ ui.countdown(player.researchFinishesAt, now) }}</div>
         </div>
     {% endif %}
 
     <div class="grid">
         <section class="panel">
-            <h2>Rohstoffe pro Stunde</h2>
+            <h2>{{ 'Rohstoffe pro Stunde'|trans }}</h2>
             <table class="table">
-                <tr class="table-head"><td></td><td class="num">Produktion</td><td class="num">Verbrauch</td><td class="num">Bilanz</td></tr>
+                <tr class="table-head"><td></td><td class="num">{{ 'Produktion'|trans }}</td><td class="num">{{ 'Verbrauch'|trans }}</td><td class="num">{{ 'Bilanz'|trans }}</td></tr>
                 {% for type in enum_cases('App\\Game\\ResourceType') %}
                     {% set balance = net.get(type) %}
                     <tr>
-                        <td>{{ type.label }}</td>
-                        <td class="num">{{ production.get(type)|number_format(0, ',', '.') }}</td>
-                        <td class="num">{{ consumption.get(type) > 0 ? '−' ~ consumption.get(type)|number_format(0, ',', '.') : '' }}</td>
-                        <td class="num {{ balance < 0 ? 'negative' }}">{{ balance >= 0 ? '+' }}{{ balance|number_format(0, ',', '.') }}</td>
+                        <td>{{ type.label|trans }}</td>
+                        <td class="num">{{ production.get(type)|num }}</td>
+                        <td class="num">{{ consumption.get(type) > 0 ? '−' ~ consumption.get(type)|num : '' }}</td>
+                        <td class="num {{ balance < 0 ? 'negative' }}">{{ balance >= 0 ? '+' }}{{ balance|num }}</td>
                     </tr>
                 {% endfor %}
             </table>
@@ -158,43 +156,43 @@
                     {% set stock = planet.resources.get(type) %}
                     <p class="warning">
                         {% if stock < 1 %}
-                            {{ type.label }} ist aufgebraucht – deine Bevölkerung hungert und schrumpft!
+                            {{ '{label} ist aufgebraucht – deine Bevölkerung hungert und schrumpft!'|trans({'{label}': type.label|trans}) }}
                         {% else %}
-                            {{ type.label }} reicht noch {{ (stock / -balance * 3600)|format_duration }}. Danach beginnt deine Bevölkerung zu schrumpfen.
+                            {{ '{label} reicht noch {value}. Danach beginnt deine Bevölkerung zu schrumpfen.'|trans({'{label}': type.label|trans, '{value}': (stock / -balance * 3600)|format_duration}) }}
                         {% endif %}
                     </p>
                 {% endif %}
             {% endfor %}
         </section>
         <section class="panel">
-            <h2>Bevölkerung</h2>
+            <h2>{{ 'Bevölkerung'|trans }}</h2>
             <table class="table">
-                <tr><td>Einwohner</td><td class="num">{{ planet.population|number_format(0, ',', '.') }}</td></tr>
-                <tr><td>Platz in Biozellen</td><td class="num">{{ population_capacity|number_format(0, ',', '.') }}</td></tr>
-                <tr><td>Wachstum</td><td class="num">{{ population_growth > 0 ? '+' ~ population_growth|number_format(0, ',', '.') ~ '/h' : (population_capacity > 0 ? 'Biozellen voll' : 'keine Biozelle') }}</td></tr>
-                <tr><td>Bunkerplätze</td><td class="num">{{ bunker_capacity|number_format(0, ',', '.') }}</td></tr>
+                <tr><td>{{ 'Einwohner'|trans }}</td><td class="num">{{ planet.population|num }}</td></tr>
+                <tr><td>{{ 'Platz in Biozellen'|trans }}</td><td class="num">{{ population_capacity|num }}</td></tr>
+                <tr><td>{{ 'Wachstum'|trans }}</td><td class="num">{{ population_growth > 0 ? '+' ~ population_growth|num ~ '/h' : (population_capacity > 0 ? ('Biozellen voll'|trans) : ('keine Biozelle'|trans)) }}</td></tr>
+                <tr><td>{{ 'Bunkerplätze'|trans }}</td><td class="num">{{ bunker_capacity|num }}</td></tr>
             </table>
             {% if planet.population > bunker_capacity %}
-                <p class="hint">{{ (planet.population - bunker_capacity)|number_format(0, ',', '.') }} Einwohner wären bei einem Bombardement ungeschützt.</p>
+                <p class="hint">{{ '{value} Einwohner wären bei einem Bombardement ungeschützt.'|trans({'{value}': (planet.population - bunker_capacity)|num}) }}</p>
             {% endif %}
         </section>
         <section class="panel">
-            <h2>Planet</h2>
+            <h2>{{ 'Planet'|trans }}</h2>
             <table class="table">
-                <tr><td>Koordinaten</td><td class="num">{{ planet.coordinates }}</td></tr>
-                <tr><td title="Jede Gebäudestufe zählt mit dem Punktesatz des Gebäudes">Punkte</td><td class="num">{{ planet_points(planet)|number_format(0, ',', '.') }}</td></tr>
-                <tr><td>Planetentyp</td><td class="num">{{ planet.type.icon }} {{ planet.type.label }}<br><span class="muted small">{{ planet.type.effect }}{% if planet.fused %}<br>Fusion: zählt als blauer Planet, alle Rohstoffe ×1,5{% endif %}</span><br><a class="small" href="{{ path('app_fusion') }}">🔗 {{ planet.fused ? 'Fusion ansehen / sprengen' : 'Fusion: Vorschau anschweißen' }}</a></td></tr>
-                <tr><td>Vor Plünderung geschützt</td><td class="num">{{ protected|number_format(0, ',', '.') }} je Rohstoff</td></tr>
+                <tr><td>{{ 'Koordinaten'|trans }}</td><td class="num">{{ planet.coordinates }}</td></tr>
+                <tr><td title="{{ 'Jede Gebäudestufe zählt mit dem Punktesatz des Gebäudes'|trans }}">{{ 'Punkte'|trans }}</td><td class="num">{{ planet_points(planet)|num }}</td></tr>
+                <tr><td>{{ 'Planetentyp'|trans }}</td><td class="num">{{ planet.type.icon }} {{ planet.type.label|trans }}<br><span class="muted small">{{ planet.type.effect|trans }}{% if planet.fused %}<br>{{ 'Fusion: zählt als blauer Planet, alle Rohstoffe ×1,5'|trans }}{% endif %}</span><br><a class="small" href="{{ path('app_fusion') }}">🔗 {{ planet.fused ? ('Fusion ansehen / sprengen'|trans) : ('Fusion: Vorschau anschweißen'|trans) }}</a></td></tr>
+                <tr><td>{{ 'Vor Plünderung geschützt'|trans }}</td><td class="num">{{ '{protected} je Rohstoff'|trans({'{protected}': protected|num}) }}</td></tr>
             </table>
         </section>
         <section class="panel">
-            <h2>Hangar</h2>
+            <h2>{{ 'Hangar'|trans }}</h2>
             {% if hangar is empty %}
-                <p class="muted">Keine Schiffe stationiert.{% if planet.buildingLevel(enum('App\\Game\\BuildingType').Shipyard) > 0 %} <a href="{{ path('app_shipyard') }}">Zur Werft</a>{% endif %}</p>
+                <p class="muted">{{ 'Keine Schiffe stationiert.'|trans }}{% if planet.buildingLevel(enum('App\\Game\\BuildingType').Shipyard) > 0 %} <a href="{{ path('app_shipyard') }}">{{ 'Zur Werft'|trans }}</a>{% endif %}</p>
             {% else %}
                 <table class="table">
                     {% for entry in hangar %}
-                        <tr><td><a href="{{ path('app_ship_info', {type: entry.type.value}) }}" title="Beschreibung und Werte mit deiner Forschung">{{ entry.type.label }}</a></td><td class="num">{{ entry.count|number_format(0, ',', '.') }}</td></tr>
+                        <tr><td><a href="{{ path('app_ship_info', {type: entry.type.value}) }}" title="{{ 'Beschreibung und Werte mit deiner Forschung'|trans }}">{{ entry.type.label|trans }}</a></td><td class="num">{{ entry.count|num }}</td></tr>
                     {% endfor %}
                 </table>
             {% endif %}

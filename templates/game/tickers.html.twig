@@ -1,28 +1,28 @@
 {% extends 'game/_layout.html.twig' %}
 {% import 'game/_macros.html.twig' as ui %}
 
-{% block title %}Ticker – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Ticker – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    <h1>Langstreckenticker</h1>
-    <p class="muted small">Ticker sind Kanäle zwischen Spielern – unabhängig von Allianzen. Jeder kann einen eröffnen und Mitspieler einladen; der Besitzer nimmt Spieler auf, entfernt sie, löscht Beiträge und kann den Ticker abgeben.</p>
+    <h1>{{ 'Langstreckenticker'|trans }}</h1>
+    <p class="muted small">{{ 'Ticker sind Kanäle zwischen Spielern – unabhängig von Allianzen. Jeder kann einen eröffnen und Mitspieler einladen; der Besitzer nimmt Spieler auf, entfernt sie, löscht Beiträge und kann den Ticker abgeben.'|trans }}</p>
 
     {% if invitations is not empty %}
         <section class="panel">
-            <h2>Einladungen</h2>
+            <h2>{{ 'Einladungen'|trans }}</h2>
             <ul class="contact-list contact-requests">
                 {% for i in invitations %}
                     <li>
-                        <span><strong>{{ i.ticker.name }}</strong> <span class="muted small">von {{ ui.player(i.ticker.owner) }}</span>
-                            {% if i.ticker.description %}<span class="ticker-description small">{{ i.ticker.description }}</span>{% endif %}</span>
+                        <span>{{ '<strong>{name}</strong> <span class="muted small">von {owner}</span>'|trans({'{name}': i.ticker.name|e, '{owner}': ui.player(i.ticker.owner)|e})|raw }}
+                            {% if i.ticker.description %}<span class="ticker-description small">{{ i.ticker.description|trans }}</span>{% endif %}</span>
                         <span class="contact-actions">
                             <form method="post" action="{{ path('app_ticker_accept', {id: i.id}) }}">
                                 <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
-                                <button class="btn btn-small" type="submit" id="ticker-accept-{{ i.id }}">Annehmen</button>
+                                <button class="btn btn-small" type="submit" id="ticker-accept-{{ i.id }}">{{ 'Annehmen'|trans }}</button>
                             </form>
                             <form method="post" action="{{ path('app_ticker_leave', {id: i.id}) }}">
                                 <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
-                                <button class="btn btn-small btn-secondary" type="submit" id="ticker-decline-{{ i.id }}">Ablehnen</button>
+                                <button class="btn btn-small btn-secondary" type="submit" id="ticker-decline-{{ i.id }}">{{ 'Ablehnen'|trans }}</button>
                             </form>
                         </span>
                     </li>
@@ -32,25 +32,25 @@
     {% endif %}
 
     <section class="panel">
-        <h2>Deine Ticker</h2>
+        <h2>{{ 'Deine Ticker'|trans }}</h2>
         {% if tickers is empty %}
-            <p class="muted">Du bist noch in keinem Ticker.</p>
+            <p class="muted">{{ 'Du bist noch in keinem Ticker.'|trans }}</p>
         {% else %}
             <ul class="contact-list">
                 {% for t in tickers %}
                     <li>
                         <span><a href="{{ path('app_ticker', {id: t.id}) }}"><strong>{{ t.name }}</strong></a>
-                            {% if t.description %}<span class="ticker-description small muted">{{ t.description|length > 120 ? t.description|slice(0, 120) ~ '…' : t.description }}</span>{% endif %}</span>
-                        <span class="muted small">{{ t.acceptedMembers|length }} Mitglied{{ t.acceptedMembers|length == 1 ? '' : 'er' }} · Besitzer {{ t.owner.username }}{% if t.isOwnedBy(player) %} (du){% endif %}</span>
+                            {% if t.description %}<span class="ticker-description small muted">{{ t.description|trans|length > 120 ? t.description|trans|slice(0, 120) ~ '…' : t.description|trans }}</span>{% endif %}</span>
+                        <span class="muted small">{{ (t.acceptedMembers|length == 1 ? '{count} Mitglied · Besitzer {username}' : '{count} Mitglieder · Besitzer {username}')|trans({'{count}': t.acceptedMembers|length, '{username}': t.owner.username}) }}{% if t.isOwnedBy(player) %} {{ '(du)'|trans }}{% endif %}</span>
                     </li>
                 {% endfor %}
             </ul>
         {% endif %}
         <form method="post" action="{{ path('app_ticker_open') }}" class="inline-action ticker-open">
             <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
-            <input type="text" name="name" required maxlength="{{ constant('App\\Entity\\Ticker::MAX_NAME') }}" placeholder="Name des neuen Tickers" aria-label="Name des neuen Tickers">
-            <textarea name="description" rows="2" maxlength="{{ constant('App\\Entity\\Ticker::MAX_DESCRIPTION') }}" placeholder="Beschreibung: worum geht es in diesem Ticker? (optional)" aria-label="Beschreibung"></textarea>
-            <button class="btn" type="submit" id="ticker-open">Ticker eröffnen</button>
+            <input type="text" name="name" required maxlength="{{ constant('App\\Entity\\Ticker::MAX_NAME') }}" placeholder="{{ 'Name des neuen Tickers'|trans }}" aria-label="{{ 'Name des neuen Tickers'|trans }}">
+            <textarea name="description" rows="2" maxlength="{{ constant('App\\Entity\\Ticker::MAX_DESCRIPTION') }}" placeholder="{{ 'Beschreibung: worum geht es in diesem Ticker? (optional)'|trans }}" aria-label="{{ 'Beschreibung'|trans }}"></textarea>
+            <button class="btn" type="submit" id="ticker-open">{{ 'Ticker eröffnen'|trans }}</button>
         </form>
     </section>
 {% endblock %}

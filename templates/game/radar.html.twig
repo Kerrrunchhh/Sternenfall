@@ -1,29 +1,29 @@
 {% extends 'game/_layout.html.twig' %}
 {% import 'game/_macros.html.twig' as ui %}
 
-{% block title %}Radar – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Radar – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    <h1>Radar</h1>
+    <h1>{{ 'Radar'|trans }}</h1>
     <p class="muted">
-        Wartende Flotten sind unsichtbar. Sichtbar werden Flotten, die angreifen oder Rohstoffe transportieren – wenn ihr nächstes Ziel in deinem Radarbereich liegt.
+        {{ 'Wartende Flotten sind unsichtbar. Sichtbar werden Flotten, die angreifen oder Rohstoffe transportieren – wenn ihr nächstes Ziel in deinem Radarbereich liegt.'|trans }}
         {% if radar_range is null %}
-            <strong>Du hast noch kein Radar erforscht.</strong>
+            <strong>{{ 'Du hast noch kein Radar erforscht.'|trans }}</strong>
         {% else %}
-            Dein Radar (Stufe {{ radar_level }}) deckt die Systeme deiner Planeten {{ radar_range > 0 ? 'und je ' ~ radar_range ~ ' System(e) links und rechts davon' }} ab.
+            {{ 'Dein Radar (Stufe {radar_level}) deckt die Systeme deiner Planeten {davon} ab.'|trans({'{radar_level}': radar_level, '{davon}': radar_range > 0 ? ('und je'|trans ~ ' ') ~ radar_range ~ (' ' ~ 'System(e) links und rechts davon'|trans)}) }}
         {% endif %}
-        {% if player.lifeForm.value in ['guardian', 'pirate'] %}Als {{ player.lifeForm.label }} kannst du angreifende Flotten abfangen.{% endif %}
-        {% if player.lifeForm.value == 'pirate' %} Transporte kannst du überfallen – ohne Bomber bleiben Transportschiffe und Ladung aber verschont.{% endif %}
+        {% if player.lifeForm.value in ['guardian', 'pirate'] %}{{ 'Als {label} kannst du angreifende Flotten abfangen.'|trans({'{label}': player.lifeForm.label|trans}) }}{% endif %}
+        {% if player.lifeForm.value == 'pirate' %} {{ 'Transporte kannst du überfallen – ohne Bomber bleiben Transportschiffe und Ladung aber verschont.'|trans }}{% endif %}
     </p>
 
     {% if radar_range is not null %}
         <section class="panel">
-            <h2>Abdeckung deiner Planeten</h2>
+            <h2>{{ 'Abdeckung deiner Planeten'|trans }}</h2>
             <table class="table">
                 {% for p in player.planets %}
                     <tr class="{{ p.id == planet.id ? 'own' }}">
                         <td>{{ p.name }} <span class="muted small">[{{ p.coordinates }}]</span></td>
-                        <td class="num small">Galaxie {{ p.galaxy }}, System {{ max(1, p.system - radar_range) }}{{ radar_range > 0 ? '–' ~ (p.system + radar_range) }}</td>
+                        <td class="num small">{{ 'Galaxie {galaxy}, System {max}{radar_range}'|trans({'{galaxy}': p.galaxy, '{max}': max(1, p.system - radar_range), '{radar_range}': radar_range > 0 ? '–' ~ (p.system + radar_range)}) }}</td>
                     </tr>
                 {% endfor %}
             </table>
@@ -32,17 +32,17 @@
 
     {% if own_visible is not empty %}
         <section class="panel">
-            <h2>Deine sichtbaren Flotten <small class="muted">– andere sehen sie mit Radar</small></h2>
+            <h2>{{ 'Deine sichtbaren Flotten <small class="muted">– andere sehen sie mit Radar</small>'|trans|raw }}</h2>
             <table class="table">
                 {% for f in own_visible %}
                     <tr>
-                        <td><strong>{{ f.label }}</strong> <span class="small muted">{{ f.mission.label }}{{ f.returning ? ' (Rückflug)' }} von {{ ui.coords(f.returning ? f.targetCoordinates : f.coordinates) }} nach {{ ui.coords(f.returning ? f.coordinates : f.targetCoordinates) }}</span></td>
-                        <td class="small">{{ f.mission.value == 'attack' and not f.returning ? 'greift an' : 'transportiert ' ~ f.cargo.total|number_format(0, ',', '.') ~ ' Rohstoffe' }}</td>
-                        <td class="num small">{{ f.returning ? 'Rückkehr' : 'Ankunft' }} in {{ ui.countdown(f.nextEventAt, now) }}</td>
+                        <td>{{ '<strong>{label}</strong> <span class="small muted">{label2}{Rckflug} von {coordinates} nach {targetCoordinates}</span>'|trans({'{label}': f.label|trans|e, '{label2}': f.mission.label|trans|e, '{Rckflug}': (f.returning ? (' ' ~ '(Rückflug)'|trans))|e, '{coordinates}': (ui.coords(f.returning ? f.targetCoordinates : f.coordinates))|e, '{targetCoordinates}': (ui.coords(f.returning ? f.coordinates : f.targetCoordinates))|e})|raw }}</td>
+                        <td class="small">{{ f.mission.value == 'attack' and not f.returning ? ('greift an'|trans) : 'transportiert {amount} Rohstoffe'|trans({'{amount}': f.cargo.total|num}) }}</td>
+                        <td class="num small">{{ '{Ankunft} in {nextEventAt}'|trans({'{Ankunft}': (f.returning ? ('Rückkehr'|trans) : ('Ankunft'|trans))|e, '{nextEventAt}': ui.countdown(f.nextEventAt, now)|e})|raw }}</td>
                     </tr>
                 {% endfor %}
             </table>
-            <p class="muted small">Flotten mit Ladung, Abholflotten (auch auf dem Hinweg) und Handelsflotten auf dem Rückweg von einem Transport können von Piraten überfallen werden – auch leer, dann ohne Beute, angreifende Flotten von Wächtern und Piraten abgefangen.</p>
+            <p class="muted small">{{ 'Flotten mit Ladung, Abholflotten (auch auf dem Hinweg) und Handelsflotten auf dem Rückweg von einem Transport können von Piraten überfallen werden – auch leer, dann ohne Beute, angreifende Flotten von Wächtern und Piraten abgefangen.'|trans }}</p>
         </section>
     {% endif %}
 
@@ -50,39 +50,37 @@
         {% set f = c.fleet %}
         <article class="panel fleet-card {{ c.attacking ? 'moving' }}">
             <div class="building-head">
-                <h2>{{ ui.player(f.owner) }} <small class="muted">{{ c.ally ? '(verbündet)' }}</small></h2>
-                <span class="small">{{ f.mission.label }}{{ f.returning ? ' (Rückflug)' }}
-                    von {{ ui.coords(f.returning ? f.targetCoordinates : f.coordinates) }} nach {{ ui.coords(f.returning ? f.coordinates : f.targetCoordinates) }}
-                    · Ankunft in {{ ui.countdown(f.nextEventAt, now) }} · {{ ui.at(f.nextEventAt, now) }}</span>
+                <h2>{{ ui.player(f.owner) }} <small class="muted">{{ c.ally ? ('(verbündet)'|trans) }}</small></h2>
+                <span class="small">{{ '{label}{Rckflug} von {coordinates} nach {targetCoordinates} · Ankunft in {nextEventAt} · {nextEventAt2}'|trans({'{label}': f.mission.label|trans|e, '{Rckflug}': (f.returning ? (' ' ~ '(Rückflug)'|trans))|e, '{coordinates}': (ui.coords(f.returning ? f.targetCoordinates : f.coordinates))|e, '{targetCoordinates}': (ui.coords(f.returning ? f.coordinates : f.targetCoordinates))|e, '{nextEventAt}': ui.countdown(f.nextEventAt, now)|e, '{nextEventAt2}': ui.at(f.nextEventAt, now)|e})|raw }}</span>
             </div>
             <p class="small">
                 {% if c.intel %}
-                    Erspäht {{ c.intel.scoutedAt|date('H:i') }}: {% for s in c.intel.shipList %}{{ s.count|number_format(0, ',', '.') }} × {{ s.type.label }}{{ not loop.last ? ', ' }}{% endfor %}{{ c.intel.cargo >= 1 ? ' · Ladung ' ~ c.intel.cargo|number_format(0, ',', '.') }}
+                    {{ 'Erspäht {scoutedAt}:'|trans({'{scoutedAt}': c.intel.scoutedAt|date('H:i')}) }} {% for s in c.intel.shipList %}{{ s.count|num }} × {{ s.type.label|trans }}{{ not loop.last ? ', ' }}{% endfor %}{{ c.intel.cargo >= 1 ? ' · Ladung ' ~ c.intel.cargo|num }}
                 {% else %}
-                    Zusammensetzung unbekannt{{ f.cargo.total >= 1 ? ' · beladen' }}
+                    {{ 'Zusammensetzung unbekannt'|trans }}{% if f.cargo.total >= 1 %} · {{ 'beladen'|trans }}{% endif %}
                 {% endif %}
-                <span class="muted">· gesehen von {{ c.seen_by|map(p => p.name)|join(', ') }}</span>
+                <span class="muted">{{ '· gesehen von {seen_by}'|trans({'{seen_by}': c.seen_by|map(p => p.name)|join(', ')}) }}</span>
             </p>
             <form method="post" action="{{ path('app_radar_spy', {id: f.id}) }}" class="inline">
                 <input type="hidden" name="_token" value="{{ csrf_token('radar') }}">
-                <button class="btn btn-small btn-secondary" type="submit" id="spy-{{ f.id }}" title="Die nächste Sonde aus deinen Hangars fliegt der Flotte entgegen (verglüht danach)">🔭 Ausspionieren</button>
+                <button class="btn btn-small btn-secondary" type="submit" id="spy-{{ f.id }}" title="{{ 'Die nächste Sonde aus deinen Hangars fliegt der Flotte entgegen (verglüht danach)'|trans }}">{{ '🔭 Ausspionieren'|trans }}</button>
             </form>
             {% if not c.ally and (c.can_intercept or c.can_raid) %}
                 {% if own_fleets is empty %}
-                    <p class="muted small">Du hast keine wartende Flotte, die du losschicken könntest.</p>
+                    <p class="muted small">{{ 'Du hast keine wartende Flotte, die du losschicken könntest.'|trans }}</p>
                 {% else %}
                     <form method="post" action="{{ path('app_radar_hunt', {id: f.id, mission: c.can_intercept ? 'intercept' : 'raid'}) }}" class="inline-action">
                         <input type="hidden" name="_token" value="{{ csrf_token('radar') }}">
-                        <select name="fleet" aria-label="Eigene Flotte">
-                            {% for own in own_fleets %}<option value="{{ own.id }}">{{ own.label }} [{{ own.coordinates }}]</option>{% endfor %}
+                        <select name="fleet" aria-label="{{ 'Eigene Flotte'|trans }}">
+                            {% for own in own_fleets %}<option value="{{ own.id }}">{{ own.label|trans }} [{{ own.coordinates }}]</option>{% endfor %}
                         </select>
-                        <label class="inline-action small">mit <input type="text" name="speed" value="100" inputmode="decimal" class="short" aria-label="Geschwindigkeit in Prozent"> %</label>
-                        <button class="btn btn-small btn-danger" type="submit" id="hunt-{{ f.id }}">{{ c.can_intercept ? 'Abfangen' : 'Überfallen' }}</button>
+                        <label class="inline-action small">{{ 'mit'|trans }} <input type="text" name="speed" value="100" inputmode="decimal" class="short" aria-label="{{ 'Geschwindigkeit in Prozent'|trans }}"> %</label>
+                        <button class="btn btn-small btn-danger" type="submit" id="hunt-{{ f.id }}">{{ c.can_intercept ? ('Abfangen'|trans) : ('Überfallen'|trans) }}</button>
                     </form>
                 {% endif %}
             {% endif %}
         </article>
     {% else %}
-        <p class="panel muted">Keine fremden Flotten auf dem Radar.</p>
+        <p class="panel muted">{{ 'Keine fremden Flotten auf dem Radar.'|trans }}</p>
     {% endfor %}
 {% endblock %}

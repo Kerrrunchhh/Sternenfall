@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\I18n\Lines;
 use App\Entity\User;
 use App\Game\AccountDeletion;
 use App\Game\GameException;
@@ -15,6 +16,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+
+use function Symfony\Component\Translation\t;
 
 /** Admin area for players: roles, vacation, messages, deleting. */
 #[IsGranted('ROLE_ADMIN')]
@@ -57,50 +60,50 @@ class AdminUserController extends AbstractGameController
                 case 'role':
                     $role = $form->getString('role');
                     if (!isset(self::ROLES[$role])) {
-                        throw new GameException('Unbekannte Rolle.');
+                        throw new GameException(t('Unbekannte Rolle.'));
                     }
                     if ($user->isSameAs($admin) && 'ROLE_ADMIN' !== $role) {
-                        throw new GameException('Deine eigene Adminrolle kannst du dir nicht nehmen.');
+                        throw new GameException(t('Deine eigene Adminrolle kannst du dir nicht nehmen.'));
                     }
                     $keep = array_values(array_diff($user->getRoles(), ['ROLE_USER', 'ROLE_ADMIN', 'ROLE_MODERATOR']));
                     $user->setRoles('player' === $role ? $keep : [...$keep, $role]);
                     $em->flush();
-                    $this->addFlash('success', \sprintf('%s ist jetzt %s.', $user->getUsername(), self::ROLES[$role]));
+                    $this->addFlash('success', t('{player} ist jetzt {value}.', ['{player}' => $user->getUsername(), '{value}' => self::ROLES[$role]]));
                     break;
                 case 'vacation':
                     $reason = trim($form->getString('reason'));
                     if ('' === $reason) {
-                        throw new GameException('Gib einen Grund an – der Spieler bekommt ihn mitgeteilt.');
+                        throw new GameException(t('Gib einen Grund an – der Spieler bekommt ihn mitgeteilt.'));
                     }
                     $until = $vacations->impose($user, VacationService::parseDays($form->getString('days')), $reason);
-                    $this->addFlash('success', \sprintf('%s ist bis %s im Urlaub.', $user->getUsername(), $until->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i')));
+                    $this->addFlash('success', t('{player} ist bis {value} im Urlaub.', ['{player}' => $user->getUsername(), '{value}' => $until->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i')]));
                     break;
                 case 'message':
                     $body = trim($form->getString('body'));
                     if ('' === $body) {
-                        throw new GameException('Die Nachricht ist leer.');
+                        throw new GameException(t('Die Nachricht ist leer.'));
                     }
-                    $inbox->send($user, 'Nachricht der Spielleitung', $body."\n\n– ".$admin->getUsername().' (Spielleitung)');
+                    $inbox->send($user, t('Nachricht der Spielleitung'), new Lines([$body, t("\n– {player} (Spielleitung)", ['{player}' => $admin->getUsername()])]));
                     $em->flush();
-                    $this->addFlash('success', 'Nachricht an '.$user->getUsername().' gesendet.');
+                    $this->addFlash('success', t('Nachricht an {player} gesendet.', ['{player}' => $user->getUsername()]));
                     break;
                 case 'delete':
                     if ($user->isSameAs($admin)) {
-                        throw new GameException('Dein eigenes Konto löschst du unter Konto.');
+                        throw new GameException(t('Dein eigenes Konto löschst du unter Konto.'));
                     }
                     if ($user->getUsername() !== trim($form->getString('confirm'))) {
-                        throw new GameException('Zur Bestätigung den Spielernamen genau eintippen.');
+                        throw new GameException(t('Zur Bestätigung den Spielernamen genau eintippen.'));
                     }
                     $name = $user->getUsername();
                     $user->requestDeletion(new \DateTimeImmutable(), 'destroy' === $form->getString('planets'));
                     $deletion->delete($user);
-                    $this->addFlash('success', \sprintf('%s wurde gelöscht; seine Planeten sind herrenlos.', $name));
+                    $this->addFlash('success', t('{name} wurde gelöscht; seine Planeten sind herrenlos.', ['{name}' => $name]));
                     break;
                 default:
-                    throw new GameException('Unbekannte Aktion.');
+                    throw new GameException(t('Unbekannte Aktion.'));
             }
         } catch (GameException $e) {
-            $this->addFlash('error', $e->getMessage());
+            $this->addFlash('error', $e->translatable());
         }
 
         return $this->redirectToRoute('app_admin_users', ['q' => $form->getString('q')]);

@@ -1,164 +1,163 @@
 {% extends 'base.html.twig' %}
 
 {% block javascripts %}
+    <script>window.I18N = {{ js_i18n()|json_encode|raw }}; window.LOCALE = {{ app.request.locale|json_encode|raw }};</script>
     <script src="{{ asset('js/game.js') }}" defer></script>
 {% endblock %}
 
 {% macro resource(label, key, amount, rate, protected) %}
     <div class="res res-{{ key }}">
         <span class="res-label">{{ label }}</span>
-        <span class="res-amount{{ amount > protected ? ' res-exposed' }}" title="Geschützt: {{ protected|number_format(0, ',', '.') }}"
-              data-amount="{{ amount }}" data-rate="{{ rate }}" data-protected="{{ protected }}">{{ amount|number_format(0, ',', '.') }}</span>
-        <span class="res-rate{{ rate < 0 ? ' res-negative' }}">{{ rate >= 0 ? '+' }}{{ rate|number_format(0, ',', '.') }}/h</span>
+        <span class="res-amount{{ amount > protected ? ' res-exposed' }}" title="{{ 'Geschützt: {protected}'|trans({'{protected}': protected|num}) }}"
+              data-amount="{{ amount }}" data-rate="{{ rate }}" data-protected="{{ protected }}">{{ amount|num }}</span>
+        <span class="res-rate{{ rate < 0 ? ' res-negative' }}">{{ rate >= 0 ? '+' }}{{ rate|num }}/h</span>
     </div>
 {% endmacro %}
 
 {% block body %}
     <header class="topbar">
-        <a class="logo-link" href="{{ path('app_overview') }}" title="Zur Übersicht"><img class="logo-image" src="{{ asset('pictures/brand/logo-header.webp') }}" alt="{{ game_name }}" width="206" height="48"></a>
+        <a class="logo-link" href="{{ path('app_overview') }}" title="{{ 'Zur Übersicht'|trans }}"><img class="logo-image" src="{{ asset('pictures/brand/logo-header.webp') }}" alt="{{ game_name }}" width="206" height="48"></a>
         <div class="resources">
             {% for type in enum_cases('App\\Game\\ResourceType') %}
-                {{ _self.resource(type.label, type.value, planet.resources.get(type), net.get(type), protected) }}
+                {{ _self.resource(type.label|trans, type.value, planet.resources.get(type), net.get(type), protected) }}
             {% endfor %}
             <div class="res res-credits">
-                <span class="res-label">Credits</span>
-                <span class="res-amount" data-amount="{{ player.credits }}" data-rate="{{ credits_per_hour }}" data-protected="Infinity">{{ player.credits|number_format(0, ',', '.') }}</span>
-                <span class="res-rate">+{{ credits_per_hour|number_format(0, ',', '.') }}/h</span>
+                <span class="res-label">{{ 'Credits'|trans }}</span>
+                <span class="res-amount" data-amount="{{ player.credits }}" data-rate="{{ credits_per_hour }}" data-protected="Infinity">{{ player.credits|num }}</span>
+                <span class="res-rate">+{{ credits_per_hour|num }}/h</span>
             </div>
             <div class="res res-population">
-                <span class="res-label">Bevölkerung</span>
-                <span class="res-amount">{{ planet.population|number_format(0, ',', '.') }}</span>
-                <span class="res-rate">max. {{ population_capacity|number_format(0, ',', '.') }}</span>
+                {{ '<span class="res-label">Bevölkerung</span> <span class="res-amount">{population}</span> <span class="res-rate">max. {population_capacity}</span>'|trans({'{population}': planet.population|num|e, '{population_capacity}': population_capacity|num|e})|raw }}
             </div>
         </div>
-        <div class="server-clock" title="Serverzeit (Europe/Berlin) – danach richten sich alle Flotten">
-            <span class="res-label">Serverzeit</span>
+        <div class="server-clock" title="{{ 'Serverzeit (Europe/Berlin) – danach richten sich alle Flotten'|trans }}">
+            <span class="res-label">{{ 'Serverzeit'|trans }}</span>
             <time data-server-clock data-server-ms="{{ server_time_ms() }}">{{ 'now'|date('H:i:s') }}</time>
         </div>
         {% if is_granted('ROLE_ALLOWED_TO_SWITCH') or is_granted('IS_IMPERSONATOR') %}
             {# Only visible to accounts allowed to switch (and while switched). #}
-            <form method="get" class="account-switch" title="Konto wechseln (nur für dich sichtbar)">
-                <select name="_switch_user" aria-label="Konto wechseln" onchange="this.form.submit()">
+            <form method="get" class="account-switch" title="{{ 'Konto wechseln (nur für dich sichtbar)'|trans }}">
+                <select name="_switch_user" aria-label="{{ 'Konto wechseln'|trans }}" onchange="this.form.submit()">
                     {% for name in switchable_accounts() %}
                         <option value="{{ name }}" {{ name == app.user.userIdentifier ? 'selected' }}>{{ name }}</option>
                     {% endfor %}
                 </select>
-                <noscript><button class="btn btn-small" type="submit">Wechseln</button></noscript>
+                <noscript><button class="btn btn-small" type="submit">{{ 'Wechseln'|trans }}</button></noscript>
                 {% if is_granted('IS_IMPERSONATOR') %}
-                    <a href="?_switch_user=_exit" class="account-switch-exit" title="Zurück zu {{ app.token.originalToken.userIdentifier }}">↩ {{ app.token.originalToken.userIdentifier }}</a>
+                    <a href="?_switch_user=_exit" class="account-switch-exit" title="{{ 'Zurück zu {userIdentifier}'|trans({'{userIdentifier}': app.token.originalToken.userIdentifier}) }}">↩ {{ app.token.originalToken.userIdentifier }}</a>
                 {% endif %}
             </form>
         {% endif %}
         <div class="user">
-            {% if player.alliance %}<a class="alliance-tag" href="{{ path('app_alliance_public', {id: player.alliance.id}) }}">[{{ player.alliance.tag }}]</a> {% endif %}<a href="{{ path('app_player', {id: player.id}) }}" title="Dein Profil und Konto (Urlaub, E-Mail, erweiterter Account)">{{ player.lifeForm.icon }} {{ app.user.username }}</a> <span class="muted">({{ player.lifeForm.label }})</span> · <a href="{{ path('app_logout') }}">Abmelden</a>
+            {% if player.alliance %}<a class="alliance-tag" href="{{ path('app_alliance_public', {id: player.alliance.id}) }}">[{{ player.alliance.tag }}]</a> {% endif %}<a href="{{ path('app_player', {id: player.id}) }}" title="{{ 'Dein Profil und Konto (Urlaub, E-Mail, erweiterter Account)'|trans }}">{{ player.lifeForm.icon }} {{ app.user.username }}</a> <span class="muted">({{ player.lifeForm.label|trans }})</span> · <a href="{{ path('app_logout') }}">{{ 'Abmelden'|trans }}</a>
         </div>
     </header>
     {% set route = app.request.attributes.get('_route') %}
     <div class="layout">
-        <nav class="sidebar sidebar-left" aria-label="Navigation">
+        <nav class="sidebar sidebar-left" aria-label="{{ 'Navigation'|trans }}">
             <h2 class="sidebar-title">{{ planet.name }}</h2>
-            <a href="{{ path('app_overview') }}" class="{{ route == 'app_overview' ? 'active' }}">Übersicht</a>
-            <a href="{{ path('app_buildings') }}" class="{{ route == 'app_buildings' ? 'active' }}">Gebäude</a>
-            <a href="{{ path('app_queues') }}" class="{{ route == 'app_queues' ? 'active' }}">Bauschleifen</a>
-            <a href="{{ path('app_research') }}" class="{{ route == 'app_research' ? 'active' }}">Forschung</a>
-            <a href="{{ path('app_shipyard') }}" class="{{ route == 'app_shipyard' ? 'active' }}">Werft</a>
-            <a href="{{ path('app_defense') }}" class="{{ route == 'app_defense' ? 'active' }}">Planetenverteidigung</a>
+            <a href="{{ path('app_overview') }}" class="{{ route == 'app_overview' ? 'active' }}">{{ 'Übersicht'|trans }}</a>
+            <a href="{{ path('app_buildings') }}" class="{{ route == 'app_buildings' ? 'active' }}">{{ 'Gebäude'|trans }}</a>
+            <a href="{{ path('app_queues') }}" class="{{ route == 'app_queues' ? 'active' }}">{{ 'Bauschleifen'|trans }}</a>
+            <a href="{{ path('app_research') }}" class="{{ route == 'app_research' ? 'active' }}">{{ 'Forschung'|trans }}</a>
+            <a href="{{ path('app_shipyard') }}" class="{{ route == 'app_shipyard' ? 'active' }}">{{ 'Werft'|trans }}</a>
+            <a href="{{ path('app_defense') }}" class="{{ route == 'app_defense' ? 'active' }}">{{ 'Planetenverteidigung'|trans }}</a>
 
-            <h2 class="sidebar-title">Planeten <small>{{ player.planets|length }}</small></h2>
+            <h2 class="sidebar-title">{{ 'Planeten <small>{planets}</small>'|trans({'{planets}': player.planets|length|e})|raw }}</h2>
             <div class="planet-list">
                 {% for p in player.planets %}
                     {# One line per planet: type, name, coordinates, what is going on. #}
-                    <a href="{{ path('app_planet_select', {id: p.id, to: route}) }}" class="planet-badge {{ p.id == planet.id ? 'current' }} {{ attacked_planets[p.id] is defined ? 'under-attack' }}" {{ p.id == planet.id ? 'aria-current="true"' }} title="{{ p.name }} [{{ p.coordinates }}] – {{ p.fused ? 'Fusion aus ' ~ p.fusionSize ~ ' Planeten (zählt als blauer Planet, Rohstoffe ×1,5)' : p.type.label }}">
+                    <a href="{{ path('app_planet_select', {id: p.id, to: route}) }}" class="planet-badge {{ p.id == planet.id ? 'current' }} {{ attacked_planets[p.id] is defined ? 'under-attack' }}" {{ p.id == planet.id ? 'aria-current="true"' }} title="{{ p.name }} [{{ p.coordinates }}] – {{ p.fused ? 'Fusion aus {fusionSize} Planeten (zählt als blauer Planet, Rohstoffe ×1,5)'|trans({'{fusionSize}': p.fusionSize}) : p.type.label|trans }}">
                         <span class="pb-icon {{ p.fused ? 'pb-fusion' }}" aria-hidden="true">{% if p.fused %}🔗{% else %}<img class="planet-pic planet-pic-tiny" src="{{ asset(p.type.picture) }}" alt="" width="18" height="18">{% endif %}</span>
                         <span class="pb-name">{{ p.name }}</span>
                         <span class="pb-coords">{{ p.coordinates }}</span>
                         <span class="planet-status">
-                            {%- if attacked_planets[p.id] is defined %}<span class="attack-alarm" title="Wird angegriffen!">🚨</span>{% endif -%}
-                            {%- if p.constructing %}<span title="Gebäude im Bau">🏗</span>{% endif -%}
-                            {%- if p.shipyardQueue is not empty %}<span title="Werft arbeitet">🚀</span>{% endif -%}
-                            {%- if p.defenseQueue is not empty %}<span title="Verteidigung im Bau">🛡</span>{% endif -%}
-                            {%- if p.integrating(now) %}<span title="Invadiert, Übergang läuft">⏳</span>{% endif -%}
-                            {%- if p.beingAbandoned %}<span title="Wird am {{ p.abandonAt|date('d.m. H:i') }} verlassen">🏳</span>{% endif -%}
+                            {%- if attacked_planets[p.id] is defined %}<span class="attack-alarm" title="{{ 'Wird angegriffen!'|trans }}">🚨</span>{% endif -%}
+                            {%- if p.constructing %}<span title="{{ 'Gebäude im Bau'|trans }}">🏗</span>{% endif -%}
+                            {%- if p.shipyardQueue is not empty %}<span title="{{ 'Werft arbeitet'|trans }}">🚀</span>{% endif -%}
+                            {%- if p.defenseQueue is not empty %}<span title="{{ 'Verteidigung im Bau'|trans }}">🛡</span>{% endif -%}
+                            {%- if p.integrating(now) %}<span title="{{ 'Invadiert, Übergang läuft'|trans }}">⏳</span>{% endif -%}
+                            {%- if p.beingAbandoned %}<span title="{{ 'Wird am {abandonAt} verlassen'|trans({'{abandonAt}': p.abandonAt|date('d.m. H:i')}) }}">🏳</span>{% endif -%}
                         </span>
                     </a>
                 {% endfor %}
             </div>
             {% if own_trade_posts is not empty %}
-                <h2 class="sidebar-title">Handelsstützpunkte <small>{{ own_trade_posts|length }}</small></h2>
+                <h2 class="sidebar-title">{{ 'Handelsstützpunkte <small>{own_trade_posts}</small>'|trans({'{own_trade_posts}': own_trade_posts|length|e})|raw }}</h2>
                 <div class="planet-list">
                     {% for tp in own_trade_posts %}
                         <a href="{{ path('app_trade_post', {id: tp.id}) }}" class="planet-badge {{ app.request.attributes.get('_route') == 'app_trade_post' and app.request.attributes.get('id') == tp.id ~ '' ? 'current' }}" title="{{ tp.name }} [{{ tp.coordinates }}]{{ tp.active ? '' : ' – aufgegeben' }}">
                             <span class="pb-icon" aria-hidden="true">⚖</span>
                             <span class="pb-name">{{ tp.name }}</span>
                             <span class="pb-coords">{{ tp.coordinates }}</span>
-                            {% if not tp.active %}<span class="planet-status" title="aufgegeben">✕</span>{% endif %}
+                            {% if not tp.active %}<span class="planet-status" title="{{ 'aufgegeben'|trans }}">✕</span>{% endif %}
                         </a>
                     {% endfor %}
                 </div>
             {% endif %}
         </nav>
         <main class="content">
-            {% if player.onVacation(now) %}<p class="panel vacation-banner">🌴 Du bist im Urlaub bis {{ player.vacationUntil|date('d.m.Y H:i') }} – <a href="{{ path('app_vacation') }}">Details</a></p>{% endif %}
+            {% if player.onVacation(now) %}<p class="panel vacation-banner">{{ '🌴 Du bist im Urlaub bis {vacationUntil} –'|trans({'{vacationUntil}': player.vacationUntil|date('d.m.Y H:i')}) }} <a href="{{ path('app_vacation') }}">{{ 'Details'|trans }}</a></p>{% endif %}
             {{ include('_flashes.html.twig') }}
             {% block content %}{% endblock %}
-            <footer class="game-footer muted small"><a href="{{ path('app_imprint') }}">Impressum</a> · <a href="{{ path('app_privacy') }}">Datenschutz</a></footer>
+            <footer class="game-footer muted small"><a href="{{ path('app_imprint') }}">{{ 'Impressum'|trans }}</a> · <a href="{{ path('app_privacy') }}">{{ 'Datenschutz'|trans }}</a> · {{ include('_language_switch.html.twig') }}</footer>
         </main>
-        <aside class="sidebar sidebar-right board-column" aria-label="Schwarzes Brett">
-            <nav class="empire-nav" aria-label="Imperium">
-            <h2 class="sidebar-title">Imperium</h2>
-            <a href="{{ path('app_fleet') }}" class="{{ route == 'app_fleet' ? 'active' }}">Flotten</a>
-            <a href="{{ path('app_galaxy') }}" class="{{ route == 'app_galaxy' ? 'active' }}">Galaxie</a>
-            <a href="{{ path('app_radar') }}" class="{{ route == 'app_radar' ? 'active' }}">Radar</a>
-            <a href="{{ path('app_bookmarks') }}" class="{{ route == 'app_bookmarks' ? 'active' }}">Koordinaten</a>
-            <a href="{{ path('app_trade') }}" class="{{ route in ['app_trade', 'app_trade_fusionators', 'app_trade_post'] ? 'active' }}">Handel</a>
+        <aside class="sidebar sidebar-right board-column" aria-label="{{ 'Schwarzes Brett'|trans }}">
+            <nav class="empire-nav" aria-label="{{ 'Imperium'|trans }}">
+            <h2 class="sidebar-title">{{ 'Imperium'|trans }}</h2>
+            <a href="{{ path('app_fleet') }}" class="{{ route == 'app_fleet' ? 'active' }}">{{ 'Flotten'|trans }}</a>
+            <a href="{{ path('app_galaxy') }}" class="{{ route == 'app_galaxy' ? 'active' }}">{{ 'Galaxie'|trans }}</a>
+            <a href="{{ path('app_radar') }}" class="{{ route == 'app_radar' ? 'active' }}">{{ 'Radar'|trans }}</a>
+            <a href="{{ path('app_bookmarks') }}" class="{{ route == 'app_bookmarks' ? 'active' }}">{{ 'Koordinaten'|trans }}</a>
+            <a href="{{ path('app_trade') }}" class="{{ route in ['app_trade', 'app_trade_fusionators', 'app_trade_post'] ? 'active' }}">{{ 'Handel'|trans }}</a>
             <a href="{{ path('app_messages') }}" class="{{ route == 'app_messages' ? 'active' }}">
-                Nachrichten <span class="badge" data-unread-badge {{ unread_messages > 0 ? '' : 'hidden' }}>{{ unread_messages }}</span>
+                {{ 'Nachrichten'|trans }} <span class="badge" data-unread-badge {{ unread_messages > 0 ? '' : 'hidden' }}>{{ unread_messages }}</span>
             </a>
-            <a href="{{ path('app_mail') }}" class="{{ route starts with 'app_mail' ? 'active' }}" title="Nachrichten von und an Mitspieler, Schnellkontakte">
-                Post{% if unread_mail + contact_requests > 0 %} <span class="badge">{{ unread_mail + contact_requests }}</span>{% endif %}
+            <a href="{{ path('app_mail') }}" class="{{ route starts with 'app_mail' ? 'active' }}" title="{{ 'Nachrichten von und an Mitspieler, Schnellkontakte'|trans }}">
+                {{ 'Post'|trans }}{% if unread_mail + contact_requests > 0 %} <span class="badge">{{ unread_mail + contact_requests }}</span>{% endif %}
             </a>
-            <a href="{{ path('app_tickers') }}" class="{{ route in ['app_tickers', 'app_ticker'] ? 'active' }}" title="Langstreckenticker: Kanäle zwischen Spielern">
-                Ticker{% if ticker_invitations > 0 %} <span class="badge">{{ ticker_invitations }}</span>{% endif %}
+            <a href="{{ path('app_tickers') }}" class="{{ route in ['app_tickers', 'app_ticker'] ? 'active' }}" title="{{ 'Langstreckenticker: Kanäle zwischen Spielern'|trans }}">
+                {{ 'Ticker'|trans }}{% if ticker_invitations > 0 %} <span class="badge">{{ ticker_invitations }}</span>{% endif %}
             </a>
-            <a href="{{ path('app_game_status') }}" class="{{ route == 'app_game_status' ? 'active' }}">Status</a>
-            <a href="{{ path('app_support') }}" class="{{ route starts with 'app_support' ? 'active' }}">Hilfe & Meldungen</a>
-            {% if forum_url %}<a href="{{ forum_url }}" target="_blank" rel="noopener">Forum ↗</a>{% endif %}
-            {% if is_granted('ROLE_MODERATOR') %}<a href="{{ path('app_admin_tickets') }}" class="{{ route starts with 'app_admin_ticket' ? 'active' }}">🛡 Meldungen{% if open_tickets > 0 %} <span class="badge">{{ open_tickets }}</span>{% endif %}</a>{% endif %}
-            {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('app_admin_users') }}" class="{{ route starts with 'app_admin_user' ? 'active' }}">🛡 Benutzer</a>{% endif %}
-            <a href="{{ path('app_notes') }}" class="{{ route == 'app_notes' ? 'active' }}">Notizblock</a>
-            <a href="{{ path('app_player_search') }}" class="{{ route == 'app_player_search' ? 'active' }}">Spieler suchen</a>
-            <a href="{{ path('app_highscores') }}" class="{{ route == 'app_highscores' ? 'active' }}">Highscores</a>
-            <a href="{{ path('app_newspaper') }}" class="{{ route == 'app_newspaper' ? 'active' }}" title="Alle Kampfberichte des Universums, 24 Stunden später">Zeitung</a>
-            <a href="{{ path('app_contracts') }}" class="{{ route == 'app_contracts' ? 'active' }}">Aufträge</a>
-            <a href="{{ path('app_transport_requests') }}" class="{{ route == 'app_transport_requests' ? 'active' }}">Transportgesuche</a>
-            <a href="{{ path('app_lifeform') }}" class="{{ route == 'app_lifeform' ? 'active' }}">Lebensform</a>
-            <a href="{{ path('app_alliance') }}" class="{{ route == 'app_alliance' ? 'active' }}">{{ player.alliance ? player.alliance.type : 'Allianz' }}</a>
-            <a href="{{ path('app_diplomacy') }}" class="{{ route == 'app_diplomacy' ? 'active' }}">Diplomatie{% if diplomacy_votes > 0 %} <span class="badge" title="Offene Abstimmungen">{{ diplomacy_votes }}</span>{% endif %}</a>
+            <a href="{{ path('app_game_status') }}" class="{{ route == 'app_game_status' ? 'active' }}">{{ 'Status'|trans }}</a>
+            <a href="{{ path('app_support') }}" class="{{ route starts with 'app_support' ? 'active' }}">{{ 'Hilfe & Meldungen'|trans }}</a>
+            {% if forum_url %}<a href="{{ forum_url }}" target="_blank" rel="noopener">{{ 'Forum ↗'|trans }}</a>{% endif %}
+            {% if is_granted('ROLE_MODERATOR') %}<a href="{{ path('app_admin_tickets') }}" class="{{ route starts with 'app_admin_ticket' ? 'active' }}">{{ '🛡 Meldungen'|trans }}{% if open_tickets > 0 %} <span class="badge">{{ open_tickets }}</span>{% endif %}</a>{% endif %}
+            {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('app_admin_users') }}" class="{{ route starts with 'app_admin_user' ? 'active' }}">{{ '🛡 Benutzer'|trans }}</a>{% endif %}
+            <a href="{{ path('app_notes') }}" class="{{ route == 'app_notes' ? 'active' }}">{{ 'Notizblock'|trans }}</a>
+            <a href="{{ path('app_player_search') }}" class="{{ route == 'app_player_search' ? 'active' }}">{{ 'Spieler suchen'|trans }}</a>
+            <a href="{{ path('app_highscores') }}" class="{{ route == 'app_highscores' ? 'active' }}">{{ 'Highscores'|trans }}</a>
+            <a href="{{ path('app_newspaper') }}" class="{{ route == 'app_newspaper' ? 'active' }}" title="{{ 'Alle Kampfberichte des Universums, 24 Stunden später'|trans }}">{{ 'Zeitung'|trans }}</a>
+            <a href="{{ path('app_contracts') }}" class="{{ route == 'app_contracts' ? 'active' }}">{{ 'Aufträge'|trans }}</a>
+            <a href="{{ path('app_transport_requests') }}" class="{{ route == 'app_transport_requests' ? 'active' }}">{{ 'Transportgesuche'|trans }}</a>
+            <a href="{{ path('app_lifeform') }}" class="{{ route == 'app_lifeform' ? 'active' }}">{{ 'Lebensform'|trans }}</a>
+            <a href="{{ path('app_alliance') }}" class="{{ route == 'app_alliance' ? 'active' }}">{{ player.alliance ? player.alliance.type|trans : ('Allianz'|trans) }}</a>
+            <a href="{{ path('app_diplomacy') }}" class="{{ route == 'app_diplomacy' ? 'active' }}">{{ 'Diplomatie'|trans }}{% if diplomacy_votes > 0 %} <span class="badge" title="{{ 'Offene Abstimmungen'|trans }}">{{ diplomacy_votes }}</span>{% endif %}</a>
             </nav>
 
-            <h2 class="sidebar-title">Schwarzes Brett{% if player.alliance %} <small>[{{ player.alliance.tag }}]</small>{% endif %}</h2>
+            <h2 class="sidebar-title">{{ 'Schwarzes Brett'|trans }}{% if player.alliance %} <small>[{{ player.alliance.tag }}]</small>{% endif %}</h2>
             {% if player.alliance is null %}
-                <p class="muted small board-hint">Das schwarze Brett gehört deiner Allianz. Tritt einer bei oder gründe eine – unter <a href="{{ path('app_alliance') }}">Allianz</a>.</p>
+                <p class="muted small board-hint">{{ 'Das schwarze Brett gehört deiner Allianz. Tritt einer bei oder gründe eine – unter'|trans }} <a href="{{ path('app_alliance') }}">{{ 'Allianz'|trans }}</a>.</p>
             {% elseif not player.allianceRank.canSeeBoard %}
-                <p class="muted small board-hint">Als Anwärter hast du noch keinen Zugang zum schwarzen Brett. Sobald dich der Gründer befördert, siehst du es hier.</p>
+                <p class="muted small board-hint">{{ 'Als Anwärter hast du noch keinen Zugang zum schwarzen Brett. Sobald dich der Gründer befördert, siehst du es hier.'|trans }}</p>
             {% else %}
                 <form method="post" action="{{ path('app_alliance_post') }}" class="board-form">
                     <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
                     <input type="hidden" name="to" value="{{ route }}">
-                    <textarea name="body" rows="3" maxlength="5000" required aria-label="Neuer Beitrag" placeholder="Nachricht an deine {{ player.alliance.type }} …"></textarea>
-                    <button class="btn btn-small" type="submit">Anheften</button>
+                    <textarea name="body" rows="3" maxlength="5000" required aria-label="{{ 'Neuer Beitrag'|trans }}" placeholder="{{ 'Nachricht an deine {type} …'|trans({'{type}': player.alliance.type|trans}) }}"></textarea>
+                    <button class="btn btn-small" type="submit">{{ 'Anheften'|trans }}</button>
                 </form>
                 <div class="board-feed">
                     {% for p in board_posts %}
                         <article class="board-note">
-                            <div class="board-meta"><strong>{{ p.author ? p.author.username : 'ehemaliges Mitglied' }}</strong> · {{ p.createdAt|date('d.m. H:i') }}</div>
+                            <div class="board-meta"><strong>{{ p.author ? p.author.username : ('ehemaliges Mitglied'|trans) }}</strong> · {{ p.createdAt|date('d.m. H:i') }}</div>
                             <div class="message-body">{{ p.body|link_coordinates }}</div>
                         </article>
                     {% else %}
-                        <p class="muted small board-hint">Noch keine Beiträge. Schreib den ersten!</p>
+                        <p class="muted small board-hint">{{ 'Noch keine Beiträge. Schreib den ersten!'|trans }}</p>
                     {% endfor %}
                 </div>
-                <a class="small" href="{{ path('app_alliance') }}">Alle Beiträge und Verwaltung →</a>
+                <a class="small" href="{{ path('app_alliance') }}">{{ 'Alle Beiträge und Verwaltung →'|trans }}</a>
             {% endif %}
         </aside>
     </div>
@@ -166,11 +165,11 @@
     {# Shared confirmation dialog for every button with data-confirm. #}
     <dialog id="confirm-dialog" class="modal" aria-labelledby="confirm-title">
         <form method="dialog">
-            <h2 id="confirm-title">Bist du sicher?</h2>
+            <h2 id="confirm-title">{{ 'Bist du sicher?'|trans }}</h2>
             <p class="modal-text" data-confirm-text></p>
             <div class="modal-actions">
-                <button class="btn btn-secondary" value="cancel" autofocus>Abbrechen</button>
-                <button class="btn btn-danger" value="confirm" data-confirm-ok>Bestätigen</button>
+                <button class="btn btn-secondary" value="cancel" autofocus>{{ 'Abbrechen'|trans }}</button>
+                <button class="btn btn-danger" value="confirm" data-confirm-ok>{{ 'Bestätigen'|trans }}</button>
             </div>
         </form>
     </dialog>

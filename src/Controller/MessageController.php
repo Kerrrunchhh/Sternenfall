@@ -11,6 +11,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 
+use function Symfony\Component\Translation\t;
+
 /** System messages (fleet, combat and spy reports): each one counts as read once opened. */
 class MessageController extends AbstractGameController
 {
@@ -49,7 +51,7 @@ class MessageController extends AbstractGameController
         if ($message->getRecipient()->isSameAs($this->player())) {
             $em->remove($message);
             $em->flush();
-            $this->addFlash('success', 'Nachricht gelöscht.');
+            $this->addFlash('success', t('Nachricht gelöscht.'));
         }
 
         return $this->redirectToRoute('app_messages');
@@ -75,7 +77,7 @@ class MessageController extends AbstractGameController
     {
         $this->currentPlanet();
         $this->messages->markAllRead($this->player());
-        $this->addFlash('success', 'Alle Nachrichten als gelesen markiert.');
+        $this->addFlash('success', t('Alle Nachrichten als gelesen markiert.'));
 
         return $this->redirectToRoute('app_messages');
     }

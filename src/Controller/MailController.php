@@ -16,6 +16,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 
+use function Symfony\Component\Translation\t;
+
 /** "Post": letters between players and the quick contact list. */
 class MailController extends AbstractGameController
 {
@@ -73,7 +75,7 @@ class MailController extends AbstractGameController
             $letter = $this->mailbox->send($this->player(), $form->getString('to'), $form->getString('subject'), $form->getString('body'));
         } catch (GameException $e) {
             // Keep what was written.
-            $this->addFlash('error', $e->getMessage());
+            $this->addFlash('error', $e->translatable());
 
             return $this->renderGame('game/mail_compose.html.twig', $planet, [
                 'to' => $form->getString('to'),
@@ -82,7 +84,7 @@ class MailController extends AbstractGameController
                 'contacts' => $this->contactService->contactsOf($this->player()),
             ], new Response(status: Response::HTTP_UNPROCESSABLE_ENTITY));
         }
-        $this->addFlash('success', \sprintf('Nachricht an %s gesendet.', $letter->getRecipient()?->getUsername()));
+        $this->addFlash('success', t('Nachricht an {player} gesendet.', ['{player}' => $letter->getRecipient()?->getUsername()]));
 
         return $this->redirectToRoute('app_mail', ['box' => 'sent']);
     }
@@ -95,7 +97,7 @@ class MailController extends AbstractGameController
         try {
             $this->mailbox->open($letter, $player);
         } catch (GameException $e) {
-            $this->addFlash('error', $e->getMessage());
+            $this->addFlash('error', $e->translatable());
 
             return $this->redirectToRoute('app_mail');
         }
@@ -121,7 +123,7 @@ class MailController extends AbstractGameController
         $this->addFlash($count > 0 ? 'success' : 'error', match ($count) {
             0 => 'Keine Nachricht ausgewählt.',
             1 => 'Nachricht gelöscht.',
-            default => \sprintf('%d Nachrichten gelöscht.', $count),
+            default => t('{count} Nachrichten gelöscht.', ['{count}' => $count]),
         });
         $box = $request->request->getString('box');
 
@@ -133,7 +135,7 @@ class MailController extends AbstractGameController
     public function requestContact(User $other): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->contactService->request($this->player(), $other), \sprintf('Kontaktanfrage an %s gesendet – oder seine Anfrage angenommen.', $other->getUsername()));
+        $this->attempt(fn () => $this->contactService->request($this->player(), $other), t('Kontaktanfrage an {player} gesendet – oder seine Anfrage angenommen.', ['{player}' => $other->getUsername()]));
 
         return $this->redirectToRoute('app_player', ['id' => $other->getId()]);
     }
@@ -143,7 +145,7 @@ class MailController extends AbstractGameController
     public function acceptContact(Contact $contact, Request $request): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->contactService->accept($contact, $this->player()), \sprintf('%s steht jetzt in deinen Schnellkontakten.', $contact->getRequester()->getUsername()));
+        $this->attempt(fn () => $this->contactService->accept($contact, $this->player()), t('{player} steht jetzt in deinen Schnellkontakten.', ['{player}' => $contact->getRequester()->getUsername()]));
 
         return $this->backTo($request, 'app_mail');
     }
@@ -155,7 +157,7 @@ class MailController extends AbstractGameController
         $this->currentPlanet();
         $player = $this->player();
         $message = match (true) {
-            $contact->isAccepted() => \sprintf('%s aus den Schnellkontakten entfernt.', $contact->other($player)->getUsername()),
+            $contact->isAccepted() => t('{player} aus den Schnellkontakten entfernt.', ['{player}' => $contact->other($player)->getUsername()]),
             $contact->getRequester()->isSameAs($player) => 'Anfrage zurückgezogen.',
             default => 'Anfrage abgelehnt.',
         };

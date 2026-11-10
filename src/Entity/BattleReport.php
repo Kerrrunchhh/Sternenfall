@@ -32,12 +32,33 @@ class BattleReport
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
-    public function __construct(string $hash, string $subject, string $body, \DateTimeImmutable $createdAt)
+    /**
+     * The report in the other languages (subject and body above are the German original).
+     *
+     * @var array<string, array{subject: string, body: string}>|null
+     */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $translations = null;
+
+    /** @param array<string, array{subject: string, body: string}> $translations */
+    public function __construct(string $hash, string $subject, string $body, \DateTimeImmutable $createdAt, array $translations = [])
     {
         $this->hash = $hash;
         $this->subject = mb_substr($subject, 0, 150);
         $this->body = $body;
         $this->createdAt = $createdAt;
+        $this->translations = array_map(static fn (array $text): array => ['subject' => mb_substr($text['subject'], 0, 150), 'body' => $text['body']], $translations) ?: null;
+    }
+
+    /** Subject in the reader's language (German if there is no translation). */
+    public function subjectIn(string $locale): string
+    {
+        return $this->translations[$locale]['subject'] ?? $this->subject;
+    }
+
+    public function bodyIn(string $locale): string
+    {
+        return $this->translations[$locale]['body'] ?? $this->body;
     }
 
     public function getId(): ?int

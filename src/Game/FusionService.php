@@ -8,6 +8,11 @@ use App\Repository\PlanetRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Lock\LockFactory;
+use App\I18n\Num;
+use App\I18n\Lines;
+use Symfony\Contracts\Translation\TranslatableInterface;
+
+use function Symfony\Component\Translation\t;
 
 /**
  * Welds planets together with a fusionator and blows fusions apart again.
@@ -55,12 +60,12 @@ final readonly class FusionService
         $top = $this->above($target);
         $reason = match (true) {
             1 === $target->getPosition() => 'Über diesem Planeten liegt kein Platz mehr – angeschweißt wird immer an den Planeten direkt darüber.',
-            null === $top => \sprintf('Platz %d direkt darüber ist frei – angeschweißt wird immer an den Planeten direkt darüber.', $target->getPosition() - 1),
-            !$top->getOwner()->isSameAs($player) => \sprintf('%s [%s] direkt darüber gehört %s.', $top->getName(), $top->getCoordinates(), $top->getOwner()->getUsername()),
-            $target->isIntegrating($now) => \sprintf('%s wurde invadiert und geht erst am %s in deinen Besitz über.', $target->getName(), $target->getIntegratedAt()->format('d.m.Y H:i')),
-            $top->isIntegrating($now) => \sprintf('%s wurde invadiert und geht erst am %s in deinen Besitz über.', $top->getName(), $top->getIntegratedAt()->format('d.m.Y H:i')),
+            null === $top => t('Platz {value} direkt darüber ist frei – angeschweißt wird immer an den Planeten direkt darüber.', ['{value}' => $target->getPosition() - 1]),
+            !$top->getOwner()->isSameAs($player) => t('{name} [{coords}] direkt darüber gehört {player}.', ['{name}' => $top->getName(), '{coords}' => $top->getCoordinates(), '{player}' => $top->getOwner()->getUsername()]),
+            $target->isIntegrating($now) => t('{name} wurde invadiert und geht erst am {value} in deinen Besitz über.', ['{name}' => $target->getName(), '{value}' => $target->getIntegratedAt()->format('d.m.Y H:i')]),
+            $top->isIntegrating($now) => t('{name} wurde invadiert und geht erst am {value} in deinen Besitz über.', ['{name}' => $top->getName(), '{value}' => $top->getIntegratedAt()->format('d.m.Y H:i')]),
             0 === $capacity => 'Für eine Fusion wird Fusionstechnik benötigt.',
-            $top->getFusionSize() + $target->getFusionSize() > $capacity => \sprintf('Deine Fusionstechnik (Stufe %d) erlaubt Fusionen aus höchstens %d Planeten – zusammen wären es %d.', $capacity, $capacity, $top->getFusionSize() + $target->getFusionSize()),
+            $top->getFusionSize() + $target->getFusionSize() > $capacity => t('Deine Fusionstechnik (Stufe {capacity}) erlaubt Fusionen aus höchstens {capacity} Planeten – zusammen wären es {fusionSize}.', ['{capacity}' => $capacity, '{fusionSize}' => $top->getFusionSize() + $target->getFusionSize()]),
             default => null,
         };
 
@@ -72,24 +77,24 @@ final readonly class FusionService
      *
      * @param list<Planet> $planets top planet first
      *
-     * @return list<string>
+     * @return list<TranslatableInterface>
      */
     public function pendingWork(array $planets): array
     {
         $work = [];
         foreach ($planets as $i => $planet) {
             foreach ($planet->getBuildingQueue() as $order) {
-                $work[] = \sprintf('Bau von %s Stufe %d auf %s', $order->getBuildingType()->label(), $order->getTargetLevel(), $planet->getName());
+                $work[] = t('Bau von {label} Stufe {targetLevel} auf {name}', ['{label}' => t($order->getBuildingType()->label()), '{targetLevel}' => $order->getTargetLevel(), '{name}' => $planet->getName()]);
             }
             if ($i > 0) {
                 foreach ($planet->getShipyardOrders()->toArray() as $order) {
-                    $work[] = \sprintf('%d × %s in der Werft von %s', $order->getRemaining(), $order->getShipType()->label(), $planet->getName());
+                    $work[] = t('{remaining} × {label} in der Werft von {name}', ['{remaining}' => $order->getRemaining(), '{label}' => t($order->getShipType()->label()), '{name}' => $planet->getName()]);
                 }
             }
         }
         $player = $planets[0]->getOwner();
         if ($player->isResearching()) {
-            $work[] = \sprintf('Forschung an %s Stufe %d', $player->getResearchType()->label(), $player->getResearchTargetLevel());
+            $work[] = t('Forschung an {label} Stufe {researchTargetLevel}', ['{label}' => t($player->getResearchType()->label()), '{researchTargetLevel}' => $player->getResearchTargetLevel()]);
         }
 
         return $work;
@@ -105,7 +110,7 @@ final readonly class FusionService
     public function fuseOnArrival(Planet $target, int $fusionators): int
     {
         if ($fusionators < 1) {
-            throw new GameException('Zum Fusionieren wird ein Fusionator benötigt.');
+            throw new GameException(t('Zum Fusionieren wird ein Fusionator benötigt.'));
         }
         $this->planets->transaction($target, function (Planet $target, \DateTimeImmutable $now): void {
             $this->weld($target, $now);
@@ -151,9 +156,9 @@ final readonly class FusionService
             $this->em->remove($planet);
         }
 
-        $this->inbox->send($top->getOwner(), \sprintf('Fusion von %s [%s]', $top->getName(), $top->getCoordinates()), implode("\n", [
-            \sprintf('%s wurde an %s angeschweißt. Die Fusion umfasst jetzt %d Planeten (Plätze %d–%d). Dabei wurde %d Fusionator verbraucht.', $chain[0]->getName(), $top->getName(), $top->getFusionSize(), $top->getPosition(), $top->getLastPosition(), $used),
-            ...([] === $cancelled ? [] : ['', 'Abgebrochen (Rohstoffe erstattet):', ...array_map(static fn (string $w) => '  '.$w, $cancelled)]),
+        $this->inbox->send($top->getOwner(), t('Fusion von {name} [{coords}]', ['{name}' => $top->getName(), '{coords}' => $top->getCoordinates()]), new Lines([
+            t('{name} wurde an {name2} angeschweißt. Die Fusion umfasst jetzt {fusionSize} Planeten (Plätze {position}–{lastPosition}). Dabei wurde {used} Fusionator verbraucht.', ['{name}' => $chain[0]->getName(), '{name2}' => $top->getName(), '{fusionSize}' => $top->getFusionSize(), '{position}' => $top->getPosition(), '{lastPosition}' => $top->getLastPosition(), '{used}' => $used]),
+            ...([] === $cancelled ? [] : ['', t('Abgebrochen (Rohstoffe erstattet):'), ...array_map(static fn (TranslatableInterface $w): TranslatableInterface => new Lines(['  ', $w], ''), $cancelled)]),
         ]));
     }
 
@@ -161,12 +166,12 @@ final readonly class FusionService
     {
         $this->withFleetLock(fn () => $this->planets->transaction($top, function (Planet $top, \DateTimeImmutable $now): void {
             if (!$top->isFused()) {
-                throw new GameException('Dieser Planet ist keine Fusion.');
+                throw new GameException(t('Dieser Planet ist keine Fusion.'));
             }
 
             $cost = Fusion::splitCost($top);
             if (!$top->getResources()->covers($cost)) {
-                throw new GameException(\sprintf('Zum Sprengen werden %s Wasserstoff benötigt.', number_format($cost->hydrogen, 0, ',', '.')));
+                throw new GameException(t('Zum Sprengen werden {hydrogen} Wasserstoff benötigt.', ['{hydrogen}' => new Num($cost->hydrogen)]));
             }
             $top->setResources($top->getResources()->subtract($cost));
 

@@ -1,19 +1,19 @@
 {# Form for a new letter or an answer. Needs: to, subject, body; optional: contacts. #}
 <form method="post" action="{{ path('app_mail_send') }}" class="mail-form">
     <input type="hidden" name="_token" value="{{ csrf_token('mail') }}">
-    <label>An
-        <input type="text" name="to" value="{{ to }}" required maxlength="180" list="mail-contacts" autocomplete="off" placeholder="Spielername">
+    <label>{{ 'An'|trans }}
+        <input type="text" name="to" value="{{ to }}" required maxlength="180" list="mail-contacts" autocomplete="off" placeholder="{{ 'Spielername'|trans }}">
     </label>
     {% if contacts is defined and contacts is not empty %}
         <datalist id="mail-contacts">
             {% for c in contacts %}<option value="{{ c.username }}"></option>{% endfor %}
         </datalist>
     {% endif %}
-    <label>Betreff
+    <label>{{ 'Betreff'|trans }}
         <input type="text" name="subject" value="{{ subject }}" maxlength="{{ constant('App\\Entity\\PlayerMessage::MAX_SUBJECT') }}">
     </label>
-    <label>Nachricht
+    <label>{{ 'Nachricht'|trans }}
         <textarea name="body" rows="10" required maxlength="{{ constant('App\\Entity\\PlayerMessage::MAX_BODY') }}" {{ body is empty ? 'autofocus' }}>{{ body }}</textarea>
     </label>
-    <button class="btn" type="submit" id="mail-send">Senden</button>
+    <button class="btn" type="submit" id="mail-send">{{ 'Senden'|trans }}</button>
 </form>

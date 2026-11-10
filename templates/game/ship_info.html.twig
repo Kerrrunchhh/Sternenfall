@@ -1,64 +1,64 @@
 {% extends 'game/_layout.html.twig' %}
 {% import 'game/_macros.html.twig' as ui %}
 
-{% block title %}{{ type.label }} – {{ game_name }}{% endblock %}
+{% block title %}{{ type.label|trans }} – {{ game_name }}{% endblock %}
 
 {% block content %}
     {% set defense = type.stationary %}
-    <p><a href="{{ path('app_overview') }}">← Übersicht</a> · <a href="{{ defense ? path('app_defense') : path('app_shipyard', type.combatShip ? {} : {tab: 'civil'}) }}">{{ defense ? 'Planetenverteidigung' : 'Werft' }}</a></p>
+    <p><a href="{{ path('app_overview') }}">{{ '← Übersicht'|trans }}</a> · <a href="{{ defense ? path('app_defense') : path('app_shipyard', type.combatShip ? {} : {tab: 'civil'}) }}">{{ defense ? ('Planetenverteidigung'|trans) : ('Werft'|trans) }}</a></p>
     {% set picture = game_picture(defense ? 'defense' : 'ships', type.value) %}
     <article class="panel building ship {{ picture ? 'has-picture' }}">
-        {% if picture %}<img class="card-picture" src="{{ asset(picture) }}" alt="{{ type.label }}">{% endif %}
+        {% if picture %}<img class="card-picture" src="{{ asset(picture) }}" alt="{{ type.label|trans }}">{% endif %}
         <div class="card-body">
             <div class="building-head">
                 <h1>
-                    {% if type.combatShip or type.stationary %}<span class="firing-order" title="Schussreihenfolge">#{{ type.firingOrder }}</span>{% endif %}
-                    {{ type.label }}
-                    {% if type.shipClass %}<span class="ship-class">{{ type.shipClass.label }}</span>{% endif %}
+                    {% if type.combatShip or type.stationary %}<span class="firing-order" title="{{ 'Schussreihenfolge'|trans }}">#{{ type.firingOrder }}</span>{% endif %}
+                    {{ type.label|trans }}
+                    {% if type.shipClass %}<span class="ship-class">{{ type.shipClass.label|trans }}</span>{% endif %}
                 </h1>
-                <span class="level">{{ defense ? 'Auf' : 'Im Hangar von' }} {{ planet.name }}: {{ stationed|number_format(0, ',', '.') }}</span>
+                <span class="level">{{ defense ? ('Auf'|trans) : ('Im Hangar von'|trans) }} {{ planet.name }}: {{ stationed|num }}</span>
             </div>
-            <p class="building-desc">{{ type.description }}</p>
+            <p class="building-desc">{{ type.description|trans }}</p>
 
-            <h2 class="section-title">Werte mit deiner Forschung</h2>
+            <h2 class="section-title">{{ 'Werte mit deiner Forschung'|trans }}</h2>
             <dl class="stats">
-                {{ ui.ship_stat('Angriff', stats.attack) }}
-                {{ ui.ship_stat('Schild', stats.shield) }}
-                <div><dt>Hülle</dt><dd>{{ spec.hull|number_format(0, ',', '.') }}</dd></div>
+                {{ ui.ship_stat(('Angriff'|trans), stats.attack) }}
+                {{ ui.ship_stat(('Schild'|trans), stats.shield) }}
+                <div><dt>{{ 'Hülle'|trans }}</dt><dd>{{ spec.hull|num }}</dd></div>
                 {% if not defense %}
-                    {{ ui.ship_stat('Tempo', stats.speed) }}
+                    {{ ui.ship_stat(('Tempo'|trans), stats.speed) }}
                     {% if type.salvageCapacity > 0 %}
-                        <div><dt>Bergeraum</dt><dd>{{ type.salvageCapacity|number_format(0, ',', '.') }}</dd></div>
+                        <div><dt>{{ 'Bergeraum'|trans }}</dt><dd>{{ type.salvageCapacity|num }}</dd></div>
                     {% else %}
-                        <div><dt>Fracht</dt><dd>{{ type.cargo > 0 ? type.cargo|number_format(0, ',', '.') : '–' }}</dd></div>
+                        <div><dt>{{ 'Fracht'|trans }}</dt><dd>{{ type.cargo > 0 ? type.cargo|num : '–' }}</dd></div>
                     {% endif %}
-                    <div><dt>Wasserstoff/Flug</dt><dd>{{ spec.fuel|number_format(0, ',', '.') }}</dd></div>
-                    <div><dt>Besatzung</dt><dd>{{ spec.crew|number_format(0, ',', '.') }}</dd></div>
-                    <div><dt>Antrieb</dt><dd>{{ spec.drive.label }}</dd></div>
+                    <div><dt>{{ 'Wasserstoff/Flug'|trans }}</dt><dd>{{ spec.fuel|num }}</dd></div>
+                    <div><dt>{{ 'Besatzung'|trans }}</dt><dd>{{ spec.crew|num }}</dd></div>
+                    <div><dt>{{ 'Antrieb'|trans }}</dt><dd>{{ spec.drive.label|trans }}</dd></div>
                 {% endif %}
             </dl>
             {% set notes = stats|map(st => st.notes)|reduce((all, n) => all|merge(n), []) %}
             {% if notes is not empty %}
-                <p class="research-effects small"><span class="muted">Deine Forschung:</span> {{ notes|join(' · ') }}</p>
+                <p class="research-effects small">{{ '<span class="muted">Deine Forschung:</span> {notes}'|trans({'{notes}': notes|map(n => n|trans)|join(' · ')|e})|raw }}</p>
             {% endif %}
             {% if type.weaponResearch or type.shieldResearch %}
                 <p class="muted small">
-                    {% if type.weaponResearch %}Angriff steigt mit {{ type.weaponResearch.label }}{% endif %}{% if type.weaponResearch and type.shieldResearch %}, {% endif %}
-                    {% if type.shieldResearch %}Schild mit {{ type.shieldResearch.label }}{% endif %}
-                    – jede Stufe +4 %, Stufe 25 verdoppelt den Wert.
+                    {% if type.weaponResearch %}{{ 'Angriff steigt mit {label}'|trans({'{label}': type.weaponResearch.label|trans}) }}{% endif %}{% if type.weaponResearch and type.shieldResearch %}, {% endif %}
+                    {% if type.shieldResearch %}{{ 'Schild mit {label}'|trans({'{label}': type.shieldResearch.label|trans}) }}{% endif %}
+                    {{ '– jede Stufe +4 %, Stufe 25 verdoppelt den Wert.'|trans }}
                 </p>
             {% endif %}
 
-            <h2 class="section-title">Bau</h2>
+            <h2 class="section-title">{{ 'Bau'|trans }}</h2>
             <div class="cost">
                 {{ ui.cost(cost, planet) }}
-                {% if credits > 0 %}<span class="{{ credits > player.credits ? 'lacking' }}">Credits {{ credits|number_format(0, ',', '.') }}</span>{% endif %}
-                <span class="duration">Dauer {{ seconds|format_duration }} <span class="muted">(Werft auf {{ planet.name }})</span></span>
+                {% if credits > 0 %}<span class="{{ credits > player.credits ? 'lacking' }}">{{ 'Credits {credits}'|trans({'{credits}': credits|num}) }}</span>{% endif %}
+                {{ '<span class="duration">Dauer {seconds} <span class="muted">(Werft auf {name})</span></span>'|trans({'{seconds}': seconds|format_duration|e, '{name}': planet.name|e})|raw }}
             </div>
             {% if missing is not empty %}
-                <p class="requirement">Benötigt: {{ missing|join(', ') }}</p>
+                <p class="requirement">{{ 'Benötigt: {missing}'|trans({'{missing}': missing|map(m => m|trans)|join(', ')}) }}</p>
             {% else %}
-                <p class="small"><a href="{{ defense ? path('app_defense') : path('app_shipyard', type.combatShip ? {} : {tab: 'civil'}) }}#order-{{ type.value }}">Jetzt bauen →</a></p>
+                <p class="small"><a href="{{ defense ? path('app_defense') : path('app_shipyard', type.combatShip ? {} : {tab: 'civil'}) }}#order-{{ type.value }}">{{ 'Jetzt bauen →'|trans }}</a></p>
             {% endif %}
         </div>
     </article>

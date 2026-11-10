@@ -24,6 +24,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Contracts\Service\Attribute\Required;
+use Symfony\Contracts\Translation\TranslatableInterface;
 
 /**
  * Shared plumbing for all in-game pages: the current planet and the data of the top bar.
@@ -118,13 +119,13 @@ abstract class AbstractGameController extends AbstractController
      *
      * @param callable(): void $action
      */
-    protected function attempt(callable $action, string $successMessage): void
+    protected function attempt(callable $action, string|TranslatableInterface $successMessage): void
     {
         try {
             $action();
             $this->addFlash('success', $successMessage);
         } catch (GameException $e) {
-            $this->addFlash('error', $e->getMessage());
+            $this->addFlash('error', $e->translatable());
         }
     }
 

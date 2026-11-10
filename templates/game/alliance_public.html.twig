@@ -8,41 +8,41 @@
         {{ ui.picture(alliance.image, 'alliances', alliance.name) }}
         <div class="profile-info">
             <h1>{{ alliance.name }} <small>[{{ alliance.tag }}]</small></h1>
-            <p class="muted">{{ alliance.type }} · {{ alliance.members|length }} Mitglied{{ alliance.members|length == 1 ? '' : 'er' }} · gegründet {{ alliance.createdAt|date('d.m.Y') }}</p>
+            <p class="muted">{{ (alliance.members|length == 1 ? '{type} · {count} Mitglied · gegründet {createdAt}' : '{type} · {count} Mitglieder · gegründet {createdAt}')|trans({'{type}': alliance.type|trans, '{count}': alliance.members|length, '{createdAt}': alliance.createdAt|date('d.m.Y')}) }}</p>
             {% set stats = alliance_stats(alliance) %}
             <dl class="stats alliance-stats">
-                <div><dt>Planeten</dt><dd>{{ stats.planets|number_format(0, ',', '.') }}</dd></div>
-                <div><dt>Punkte</dt><dd>{{ stats.points|number_format(0, ',', '.') }}</dd></div>
-                <div><dt>Ø Punkte</dt><dd>{{ stats.avg_points|number_format(0, ',', '.') }}</dd></div>
-                <div><dt>Kampferfahrung</dt><dd>{{ stats.experience|number_format(0, ',', '.') }}</dd></div>
-                <div><dt>Ø Kampferfahrung</dt><dd>{{ stats.avg_experience|number_format(0, ',', '.') }}</dd></div>
+                <div><dt>{{ 'Planeten'|trans }}</dt><dd>{{ stats.planets|num }}</dd></div>
+                <div><dt>{{ 'Punkte'|trans }}</dt><dd>{{ stats.points|num }}</dd></div>
+                <div><dt>{{ 'Ø Punkte'|trans }}</dt><dd>{{ stats.avg_points|num }}</dd></div>
+                <div><dt>{{ 'Kampferfahrung'|trans }}</dt><dd>{{ stats.experience|num }}</dd></div>
+                <div><dt>{{ 'Ø Kampferfahrung'|trans }}</dt><dd>{{ stats.avg_experience|num }}</dd></div>
             </dl>
             {# Members stay private: the public page shows no member list. #}
-            <p><a class="btn btn-small btn-secondary" href="{{ path('app_mail_compose', {to: '[' ~ alliance.tag ~ ']'}) }}" id="write-alliance">✉ Nachricht an {{ alliance.type == 'Allianz' ? 'die Allianz' : (alliance.type == 'Orden' ? 'den Orden' : (alliance.type == 'Syndikat' ? 'das Syndikat' : 'die Handelsgilde')) }}</a> <span class="muted small">geht an die Gründerin bzw. den Gründer</span></p>
+            <p><a class="btn btn-small btn-secondary" href="{{ path('app_mail_compose', {to: '[' ~ alliance.tag ~ ']'}) }}" id="write-alliance">{{ '✉ Nachricht an {Allianz}</a> <span class="muted small">geht an die Gründerin bzw. den Gründer</span>'|trans({'{Allianz}': (alliance.type == 'Allianz' ? ('die Allianz'|trans) : (alliance.type == 'Orden' ? ('den Orden'|trans) : (alliance.type == 'Syndikat' ? ('das Syndikat'|trans) : ('die Handelsgilde'|trans))))|e})|raw }}</p>
             <div class="apply-box">
                 {% if player.alliance and player.alliance.id == alliance.id %}
-                    <a class="btn btn-small btn-secondary" href="{{ path('app_alliance') }}">Zur Allianzverwaltung</a>
+                    <a class="btn btn-small btn-secondary" href="{{ path('app_alliance') }}">{{ 'Zur Allianzverwaltung'|trans }}</a>
                 {% elseif request and not request.invitation %}
-                    <button class="btn btn-small" type="button" disabled>Bewerbung abgeschickt</button>
-                    <span class="muted small">am {{ request.createdAt|date('d.m.Y H:i') }} – die Führung entscheidet darüber.</span>
+                    <button class="btn btn-small" type="button" disabled>{{ 'Bewerbung abgeschickt'|trans }}</button>
+                    <span class="muted small">{{ 'am {createdAt} – die Führung entscheidet darüber.'|trans({'{createdAt}': request.createdAt|date('d.m.Y H:i')}) }}</span>
                 {% elseif not alliance.admits(player) %}
-                    <button class="btn btn-small" type="button" disabled>Bewerben</button>
-                    <span class="muted small">In {{ alliance.type == 'Allianz' ? 'dieser Allianz' : (alliance.type == 'Orden' ? 'diesem Orden' : (alliance.type == 'Syndikat' ? 'diesem Syndikat' : 'dieser Handelsgilde')) }} sind nur {{ alliance.lifeForm.label }}.</span>
+                    <button class="btn btn-small" type="button" disabled>{{ 'Bewerben'|trans }}</button>
+                    <span class="muted small">{{ 'In {Allianz} sind nur {label}.'|trans({'{Allianz}': alliance.type == 'Allianz' ? ('dieser Allianz'|trans) : (alliance.type == 'Orden' ? ('diesem Orden'|trans) : (alliance.type == 'Syndikat' ? ('diesem Syndikat'|trans) : ('dieser Handelsgilde'|trans))), '{label}': alliance.lifeForm.label|trans}) }}</span>
                 {% elseif player.alliance %}
-                    <button class="btn btn-small" type="button" disabled>Bewerben</button>
-                    <span class="muted small">Du bist bereits Mitglied von [{{ player.alliance.tag }}]. Um dich hier zu bewerben, musst du dort erst austreten.</span>
+                    <button class="btn btn-small" type="button" disabled>{{ 'Bewerben'|trans }}</button>
+                    <span class="muted small">{{ 'Du bist bereits Mitglied von [{tag}]. Um dich hier zu bewerben, musst du dort erst austreten.'|trans({'{tag}': player.alliance.tag}) }}</span>
                 {% else %}
                     <form method="post" action="{{ path('app_alliance_apply', {id: alliance.id}) }}">
                         <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
-                        <button class="btn" type="submit">{{ request ? 'Einladung annehmen und beitreten' : 'Bewerben' }}</button>
+                        <button class="btn" type="submit">{{ request ? ('Einladung annehmen und beitreten'|trans) : ('Bewerben'|trans) }}</button>
                     </form>
-                    <span class="muted small">{{ request ? 'Du wurdest eingeladen.' : 'Die Führung von ' ~ alliance.name ~ ' entscheidet über deine Bewerbung.' }}</span>
+                    <span class="muted small">{{ request ? ('Du wurdest eingeladen.'|trans) : ('Die Führung von'|trans ~ ' ') ~ alliance.name ~ (' ' ~ 'entscheidet über deine Bewerbung.'|trans) }}</span>
                 {% endif %}
             </div>
             {% if alliance.externalText %}
                 <div class="message-body">{{ alliance.externalText }}</div>
             {% else %}
-                <p class="muted">{{ alliance.name }} hat sich noch nicht vorgestellt.</p>
+                <p class="muted">{{ '{name} hat sich noch nicht vorgestellt.'|trans({'{name}': alliance.name}) }}</p>
             {% endif %}
         </div>
     </section>

@@ -10,6 +10,8 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Output\OutputInterface;
 
+use function Symfony\Component\Translation\t;
+
 /**
  * Announces finished research by e-mail (for players who want it). Run it every
  * minute by cron:  * * * * * cd /var/www/earthlost && php bin/console app:mail-research
@@ -34,7 +36,7 @@ final class MailResearchCommand
             if ($user->isOnVacation($now)) {
                 continue;
             }
-            $this->mailer->notify($user, 'research', 'Forschung abgeschlossen', \sprintf('%s Stufe %d ist fertig erforscht. Dein Forschungslabor wartet auf den nächsten Auftrag.', $user->getResearchType()?->label() ?? 'Deine Forschung', $user->getResearchTargetLevel()));
+            $this->mailer->notify($user, 'research', t('Forschung abgeschlossen'), t('{value} Stufe {researchTargetLevel} ist fertig erforscht. Dein Forschungslabor wartet auf den nächsten Auftrag.', ['{value}' => $user->getResearchType()?->label() ?? 'Deine Forschung', '{researchTargetLevel}' => $user->getResearchTargetLevel()]));
             $user->markResearchMailSent();
         }
         $this->em->flush();

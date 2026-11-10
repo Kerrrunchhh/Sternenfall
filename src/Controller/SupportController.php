@@ -13,6 +13,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 
+use function Symfony\Component\Translation\t;
+
 /** "Hilfe & Meldungen": report a player, make a suggestion, report a bug. */
 class SupportController extends AbstractGameController
 {
@@ -42,11 +44,11 @@ class SupportController extends AbstractGameController
         $kind = TicketKind::tryFrom($form->getString('kind')) ?? TicketKind::Suggestion;
         try {
             $ticket = $this->support->create($this->player(), $kind, $form->getString('subject'), $form->getString('body'), $form->getString('reported'));
-            $this->addFlash('success', 'Danke! Deine Meldung ist bei den Admins angekommen.');
+            $this->addFlash('success', t('Danke! Deine Meldung ist bei den Admins angekommen.'));
 
             return $this->redirectToRoute('app_support_show', ['id' => $ticket->getId()]);
         } catch (GameException $e) {
-            $this->addFlash('error', $e->getMessage());
+            $this->addFlash('error', $e->translatable());
 
             return $this->redirectToRoute('app_support', ['kind' => $kind->value, 'report' => $form->getString('reported')]);
         }
@@ -68,7 +70,7 @@ class SupportController extends AbstractGameController
     public function reply(Ticket $ticket, Request $request): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->support->reply($ticket, $this->player(), $request->request->getString('body')), 'Antwort gesendet.');
+        $this->attempt(fn () => $this->support->reply($ticket, $this->player(), $request->request->getString('body')), t('Antwort gesendet.'));
 
         return $this->redirectToRoute('app_support_show', ['id' => $ticket->getId()]);
     }

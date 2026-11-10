@@ -1,63 +1,57 @@
 {% extends 'game/_layout.html.twig' %}
 {% import 'game/_macros.html.twig' as ui %}
 
-{% block title %}Fusion – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Fusion – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    <h1>Fusion</h1>
+    <h1>{{ 'Fusion'|trans }}</h1>
 
     {% if planet.fused %}
         <section class="panel">
-            <h2>{{ planet.name }} ist eine Fusion aus {{ planet.fusionSize }} Planeten</h2>
+            <h2>{{ '{name} ist eine Fusion aus {fusionSize} Planeten'|trans({'{name}': planet.name, '{fusionSize}': planet.fusionSize}) }}</h2>
             <table class="table">
-                <tr><td>{{ planet.position }}</td><td>{{ planet.name }} <span class="muted small">(oberster Planet)</span></td></tr>
+                <tr><td>{{ planet.position }}</td><td>{{ '{name} <span class="muted small">(oberster Planet)</span>'|trans({'{name}': planet.name|e})|raw }}</td></tr>
                 {% for part in planet.fusedPlanets %}
                     <tr><td>{{ part.position }}</td><td>{{ part.name }}</td></tr>
                 {% endfor %}
             </table>
-            <p><strong>Schild: {{ shield|number_format(0, ',', '.') }}</strong> <span class="muted small">({{ planet.buildingLevel(enum('App\\Game\\BuildingType').ShieldGenerator) }} Stufen Schildgenerator)</span></p>
+            <p>{{ '<strong>Schild: {shield}</strong> <span class="muted small">({buildingLevel} Stufen Schildgenerator)</span>'|trans({'{shield}': shield|num|e, '{buildingLevel}': planet.buildingLevel(enum('App\\Game\\BuildingType').ShieldGenerator)|e})|raw }}</p>
             <ul class="muted small">
-                <li>Ist die Angriffskraft der Angreifer, die einen Kampf überstehen, größer als der Schild, wird der unterste Planet abgesprengt. Er nimmt seinen Anteil (1/{{ planet.fusionSize }}) an Rohstoffen, Bevölkerung und Gebäudestufen mit. Danach ist der Schild wieder voll.</li>
-                <li>Eine gelungene Invasion sprengt ebenfalls nur einen Planeten ab und übernimmt ihn. Die Chance hängt von der Zahl der Invasionsschiffe und der Bevölkerung der ganzen Fusion ab (1 Invasionsschiff je ca. 20.000 Einwohner, immer 1–99 %).</li>
-                <li>Eine Forschung, die auf {{ planet.name }} läuft, läuft weiter, bis auch dieser Planet invadiert wird.</li>
+                <li>{{ 'Ist die Angriffskraft der Angreifer, die einen Kampf überstehen, größer als der Schild, wird der unterste Planet abgesprengt. Er nimmt seinen Anteil (1/{fusionSize}) an Rohstoffen, Bevölkerung und Gebäudestufen mit. Danach ist der Schild wieder voll.'|trans({'{fusionSize}': planet.fusionSize}) }}</li>
+                <li>{{ 'Eine gelungene Invasion sprengt ebenfalls nur einen Planeten ab und übernimmt ihn. Die Chance hängt von der Zahl der Invasionsschiffe und der Bevölkerung der ganzen Fusion ab (1 Invasionsschiff je ca. 20.000 Einwohner, immer 1–99 %).'|trans }}</li>
+                <li>{{ 'Eine Forschung, die auf {name} läuft, läuft weiter, bis auch dieser Planet invadiert wird.'|trans({'{name}': planet.name}) }}</li>
             </ul>
-            <p class="muted">Beim Sprengen entstehen die Planeten wieder. Gebäudestufen, Rohstoffe und Bevölkerung werden so gleichmäßig wie möglich verteilt, die Schiffe bleiben auf {{ planet.name }}. <strong>Alle Verteidigungsanlagen werden dabei zerstört.</strong></p>
+            <p class="muted">{{ 'Beim Sprengen entstehen die Planeten wieder. Gebäudestufen, Rohstoffe und Bevölkerung werden so gleichmäßig wie möglich verteilt, die Schiffe bleiben auf {name}. <strong>Alle Verteidigungsanlagen werden dabei zerstört.</strong>'|trans({'{name}': planet.name|e})|raw }}</p>
             <form method="post" action="{{ path('app_fusion_split') }}" class="inline-action">
                 <input type="hidden" name="_token" value="{{ csrf_token('fusion') }}">
-                <span class="{{ split_cost.hydrogen > planet.resources.hydrogen ? 'lacking' }}">Kosten: {{ split_cost.hydrogen|number_format(0, ',', '.') }} Wasserstoff</span>
-                <button class="btn btn-danger" type="submit" id="fusion-split" {{ split_cost.hydrogen > planet.resources.hydrogen ? 'disabled' }}>Fusion sprengen</button>
+                <span class="{{ split_cost.hydrogen > planet.resources.hydrogen ? 'lacking' }}">{{ 'Kosten: {hydrogen} Wasserstoff'|trans({'{hydrogen}': split_cost.hydrogen|num}) }}</span>
+                <button class="btn btn-danger" type="submit" id="fusion-split" {{ split_cost.hydrogen > planet.resources.hydrogen ? 'disabled' }}>{{ 'Fusion sprengen'|trans }}</button>
             </form>
         </section>
     {% endif %}
 
     <section class="panel">
-        <h2>An den Planeten darüber anschweißen</h2>
+        <h2>{{ 'An den Planeten darüber anschweißen'|trans }}</h2>
         <p class="muted">
-            Ein Fusionator wird immer zu dem Planeten geschickt, der angeschweißt werden soll – also zum unteren.
-            Er verschweißt ihn mit deinem Planeten direkt darüber (auch mit einer bestehenden Fusion, die dann wächst).
-            Schicke dazu eine Flotte mit Fusionator mit dem Auftrag <a href="{{ path('app_fleet', {galaxy: planet.galaxy, system: planet.system, position: planet.position, mission: 'fuse'}) }}">„Fusionieren“</a> zu diesem Planeten;
-            steht sie schon hier, geht es sofort. Pro Fusion wird ein Fusionator verbraucht, weitere fliegen zurück.
-            <strong>Fusionen lohnen sich:</strong> Sie zählen immer als blauer Planet (doppeltes Bevölkerungswachstum) und produzieren alle Rohstoffe ×1,5.
-            Gebäudestufen, Rohstoffe, Bevölkerung, Schiffe und Flotten werden zusammengelegt. Laufende Gebäudebauten und die laufende Forschung werden abgebrochen.
-            Invadierte Planeten können erst nach 4 Wochen fusioniert werden. Fusionatoren bauen nur Händler.
+            {{ 'Ein Fusionator wird immer zu dem Planeten geschickt, der angeschweißt werden soll – also zum unteren. Er verschweißt ihn mit deinem Planeten direkt darüber (auch mit einer bestehenden Fusion, die dann wächst). Schicke dazu eine Flotte mit Fusionator mit dem Auftrag'|trans }} <a href="{{ path('app_fleet', {galaxy: planet.galaxy, system: planet.system, position: planet.position, mission: 'fuse'}) }}">{{ '„Fusionieren“</a> zu diesem Planeten; steht sie schon hier, geht es sofort. Pro Fusion wird ein Fusionator verbraucht, weitere fliegen zurück. <strong>Fusionen lohnen sich:</strong> Sie zählen immer als blauer Planet (doppeltes Bevölkerungswachstum) und produzieren alle Rohstoffe ×1,5. Gebäudestufen, Rohstoffe, Bevölkerung, Schiffe und Flotten werden zusammengelegt. Laufende Gebäudebauten und die laufende Forschung werden abgebrochen. Invadierte Planeten können erst nach 4 Wochen fusioniert werden. Fusionatoren bauen nur Händler.'|trans|raw }}
         </p>
         <table class="table">
-            <tr><td>Größte erlaubte Fusion (Fusionstechnik)</td><td class="num">{{ capacity }} Planet{{ capacity == 1 ? '' : 'en' }}</td></tr>
-            <tr><td>{{ planet.name }} würde angeschweißt an</td><td class="num">{% if top %}{{ top.name }} {{ ui.coords(top.coordinates) }}{% else %}–{% endif %}</td></tr>
+            <tr><td>{{ 'Größte erlaubte Fusion (Fusionstechnik)'|trans }}</td><td class="num">{{ (capacity == 1 ? '{count} Planet' : '{count} Planeten')|trans({'{count}': capacity}) }}</td></tr>
+            <tr><td>{{ '{name} würde angeschweißt an'|trans({'{name}': planet.name}) }}</td><td class="num">{% if top %}{{ top.name }} {{ ui.coords(top.coordinates) }}{% else %}–{% endif %}</td></tr>
         </table>
 
         {% if top %}
-            <h3>Vorschau</h3>
+            <h3>{{ 'Vorschau'|trans }}</h3>
             <table class="table">
                 <tr class="table-head">
-                    <td>Gebäude</td>
+                    <td>{{ 'Gebäude'|trans }}</td>
                     <td class="num">{{ top.name }} [{{ top.position }}{{ top.fused ? '-' ~ top.lastPosition }}]</td>
                     <td class="num">{{ planet.name }} [{{ planet.position }}{{ planet.fused ? '-' ~ planet.lastPosition }}]</td>
-                    <td class="num">Nach Fusion</td>
+                    <td class="num">{{ 'Nach Fusion'|trans }}</td>
                 </tr>
                 {% for row in preview %}
                     <tr>
-                        <td>{{ row.type.label }}</td>
+                        <td>{{ row.type.label|trans }}</td>
                         {% for level in row.levels %}<td class="num">{{ level }}</td>{% endfor %}
                         <td class="num"><strong>{{ row.total }}</strong></td>
                     </tr>
@@ -65,14 +59,14 @@
             </table>
         {% endif %}
 
-        {% if stop_reason %}<p class="muted">{{ stop_reason }}</p>{% endif %}
+        {% if stop_reason %}<p class="muted">{{ stop_reason|trans }}</p>{% endif %}
         {% if integrating %}
-            <p class="warning">{{ planet.name }} wurde invadiert und geht erst am {{ planet.integratedAt|date('d.m.Y H:i') }} in deinen Besitz über. Bis dahin kann er nicht fusioniert werden.</p>
+            <p class="warning">{{ '{name} wurde invadiert und geht erst am {integratedAt} in deinen Besitz über. Bis dahin kann er nicht fusioniert werden.'|trans({'{name}': planet.name, '{integratedAt}': planet.integratedAt|date('d.m.Y H:i')}) }}</p>
         {% endif %}
         {% if pending is not empty %}
             <div class="warning">
-                Bei der Fusion wird abgebrochen (Rohstoffe werden erstattet):
-                <ul>{% for work in pending %}<li>{{ work }}</li>{% endfor %}</ul>
+                {{ 'Bei der Fusion wird abgebrochen (Rohstoffe werden erstattet):'|trans }}
+                <ul>{% for work in pending %}<li>{{ work|trans }}</li>{% endfor %}</ul>
             </div>
         {% endif %}
 

@@ -22,6 +22,8 @@ use Symfony\Component\Clock\MockClock;
 /** Letters between players, quick contacts and who sees whose online status. */
 final class PlayerMailTest extends TestCase
 {
+    use RendersMessages;
+
     private \DateTimeImmutable $now;
     private User $anna;
     private User $bert;
@@ -85,7 +87,7 @@ final class PlayerMailTest extends TestCase
 
         [$subject, $body] = Mailbox::replyDraft($letter);
         self::assertSame('Re: Angriff?', $subject);
-        self::assertStringContainsString("Anna schrieb am 01.01.2026 13:00:\n> Zeile 1\n> Zeile 2", $body);
+        self::assertStringContainsString("Anna schrieb am 01.01.2026 13:00:\n> Zeile 1\n> Zeile 2", self::text($body));
         self::assertSame('Re: Angriff?', Mailbox::replyDraft(new PlayerMessage($this->bert, $this->anna, $subject, 'ok', $this->now))[0], 'no "Re: Re:"');
     }
 

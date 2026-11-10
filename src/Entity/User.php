@@ -113,6 +113,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $vacationReason = null;
 
+    /** Language of the interface, system messages and e-mails (see translation.yaml enabled_locales). */
+    #[ORM\Column(length: 5, options: ['default' => 'de'])]
+    private string $locale = 'de';
+
     /** Extended account (paid subscription) runs until then. */
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $extendedUntil = null;
@@ -706,5 +710,15 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         $this->subscriptionId = $id;
         $this->subscriptionStatus = $status;
+    }
+
+    public function getLocale(): string
+    {
+        return $this->locale;
+    }
+
+    public function setLocale(string $locale): void
+    {
+        $this->locale = $locale;
     }
 }

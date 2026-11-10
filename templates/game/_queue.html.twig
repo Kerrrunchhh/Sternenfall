@@ -5,11 +5,10 @@
 {% import 'game/_macros.html.twig' as ui %}
 <section class="panel queue">
     <h2>
-        {{ kind.label }}-Bauschleife
-        <small class="muted">{{ entries|length }}{{ kind.maxLength ? '/' ~ kind.maxLength }}</small>
+        {{ '{label}-Bauschleife <small class="muted">{entries}{maxLength}</small>'|trans({'{label}': kind.label|trans|e, '{entries}': entries|length|e, '{maxLength}': (kind.maxLength ? '/' ~ kind.maxLength)|e})|raw }}
     </h2>
     {% if entries is empty %}
-        <p class="muted small">Keine Aufträge.</p>
+        <p class="muted small">{{ 'Keine Aufträge.'|trans }}</p>
     {% else %}
         <form method="post" action="{{ path('app_queue_reorder', {id: queue_planet.id, kind: kind.value}) }}" class="queue-form">
             <input type="hidden" name="_token" value="{{ csrf_token('queue') }}">
@@ -18,20 +17,20 @@
                 {% for e in entries %}
                     <li draggable="true" class="queue-item {{ e.active ? 'active' }}">
                         <input type="hidden" name="order[]" value="{{ e.id }}">
-                        <span class="queue-handle" title="Ziehen zum Umsortieren" aria-hidden="true">⠿</span>
+                        <span class="queue-handle" title="{{ 'Ziehen zum Umsortieren'|trans }}" aria-hidden="true">⠿</span>
                         <span class="queue-label">
-                            {{ e.label }}
-                            <span class="muted small">{{ e.seconds|format_duration }}{{ e.detail ? ' · ' ~ e.detail }}</span>
+                            {{ e.label|trans }}
+                            <span class="muted small">{{ e.seconds|format_duration }}{% if e.detail %} · {{ e.detail|trans }}{% endif %}</span>
                         </span>
                         <span class="queue-time small">
-                            {% if e.active %}läuft · {{ ui.countdown(e.finishesAt, now) }}{% else %}fertig ca. {{ e.finishesAt|date('d.m. H:i') }}{% endif %}
+                            {% if e.active %}{{ 'läuft · {finishesAt}'|trans({'{finishesAt}': ui.countdown(e.finishesAt, now)|e})|raw }}{% else %}{{ 'fertig ca. {finishesAt}'|trans({'{finishesAt}': e.finishesAt|date('d.m. H:i')}) }}{% endif %}
                         </span>
                         <span class="queue-buttons">
-                            <button type="submit" name="move" value="{{ e.id }}:up" class="btn btn-small btn-secondary" {{ loop.first ? 'disabled' }} aria-label="{{ e.label }} nach oben">▲</button>
-                            <button type="submit" name="move" value="{{ e.id }}:down" class="btn btn-small btn-secondary" {{ loop.last ? 'disabled' }} aria-label="{{ e.label }} nach unten">▼</button>
+                            <button type="submit" name="move" value="{{ e.id }}:up" class="btn btn-small btn-secondary" {{ loop.first ? 'disabled' }} aria-label="{{ '{label} nach oben'|trans({'{label}': e.label|trans}) }}">▲</button>
+                            <button type="submit" name="move" value="{{ e.id }}:down" class="btn btn-small btn-secondary" {{ loop.last ? 'disabled' }} aria-label="{{ '{label} nach unten'|trans({'{label}': e.label|trans}) }}">▼</button>
                             <button type="submit" formaction="{{ path('app_queue_cancel', {id: queue_planet.id, kind: kind.value, orderId: e.id}) }}"
-                                    class="btn btn-small btn-danger" aria-label="{{ e.label }} abbrechen"
-                                    data-confirm="{{ kind.value == 'buildings' ? 'Bau von ' ~ e.label ~ ' wirklich abbrechen? Die Kosten werden erstattet, der Fortschritt geht verloren.' : e.label ~ (kind.value == 'defense' ? ' wirklich abbrechen? Rohstoffe und Credits der noch nicht gebauten Anlagen werden erstattet.' : ' wirklich abbrechen? Rohstoffe, Credits und Besatzung der noch nicht gebauten Schiffe werden erstattet.') }}" data-confirm-label="{{ kind.value == 'buildings' ? 'Bau abbrechen' : 'Auftrag abbrechen' }}">✕</button>
+                                    class="btn btn-small btn-danger" aria-label="{{ '{label} abbrechen'|trans({'{label}': e.label|trans}) }}"
+                                    data-confirm="{{ kind.value == 'buildings' ? 'Bau von {label} wirklich abbrechen? Die Kosten werden erstattet, der Fortschritt geht verloren.'|trans({'{label}': e.label|trans}) : (kind.value == 'defense' ? '{label} wirklich abbrechen? Rohstoffe und Credits der noch nicht gebauten Anlagen werden erstattet.'|trans({'{label}': e.label|trans}) : '{label} wirklich abbrechen? Rohstoffe, Credits und Besatzung der noch nicht gebauten Schiffe werden erstattet.'|trans({'{label}': e.label|trans})) }}" data-confirm-label="{{ kind.value == 'buildings' ? 'Bau abbrechen'|trans : 'Auftrag abbrechen'|trans }}">✕</button>
                         </span>
                     </li>
                 {% endfor %}

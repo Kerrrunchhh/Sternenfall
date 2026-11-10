@@ -10,6 +10,10 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use App\I18n\Raw;
+use Symfony\Contracts\Translation\TranslatableInterface;
+
+use function Symfony\Component\Translation\t;
 
 /**
  * A group of ships outside a planet's hangar.
@@ -174,9 +178,10 @@ class Fleet
     }
 
     /** Name for display; unnamed quick dispatches are described by their mission. */
-    public function getLabel(): string
+    /** The fleet's name, or e.g. "Spionage von [1:2:3]" for unnamed ones (translated where shown). */
+    public function getLabel(): TranslatableInterface
     {
-        return $this->name ?? ($this->mission?->label() ?? 'Flotte').' von ['.$this->getCoordinates().']';
+        return null !== $this->name ? new Raw($this->name) : t('{mission} von [{coords}]', ['{mission}' => t($this->mission?->label() ?? 'Flotte'), '{coords}' => $this->getCoordinates()]);
     }
 
     public function getGalaxy(): int

@@ -3,6 +3,9 @@
 namespace App\Game;
 
 use App\Entity\User;
+use App\I18n\Num;
+
+use function Symfony\Component\Translation\t;
 
 /**
  * A unit's values as the player's research shapes them: attack (weapon research),
@@ -28,7 +31,7 @@ final readonly class ShipStats
     /**
      * Base and researched value of every value research changes, with what changes it.
      *
-     * @return array<'attack'|'shield'|'speed', array{base: int, value: int, notes: list<string>}>
+     * @return array<'attack'|'shield'|'speed', array{base: int, value: int, notes: list<\Symfony\Contracts\Translation\TranslatableInterface>}>
      */
     public function describe(ShipType $type, User $player): array
     {
@@ -50,14 +53,14 @@ final readonly class ShipStats
         $notes = self::researchNotes($spec->drive, $player, 'Tempo');
         $lifeForm = $player->getLifeForm();
         if (1.0 !== $lifeForm->speedFactor()) {
-            $notes[] = \sprintf('Lebensform %s: Tempo ×%s', $lifeForm->label(), str_replace('.', ',', (string) $lifeForm->speedFactor()));
+            $notes[] = t('Lebensform {lifeForm}: Tempo ×{factor}', ['{lifeForm}' => t($lifeForm->label()), '{factor}' => new Num($lifeForm->speedFactor(), 1)]);
         }
         $speed = $this->economy->shipSpeed($type, $player);
         $researched = (int) round($spec->speed * self::factor($spec->drive, $player) * $lifeForm->speedFactor());
         if ($speed > $researched) {
             $notes[] = ShipType::Scout === $type
-                ? 'Immer 10 % schneller als der Fusionator'
-                : 'Immer 10 % schneller als das schnellste reguläre Schiff';
+                ? t('Immer 10 % schneller als der Fusionator')
+                : t('Immer 10 % schneller als das schnellste reguläre Schiff');
         }
         $stats['speed'] = ['base' => $spec->speed, 'value' => $speed, 'notes' => $notes];
 
@@ -69,7 +72,7 @@ final readonly class ShipStats
         return 1 + Battle::RESEARCH_BONUS * (null === $research ? 0 : $player->getResearchLevel($research));
     }
 
-    /** @return list<string> */
+    /** @return list<\Symfony\Contracts\Translation\TranslatableInterface> */
     private static function researchNotes(?ResearchType $research, User $player, string $what): array
     {
         if (null === $research) {
@@ -77,6 +80,6 @@ final readonly class ShipStats
         }
         $level = $player->getResearchLevel($research);
 
-        return [\sprintf('%s Stufe %d: %s +%d %%', $research->label(), $level, $what, (int) round(100 * Battle::RESEARCH_BONUS * $level))];
+        return [t('{research} Stufe {level}: {what} +{bonus} %', ['{research}' => t($research->label()), '{level}' => $level, '{what}' => t($what), '{bonus}' => (int) round(100 * Battle::RESEARCH_BONUS * $level)])];
     }
 }

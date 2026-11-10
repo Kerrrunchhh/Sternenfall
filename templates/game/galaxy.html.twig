@@ -1,33 +1,33 @@
 {% extends 'game/_layout.html.twig' %}
 {% import 'game/_macros.html.twig' as ui %}
 
-{% block title %}Galaxie – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Galaxie – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    <h1>Galaxie</h1>
+    <h1>{{ 'Galaxie'|trans }}</h1>
 
     <form method="get" action="{{ path('app_galaxy') }}" class="panel galaxy-nav">
         <a class="btn btn-small btn-secondary" href="{{ path('app_galaxy', {galaxy: galaxy, system: max(1, system - 1)}) }}">←</a>
-        <label>Galaxie <input type="number" name="galaxy" min="1" max="{{ galaxies }}" value="{{ galaxy }}"></label>
-        <label>System <input type="number" name="system" min="1" max="{{ systems }}" value="{{ system }}"></label>
-        <button class="btn btn-small" type="submit">Anzeigen</button>
+        <label>{{ 'Galaxie'|trans }} <input type="number" name="galaxy" min="1" max="{{ galaxies }}" value="{{ galaxy }}"></label>
+        <label>{{ 'System'|trans }} <input type="number" name="system" min="1" max="{{ systems }}" value="{{ system }}"></label>
+        <button class="btn btn-small" type="submit">{{ 'Anzeigen'|trans }}</button>
         <a class="btn btn-small btn-secondary" href="{{ path('app_galaxy', {galaxy: galaxy, system: min(systems, system + 1)}) }}">→</a>
     </form>
 
     <section class="panel">
-        <h2>System {{ galaxy }}:{{ system }} <small class="muted">· {{ slots|length }} Planetenplätze</small></h2>
+        <h2>{{ 'System {galaxy}:{system} <small class="muted">· {slots} Planetenplätze</small>'|trans({'{galaxy}': galaxy|e, '{system}': system|e, '{slots}': slots|length|e})|raw }}</h2>
         <table class="table galaxy-table">
             {% for position, p in slots %}
                 {% set coords = {galaxy: galaxy, system: system, position: position} %}
                 <tr id="slot-{{ position }}" class="{{ p and p.owner.id == player.id ? 'own' }} {{ not p and posts[position] is defined ? 'trade-post' }}">
                     {% set slot_type = types[position] %}
-                    <td class="num pos">{{ position }}{% if debris[position] is defined %} <a class="debris" href="{{ path('app_fleet', coords|merge({mission: 'salvage'})) }}" title="Trümmerfeld: {{ debris[position].debrisIron|number_format(0, ',', '.') }} Eisen, {{ debris[position].debrisTitanium|number_format(0, ',', '.') }} Titan (Stand {{ debris[position].debrisSeenAt|date('d.m. H:i') }}) – bergen">✦</a>{% endif %}</td>
+                    <td class="num pos">{{ position }}{% if debris[position] is defined %} <a class="debris" href="{{ path('app_fleet', coords|merge({mission: 'salvage'})) }}" title="{{ 'Trümmerfeld: {debrisIron} Eisen, {debrisTitanium} Titan (Stand {debrisSeenAt}) – bergen'|trans({'{debrisIron}': debris[position].debrisIron|num, '{debrisTitanium}': debris[position].debrisTitanium|num, '{debrisSeenAt}': debris[position].debrisSeenAt|date('d.m. H:i')}) }}">✦</a>{% endif %}</td>
                     {% if p and position != p.position %}
                         {# Welded into the fusion above: only its top planet is shown. #}
                         <td class="spy-cell"></td>
                         <td class="slot-type"></td>
-                        <td class="muted welded" title="Einfusioniert in {{ p.name }}">–</td>
-                        <td class="muted welded" title="Gehört zur Fusion {{ p.name }} von {{ p.owner.username }}">–</td>
+                        <td class="muted welded" title="{{ 'Einfusioniert in {name}'|trans({'{name}': p.name}) }}">–</td>
+                        <td class="muted welded" title="{{ 'Gehört zur Fusion {name} von {username}'|trans({'{name}': p.name, '{username}': p.owner.username}) }}">–</td>
                         <td class="actions"></td>
                     {% else %}
                     <td class="spy-cell">
@@ -35,7 +35,7 @@
                             <form method="post" action="{{ path('app_bookmark_delete', {id: bookmarks[position].id}) }}">
                                 <input type="hidden" name="_token" value="{{ csrf_token('bookmark') }}">
                                 <input type="hidden" name="from" value="galaxy">
-                                <button class="icon-button bookmarked" type="submit" title="Gemerkt als „{{ bookmarks[position].label }}“ – klicken zum Vergessen" aria-label="Platz {{ position }} vergessen">📌</button>
+                                <button class="icon-button bookmarked" type="submit" title="{{ 'Gemerkt als „{label}“ – klicken zum Vergessen'|trans({'{label}': bookmarks[position].label|trans}) }}" aria-label="{{ 'Platz {position} vergessen'|trans({'{position}': position}) }}">📌</button>
                             </form>
                         {% else %}
                             <form method="post" action="{{ path('app_bookmark_add') }}">
@@ -43,7 +43,7 @@
                                 <input type="hidden" name="galaxy" value="{{ galaxy }}">
                                 <input type="hidden" name="system" value="{{ system }}">
                                 <input type="hidden" name="position" value="{{ position }}">
-                                <button class="icon-button bookmark-add" type="submit" title="Koordinaten merken" aria-label="Platz {{ position }} merken">📌</button>
+                                <button class="icon-button bookmark-add" type="submit" title="{{ 'Koordinaten merken'|trans }}" aria-label="{{ 'Platz {position} merken'|trans({'{position}': position}) }}">📌</button>
                             </form>
                         {% endif %}
                         {% if not (p and p.owner.id == player.id) %}
@@ -52,43 +52,43 @@
                                 <input type="hidden" name="galaxy" value="{{ galaxy }}">
                                 <input type="hidden" name="system" value="{{ system }}">
                                 <input type="hidden" name="position" value="{{ position }}">
-                                <button class="icon-button" type="submit" title="Ausspionieren: die nächste Sonde aus deinen Hangars fliegt los (verglüht danach)" aria-label="Platz {{ position }} ausspionieren">🔭</button>
+                                <button class="icon-button" type="submit" title="{{ 'Ausspionieren: die nächste Sonde aus deinen Hangars fliegt los (verglüht danach)'|trans }}" aria-label="{{ 'Platz {position} ausspionieren'|trans({'{position}': position}) }}">🔭</button>
                             </form>
                         {% endif %}
                     </td>
                     {% if slot_type %}
-                        <td class="slot-type" title="{{ slot_type.label }}: {{ slot_type.effect }}"><img class="planet-pic planet-pic-tiny" src="{{ asset(slot_type.picture) }}" alt="{{ slot_type.label }}" width="22" height="22" loading="lazy"></td>
+                        <td class="slot-type" title="{{ slot_type.label|trans }}: {{ slot_type.effect|trans }}"><img class="planet-pic planet-pic-tiny" src="{{ asset(slot_type.picture) }}" alt="{{ slot_type.label|trans }}" width="22" height="22" loading="lazy"></td>
                     {% else %}
-                        <td class="slot-type unknown" title="Planetentyp unbekannt – schicke eine Sonde hin">❔</td>
+                        <td class="slot-type unknown" title="{{ 'Planetentyp unbekannt – schicke eine Sonde hin'|trans }}">❔</td>
                     {% endif %}
                     {% if p %}
                         <td>
-                            {% if p.homeworld %}<span title="Heimatplanet – kann nicht invadiert werden">🏠</span> {% endif %}{{ p.name }}{% if p.fused %} <span class="muted small" title="Fusion aus {{ p.fusionSize }} Planeten, Plätze {{ p.position }}–{{ p.lastPosition }}">🔗 {{ p.fusionSize }} Planeten</span>{% endif %}{% if p.integrating(now) %} <span class="muted small">(invadiert, Übergang am {{ p.integratedAt|date('d.m.Y') }})</span>{% endif %}
+                            {% if p.homeworld %}<span title="{{ 'Heimatplanet – kann nicht invadiert werden'|trans }}">🏠</span> {% endif %}{{ p.name }}{% if p.fused %} <span class="muted small" title="{{ 'Fusion aus {fusionSize} Planeten, Plätze {position}–{lastPosition}'|trans({'{fusionSize}': p.fusionSize, '{position}': p.position, '{lastPosition}': p.lastPosition}) }}">{{ '🔗 {fusionSize} Planeten</span>'|trans({'{fusionSize}': p.fusionSize|e})|raw }}{% endif %}{% if p.integrating(now) %} <span class="muted small">{{ '(invadiert, Übergang am {integratedAt})'|trans({'{integratedAt}': p.integratedAt|date('d.m.Y')}) }}</span>{% endif %}
                         </td>
-                        <td>{{ ui.player(p.owner) }}{% if p.owner.onVacation(now) %} <span class="vacation-tag" title="Im Urlaub bis {{ p.owner.vacationUntil|date('d.m.Y H:i') }}">🌴 Urlaub</span>{% endif %}</td>
+                        <td>{{ ui.player(p.owner) }}{% if p.owner.onVacation(now) %} <span class="vacation-tag" title="{{ 'Im Urlaub bis {vacationUntil}'|trans({'{vacationUntil}': p.owner.vacationUntil|date('d.m.Y H:i')}) }}">{{ '🌴 Urlaub'|trans }}</span>{% endif %}</td>
                         <td class="num actions">
                             {% if p.owner.id == player.id %}
-                                <a href="{{ path('app_fleet', coords|merge({mission: 'transport'})) }}">Transport</a>
-                                <a href="{{ path('app_fleet', coords|merge({mission: 'station'})) }}">Stationieren</a>
-                                <a href="{{ path('app_fleet', coords|merge({mission: 'fuse'})) }}">Fusionieren</a>
+                                <a href="{{ path('app_fleet', coords|merge({mission: 'transport'})) }}">{{ 'Transport'|trans }}</a>
+                                <a href="{{ path('app_fleet', coords|merge({mission: 'station'})) }}">{{ 'Stationieren'|trans }}</a>
+                                <a href="{{ path('app_fleet', coords|merge({mission: 'fuse'})) }}">{{ 'Fusionieren'|trans }}</a>
                             {% else %}
                                 {% set treaty = treaty_with(p.owner) %}
-                                {% if treaty %}<span class="muted small" title="{{ treaty.label }}: {{ treaty.effect }}">{{ treaty.icon }}</span>{% endif %}
-                                {% if may_attack(p.owner) %}<a href="{{ path('app_fleet', coords|merge({mission: 'attack'})) }}">Angreifen</a>{% endif %}
-                                <a href="{{ path('app_fleet', coords|merge({mission: 'transport'})) }}">Transport</a>
+                                {% if treaty %}<span class="muted small" title="{{ treaty.label|trans }}: {{ treaty.effect|trans }}">{{ treaty.icon }}</span>{% endif %}
+                                {% if may_attack(p.owner) %}<a href="{{ path('app_fleet', coords|merge({mission: 'attack'})) }}">{{ 'Angreifen'|trans }}</a>{% endif %}
+                                <a href="{{ path('app_fleet', coords|merge({mission: 'transport'})) }}">{{ 'Transport'|trans }}</a>
                             {% endif %}
                         </td>
                     {% elseif posts[position] is defined %}
                         {% set post = posts[position] %}
-                        <td><a href="{{ path('app_trade_post', {id: post.id}) }}" title="Preise und Handel">⚖ {{ post.name }}</a> <span class="muted small">{{ post.active ? 'Handelsstützpunkt' : 'aufgegebener Handelsstützpunkt' }}</span></td>
+                        <td><a href="{{ path('app_trade_post', {id: post.id}) }}" title="{{ 'Preise und Handel'|trans }}">⚖ {{ post.name }}</a> <span class="muted small">{{ post.active ? ('Handelsstützpunkt'|trans) : ('aufgegebener Handelsstützpunkt'|trans) }}</span></td>
                         <td>{{ ui.player(post.owner) }}</td>
                         <td class="num actions">
-                            {% if post.owner.id == player.id and post.active %}<a href="{{ path('app_fleet', coords|merge({mission: 'supply'})) }}">Beliefern</a>{% endif %}
-                            {% if post.accessibleTo(player) %}<a href="{{ path('app_fleet', coords|merge({mission: 'transport'})) }}" title="Handelsflotte hinschicken (Transport oder Stationieren) – sie wartet dort zum Handeln">Handeln</a>{% else %}<span class="muted small">gesperrt</span>{% endif %}
-                            <a href="{{ path('app_trade_post', {id: post.id}) }}">Preise</a>
+                            {% if post.owner.id == player.id and post.active %}<a href="{{ path('app_fleet', coords|merge({mission: 'supply'})) }}">{{ 'Beliefern'|trans }}</a>{% endif %}
+                            {% if post.accessibleTo(player) %}<a href="{{ path('app_fleet', coords|merge({mission: 'transport'})) }}" title="{{ 'Handelsflotte hinschicken (Transport oder Stationieren) – sie wartet dort zum Handeln'|trans }}">{{ 'Handeln'|trans }}</a>{% else %}<span class="muted small">{{ 'gesperrt'|trans }}</span>{% endif %}
+                            <a href="{{ path('app_trade_post', {id: post.id}) }}">{{ 'Preise'|trans }}</a>
                         </td>
                     {% else %}
-                        <td class="muted">frei</td>
+                        <td class="muted">{{ 'frei'|trans }}</td>
                         <td></td>
                         <td class="num actions">
                             <form method="post" action="{{ path('app_galaxy_colonize') }}" class="inline-form">
@@ -96,7 +96,7 @@
                                 <input type="hidden" name="galaxy" value="{{ coords.galaxy }}">
                                 <input type="hidden" name="system" value="{{ coords.system }}">
                                 <input type="hidden" name="position" value="{{ coords.position }}">
-                                <button type="submit" class="link-button" id="colonize-{{ coords.position }}" title="{{ planet.shipCount(enum('App\\Game\\ShipType').ColonyShip) > 0 ? 'Ein Kolonieschiff startet von ' ~ planet.name ~ ' (' ~ planet.shipCount(enum('App\\Game\\ShipType').ColonyShip) ~ ' im Hangar)' : 'Kein Kolonieschiff im Hangar von ' ~ planet.name }}">Kolonisieren</button>
+                                <button type="submit" class="link-button" id="colonize-{{ coords.position }}" title="{{ planet.shipCount(enum('App\\Game\\ShipType').ColonyShip) > 0 ? 'Ein Kolonieschiff startet von {name} ({count} im Hangar)'|trans({'{name}': planet.name, '{count}': planet.shipCount(enum('App\\Game\\ShipType').ColonyShip)}) : 'Kein Kolonieschiff im Hangar von {name}'|trans({'{name}': planet.name}) }}">{{ 'Kolonisieren'|trans }}</button>
                             </form>
                         </td>
                     {% endif %}

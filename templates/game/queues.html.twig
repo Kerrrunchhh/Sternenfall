@@ -1,18 +1,18 @@
 {% extends 'game/_layout.html.twig' %}
 
-{% block title %}Bauschleifen – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Bauschleifen – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    <h1>Bauschleifen</h1>
-    <p class="muted">Alle Bauschleifen deiner Planeten. Ziehe Aufträge mit der Maus an eine andere Stelle oder nutze die Pfeile. Bereits begonnene Arbeit geht beim Umsortieren nicht verloren.</p>
+    <h1>{{ 'Bauschleifen'|trans }}</h1>
+    <p class="muted">{{ 'Alle Bauschleifen deiner Planeten. Ziehe Aufträge mit der Maus an eine andere Stelle oder nutze die Pfeile. Bereits begonnene Arbeit geht beim Umsortieren nicht verloren.'|trans }}</p>
     <div class="queue-toggle-all">
-        <button type="button" class="btn btn-small btn-secondary" data-details-all="open">Alle aufklappen</button>
-        <button type="button" class="btn btn-small btn-secondary" data-details-all="close">Alle zuklappen</button>
+        <button type="button" class="btn btn-small btn-secondary" data-details-all="open">{{ 'Alle aufklappen'|trans }}</button>
+        <button type="button" class="btn btn-small btn-secondary" data-details-all="close">{{ 'Alle zuklappen'|trans }}</button>
     </div>
     {% for entry in planets %}
         {% set busy = (entry.buildings|length) + (entry.shipyard|length) + (entry.defense|length) %}
         <details class="queue-planet" data-remember-open="queues-{{ entry.planet.id }}" data-details-group {{ busy > 0 ? 'open' }}>
-        <summary class="section-title">{{ entry.planet.name }} <small class="muted">[{{ entry.planet.coordinates }}] · {{ busy }} Auftr{{ busy == 1 ? 'ag' : 'äge' }}</small></summary>
+        <summary class="section-title">{{ entry.planet.name }} <small class="muted">[{{ entry.planet.coordinates }}] · {{ busy == 1 ? '{busy} Auftrag'|trans({'{busy}': busy}) : '{busy} Aufträge'|trans({'{busy}': busy}) }}</small></summary>
         <div class="grid">
             {{ include('game/_queue.html.twig', {queue_planet: entry.planet, kind: enum('App\\Game\\QueueKind').Buildings, entries: entry.buildings, back: 'app_queues'}) }}
             {{ include('game/_queue.html.twig', {queue_planet: entry.planet, kind: enum('App\\Game\\QueueKind').Shipyard, entries: entry.shipyard, back: 'app_queues'}) }}

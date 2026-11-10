@@ -1,22 +1,22 @@
 {% extends 'game/_layout.html.twig' %}
 {% import 'game/_macros.html.twig' as ui %}
 
-{% block title %}Handel – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Handel – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    <h1>Handel</h1>
+    <h1>{{ 'Handel'|trans }}</h1>
     {{ include('game/_trade_tabs.html.twig') }}
 
     <section class="panel">
-        <h2>Durchschnittspreise</h2>
-        <p class="muted small">Durchschnitt über alle Handelsstützpunkte, die die Ware zu einem Preis anbieten und vorrätig haben (Credits pro Stück).</p>
+        <h2>{{ 'Durchschnittspreise'|trans }}</h2>
+        <p class="muted small">{{ 'Durchschnitt über alle Handelsstützpunkte, die die Ware zu einem Preis anbieten und vorrätig haben (Credits pro Stück).'|trans }}</p>
         <table class="table">
-            <tr class="table-head"><td>Ware</td><td class="num">Ø Preis</td><td class="num">Angebote</td></tr>
+            <tr class="table-head"><td>{{ 'Ware'|trans }}</td><td class="num">{{ 'Ø Preis'|trans }}</td><td class="num">{{ 'Angebote'|trans }}</td></tr>
             {% for good in goods %}
                 <tr>
                     <td>{{ good|good_label }}</td>
                     {% if averages[good] is defined %}
-                        <td class="num">{{ averages[good].average|number_format(2, ',', '.') }}</td>
+                        <td class="num">{{ averages[good].average|num(2) }}</td>
                         <td class="num">{{ averages[good].posts }}</td>
                     {% else %}
                         <td class="num muted">–</td><td class="num muted">0</td>
@@ -26,11 +26,11 @@
         </table>
     </section>
 
-    <h2 class="section-title">Alle Handelsstützpunkte ({{ posts|filter(p => p.active)|length }})
-        <label class="inline-check small"><input type="checkbox" data-only-accessible> nur für mich zugängliche</label></h2>
+    <h2 class="section-title">{{ 'Alle Handelsstützpunkte ({posts})'|trans({'{posts}': posts|filter(p => p.active)|length}) }}
+        <label class="inline-check small"><input type="checkbox" data-only-accessible> {{ 'nur für mich zugängliche'|trans }}</label></h2>
     {% set listed = posts|filter(p => p.active or p.owner.id == player.id) %}
     {% if listed is empty %}
-        <p class="panel muted">Noch gibt es keine Handelsstützpunkte.</p>
+        <p class="panel muted">{{ 'Noch gibt es keine Handelsstützpunkte.'|trans }}</p>
     {% else %}
         <div class="panel">
             <table class="table">
@@ -41,11 +41,11 @@
                         <td>{{ ui.coords(post.coordinates) }}</td>
                         <td>{{ ui.player(post.owner) }}</td>
                         <td class="small">
-                            {% if not post.active %}aufgegeben
-                            {% elseif not post.restricted %}offen für alle
-                            {% else %}nur für {{ (post.allowedLifeForms|map(l => l.label)|merge(post.allowedAlliances|map(a => '[' ~ a.tag ~ ']')))|join(', ') }}{% endif %}
+                            {% if not post.active %}{{ 'aufgegeben'|trans }}
+                            {% elseif not post.restricted %}{{ 'offen für alle'|trans }}
+                            {% else %}{{ 'nur für {allowedLifeForms}'|trans({'{allowedLifeForms}': (post.allowedLifeForms|map(l => l.label|trans)|merge(post.allowedAlliances|map(a => '[' ~ a.tag ~ ']')))|join(', ')}) }}{% endif %}
                             {{ access ? '' : '· gesperrt' }}
-                            {% if post.buysAnything %}· kauft an{% endif %}
+                            {% if post.buysAnything %}{{ '· kauft an'|trans }}{% endif %}
                         </td>
                     </tr>
                 {% endfor %}
@@ -54,15 +54,15 @@
     {% endif %}
 
     {% if is_trader %}
-        <h2 class="section-title">Deine Handelsstützpunkte ({{ mine|filter(p => p.active)|length }} / {{ allowed_posts }})</h2>
+        <h2 class="section-title">{{ 'Deine Handelsstützpunkte ({mine} / {allowed_posts})'|trans({'{mine}': mine|filter(p => p.active)|length, '{allowed_posts}': allowed_posts}) }}</h2>
         {% if mine|filter(p => p.active) is not empty %}
             <div class="panel">
                 <table class="table">
                     {% for post in mine|filter(p => p.active) %}
                         <tr>
                             <td>⚖ {{ post.name }} {{ ui.coords(post.coordinates) }}</td>
-                            <td class="small muted">{{ visitors[post.id] is defined ? visitors[post.id]|length ~ ' fremde Flotte(n) warten' : '' }}</td>
-                            <td class="num"><a class="btn btn-small" href="{{ path('app_trade_post', {id: post.id}) }}">Verwalten</a></td>
+                            <td class="small muted">{{ visitors[post.id] is defined ? visitors[post.id]|length ~ (' ' ~ 'fremde Flotte(n) warten'|trans) : '' }}</td>
+                            <td class="num"><a class="btn btn-small" href="{{ path('app_trade_post', {id: post.id}) }}">{{ 'Verwalten'|trans }}</a></td>
                         </tr>
                     {% endfor %}
                 </table>
@@ -70,21 +70,21 @@
         {% endif %}
         {% if mine|filter(p => p.active)|length < allowed_posts %}
             <section class="panel">
-                <h2>Neuen Stützpunkt eröffnen</h2>
+                <h2>{{ 'Neuen Stützpunkt eröffnen'|trans }}</h2>
                 <form method="post" action="{{ path('app_trade_open') }}" class="fleet-form">
                     <input type="hidden" name="_token" value="{{ csrf_token('trade') }}">
-                    <label>Name <input type="text" name="name" maxlength="40" required></label>
+                    <label>{{ 'Name'|trans }} <input type="text" name="name" maxlength="40" required></label>
                     <div class="coords">
-                        <label>Galaxie <input type="number" name="galaxy" min="1" value="{{ planet.galaxy }}" required></label>
-                        <label>System <input type="number" name="system" min="1" value="{{ planet.system }}" required></label>
-                        <label>Position <input type="number" name="position" min="1" required></label>
+                        <label>{{ 'Galaxie'|trans }} <input type="number" name="galaxy" min="1" value="{{ planet.galaxy }}" required></label>
+                        <label>{{ 'System'|trans }} <input type="number" name="system" min="1" value="{{ planet.system }}" required></label>
+                        <label>{{ 'Position'|trans }} <input type="number" name="position" min="1" required></label>
                     </div>
-                    <p class="muted small">Nur auf einem freien Platz. Der Platz kann dann nicht mehr kolonisiert werden.</p>
-                    <button class="btn btn-small" type="submit" id="trade-open">Eröffnen</button>
+                    <p class="muted small">{{ 'Nur auf einem freien Platz. Der Platz kann dann nicht mehr kolonisiert werden.'|trans }}</p>
+                    <button class="btn btn-small" type="submit" id="trade-open">{{ 'Eröffnen'|trans }}</button>
                 </form>
             </section>
         {% else %}
-            <p class="muted">{{ allowed_posts == 0 ? 'Erforsche „Handelsnetz“, um Handelsstützpunkte zu eröffnen.' : 'Für weitere Stützpunkte brauchst du eine höhere Stufe „Handelsnetz“.' }}</p>
+            <p class="muted">{{ allowed_posts == 0 ? ('Erforsche „Handelsnetz“, um Handelsstützpunkte zu eröffnen.'|trans) : ('Für weitere Stützpunkte brauchst du eine höhere Stufe „Handelsnetz“.'|trans) }}</p>
         {% endif %}
     {% endif %}
 {% endblock %}

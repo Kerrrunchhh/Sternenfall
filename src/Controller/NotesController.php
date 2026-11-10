@@ -8,6 +8,9 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
+use App\I18n\Num;
+
+use function Symfony\Component\Translation\t;
 
 /** A private notepad for every player. */
 class NotesController extends AbstractGameController
@@ -25,9 +28,9 @@ class NotesController extends AbstractGameController
         $this->currentPlanet();
         $notes = str_replace("\r\n", "\n", $request->request->getString('notes'));
         if (mb_strlen($notes) > User::NOTES_LIMIT) {
-            $this->addFlash('error', \sprintf('Der Notizblock fasst höchstens %s Zeichen – der Rest wurde abgeschnitten.', number_format(User::NOTES_LIMIT, 0, ',', '.')));
+            $this->addFlash('error', t('Der Notizblock fasst höchstens {value} Zeichen – der Rest wurde abgeschnitten.', ['{value}' => new Num(User::NOTES_LIMIT)]));
         } else {
-            $this->addFlash('success', 'Notizen gespeichert.');
+            $this->addFlash('success', t('Notizen gespeichert.'));
         }
         $this->player()->writeNotes($notes, \DateTimeImmutable::createFromInterface($this->clock->now()));
         $em->flush();

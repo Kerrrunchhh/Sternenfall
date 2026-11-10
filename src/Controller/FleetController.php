@@ -25,6 +25,10 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
+use App\I18n\Lines;
+use Symfony\Contracts\Translation\TranslatableInterface;
+
+use function Symfony\Component\Translation\t;
 
 class FleetController extends AbstractGameController
 {
@@ -120,7 +124,7 @@ class FleetController extends AbstractGameController
     {
         $planet = $this->currentPlanet();
         $name = $request->request->getString('name');
-        $this->attempt(fn () => $this->fleetService->create($planet, $name, $this->ships($request)), \sprintf('Flotte „%s“ gebildet.', trim($name)));
+        $this->attempt(fn () => $this->fleetService->create($planet, $name, $this->ships($request)), t('Flotte „{value}“ gebildet.', ['{value}' => trim($name)]));
 
         return $this->redirectToRoute('app_fleet');
     }
@@ -134,16 +138,16 @@ class FleetController extends AbstractGameController
         $id = $request->request->getString('fleet');
         $fleet = ctype_digit($id) ? $fleets->find((int) $id) : null;
         if (null === $fleet || !$fleet->getOwner()->isSameAs($this->player())) {
-            $this->addFlash('error', 'Wähle eine deiner Flotten aus.');
+            $this->addFlash('error', t('Wähle eine deiner Flotten aus.'));
 
             return $this->redirectToRoute('app_fleet');
         }
         $this->attempt(function () use ($fleet, $planet, $request): void {
             if (!$fleet->isIdle() || $fleet->getGalaxy() !== $planet->getGalaxy() || $fleet->getSystem() !== $planet->getSystem() || !$planet->covers($fleet->getPosition())) {
-                throw new GameException(\sprintf('%s wartet nicht an %s.', $fleet->getLabel(), $planet->getName()));
+                throw new GameException(t('{label} wartet nicht an {name}.', ['{label}' => $fleet->getLabel(), '{name}' => $planet->getName()]));
             }
             $this->fleetService->transfer($fleet, $this->player(), $this->ships($request), true);
-        }, \sprintf('Schiffe aus dem Hangar von %s zu %s hinzugefügt.', $planet->getName(), $fleet->getLabel()));
+        }, t('Schiffe aus dem Hangar von {name} zu {label} hinzugefügt.', ['{name}' => $planet->getName(), '{label}' => $fleet->getLabel()]));
 
         return $this->redirectToRoute('app_fleet');
     }
@@ -153,7 +157,7 @@ class FleetController extends AbstractGameController
     public function rename(Fleet $fleet, Request $request): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->fleetService->rename($fleet, $this->player(), $request->request->getString('name')), 'Flotte umbenannt.');
+        $this->attempt(fn () => $this->fleetService->rename($fleet, $this->player(), $request->request->getString('name')), t('Flotte umbenannt.'));
 
         return $this->redirectToRoute('app_fleet');
     }
@@ -170,7 +174,7 @@ class FleetController extends AbstractGameController
             $speed = Navigation::parsePercent($form->getString('speed'));
             $this->addFlash('success', $this->fleetService->sendFleet($fleet, $this->player(), $form->getInt('galaxy'), $form->getInt('system'), $form->getInt('position'), $mission, $this->cargo($request), $order, $speed));
         } catch (GameException $e) {
-            $this->addFlash('error', $e->getMessage());
+            $this->addFlash('error', $e->translatable());
         }
 
         return $this->redirectToRoute('app_fleet');
@@ -188,9 +192,9 @@ class FleetController extends AbstractGameController
 
         try {
             $report = $this->fleetService->gather($fleet, $this->player(), $request->request->getInt('minutes'), $types);
-            $this->addFlash('success', 'Schiffe werden zusammengezogen: '.implode('; ', $report).'.');
+            $this->addFlash('success', t('Schiffe werden zusammengezogen: {report}.', ['{report}' => new Lines($report, '; ')]));
         } catch (GameException $e) {
-            $this->addFlash('error', $e->getMessage());
+            $this->addFlash('error', $e->translatable());
         }
 
         return $this->redirectToRoute('app_fleet');
@@ -216,7 +220,7 @@ class FleetController extends AbstractGameController
     {
         $this->currentPlanet();
         $name = $request->request->getString('name');
-        $this->attempt(fn () => $this->fleetService->split($fleet, $this->player(), $name, $this->ships($request)), \sprintf('Neue Flotte „%s“ abgespalten.', trim($name)));
+        $this->attempt(fn () => $this->fleetService->split($fleet, $this->player(), $name, $this->ships($request)), t('Neue Flotte „{value}“ abgespalten.', ['{value}' => trim($name)]));
 
         return $this->redirectToRoute('app_fleet');
     }
@@ -242,9 +246,9 @@ class FleetController extends AbstractGameController
         $this->currentPlanet();
         $member = $users->find($request->request->getInt('member'));
         if (null === $member) {
-            $this->addFlash('error', 'Bitte wähle ein Mitglied aus.');
+            $this->addFlash('error', t('Bitte wähle ein Mitglied aus.'));
         } else {
-            $this->attempt(fn () => $this->fleetService->releaseTo($fleet, $this->player(), $member), \sprintf('Flotte für %s freigegeben.', $member->getUsername()));
+            $this->attempt(fn () => $this->fleetService->releaseTo($fleet, $this->player(), $member), t('Flotte für {player} freigegeben.', ['{player}' => $member->getUsername()]));
         }
 
         return $this->redirectToRoute('app_fleet');
@@ -257,7 +261,7 @@ class FleetController extends AbstractGameController
         $this->currentPlanet();
         $user = $users->find($member);
         if (null !== $user) {
-            $this->attempt(fn () => $this->fleetService->revokeFrom($fleet, $this->player(), $user), \sprintf('Freigabe für %s zurückgenommen.', $user->getUsername()));
+            $this->attempt(fn () => $this->fleetService->revokeFrom($fleet, $this->player(), $user), t('Freigabe für {player} zurückgenommen.', ['{player}' => $user->getUsername()]));
         }
 
         return $this->redirectToRoute('app_fleet');
@@ -271,7 +275,7 @@ class FleetController extends AbstractGameController
         try {
             $this->addFlash('success', $this->fleetService->hover($fleet, $this->player(), $request->request->getString('source')));
         } catch (GameException $e) {
-            $this->addFlash('error', $e->getMessage());
+            $this->addFlash('error', $e->translatable());
         }
 
         return $this->redirectToRoute('app_fleet');
@@ -282,7 +286,7 @@ class FleetController extends AbstractGameController
     public function unload(Fleet $fleet): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->fleetService->unloadCargo($fleet, $this->player()), 'Ladung abgeladen.');
+        $this->attempt(fn () => $this->fleetService->unloadCargo($fleet, $this->player()), t('Ladung abgeladen.'));
 
         return $this->redirectToRoute('app_fleet');
     }
@@ -292,7 +296,7 @@ class FleetController extends AbstractGameController
     public function dissolve(Fleet $fleet): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->fleetService->dissolve($fleet, $this->player()), 'Flotte aufgelöst, die Schiffe stehen im Hangar.');
+        $this->attempt(fn () => $this->fleetService->dissolve($fleet, $this->player()), t('Flotte aufgelöst, die Schiffe stehen im Hangar.'));
 
         return $this->redirectToRoute('app_fleet');
     }
@@ -303,7 +307,7 @@ class FleetController extends AbstractGameController
     {
         $this->currentPlanet();
         $hovering = FleetMission::Hover === $fleet->getMission();
-        $this->attempt(fn () => $this->fleetService->recall($fleet, $this->player()), \sprintf($hovering ? '%s ist wieder gelandet.' : '%s kehrt um.', $fleet->getLabel()));
+        $this->attempt(fn () => $this->fleetService->recall($fleet, $this->player()), $hovering ? t('{label} ist wieder gelandet.', ['{label}' => $fleet->getLabel()]) : t('{label} kehrt um.', ['{label}' => $fleet->getLabel()]));
 
         return $this->backTo($request, 'app_fleet');
     }
@@ -342,7 +346,7 @@ class FleetController extends AbstractGameController
         )));
 
         if ([] === $selected) {
-            $this->addFlash('error', 'Wähle mindestens eine Flotte aus.');
+            $this->addFlash('error', t('Wähle mindestens eine Flotte aus.'));
 
             return $this->redirectToRoute('app_fleet');
         }
@@ -355,13 +359,13 @@ class FleetController extends AbstractGameController
             $action = null === $mission ? '' : 'send';
         }
         if ('send' !== $action && !isset(self::BULK_ACTIONS[$action])) {
-            $this->addFlash('error', 'Wähle eine Aktion aus.');
+            $this->addFlash('error', t('Wähle eine Aktion aus.'));
 
             return $this->redirectToRoute('app_fleet');
         }
         $single = \in_array($action, ['gather', 'load', 'drop', 'split', 'rename'], true);
         if ($single && 1 !== \count($selected)) {
-            $this->addFlash('error', \sprintf('„%s“ geht nur mit genau einer ausgewählten Flotte.', self::BULK_ACTIONS[$action]));
+            $this->addFlash('error', t('„{value}“ geht nur mit genau einer ausgewählten Flotte.', ['{value}' => self::BULK_ACTIONS[$action]]));
 
             return $this->redirectToRoute('app_fleet');
         }
@@ -373,26 +377,26 @@ class FleetController extends AbstractGameController
             if ('squadron_add' === $action) {
                 $this->attempt(
                     fn () => $squadronService->add($player, $squadron, $form->getString('squadron_name'), $selected),
-                    \sprintf('%d Flotte(n) im Geschwader „%s“.', \count($selected), $squadron?->getName() ?? trim($form->getString('squadron_name'))),
+                    t('{count} Flotte(n) im Geschwader „{value}“.', ['{count}' => \count($selected), '{value}' => $squadron?->getName() ?? trim($form->getString('squadron_name'))]),
                 );
             } elseif (null === $squadron) {
-                $this->addFlash('error', 'Wähle ein Geschwader aus.');
+                $this->addFlash('error', t('Wähle ein Geschwader aus.'));
             } else {
-                $this->attempt(fn () => $squadronService->remove($player, $squadron, $selected), \sprintf('%d Flotte(n) aus „%s“ entfernt.', \count($selected), $squadron->getName()));
+                $this->attempt(fn () => $squadronService->remove($player, $squadron, $selected), t('{count} Flotte(n) aus „{name}“ entfernt.', ['{count}' => \count($selected), '{name}' => $squadron->getName()]));
             }
 
             return $this->redirectToRoute('app_fleet');
         }
 
         if ('merge' === $action) {
-            $this->attempt(fn () => $this->fleetService->merge($selected, $player), \sprintf('%d Flotten zu „%s“ zusammengelegt.', \count($selected), $selected[0]->getLabel()));
+            $this->attempt(fn () => $this->fleetService->merge($selected, $player), t('{count} Flotten zu „{label}“ zusammengelegt.', ['{count}' => \count($selected), '{label}' => $selected[0]->getLabel()]));
 
             return $this->redirectToRoute('app_fleet');
         }
 
         $cargo = $this->cargo($request);
         if ('send' === $action && \count($selected) > 1 && !$cargo->isEmpty() && !\in_array($mission, FleetService::GROUP_MISSIONS, true)) {
-            $this->addFlash('error', 'Ladung kann nur eine einzelne Flotte mitnehmen. Wähle nur eine Flotte aus oder lass die Ladung leer.');
+            $this->addFlash('error', t('Ladung kann nur eine einzelne Flotte mitnehmen. Wähle nur eine Flotte aus oder lass die Ladung leer.'));
 
             return $this->redirectToRoute('app_fleet');
         }
@@ -403,10 +407,10 @@ class FleetController extends AbstractGameController
         if ('send' === $action && \in_array($mission, FleetService::GROUP_MISSIONS, true) && (\count($selected) > 1 || null !== $lead)) {
             try {
                 foreach ($this->fleetService->sendGroup($selected, $player, $form->getInt('galaxy'), $form->getInt('system'), $form->getInt('position'), $mission, $this->cargo($request), Navigation::parsePercent($form->getString('speed')), $lead) as $line) {
-                    $this->addFlash(str_contains($line, 'gestartet') || str_contains($line, 'tritt dem Angriff') || str_contains($line, 'im Konvoi') ? 'success' : 'error', $line);
+                    $this->addFlash($line['ok'] ? 'success' : 'error', $line['text']);
                 }
             } catch (GameException $e) {
-                $this->addFlash('error', $e->getMessage());
+                $this->addFlash('error', $e->translatable());
             }
 
             return $this->redirectToRoute('app_fleet');
@@ -420,25 +424,25 @@ class FleetController extends AbstractGameController
                     'send' => $this->fleetService->sendFleet($fleet, $player, $form->getInt('galaxy'), $form->getInt('system'), $form->getInt('position'),
                         $mission, $cargo,
                         FleetMission::Pickup === $mission ? $this->pickupOrder($request) : [], Navigation::parsePercent($form->getString('speed'))),
-                    'recall' => $this->run(fn () => $this->fleetService->recall($fleet, $player), FleetMission::Hover === $fleet->getMission() ? 'ist wieder gelandet' : 'kehrt um', $label),
-                    'gather' => 'Schiffe werden zusammengezogen: '.implode('; ', $this->fleetService->gather($fleet, $player, $form->getInt('minutes'), array_values(array_filter(array_map(
-                        static fn (mixed $v): ?ShipType => ShipType::tryFrom((string) $v), $form->all('types')))))).'.',
-                    'load' => $this->run(fn () => $this->fleetService->transfer($fleet, $player, array_map('intval', $form->all('load')[$id] ?? []), true), 'hat Schiffe aus dem Hangar aufgenommen', $label),
-                    'drop' => $label.' '.$this->fleetService->removeShips($fleet, $player, array_map('intval', $form->all('drop')[$id] ?? [])).'.',
-                    'split' => $this->run(fn () => $this->fleetService->split($fleet, $player, $form->getString('name'), array_map('intval', $form->all('split')[$id] ?? [])), \sprintf('wurde aufgeteilt, neue Flotte „%s“', trim($form->getString('name'))), $label),
-                    'rename' => $this->run(fn () => $this->fleetService->rename($fleet, $player, $form->getString('name')), \sprintf('heißt jetzt „%s“', trim($form->getString('name'))), $label),
-                    'unload' => $this->run(fn () => $this->fleetService->unloadCargo($fleet, $player), 'hat die Ladung abgeladen', $label),
-                    'dissolve' => $this->run(fn () => $this->fleetService->dissolve($fleet, $player), 'wurde aufgelöst, die Schiffe stehen im Hangar', $label),
-                    'release_alliance' => $this->run(fn () => $this->fleetService->releaseToAlliance($fleet, $player, true), 'ist für die Allianz freigegeben', $label),
-                    'unrelease_alliance' => $this->run(fn () => $this->fleetService->releaseToAlliance($fleet, $player, false), 'ist nicht mehr allgemein freigegeben', $label),
-                    'release_member' => null === $member ? throw new GameException('Bitte wähle ein Mitglied aus.')
-                        : $this->run(fn () => $this->fleetService->releaseTo($fleet, $player, $member), 'ist für '.$member->getUsername().' freigegeben', $label),
-                    'revoke_member' => null === $member ? throw new GameException('Bitte wähle ein Mitglied aus.')
-                        : $this->run(fn () => $this->fleetService->revokeFrom($fleet, $player, $member), 'ist für '.$member->getUsername().' nicht mehr freigegeben', $label),
+                    'recall' => $this->run(fn () => $this->fleetService->recall($fleet, $player), FleetMission::Hover === $fleet->getMission() ? t('{label} ist wieder gelandet.', ['{label}' => $label]) : t('{label} kehrt um.', ['{label}' => $label])),
+                    'gather' => t('Schiffe werden zusammengezogen: {report}.', ['{report}' => new Lines($this->fleetService->gather($fleet, $player, $form->getInt('minutes'), array_values(array_filter(array_map(
+                        static fn (mixed $v): ?ShipType => ShipType::tryFrom((string) $v), $form->all('types'))))), '; ')]),
+                    'load' => $this->run(fn () => $this->fleetService->transfer($fleet, $player, array_map('intval', $form->all('load')[$id] ?? []), true), t('{label} hat Schiffe aus dem Hangar aufgenommen.', ['{label}' => $label])),
+                    'drop' => t('{label} {what}.', ['{label}' => $label, '{what}' => $this->fleetService->removeShips($fleet, $player, array_map('intval', $form->all('drop')[$id] ?? []))]),
+                    'split' => $this->run(fn () => $this->fleetService->split($fleet, $player, $form->getString('name'), array_map('intval', $form->all('split')[$id] ?? [])), t('{label} wurde aufgeteilt, neue Flotte „{value}“.', ['{label}' => $label, '{value}' => trim($form->getString('name'))])),
+                    'rename' => $this->run(fn () => $this->fleetService->rename($fleet, $player, $form->getString('name')), t('{label} heißt jetzt „{value}“.', ['{label}' => $label, '{value}' => trim($form->getString('name'))])),
+                    'unload' => $this->run(fn () => $this->fleetService->unloadCargo($fleet, $player), t('{label} hat die Ladung abgeladen.', ['{label}' => $label])),
+                    'dissolve' => $this->run(fn () => $this->fleetService->dissolve($fleet, $player), t('{label} wurde aufgelöst, die Schiffe stehen im Hangar.', ['{label}' => $label])),
+                    'release_alliance' => $this->run(fn () => $this->fleetService->releaseToAlliance($fleet, $player, true), t('{label} ist für die Allianz freigegeben.', ['{label}' => $label])),
+                    'unrelease_alliance' => $this->run(fn () => $this->fleetService->releaseToAlliance($fleet, $player, false), t('{label} ist nicht mehr allgemein freigegeben.', ['{label}' => $label])),
+                    'release_member' => null === $member ? throw new GameException(t('Bitte wähle ein Mitglied aus.'))
+                        : $this->run(fn () => $this->fleetService->releaseTo($fleet, $player, $member), t('{label} ist für {player} freigegeben.', ['{label}' => $label, '{player}' => $member->getUsername()])),
+                    'revoke_member' => null === $member ? throw new GameException(t('Bitte wähle ein Mitglied aus.'))
+                        : $this->run(fn () => $this->fleetService->revokeFrom($fleet, $player, $member), t('{label} ist für {player} nicht mehr freigegeben.', ['{label}' => $label, '{player}' => $member->getUsername()])),
                 };
                 $this->addFlash('success', $message);
             } catch (GameException $e) {
-                $this->addFlash('error', \count($selected) > 1 ? $label.': '.$e->getMessage() : $e->getMessage());
+                $this->addFlash('error', \count($selected) > 1 ? t('{label}: {error}', ['{label}' => $label, '{error}' => $e->translatable()]) : $e->translatable());
             }
         }
 
@@ -453,7 +457,7 @@ class FleetController extends AbstractGameController
         $form = $request->request;
         $this->attempt(
             fn () => $filters->save($this->player(), $form->getString('name'), $form->getString('color'), $form->getString('definition')),
-            \sprintf('Filter „%s“ gespeichert.', trim($form->getString('name'))),
+            t('Filter „{value}“ gespeichert.', ['{value}' => trim($form->getString('name'))]),
         );
 
         return $this->redirectToRoute('app_fleet');
@@ -465,7 +469,7 @@ class FleetController extends AbstractGameController
     {
         $this->currentPlanet();
         $name = $request->request->getString('name');
-        $this->attempt(fn () => $filters->delete($this->player(), $name), \sprintf('Filter „%s“ gelöscht.', $name));
+        $this->attempt(fn () => $filters->delete($this->player(), $name), t('Filter „{name}“ gelöscht.', ['{name}' => $name]));
 
         return $this->redirectToRoute('app_fleet');
     }
@@ -475,17 +479,17 @@ class FleetController extends AbstractGameController
     public function deleteSquadron(Squadron $squadron, SquadronService $squadronService): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $squadronService->delete($this->player(), $squadron), \sprintf('Geschwader „%s“ aufgelöst – die Flotten bleiben, wie sie sind.', $squadron->getName()));
+        $this->attempt(fn () => $squadronService->delete($this->player(), $squadron), t('Geschwader „{name}“ aufgelöst – die Flotten bleiben, wie sie sind.', ['{name}' => $squadron->getName()]));
 
         return $this->redirectToRoute('app_fleet');
     }
 
     /** Runs a service call and returns "<fleet> <what happened>." for the flash message. */
-    private function run(callable $operation, string $outcome, string $label): string
+    private function run(callable $operation, TranslatableInterface $outcome): TranslatableInterface
     {
         $operation();
 
-        return \sprintf('%s %s.', $label, $outcome);
+        return $outcome;
     }
 
     /** @return array<string, int> */

@@ -1,14 +1,14 @@
 {% extends 'game/_layout.html.twig' %}
 {% import 'game/_macros.html.twig' as ui %}
 
-{% block title %}Koordinaten – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Koordinaten – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    <h1>Gemerkte Koordinaten <small class="muted">{{ bookmarks|length }} / {{ max_bookmarks }}</small></h1>
-    <p class="muted small">Merke dir Koordinaten im <a href="{{ path('app_galaxy') }}">Universum</a> mit 📌. Beim Losschicken einer Flotte kannst du sie dann aus der Liste „Gemerkte Koordinaten“ wählen.</p>
+    <h1>{{ 'Gemerkte Koordinaten <small class="muted">{bookmarks} / {max_bookmarks}</small>'|trans({'{bookmarks}': bookmarks|length|e, '{max_bookmarks}': max_bookmarks|e})|raw }}</h1>
+    <p class="muted small">{{ 'Merke dir Koordinaten im'|trans }} <a href="{{ path('app_galaxy') }}">{{ 'Universum</a> mit 📌. Beim Losschicken einer Flotte kannst du sie dann aus der Liste „Gemerkte Koordinaten“ wählen.'|trans|raw }}</p>
 
     {% if bookmarks is empty %}
-        <p class="panel muted">Noch keine Koordinaten gemerkt.</p>
+        <p class="panel muted">{{ 'Noch keine Koordinaten gemerkt.'|trans }}</p>
     {% else %}
         <div class="panel">
             <table class="table bookmarks">
@@ -18,15 +18,15 @@
                         <td>
                             <form method="post" action="{{ path('app_bookmark_rename', {id: b.id}) }}" class="inline-action">
                                 <input type="hidden" name="_token" value="{{ csrf_token('bookmark') }}">
-                                <input type="text" name="label" value="{{ b.label }}" maxlength="40" required aria-label="Name für {{ b.coordinates }}">
-                                <button class="btn btn-small btn-secondary" type="submit" id="bookmark-rename-{{ b.id }}">Speichern</button>
+                                <input type="text" name="label" value="{{ b.label|trans }}" maxlength="40" required aria-label="{{ 'Name für {coordinates}'|trans({'{coordinates}': b.coordinates}) }}">
+                                <button class="btn btn-small btn-secondary" type="submit" id="bookmark-rename-{{ b.id }}">{{ 'Speichern'|trans }}</button>
                             </form>
                         </td>
                         <td class="num actions">
-                            <a href="{{ path('app_fleet', {galaxy: b.galaxy, system: b.system, position: b.position}) }}">Flotte hierhin</a>
+                            <a href="{{ path('app_fleet', {galaxy: b.galaxy, system: b.system, position: b.position}) }}">{{ 'Flotte hierhin'|trans }}</a>
                             <form method="post" action="{{ path('app_bookmark_delete', {id: b.id}) }}" class="inline">
                                 <input type="hidden" name="_token" value="{{ csrf_token('bookmark') }}">
-                                <button class="btn btn-small btn-danger" type="submit" id="bookmark-delete-{{ b.id }}" aria-label="{{ b.label }} vergessen">✕</button>
+                                <button class="btn btn-small btn-danger" type="submit" id="bookmark-delete-{{ b.id }}" aria-label="{{ '{label} vergessen'|trans({'{label}': b.label|trans}) }}">✕</button>
                             </form>
                         </td>
                     </tr>

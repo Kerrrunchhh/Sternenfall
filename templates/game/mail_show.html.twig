@@ -4,15 +4,15 @@
 {% block title %}{{ letter.subject }} – {{ game_name }}{% endblock %}
 
 {% block content %}
-    <p><a href="{{ path('app_mail', received ? {} : {box: 'sent'}) }}">← {{ received ? 'Posteingang' : 'Gesendet' }}</a></p>
+    <p><a href="{{ path('app_mail', received ? {} : {box: 'sent'}) }}">← {{ received ? ('Posteingang'|trans) : ('Gesendet'|trans) }}</a></p>
     <article class="panel mail-letter">
         <h1>{{ letter.subject }}</h1>
         <p class="muted small">
             {% if received %}
-                Von {% if letter.sender %}{{ ui.player(letter.sender) }} {{ ui.presence(letter.sender) }}{% else %}gelöschter Spieler{% endif %}
+                {{ 'Von'|trans }} {% if letter.sender %}{{ ui.player(letter.sender) }} {{ ui.presence(letter.sender) }}{% else %}{{ 'gelöschter Spieler'|trans }}{% endif %}
             {% else %}
-                An {% if letter.recipient %}{{ ui.player(letter.recipient) }} {{ ui.presence(letter.recipient) }}{% else %}gelöschter Spieler{% endif %}
-                · {{ letter.read ? 'gelesen' : 'noch nicht gelesen' }}
+                {{ 'An'|trans }} {% if letter.recipient %}{{ ui.player(letter.recipient) }} {{ ui.presence(letter.recipient) }}{% else %}{{ 'gelöschter Spieler'|trans }}{% endif %}
+                · {{ letter.read ? 'gelesen' : ('noch nicht gelesen'|trans) }}
             {% endif %}
             · {{ letter.createdAt|date('d.m.Y H:i') }}
         </p>
@@ -21,15 +21,15 @@
             <input type="hidden" name="_token" value="{{ csrf_token('mail') }}">
             <input type="hidden" name="box" value="{{ received ? 'inbox' : 'sent' }}">
             <input type="hidden" name="letters[]" value="{{ letter.id }}">
-            {% if reply_to %}<a class="btn" href="#reply" id="mail-reply-jump">↩ Antworten</a>{% endif %}
-            <button class="btn btn-danger" type="submit" id="mail-delete-one" data-confirm="Nachricht löschen?" data-confirm-label="Löschen">Löschen</button>
+            {% if reply_to %}<a class="btn" href="#reply" id="mail-reply-jump">{{ '↩ Antworten'|trans }}</a>{% endif %}
+            <button class="btn btn-danger" type="submit" id="mail-delete-one" data-confirm="{{ 'Nachricht löschen?'|trans }}" data-confirm-label="{{ 'Löschen'|trans }}">{{ 'Löschen'|trans }}</button>
         </form>
     </article>
 
     {% if reply_to %}
         <section class="panel" id="reply">
-            <h2>{{ received ? 'Antworten' : 'Noch eine Nachricht' }} an {{ reply_to.username }}</h2>
-            {{ include('game/_mail_form.html.twig', {to: reply_to.username, subject: reply_subject, body: received ? reply_body : ''}) }}
+            <h2>{{ '{Nachricht} an {username}'|trans({'{Nachricht}': received ? ('Antworten'|trans) : ('Noch eine Nachricht'|trans), '{username}': reply_to.username}) }}</h2>
+            {{ include('game/_mail_form.html.twig', {to: reply_to.username, subject: reply_subject, body: received ? reply_body|trans : ''}) }}
         </section>
     {% endif %}
 {% endblock %}

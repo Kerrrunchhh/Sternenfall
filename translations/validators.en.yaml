@@ -1,0 +1,6 @@
+"Bitte gib deine E-Mail-Adresse ein.": "Please enter your e-mail address."
+"Bitte gib ein Passwort ein.": "Please enter a password."
+"Bitte lade ein JPEG-, PNG-, WebP- oder GIF-Bild hoch.": "Please upload a JPEG, PNG, WebP or GIF picture."
+"Das Bild darf höchstens 2 MB groß sein.": "The picture may be at most 2 MB."
+"Das Passwort muss mindestens {{ limit }} Zeichen lang sein.": "The password must be at least {{ limit }} characters long."
+"Die Passwörter stimmen nicht überein.": "The passwords don’t match."

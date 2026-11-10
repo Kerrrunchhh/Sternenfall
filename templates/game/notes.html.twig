@@ -1,24 +1,23 @@
 {% extends 'game/_layout.html.twig' %}
 
-{% block title %}Notizblock – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Notizblock – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    <h1>Notizblock</h1>
-    <p class="muted small">Nur für dich sichtbar – für Ziele, Koordinaten, Absprachen oder Pläne. Koordinaten wie [3:144:9] werden unten als Links angezeigt.</p>
+    <h1>{{ 'Notizblock'|trans }}</h1>
+    <p class="muted small">{{ 'Nur für dich sichtbar – für Ziele, Koordinaten, Absprachen oder Pläne. Koordinaten wie [3:144:9] werden unten als Links angezeigt.'|trans }}</p>
     <section class="panel">
         <form method="post" action="{{ path('app_notes_save') }}" class="notes-form" data-notes-form>
             <input type="hidden" name="_token" value="{{ csrf_token('notes') }}">
-            <textarea name="notes" rows="22" maxlength="{{ limit }}" aria-label="Notizen" placeholder="Schreib hier, was du dir merken willst …" data-notes>{{ player.notes }}</textarea>
+            <textarea name="notes" rows="22" maxlength="{{ limit }}" aria-label="{{ 'Notizen'|trans }}" placeholder="{{ 'Schreib hier, was du dir merken willst …'|trans }}" data-notes>{{ player.notes }}</textarea>
             <div class="notes-foot">
-                <button class="btn" type="submit" id="notes-save">Speichern</button>
-                <span class="muted small" data-notes-state>{{ player.notesUpdatedAt ? 'Zuletzt gespeichert am ' ~ player.notesUpdatedAt|date('d.m.Y H:i') : 'Noch leer.' }}</span>
-                <span class="muted small notes-count"><span data-notes-count>{{ player.notes|length }}</span> / {{ limit|number_format(0, ',', '.') }} Zeichen · Strg+S speichert</span>
+                <button class="btn" type="submit" id="notes-save">{{ 'Speichern'|trans }}</button>
+                {{ '<span class="muted small" data-notes-state>{notesUpdatedAt}</span> <span class="muted small notes-count"><span data-notes-count>{notes}</span> / {limit} Zeichen · Strg+S speichert</span>'|trans({'{notesUpdatedAt}': (player.notesUpdatedAt ? ('Zuletzt gespeichert am'|trans ~ ' ') ~ player.notesUpdatedAt|date('d.m.Y H:i') : ('Noch leer.'|trans))|e, '{notes}': player.notes|length|e, '{limit}': limit|num|e})|raw }}
             </div>
         </form>
     </section>
     {% if player.notes %}
         <section class="panel">
-            <h2>Ansicht mit Links</h2>
+            <h2>{{ 'Ansicht mit Links'|trans }}</h2>
             <div class="message-body">{{ player.notes|link_coordinates }}</div>
         </section>
     {% endif %}

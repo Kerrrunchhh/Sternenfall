@@ -1,14 +1,13 @@
 {% extends 'security/_layout.html.twig' %}
 
 {% block content %}
-    {% if deleted_at %}<p class="flash flash-success">Dein Konto wird am {{ deleted_at|date('d.m.Y H:i') }} gelöscht. Meldest du dich vorher wieder an, bleibt es erhalten.</p>{% endif %}
-    <p>Übernimm das Kommando über eine junge Kolonie: Fördere Rohstoffe, errichte Gebäude,
-       erforsche neue Technologien und schicke deine Flotten in die Weiten des Universums.</p>
+    {% if deleted_at %}<p class="flash flash-success">{{ 'Dein Konto wird am {deleted_at} gelöscht. Meldest du dich vorher wieder an, bleibt es erhalten.'|trans({'{deleted_at}': deleted_at|date('d.m.Y H:i')}) }}</p>{% endif %}
+    <p>{{ 'Übernimm das Kommando über eine junge Kolonie: Fördere Rohstoffe, errichte Gebäude, erforsche neue Technologien und schicke deine Flotten in die Weiten des Universums.'|trans }}</p>
     <div class="actions">
-        <a class="btn" href="{{ path('app_register') }}">Jetzt registrieren</a>
-        <a class="btn btn-secondary" href="{{ path('app_login') }}">Anmelden</a>
+        <a class="btn" href="{{ path('app_register') }}">{{ 'Jetzt registrieren'|trans }}</a>
+        <a class="btn btn-secondary" href="{{ path('app_login') }}">{{ 'Anmelden'|trans }}</a>
     </div>
     {{ include('_ad.html.twig') }}
     <div class="landing-top">{{ include('_top_experience.html.twig') }}</div>
-    <p class="muted small landing-links"><a href="{{ path('app_status') }}">Status des Universums</a></p>
+    <p class="muted small landing-links"><a href="{{ path('app_status') }}">{{ 'Status des Universums'|trans }}</a></p>
 {% endblock %}

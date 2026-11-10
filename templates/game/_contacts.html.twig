@@ -4,17 +4,16 @@
     <ul class="contact-list contact-requests">
         {% for c in incoming_requests %}
             <li>
-                <span>{{ ui.player(c.requester) }} <span class="muted small">möchte dein Schnellkontakt werden</span></span>
-                <span class="contact-actions">
+                <span>{{ '{requester} <span class="muted small">möchte dein Schnellkontakt werden</span></span> <span class="contact-actions">'|trans({'{requester}': ui.player(c.requester)|e})|raw }}
                     <form method="post" action="{{ path('app_contact_accept', {id: c.id}) }}">
                         <input type="hidden" name="_token" value="{{ csrf_token('contact') }}">
                         <input type="hidden" name="to" value="{{ back }}">
-                        <button class="btn btn-small" type="submit" id="contact-accept-{{ c.id }}">Annehmen</button>
+                        <button class="btn btn-small" type="submit" id="contact-accept-{{ c.id }}">{{ 'Annehmen'|trans }}</button>
                     </form>
                     <form method="post" action="{{ path('app_contact_remove', {id: c.id}) }}">
                         <input type="hidden" name="_token" value="{{ csrf_token('contact') }}">
                         <input type="hidden" name="to" value="{{ back }}">
-                        <button class="btn btn-small btn-secondary" type="submit" id="contact-decline-{{ c.id }}">Ablehnen</button>
+                        <button class="btn btn-small btn-secondary" type="submit" id="contact-decline-{{ c.id }}">{{ 'Ablehnen'|trans }}</button>
                     </form>
                 </span>
             </li>
@@ -22,13 +21,13 @@
     </ul>
 {% endif %}
 {% if contacts is empty %}
-    <p class="muted small">Noch keine Schnellkontakte. Im Profil eines Mitspielers kannst du ihn anfragen; nimmt er an, steht er hier mit seinem Online-Status.</p>
+    <p class="muted small">{{ 'Noch keine Schnellkontakte. Im Profil eines Mitspielers kannst du ihn anfragen; nimmt er an, steht er hier mit seinem Online-Status.'|trans }}</p>
 {% else %}
     <ul class="contact-list">
         {% for c in contacts %}
             <li>
                 <span>{{ ui.player(c) }} {{ ui.presence(c) }}</span>
-                <a class="btn btn-small btn-secondary" href="{{ path('app_mail_compose', {to: c.username}) }}" title="Nachricht an {{ c.username }}">✉ Schreiben</a>
+                <a class="btn btn-small btn-secondary" href="{{ path('app_mail_compose', {to: c.username}) }}" title="{{ 'Nachricht an {username}'|trans({'{username}': c.username}) }}">{{ '✉ Schreiben'|trans }}</a>
             </li>
         {% endfor %}
     </ul>

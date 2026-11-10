@@ -11,6 +11,8 @@ use PHPUnit\Framework\TestCase;
 
 class BattleTest extends TestCase
 {
+    use RendersMessages;
+
     public function testOverwhelmingAttackerWinsAndLosesNothing(): void
     {
         $battle = new Battle();
@@ -122,12 +124,12 @@ class BattleTest extends TestCase
         $battle->add(BattleGroup::DEFENDER, $me, ['falke' => 5], 'hangar');
         $result = $battle->fight();
 
-        $mine = $result->report($me);
+        $mine = self::text($result->report($me));
         self::assertMatchesRegularExpression('/Verteidiger:\n  Du \(ich\):\n    Falke: 5 → \d/', $mine, 'own units first, marked "Du"');
         self::assertStringContainsString('kamerad [ORD] · Allianz:', $mine);
         self::assertMatchesRegularExpression('/Pfeil: 10 → \d+ \(−\d+\)/', $mine, 'how many are left and lost');
 
-        $neutral = $result->report();
+        $neutral = self::text($result->report());
         self::assertStringNotContainsString('Du (', $neutral);
         self::assertStringNotContainsString('Allianz:', $neutral);
     }

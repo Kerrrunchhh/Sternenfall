@@ -16,6 +16,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 
+use function Symfony\Component\Translation\t;
+
 class RadarController extends AbstractGameController
 {
     #[Route('/radar', name: 'app_radar', methods: ['GET'])]
@@ -68,7 +70,7 @@ class RadarController extends AbstractGameController
         try {
             $this->addFlash('success', $this->fleetService->spyFleet($this->player(), $target));
         } catch (GameException $e) {
-            $this->addFlash('error', $e->getMessage());
+            $this->addFlash('error', $e->translatable());
         }
 
         return $this->backTo($request, 'app_radar');
@@ -82,12 +84,12 @@ class RadarController extends AbstractGameController
         $hunter = $fleets->find($request->request->getInt('fleet'));
         try {
             if (null === $hunter) {
-                throw new GameException('Bitte wähle eine eigene Flotte aus.');
+                throw new GameException(t('Bitte wähle eine eigene Flotte aus.'));
             }
             $speed = \App\Game\Navigation::parsePercent($request->request->getString('speed'));
             $this->addFlash('success', $this->fleetService->hunt($hunter, $this->player(), $prey, FleetMission::from($mission), $speed));
         } catch (GameException $e) {
-            $this->addFlash('error', $e->getMessage());
+            $this->addFlash('error', $e->translatable());
         }
 
         return $this->redirectToRoute('app_radar');

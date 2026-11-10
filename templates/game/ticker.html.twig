@@ -1,19 +1,19 @@
 {% extends 'game/_layout.html.twig' %}
 {% import 'game/_macros.html.twig' as ui %}
 
-{% block title %}{{ ticker.name }} – Ticker – {{ game_name }}{% endblock %}
+{% block title %}{{ '{name} – Ticker – {game_name}'|trans({'{name}': ticker.name, '{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    <p><a href="{{ path('app_tickers') }}">← Alle Ticker</a></p>
+    <p><a href="{{ path('app_tickers') }}">{{ '← Alle Ticker'|trans }}</a></p>
     <h1>📡 {{ ticker.name }}</h1>
-    {% if ticker.description %}<p class="ticker-about message-body">{{ ticker.description|link_coordinates }}</p>{% endif %}
+    {% if ticker.description %}<p class="ticker-about message-body">{{ ticker.description|trans|link_coordinates }}</p>{% endif %}
     {% if owner %}
         <details class="ticker-describe">
-            <summary class="small">{{ ticker.description ? 'Beschreibung ändern' : 'Beschreibung hinzufügen' }}</summary>
+            <summary class="small">{{ ticker.description|trans ? ('Beschreibung ändern'|trans) : ('Beschreibung hinzufügen'|trans) }}</summary>
             <form method="post" action="{{ path('app_ticker_describe', {id: ticker.id}) }}" class="board-form">
                 <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
-                <textarea name="description" rows="3" maxlength="{{ constant('App\\Entity\\Ticker::MAX_DESCRIPTION') }}" aria-label="Beschreibung des Tickers" placeholder="Worum geht es in diesem Ticker?">{{ ticker.description }}</textarea>
-                <button class="btn btn-small" type="submit" id="ticker-describe">Speichern</button>
+                <textarea name="description" rows="3" maxlength="{{ constant('App\\Entity\\Ticker::MAX_DESCRIPTION') }}" aria-label="{{ 'Beschreibung des Tickers'|trans }}" placeholder="{{ 'Worum geht es in diesem Ticker?'|trans }}">{{ ticker.description|trans }}</textarea>
+                <button class="btn btn-small" type="submit" id="ticker-describe">{{ 'Speichern'|trans }}</button>
             </form>
         </details>
     {% endif %}
@@ -22,44 +22,44 @@
         <section class="panel">
             <form method="post" action="{{ path('app_ticker_post', {id: ticker.id}) }}" class="board-form ticker-form">
                 <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
-                <textarea name="body" rows="3" maxlength="{{ constant('App\\Entity\\TickerPost::MAX_BODY') }}" required aria-label="Neuer Beitrag" placeholder="Nachricht an alle im Ticker …"></textarea>
-                <button class="btn btn-small" type="submit" id="ticker-send">Senden</button>
+                <textarea name="body" rows="3" maxlength="{{ constant('App\\Entity\\TickerPost::MAX_BODY') }}" required aria-label="{{ 'Neuer Beitrag'|trans }}" placeholder="{{ 'Nachricht an alle im Ticker …'|trans }}"></textarea>
+                <button class="btn btn-small" type="submit" id="ticker-send">{{ 'Senden'|trans }}</button>
             </form>
             <div class="board-feed ticker-feed">
                 {% for p in posts %}
                     <div class="board-post">
                         <div class="muted small board-meta">
-                            <span>{% if p.author %}{{ ui.player(p.author) }}{% else %}gelöschter Spieler{% endif %} · {{ p.createdAt|date('d.m.Y H:i') }}</span>
+                            <span>{% if p.author %}{{ ui.player(p.author) }}{% else %}{{ 'gelöschter Spieler'|trans }}{% endif %} · {{ p.createdAt|date('d.m.Y H:i') }}</span>
                             {% if owner %}
                                 <form method="post" action="{{ path('app_ticker_post_delete', {id: p.id}) }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
-                                    <button class="btn btn-small btn-danger" type="submit" data-confirm="Beitrag löschen?" data-confirm-label="Löschen" title="Beitrag löschen">✕</button>
+                                    <button class="btn btn-small btn-danger" type="submit" data-confirm="{{ 'Beitrag löschen?'|trans }}" data-confirm-label="{{ 'Löschen'|trans }}" title="{{ 'Beitrag löschen'|trans }}">✕</button>
                                 </form>
                             {% endif %}
                         </div>
                         <div class="message-body">{{ p.body|link_coordinates }}</div>
                     </div>
                 {% else %}
-                    <p class="muted">Noch keine Beiträge. Schreib den ersten!</p>
+                    <p class="muted">{{ 'Noch keine Beiträge. Schreib den ersten!'|trans }}</p>
                 {% endfor %}
             </div>
         </section>
 
         <section class="panel">
-            <h2>Mitglieder <small class="muted">{{ ticker.acceptedMembers|length }}</small></h2>
+            <h2>{{ 'Mitglieder <small class="muted">{acceptedMembers}</small>'|trans({'{acceptedMembers}': ticker.acceptedMembers|length|e})|raw }}</h2>
             <ul class="contact-list">
                 {% for m in ticker.acceptedMembers %}
                     <li>
-                        <span>{{ ui.player(m.user) }}{% if ticker.isOwnedBy(m.user) %} <span class="muted small" title="Besitzer">👑</span>{% endif %}</span>
+                        <span>{{ ui.player(m.user) }}{% if ticker.isOwnedBy(m.user) %} <span class="muted small" title="{{ 'Besitzer'|trans }}">👑</span>{% endif %}</span>
                         {% if owner and not ticker.isOwnedBy(m.user) %}
                             <span class="contact-actions">
                                 <form method="post" action="{{ path('app_ticker_hand_over', {id: m.id}) }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
-                                    <button class="btn btn-small btn-secondary" type="submit" data-confirm="Ticker an {{ m.user.username }} abgeben? Du bleibst Mitglied, verlierst aber die Besitzerrechte." data-confirm-label="Abgeben">Abgeben</button>
+                                    <button class="btn btn-small btn-secondary" type="submit" data-confirm="{{ 'Ticker an {username} abgeben? Du bleibst Mitglied, verlierst aber die Besitzerrechte.'|trans({'{username}': m.user.username}) }}" data-confirm-label="{{ 'Abgeben'|trans }}">{{ 'Abgeben'|trans }}</button>
                                 </form>
                                 <form method="post" action="{{ path('app_ticker_remove', {id: m.id}) }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
-                                    <button class="btn btn-small btn-danger" type="submit" data-confirm="{{ m.user.username }} aus dem Ticker entfernen?" data-confirm-label="Entfernen">Entfernen</button>
+                                    <button class="btn btn-small btn-danger" type="submit" data-confirm="{{ '{username} aus dem Ticker entfernen?'|trans({'{username}': m.user.username}) }}" data-confirm-label="{{ 'Entfernen'|trans }}">{{ 'Entfernen'|trans }}</button>
                                 </form>
                             </span>
                         {% endif %}
@@ -69,14 +69,14 @@
 
             {% if owner %}
                 {% if ticker.invitations is not empty %}
-                    <h3 class="small muted">Eingeladen</h3>
+                    <h3 class="small muted">{{ 'Eingeladen'|trans }}</h3>
                     <ul class="contact-list">
                         {% for i in ticker.invitations %}
                             <li>
                                 <span>{{ ui.player(i.user) }}</span>
                                 <form method="post" action="{{ path('app_ticker_remove', {id: i.id}) }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
-                                    <button class="btn btn-small btn-secondary" type="submit">Zurückziehen</button>
+                                    <button class="btn btn-small btn-secondary" type="submit">{{ 'Zurückziehen'|trans }}</button>
                                 </form>
                             </li>
                         {% endfor %}
@@ -84,17 +84,17 @@
                 {% endif %}
                 <form method="post" action="{{ path('app_ticker_invite', {id: ticker.id}) }}" class="inline-action">
                     <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
-                    <input type="text" name="username" required placeholder="Spielername" aria-label="Spieler einladen">
-                    <button class="btn btn-small" type="submit" id="ticker-invite">Einladen</button>
+                    <input type="text" name="username" required placeholder="{{ 'Spielername'|trans }}" aria-label="{{ 'Spieler einladen'|trans }}">
+                    <button class="btn btn-small" type="submit" id="ticker-invite">{{ 'Einladen'|trans }}</button>
                 </form>
                 <form method="post" action="{{ path('app_ticker_close', {id: ticker.id}) }}" class="ticker-close">
                     <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
-                    <button class="btn btn-small btn-danger" type="submit" data-confirm="Ticker „{{ ticker.name }}“ schließen? Alle Beiträge werden gelöscht." data-confirm-label="Schließen">Ticker schließen</button>
+                    <button class="btn btn-small btn-danger" type="submit" data-confirm="{{ 'Ticker „{name}“ schließen? Alle Beiträge werden gelöscht.'|trans({'{name}': ticker.name}) }}" data-confirm-label="{{ 'Schließen'|trans }}">{{ 'Ticker schließen'|trans }}</button>
                 </form>
             {% else %}
                 <form method="post" action="{{ path('app_ticker_leave', {id: membership.id}) }}" class="ticker-close">
                     <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
-                    <button class="btn btn-small btn-secondary" type="submit" data-confirm="Ticker „{{ ticker.name }}“ verlassen?" data-confirm-label="Verlassen">Ticker verlassen</button>
+                    <button class="btn btn-small btn-secondary" type="submit" data-confirm="{{ 'Ticker „{name}“ verlassen?'|trans({'{name}': ticker.name}) }}" data-confirm-label="{{ 'Verlassen'|trans }}">{{ 'Ticker verlassen'|trans }}</button>
                 </form>
             {% endif %}
         </section>

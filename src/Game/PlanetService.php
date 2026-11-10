@@ -2,6 +2,7 @@
 
 namespace App\Game;
 
+use App\I18n\Lines;
 use App\Entity\BuildingOrder;
 use App\Entity\Planet;
 use App\Entity\QueueItem;
@@ -10,6 +11,9 @@ use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Lock\LockFactory;
+use App\I18n\Num;
+
+use function Symfony\Component\Translation\t;
 
 /**
  * Entry point for every state change of a planet or its owner. Each operation
@@ -48,13 +52,13 @@ final readonly class PlanetService
         $this->locked($planet, function (Planet $planet, \DateTimeImmutable $now) use ($type): void {
             $queue = $planet->getBuildingQueue();
             if (\count($queue) >= QueueKind::Buildings->maxLength()) {
-                throw new GameException('Die Bauschleife ist voll: ein Gebäude im Bau und eines in Wartestellung.');
+                throw new GameException(t('Die Bauschleife ist voll: ein Gebäude im Bau und eines in Wartestellung.'));
             }
 
             // Requirements may be fulfilled by upgrades that are already queued.
             $missing = $this->economy->missingRequirements($type->requirements(), $planet, planned: true);
             if ([] !== $missing) {
-                throw new GameException('Voraussetzungen fehlen: '.implode(', ', $missing).'.');
+                throw new GameException(t('Voraussetzungen fehlen: {missing}.', ['{missing}' => new Lines($missing, ', ')]));
             }
 
             $targetLevel = $planet->getPlannedBuildingLevel($type) + 1;
@@ -75,17 +79,17 @@ final readonly class PlanetService
         $this->locked($planet, function (Planet $planet, \DateTimeImmutable $now) use ($type): void {
             $player = $planet->getOwner();
             if ($player->isResearching()) {
-                throw new GameException('Es läuft bereits eine Forschung.');
+                throw new GameException(t('Es läuft bereits eine Forschung.'));
             }
 
             $missing = $this->economy->missingRequirements($type->requirements(), $planet);
             if ([] !== $missing) {
-                throw new GameException('Voraussetzungen fehlen: '.implode(', ', $missing).'.');
+                throw new GameException(t('Voraussetzungen fehlen: {missing}.', ['{missing}' => new Lines($missing, ', ')]));
             }
 
             $targetLevel = $player->getResearchLevel($type) + 1;
             if (null !== $type->maxLevel() && $targetLevel > $type->maxLevel()) {
-                throw new GameException(\sprintf('%s ist bereits auf der höchsten Stufe %d.', $type->label(), $type->maxLevel()));
+                throw new GameException(t('{type} ist bereits auf der höchsten Stufe {maxLevel}.', ['{type}' => t($type->label()), '{maxLevel}' => $type->maxLevel()]));
             }
             $this->pay($planet, $this->economy->researchCost($type, $targetLevel));
             $seconds = $this->economy->researchSeconds($type, $targetLevel, $planet);
@@ -101,11 +105,11 @@ final readonly class PlanetService
     {
         $name = trim(preg_replace('/\s+/u', ' ', $name) ?? '');
         if ('' === $name || mb_strlen($name) > 30) {
-            throw new GameException('Der Planetenname muss 1 bis 30 Zeichen lang sein.');
+            throw new GameException(t('Der Planetenname muss 1 bis 30 Zeichen lang sein.'));
         }
         $this->locked($planet, function (Planet $planet) use ($actor, $name): void {
             if (!$planet->getOwner()->isSameAs($actor)) {
-                throw new GameException('Du kannst nur deine eigenen Planeten umbenennen.');
+                throw new GameException(t('Du kannst nur deine eigenen Planeten umbenennen.'));
             }
             $planet->setName($name);
         });
@@ -124,13 +128,13 @@ final readonly class PlanetService
         $at = null;
         $this->locked($planet, function (Planet $planet, \DateTimeImmutable $now) use ($actor, &$at): void {
             if (!$planet->getOwner()->isSameAs($actor)) {
-                throw new GameException('Du kannst nur deine eigenen Planeten verlassen.');
+                throw new GameException(t('Du kannst nur deine eigenen Planeten verlassen.'));
             }
             if ($planet->isHomeworld()) {
-                throw new GameException('Den Heimatplaneten kannst du nicht verlassen.');
+                throw new GameException(t('Den Heimatplaneten kannst du nicht verlassen.'));
             }
             if ($planet->isBeingAbandoned()) {
-                throw new GameException(\sprintf('%s wird bereits verlassen.', $planet->getName()));
+                throw new GameException(t('{name} wird bereits verlassen.', ['{name}' => $planet->getName()]));
             }
             $at = $now->modify(self::ABANDON_DELAY);
             $planet->setAbandonAt($at);
@@ -143,7 +147,7 @@ final readonly class PlanetService
     {
         $this->locked($planet, function (Planet $planet) use ($actor): void {
             if (!$planet->getOwner()->isSameAs($actor) || !$planet->isBeingAbandoned()) {
-                throw new GameException('Dieser Planet wird nicht verlassen.');
+                throw new GameException(t('Dieser Planet wird nicht verlassen.'));
             }
             $planet->setAbandonAt(null);
         });
@@ -175,7 +179,7 @@ final readonly class PlanetService
         $this->locked($planet, function (Planet $planet): void {
             $player = $planet->getOwner();
             if (!$player->isResearching()) {
-                throw new GameException('Es läuft keine Forschung.');
+                throw new GameException(t('Es läuft keine Forschung.'));
             }
 
             $cost = $this->economy->researchCost($player->getResearchType(), $player->getResearchTargetLevel());
@@ -194,24 +198,24 @@ final readonly class PlanetService
         $this->locked($planet, function (Planet $planet, \DateTimeImmutable $now) use ($type, $quantity, $percent): void {
             $limit = self::maxOrderQuantity($type);
             if ($quantity < 1 || $quantity > $limit) {
-                throw new GameException(\sprintf('Bitte gib eine Anzahl zwischen 1 und %s an.', number_format($limit, 0, ',', '.')));
+                throw new GameException(t('Bitte gib eine Anzahl zwischen 1 und {limit} an.', ['{limit}' => new Num($limit)]));
             }
 
             $missing = $this->economy->missingShipRequirements($type, $planet);
             if ([] !== $missing) {
-                throw new GameException('Voraussetzungen fehlen: '.implode(', ', $missing).'.');
+                throw new GameException(t('Voraussetzungen fehlen: {missing}.', ['{missing}' => new Lines($missing, ', ')]));
             }
 
             $crew = $type->spec()->crew * $quantity;
             if ($crew > floor($planet->getPopulation())) {
-                throw new GameException(\sprintf('Nicht genügend Bevölkerung für die Besatzung (%d benötigt).', $crew));
+                throw new GameException(t('Nicht genügend Bevölkerung für die Besatzung ({crew} benötigt).', ['{crew}' => $crew]));
             }
 
             $player = $planet->getOwner();
             $unitCost = $this->economy->shipOrderCost($type, $player, $percent);
             $unitCredits = $this->economy->shipOrderCredits($type, $player, $percent);
             if ($unitCredits * $quantity > $player->getCredits()) {
-                throw new GameException(\sprintf('Nicht genügend Credits (%s benötigt).', number_format($unitCredits * $quantity, 0, ',', '.')));
+                throw new GameException(t('Nicht genügend Credits ({quantity} benötigt).', ['{quantity}' => new Num($unitCredits * $quantity)]));
             }
             $this->pay($planet, $unitCost->multiply($quantity));
             $player->addCredits(-$unitCredits * $quantity);
@@ -270,7 +274,7 @@ final readonly class PlanetService
             }
             $orderIds = array_values(array_unique(array_map('intval', $orderIds)));
             if (\count($orderIds) !== \count($byId) || [] !== array_diff($orderIds, array_keys($byId))) {
-                throw new GameException('Die Bauschleife hat sich inzwischen geändert. Bitte lade die Seite neu.');
+                throw new GameException(t('Die Bauschleife hat sich inzwischen geändert. Bitte lade die Seite neu.'));
             }
 
             foreach ($queue as $item) {
@@ -328,7 +332,7 @@ final readonly class PlanetService
             }
         }
 
-        throw new GameException('Diesen Auftrag gibt es nicht mehr.');
+        throw new GameException(t('Diesen Auftrag gibt es nicht mehr.'));
     }
 
     /** @param list<QueueItem> $queue */
@@ -341,7 +345,7 @@ final readonly class PlanetService
     {
         $stock = $planet->getResources();
         if (!$stock->covers($cost)) {
-            throw new GameException('Nicht genügend Rohstoffe.');
+            throw new GameException(t('Nicht genügend Rohstoffe.'));
         }
         $planet->setResources($stock->subtract($cost));
     }

@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\I18n\NumberInput;
 use App\Entity\Alliance;
 use App\Entity\AlliancePost;
 use App\Entity\AllianceRequest;
@@ -16,6 +17,9 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
+use App\I18n\Num;
+
+use function Symfony\Component\Translation\t;
 
 class AllianceController extends AbstractGameController
 {
@@ -58,7 +62,7 @@ class AllianceController extends AbstractGameController
         $this->currentPlanet();
         $this->attempt(
             fn () => $this->alliances->found($this->player(), $request->request->getString('name'), $request->request->getString('tag')),
-            \sprintf('%s „%s“ wurde gegründet.', $this->player()->getLifeForm()->allianceType(), trim($request->request->getString('name'))),
+            t('{allianceType} „{value}“ wurde gegründet.', ['{allianceType}' => $this->player()->getLifeForm()->allianceType(), '{value}' => trim($request->request->getString('name'))]),
         );
 
         return $this->redirectToRoute('app_alliance');
@@ -73,7 +77,7 @@ class AllianceController extends AbstractGameController
         $invited = true === $this->repository->findRequest($alliance, $this->player())?->isInvitation();
         $this->attempt(
             fn () => $this->alliances->apply($this->player(), $alliance),
-            $invited ? \sprintf('Du bist „%s“ beigetreten.', $alliance->getName()) : \sprintf('Deine Bewerbung bei „%s“ wurde abgeschickt.', $alliance->getName()),
+            $invited ? t('Du bist „{name}“ beigetreten.', ['{name}' => $alliance->getName()]) : t('Deine Bewerbung bei „{name}“ wurde abgeschickt.', ['{name}' => $alliance->getName()]),
         );
 
         return $invited && $this->player()->getAlliance()
@@ -87,8 +91,8 @@ class AllianceController extends AbstractGameController
     {
         $this->currentPlanet();
         'accept' === $answer
-            ? $this->attempt(fn () => $this->alliances->accept($this->player(), $allianceRequest), 'Angenommen.')
-            : $this->attempt(fn () => $this->alliances->decline($this->player(), $allianceRequest), 'Abgelehnt.');
+            ? $this->attempt(fn () => $this->alliances->accept($this->player(), $allianceRequest), t('Angenommen.'))
+            : $this->attempt(fn () => $this->alliances->decline($this->player(), $allianceRequest), t('Abgelehnt.'));
 
         return $this->redirectToRoute('app_alliance');
     }
@@ -99,7 +103,7 @@ class AllianceController extends AbstractGameController
     {
         $this->currentPlanet();
         $name = $request->request->getString('username');
-        $this->attempt(fn () => $this->alliances->invite($this->player(), $name), \sprintf('%s wurde eingeladen.', trim($name)));
+        $this->attempt(fn () => $this->alliances->invite($this->player(), $name), t('{value} wurde eingeladen.', ['{value}' => trim($name)]));
 
         return $this->redirectToRoute('app_alliance');
     }
@@ -111,9 +115,9 @@ class AllianceController extends AbstractGameController
         $this->currentPlanet();
         $rank = AllianceRank::tryFrom($request->request->getString('rank'));
         if ('founder' === $request->request->getString('rank')) {
-            $this->attempt(fn () => $this->alliances->transferFounder($this->player(), $member), \sprintf('%s ist jetzt Gründer.', $member->getUsername()));
+            $this->attempt(fn () => $this->alliances->transferFounder($this->player(), $member), t('{player} ist jetzt Gründer.', ['{player}' => $member->getUsername()]));
         } elseif (null !== $rank) {
-            $this->attempt(fn () => $this->alliances->setRank($this->player(), $member, $rank), \sprintf('%s ist jetzt %s.', $member->getUsername(), $rank->label()));
+            $this->attempt(fn () => $this->alliances->setRank($this->player(), $member, $rank), t('{player} ist jetzt {rank}.', ['{player}' => $member->getUsername(), '{rank}' => t($rank->label())]));
         }
 
         return $this->redirectToRoute('app_alliance');
@@ -124,7 +128,7 @@ class AllianceController extends AbstractGameController
     public function kick(User $member): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->alliances->kick($this->player(), $member), \sprintf('%s wurde ausgeschlossen.', $member->getUsername()));
+        $this->attempt(fn () => $this->alliances->kick($this->player(), $member), t('{player} wurde ausgeschlossen.', ['{player}' => $member->getUsername()]));
 
         return $this->redirectToRoute('app_alliance');
     }
@@ -134,7 +138,7 @@ class AllianceController extends AbstractGameController
     public function leave(): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->alliances->leave($this->player()), 'Du hast die Allianz verlassen.');
+        $this->attempt(fn () => $this->alliances->leave($this->player()), t('Du hast die Allianz verlassen.'));
 
         return $this->redirectToRoute('app_alliance');
     }
@@ -144,7 +148,7 @@ class AllianceController extends AbstractGameController
     public function dissolve(): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->alliances->dissolve($this->player()), 'Die Allianz wurde aufgelöst.');
+        $this->attempt(fn () => $this->alliances->dissolve($this->player()), t('Die Allianz wurde aufgelöst.'));
 
         return $this->redirectToRoute('app_alliance');
     }
@@ -158,12 +162,12 @@ class AllianceController extends AbstractGameController
         try {
             $deposed = $this->alliances->voteFounder($this->player(), $candidate);
             $this->addFlash('success', match (true) {
-                $deposed => \sprintf('Mehrheit erreicht: %s ist jetzt Gründer.', $candidate->getUsername()),
+                $deposed => t('Mehrheit erreicht: {player} ist jetzt Gründer.', ['{player}' => $candidate->getUsername()]),
                 null === $candidate => 'Deine Stimme wurde zurückgezogen.',
-                default => \sprintf('Deine Stimme für %s wurde gezählt.', $candidate->getUsername()),
+                default => t('Deine Stimme für {player} wurde gezählt.', ['{player}' => $candidate->getUsername()]),
             });
         } catch (GameException $e) {
-            $this->addFlash('error', $e->getMessage());
+            $this->addFlash('error', $e->translatable());
         }
 
         return $this->redirectToRoute('app_alliance');
@@ -187,7 +191,7 @@ class AllianceController extends AbstractGameController
     {
         $this->currentPlanet();
         $rate = $request->request->getInt('rate');
-        $this->attempt(fn () => $this->alliances->setTax($this->player(), $rate), \sprintf('Steuersatz: %d %%.', $rate));
+        $this->attempt(fn () => $this->alliances->setTax($this->player(), $rate), t('Steuersatz: {rate} %.', ['{rate}' => $rate]));
 
         return $this->redirectToRoute('app_alliance');
     }
@@ -200,10 +204,10 @@ class AllianceController extends AbstractGameController
         $form = $request->request;
         $member = $users->find($form->getInt('member'));
         if (null === $member) {
-            $this->addFlash('error', 'Wähle ein Mitglied aus.');
+            $this->addFlash('error', t('Wähle ein Mitglied aus.'));
         } else {
-            $amount = (float) str_replace(['.', ','], ['', '.'], $form->getString('amount'));
-            $this->attempt(fn () => $this->alliances->payOut($this->player(), $member, $amount, $form->getString('note')), \sprintf('%s Credits an %s ausgezahlt.', number_format(floor($amount), 0, ',', '.'), $member->getUsername()));
+            $amount = NumberInput::amount($form->getString('amount'));
+            $this->attempt(fn () => $this->alliances->payOut($this->player(), $member, $amount, $form->getString('note')), t('{value} Credits an {player} ausgezahlt.', ['{value}' => new Num(floor($amount)), '{player}' => $member->getUsername()]));
         }
 
         return $this->redirectToRoute('app_alliance');
@@ -217,7 +221,7 @@ class AllianceController extends AbstractGameController
         $form = $request->request;
         $this->attempt(
             fn () => $this->alliances->present($this->player(), $form->getString('internal_text'), $form->getString('external_text'), $request->files->get('image'), $form->getBoolean('remove_image')),
-            'Darstellung der Allianz gespeichert.',
+            t('Darstellung der Allianz gespeichert.'),
         );
 
         return $this->redirectToRoute('app_alliance');
@@ -228,7 +232,7 @@ class AllianceController extends AbstractGameController
     public function post(Request $request): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->alliances->post($this->player(), $request->request->getString('body')), 'Beitrag veröffentlicht.');
+        $this->attempt(fn () => $this->alliances->post($this->player(), $request->request->getString('body')), t('Beitrag veröffentlicht.'));
 
         return $this->backTo($request, 'app_alliance');
     }
@@ -240,9 +244,9 @@ class AllianceController extends AbstractGameController
         $this->currentPlanet();
         try {
             $this->alliances->deletePost($this->player(), $post);
-            $this->addFlash('success', 'Beitrag gelöscht.');
+            $this->addFlash('success', t('Beitrag gelöscht.'));
         } catch (GameException $e) {
-            $this->addFlash('error', $e->getMessage());
+            $this->addFlash('error', $e->translatable());
         }
 
         return $this->redirectToRoute('app_alliance');

@@ -15,6 +15,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 
+use function Symfony\Component\Translation\t;
+
 /** Diplomacy: bonds, non-aggression pacts and wars between alliances. */
 class DiplomacyController extends AbstractGameController
 {
@@ -49,9 +51,9 @@ class DiplomacyController extends AbstractGameController
         $target = ctype_digit($id) ? $alliances->find((int) $id) : null;
         $kind = TreatyKind::tryFrom($request->request->getString('kind'));
         if (null === $target || null === $kind) {
-            $this->addFlash('error', 'Wähle eine Allianz und eine Vertragsart.');
+            $this->addFlash('error', t('Wähle eine Allianz und eine Vertragsart.'));
         } else {
-            $this->attempt(fn () => $this->diplomacy->propose($this->player(), $target, $kind, $request->request->getString('message')), \sprintf('Vorschlag „%s“ mit %s eingereicht – deine Stimme ist gezählt.', $kind->label(), $target->getName()));
+            $this->attempt(fn () => $this->diplomacy->propose($this->player(), $target, $kind, $request->request->getString('message')), t('Vorschlag „{kind}“ mit {name} eingereicht – deine Stimme ist gezählt.', ['{kind}' => t($kind->label()), '{name}' => $target->getName()]));
         }
 
         return $this->redirectToRoute('app_diplomacy');
@@ -62,7 +64,7 @@ class DiplomacyController extends AbstractGameController
     public function end(DiplomaticRelation $relation, Request $request): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->diplomacy->proposeEnd($this->player(), $relation, $request->request->getString('message')), 'Abstimmung über das Ende eingereicht – deine Stimme ist gezählt.');
+        $this->attempt(fn () => $this->diplomacy->proposeEnd($this->player(), $relation, $request->request->getString('message')), t('Abstimmung über das Ende eingereicht – deine Stimme ist gezählt.'));
 
         return $this->redirectToRoute('app_diplomacy');
     }
@@ -76,7 +78,7 @@ class DiplomacyController extends AbstractGameController
             $result = $this->diplomacy->vote($this->player(), $proposal, 'yes' === $request->request->getString('vote'));
             $this->addFlash('success', $result);
         } catch (GameException $e) {
-            $this->addFlash('error', $e->getMessage());
+            $this->addFlash('error', $e->translatable());
         }
 
         return $this->redirectToRoute('app_diplomacy');

@@ -1,64 +1,64 @@
 {% extends 'game/_layout.html.twig' %}
 {% import 'game/_macros.html.twig' as ui %}
 
-{% block title %}{{ defense ? 'Planetenverteidigung' : 'Werft' }} – {{ game_name }}{% endblock %}
+{% block title %}{{ defense ? ('Planetenverteidigung'|trans) : ('Werft'|trans) }} – {{ game_name }}{% endblock %}
 
 {% block content %}
-    <h1>{{ defense ? 'Planetenverteidigung' : 'Werft' }}</h1>
+    <h1>{{ defense ? ('Planetenverteidigung'|trans) : ('Werft'|trans) }}</h1>
 
     {{ include('game/_queue.html.twig', {queue_planet: planet, kind: defense ? enum('App\\Game\\QueueKind').Defense : enum('App\\Game\\QueueKind').Shipyard, entries: queue, back: defense ? 'app_defense' : 'app_shipyard'}) }}
 
     {% if planet.buildingLevel(enum('App\\Game\\BuildingType').Shipyard) == 0 %}
-        <p class="panel warning">Auf diesem Planeten steht noch keine Raumwerft{{ defense ? ' – auch Verteidigungsanlagen werden dort gebaut' }}.</p>
+        <p class="panel warning">{{ 'Auf diesem Planeten steht noch keine Raumwerft{gebaut}.'|trans({'{gebaut}': defense ? (' ' ~ '– auch Verteidigungsanlagen werden dort gebaut'|trans)}) }}</p>
     {% endif %}
 
-    {% if defense %}<p class="muted small">Verteidigungsanlagen stehen fest auf dem Planeten und schießen bei Angriffen mit. Sie werden in der Werft gebaut und teilen sich die Bauschleife mit den Schiffen.</p>{% endif %}
-    <p class="muted small">Schiffe und Verteidigung lassen sich auch mit 125–200 % bauen: Das kostet mehr Eisen und Titan und zusätzlich so viel Nahrung und Wasser wie das Mehr an Eisen (Wasserstoff ein Zehntel davon); bei Verteidigungsanlagen steigen auch die Credits. Dafür sinkt die Bauzeit (200 % = halbe Zeit). Alles, was in der Bauschleife steckt, ist vor Plünderung sicher und wird beim Abbrechen voll erstattet.</p>
+    {% if defense %}<p class="muted small">{{ 'Verteidigungsanlagen stehen fest auf dem Planeten und schießen bei Angriffen mit. Sie werden in der Werft gebaut und teilen sich die Bauschleife mit den Schiffen.'|trans }}</p>{% endif %}
+    <p class="muted small">{{ 'Schiffe und Verteidigung lassen sich auch mit 125–200 % bauen: Das kostet mehr Eisen und Titan und zusätzlich so viel Nahrung und Wasser wie das Mehr an Eisen (Wasserstoff ein Zehntel davon); bei Verteidigungsanlagen steigen auch die Credits. Dafür sinkt die Bauzeit (200 % = halbe Zeit). Alles, was in der Bauschleife steckt, ist vor Plünderung sicher und wird beim Abbrechen voll erstattet.'|trans }}</p>
 
     {% if not defense %}
-        <nav class="tabs" aria-label="Werft">
-            <a href="{{ path('app_shipyard') }}" class="{{ not civil ? 'active' }}" {{ not civil ? 'aria-current="page"' }}>Kriegsschiffe</a>
-            <a href="{{ path('app_shipyard', {tab: 'civil'}) }}" class="{{ civil ? 'active' }}" {{ civil ? 'aria-current="page"' }}>Zivile Schiffe</a>
+        <nav class="tabs" aria-label="{{ 'Werft'|trans }}">
+            <a href="{{ path('app_shipyard') }}" class="{{ not civil ? 'active' }}" {{ not civil ? 'aria-current="page"' }}>{{ 'Kriegsschiffe'|trans }}</a>
+            <a href="{{ path('app_shipyard', {tab: 'civil'}) }}" class="{{ civil ? 'active' }}" {{ civil ? 'aria-current="page"' }}>{{ 'Zivile Schiffe'|trans }}</a>
         </nav>
     {% endif %}
 
     {% for group, ships in groups %}
-        {% if defense %}<h2 class="section-title">{{ group }}</h2>{% endif %}
+        {% if defense %}<h2 class="section-title">{{ group|trans }}</h2>{% endif %}
         <div class="building-list">
             {% for s in ships %}
                 {% set picture = game_picture(defense ? 'defense' : 'ships', s.type.value) %}
                 <article class="panel building ship {{ picture ? 'has-picture' }}">
-                    {% if picture %}<img class="card-picture" src="{{ asset(picture) }}" alt="{{ s.type.label }}" loading="lazy">{% endif %}
+                    {% if picture %}<img class="card-picture" src="{{ asset(picture) }}" alt="{{ s.type.label|trans }}" loading="lazy">{% endif %}
                     <div class="card-body">
                     <div class="building-head">
                         <h2>
-                            {% if s.type.combatShip or s.type.stationary %}<span class="firing-order" title="Schussreihenfolge">#{{ s.type.firingOrder }}</span>{% endif %}
-                            {{ s.type.label }}
-                            {% if s.type.shipClass %}<span class="ship-class">{{ s.type.shipClass.label }}</span>{% endif %}
+                            {% if s.type.combatShip or s.type.stationary %}<span class="firing-order" title="{{ 'Schussreihenfolge'|trans }}">#{{ s.type.firingOrder }}</span>{% endif %}
+                            {{ s.type.label|trans }}
+                            {% if s.type.shipClass %}<span class="ship-class">{{ s.type.shipClass.label|trans }}</span>{% endif %}
                         </h2>
-                        <span class="level">{{ defense ? 'Auf dem Planeten' : 'Im Hangar' }}: {{ s.stationed|number_format(0, ',', '.') }}</span>
+                        <span class="level">{{ defense ? ('Auf dem Planeten'|trans) : ('Im Hangar'|trans) }}: {{ s.stationed|num }}</span>
                     </div>
-                    <p class="building-desc">{{ s.type.description }}</p>
+                    <p class="building-desc">{{ s.type.description|trans }}</p>
                     <dl class="stats">
-                        {{ ui.ship_stat('Angriff', s.stats.attack) }}
-                        {{ ui.ship_stat('Schild', s.stats.shield) }}
-                        <div><dt>Hülle</dt><dd>{{ s.spec.hull|number_format(0, ',', '.') }}</dd></div>
+                        {{ ui.ship_stat(('Angriff'|trans), s.stats.attack) }}
+                        {{ ui.ship_stat(('Schild'|trans), s.stats.shield) }}
+                        <div><dt>{{ 'Hülle'|trans }}</dt><dd>{{ s.spec.hull|num }}</dd></div>
                         {% if not defense %}
-                        {{ ui.ship_stat('Tempo', s.stats.speed) }}
+                        {{ ui.ship_stat(('Tempo'|trans), s.stats.speed) }}
                         {% if s.type.salvageCapacity > 0 %}
-                            <div><dt>Bergeraum</dt><dd>{{ s.type.salvageCapacity|number_format(0, ',', '.') }}</dd></div>
+                            <div><dt>{{ 'Bergeraum'|trans }}</dt><dd>{{ s.type.salvageCapacity|num }}</dd></div>
                         {% else %}
-                            <div><dt>Fracht</dt><dd>{{ s.type.cargo > 0 ? s.type.cargo|number_format(0, ',', '.') : '–' }}</dd></div>
+                            <div><dt>{{ 'Fracht'|trans }}</dt><dd>{{ s.type.cargo > 0 ? s.type.cargo|num : '–' }}</dd></div>
                         {% endif %}
-                        <div><dt>Wasserstoff/Flug</dt><dd>{{ s.spec.fuel|number_format(0, ',', '.') }}</dd></div>
+                        <div><dt>{{ 'Wasserstoff/Flug'|trans }}</dt><dd>{{ s.spec.fuel|num }}</dd></div>
                         {% endif %}
-                        {% if not defense %}<div><dt>Besatzung</dt><dd>{{ s.spec.crew|number_format(0, ',', '.') }}</dd></div>{% endif %}
-                        {% if not defense %}<div><dt>Antrieb</dt><dd>{{ s.spec.drive.label }}</dd></div>{% endif %}
+                        {% if not defense %}<div><dt>{{ 'Besatzung'|trans }}</dt><dd>{{ s.spec.crew|num }}</dd></div>{% endif %}
+                        {% if not defense %}<div><dt>{{ 'Antrieb'|trans }}</dt><dd>{{ s.spec.drive.label|trans }}</dd></div>{% endif %}
                     </dl>
                     {# What the own research (and life form) makes of the base values. #}
                     {% set notes = s.stats|map(st => st.notes)|reduce((all, n) => all|merge(n), []) %}
                     {% if notes is not empty %}
-                        <p class="research-effects small"><span class="muted">Deine Forschung:</span> {{ notes|join(' · ') }}</p>
+                        <p class="research-effects small">{{ '<span class="muted">Deine Forschung:</span> {notes}'|trans({'{notes}': notes|map(n => n|trans)|join(' · ')|e})|raw }}</p>
                     {% endif %}
                     <div class="building-foot" data-build-rates>
                         {% for percent, r in s.rates|filter((r, percent) => percent == 100) %}
@@ -66,23 +66,23 @@
                         {% endfor %}
                         {# Higher build rates only on demand. #}
                         <details class="rate-details" data-rate-details>
-                            <summary>Kosten bei 125–200 % (schneller bauen, Rohstoffe sichern)</summary>
+                            <summary>{{ 'Kosten bei 125–200 % (schneller bauen, Rohstoffe sichern)'|trans }}</summary>
                             {% for percent, r in s.rates|filter((r, percent) => percent > 100) %}
                                 {{ _self.rate_row(percent, r, s, planet, player, false) }}
                             {% endfor %}
                         </details>
                         {% if s.missing is not empty %}
-                            <span class="requirement">Benötigt: {{ s.missing|join(', ') }}</span>
+                            <span class="requirement">{{ 'Benötigt: {missing}'|trans({'{missing}': s.missing|map(m => m|trans)|join(', ')}) }}</span>
                         {% else %}
                             {% set base = s.rates|first %}
                             <form method="post" action="{{ path('app_shipyard_order', {type: s.type.value}) }}" class="order-form">
                                 <input type="hidden" name="_token" value="{{ csrf_token('shipyard') }}">
-                                <input type="number" name="quantity" min="1" max="{{ max(base.max, 1) }}" value="1" aria-label="Anzahl {{ s.type.label }}">
-                                <select name="percent" aria-label="Baurate {{ s.type.label }}" title="Baurate: mehr Kosten, kürzere Bauzeit">
+                                <input type="number" name="quantity" min="1" max="{{ max(base.max, 1) }}" value="1" aria-label="{{ 'Anzahl {label}'|trans({'{label}': s.type.label|trans}) }}">
+                                <select name="percent" aria-label="{{ 'Baurate {label}'|trans({'{label}': s.type.label|trans}) }}" title="{{ 'Baurate: mehr Kosten, kürzere Bauzeit'|trans }}">
                                     {% for percent, r in s.rates %}<option value="{{ percent }}">{{ percent }} %</option>{% endfor %}
                                 </select>
-                                <span class="muted" data-rate-max-label>max. {{ base.max|number_format(0, ',', '.') }}</span>
-                                <button class="btn btn-small" type="submit" id="order-{{ s.type.value }}">Bauen</button>
+                                <span class="muted" data-rate-max-label>{{ 'max. {max}'|trans({'{max}': base.max|num}) }}</span>
+                                <button class="btn btn-small" type="submit" id="order-{{ s.type.value }}">{{ 'Bauen'|trans }}</button>
                             </form>
                         {% endif %}
                     </div>
@@ -97,10 +97,10 @@
 {% macro rate_row(percent, r, s, planet, player, active) %}
     {% import 'game/_macros.html.twig' as ui %}
     <div class="cost rate-row {{ active ? 'rate-active' }}" data-rate-percent="{{ percent }}" data-rate-max="{{ r.max }}">
-        <span class="rate-label" title="Kosten pro Stück beim Bau mit {{ percent }} %">{{ percent }} %</span>
+        <span class="rate-label" title="{{ 'Kosten pro Stück beim Bau mit {percent} %'|trans({'{percent}': percent}) }}">{{ percent }} %</span>
         {{ ui.cost(r.cost, planet) }}
-        <span class="{{ r.credits > player.credits ? 'lacking' }}">Credits {{ r.credits|number_format(0, ',', '.') }}</span>
-        {% if s.spec.crew > 0 %}<span class="{{ s.spec.crew > planet.population ? 'lacking' }}">Besatzung {{ s.spec.crew|number_format(0, ',', '.') }}</span>{% endif %}
-        <span class="duration">Dauer {{ r.seconds|format_duration }}</span>
+        <span class="{{ r.credits > player.credits ? 'lacking' }}">{{ 'Credits {credits}'|trans({'{credits}': r.credits|num}) }}</span>
+        {% if s.spec.crew > 0 %}<span class="{{ s.spec.crew > planet.population ? 'lacking' }}">{{ 'Besatzung {crew}'|trans({'{crew}': s.spec.crew|num}) }}</span>{% endif %}
+        <span class="duration">{{ 'Dauer {seconds}'|trans({'{seconds}': r.seconds|format_duration}) }}</span>
     </div>
 {% endmacro %}

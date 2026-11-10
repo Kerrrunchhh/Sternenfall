@@ -9,6 +9,9 @@ use App\Repository\ContractRepository;
 use App\Repository\PlanetRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
+use App\I18n\Num;
+
+use function Symfony\Component\Translation\t;
 
 /**
  * Contracts: a client offers a cash reward (held in escrow) for protecting one of his
@@ -31,21 +34,21 @@ final readonly class ContractService
     public function create(User $client, string $kind, int $galaxy, int $system, int $position, float $reward, int $days, string $note): Contract
     {
         if (!\in_array($kind, [Contract::PROTECTION, Contract::INVASION], true)) {
-            throw new GameException('Wähle Planetenschutz oder Invasion.');
+            throw new GameException(t('Wähle Planetenschutz oder Invasion.'));
         }
         if ($days < Contract::MIN_DAYS || $days > Contract::MAX_DAYS) {
-            throw new GameException(\sprintf('Ein Auftrag dauert %d bis %d Tage.', Contract::MIN_DAYS, Contract::MAX_DAYS));
+            throw new GameException(t('Ein Auftrag dauert {value} bis {value2} Tage.', ['{value}' => Contract::MIN_DAYS, '{value2}' => Contract::MAX_DAYS]));
         }
         $reward = floor($reward);
         if ($reward < 1) {
-            throw new GameException('Die Belohnung muss mindestens 1 Credit sein.');
+            throw new GameException(t('Die Belohnung muss mindestens 1 Credit sein.'));
         }
-        $planet = $this->planets->findAt($galaxy, $system, $position) ?? throw new GameException('Dort gibt es keinen Planeten.');
+        $planet = $this->planets->findAt($galaxy, $system, $position) ?? throw new GameException(t('Dort gibt es keinen Planeten.'));
         if (Contract::PROTECTION === $kind && !$planet->getOwner()->isSameAs($client)) {
-            throw new GameException('Schutz kannst du nur für deine eigenen Planeten in Auftrag geben.');
+            throw new GameException(t('Schutz kannst du nur für deine eigenen Planeten in Auftrag geben.'));
         }
         if (Contract::INVASION === $kind && ($planet->getOwner()->isSameAs($client) || $client->isAllyOf($planet->getOwner()))) {
-            throw new GameException('Eigene und verbündete Planeten lässt du nicht invadieren.');
+            throw new GameException(t('Eigene und verbündete Planeten lässt du nicht invadieren.'));
         }
         $this->escrow($client, $reward);
 
@@ -59,32 +62,32 @@ final readonly class ContractService
     public function apply(Contract $contract, User $applicant, string $message): void
     {
         if (Contract::OPEN !== $contract->getStatus()) {
-            throw new GameException('Für diesen Auftrag kann man sich nicht mehr bewerben.');
+            throw new GameException(t('Für diesen Auftrag kann man sich nicht mehr bewerben.'));
         }
         if ($contract->getClient()->isSameAs($applicant)) {
-            throw new GameException('Auf deinen eigenen Auftrag bewirbst du dich nicht.');
+            throw new GameException(t('Auf deinen eigenen Auftrag bewirbst du dich nicht.'));
         }
         if (null !== $contract->applicationOf($applicant)) {
-            throw new GameException('Du hast dich schon beworben.');
+            throw new GameException(t('Du hast dich schon beworben.'));
         }
         $contract->apply($applicant, $message, $this->now());
-        $this->inbox->send($contract->getClient(), 'Bewerbung auf deinen Auftrag', \sprintf("%s bewirbt sich auf deinen Auftrag „%s“ für %s [%s].%s\n\nAnnehmen kannst du unter Aufträge.", $applicant->getUsername(), $contract->kindLabel(), $contract->getPlanetName(), $contract->getCoordinates(), '' === trim($message) ? '' : "\n\n> ".trim($message)));
+        $this->inbox->send($contract->getClient(), t('Bewerbung auf deinen Auftrag'), t("{player} bewirbt sich auf deinen Auftrag „{kindLabel}“ für {planetName} [{coords}].{value}\n\nAnnehmen kannst du unter Aufträge.", ['{player}' => $applicant->getUsername(), '{kindLabel}' => t($contract->kindLabel()), '{planetName}' => $contract->getPlanetName(), '{coords}' => $contract->getCoordinates(), '{value}' => '' === trim($message) ? '' : "\n\n> ".trim($message)]));
         $this->em->flush();
     }
 
     public function accept(Contract $contract, User $client, int $applicationId): void
     {
         if (!$contract->getClient()->isSameAs($client) || Contract::OPEN !== $contract->getStatus()) {
-            throw new GameException('Diesen Auftrag kannst du nicht (mehr) vergeben.');
+            throw new GameException(t('Diesen Auftrag kannst du nicht (mehr) vergeben.'));
         }
         $application = $contract->getApplications()->findFirst(static fn (int $k, $a): bool => $a->getId() === $applicationId)
-            ?? throw new GameException('Diese Bewerbung gibt es nicht.');
+            ?? throw new GameException(t('Diese Bewerbung gibt es nicht.'));
         $contract->assign($application->getApplicant(), $this->now());
         foreach ($contract->getApplications() as $other) {
             $won = $other === $application;
-            $this->inbox->send($other->getApplicant(), $won ? 'Auftrag erhalten: '.$contract->kindLabel() : 'Auftrag vergeben', $won
-                ? \sprintf("%s hat dir den Auftrag gegeben: %s für %s [%s], Belohnung %s Credits, bis %s.\n%s", $client->getUsername(), $contract->kindLabel(), $contract->getPlanetName(), $contract->getCoordinates(), number_format($contract->getReward(), 0, ',', '.'), $contract->getEndsAt()->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i'), $contract->isProtection() ? 'Du darfst so lange Schiffe auf dem Planeten stationieren.' : 'Bei einer Fusion: erst sprengen, dann den obersten Planeten invadieren.')
-                : \sprintf('Der Auftrag „%s“ für %s [%s] ging an jemand anderen.', $contract->kindLabel(), $contract->getPlanetName(), $contract->getCoordinates()));
+            $this->inbox->send($other->getApplicant(), $won ? t('Auftrag erhalten: {kind}', ['{kind}' => t($contract->kindLabel())]) : t('Auftrag vergeben'), $won
+                ? t("{player} hat dir den Auftrag gegeben: {kindLabel} für {planetName} [{coords}], Belohnung {reward} Credits, bis {value}.\n{value2}", ['{player}' => $client->getUsername(), '{kindLabel}' => t($contract->kindLabel()), '{planetName}' => $contract->getPlanetName(), '{coords}' => $contract->getCoordinates(), '{reward}' => new Num($contract->getReward()), '{value}' => $contract->getEndsAt()->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i'), '{value2}' => $contract->isProtection() ? t('Du darfst so lange Schiffe auf dem Planeten stationieren.') : t('Bei einer Fusion: erst sprengen, dann den obersten Planeten invadieren.')])
+                : t('Der Auftrag „{kindLabel}“ für {planetName} [{coords}] ging an jemand anderen.', ['{kindLabel}' => t($contract->kindLabel()), '{planetName}' => $contract->getPlanetName(), '{coords}' => $contract->getCoordinates()]));
         }
         $this->em->flush();
     }
@@ -92,7 +95,7 @@ final readonly class ContractService
     public function cancel(Contract $contract, User $client): void
     {
         if (!$contract->getClient()->isSameAs($client) || Contract::OPEN !== $contract->getStatus()) {
-            throw new GameException('Zurückziehen geht nur, solange der Auftrag noch nicht vergeben ist.');
+            throw new GameException(t('Zurückziehen geht nur, solange der Auftrag noch nicht vergeben ist.'));
         }
         $contract->close(Contract::CANCELLED);
         $this->credit($client, $contract->getReward());
@@ -119,8 +122,8 @@ final readonly class ContractService
                 && true === $contract->getContractor()?->isSameAs($conqueror)) {
                 $contract->close(Contract::DONE);
                 $this->credit($conqueror, $contract->getReward());
-                $this->inbox->send($conqueror, 'Auftrag erfüllt', \sprintf('Du hast %s [%s] erobert – %s Credits Belohnung von %s.', $planet->getName(), $contract->getCoordinates(), number_format($contract->getReward(), 0, ',', '.'), $contract->getClient()->getUsername()));
-                $this->inbox->send($contract->getClient(), 'Auftrag erfüllt', \sprintf('%s hat %s [%s] erobert und die Belohnung erhalten.', $conqueror->getUsername(), $planet->getName(), $contract->getCoordinates()));
+                $this->inbox->send($conqueror, t('Auftrag erfüllt'), t('Du hast {name} [{coords}] erobert – {reward} Credits Belohnung von {player}.', ['{name}' => $planet->getName(), '{coords}' => $contract->getCoordinates(), '{reward}' => new Num($contract->getReward()), '{player}' => $contract->getClient()->getUsername()]));
+                $this->inbox->send($contract->getClient(), t('Auftrag erfüllt'), t('{player} hat {name} [{coords}] erobert und die Belohnung erhalten.', ['{player}' => $conqueror->getUsername(), '{name}' => $planet->getName(), '{coords}' => $contract->getCoordinates()]));
             }
         }
     }
@@ -134,15 +137,15 @@ final readonly class ContractService
             if ($contract->isProtection() && null !== $contractor && true === $planet?->getOwner()->isSameAs($contract->getClient())) {
                 $contract->close(Contract::DONE);
                 $this->credit($contractor, $contract->getReward());
-                $this->inbox->send($contractor, 'Auftrag erfüllt', \sprintf('%s [%s] gehört nach wie vor %s – %s Credits für den Schutz.', $contract->getPlanetName(), $contract->getCoordinates(), $contract->getClient()->getUsername(), number_format($contract->getReward(), 0, ',', '.')));
+                $this->inbox->send($contractor, t('Auftrag erfüllt'), t('{planetName} [{coords}] gehört nach wie vor {player} – {reward} Credits für den Schutz.', ['{planetName}' => $contract->getPlanetName(), '{coords}' => $contract->getCoordinates(), '{player}' => $contract->getClient()->getUsername(), '{reward}' => new Num($contract->getReward())]));
             } else {
                 $contract->close(Contract::FAILED);
                 $this->credit($contract->getClient(), $contract->getReward());
                 if (null !== $contractor) {
-                    $this->inbox->send($contractor, 'Auftrag nicht erfüllt', \sprintf('Die Zeit für „%s“ bei %s [%s] ist um. Die Belohnung geht an %s zurück.', $contract->kindLabel(), $contract->getPlanetName(), $contract->getCoordinates(), $contract->getClient()->getUsername()));
+                    $this->inbox->send($contractor, t('Auftrag nicht erfüllt'), t('Die Zeit für „{kindLabel}“ bei {planetName} [{coords}] ist um. Die Belohnung geht an {player} zurück.', ['{kindLabel}' => t($contract->kindLabel()), '{planetName}' => $contract->getPlanetName(), '{coords}' => $contract->getCoordinates(), '{player}' => $contract->getClient()->getUsername()]));
                 }
             }
-            $this->inbox->send($contract->getClient(), 'Auftrag beendet: '.$contract->statusLabel(), \sprintf('„%s“ für %s [%s] ist beendet: %s.', $contract->kindLabel(), $contract->getPlanetName(), $contract->getCoordinates(), Contract::DONE === $contract->getStatus() ? 'erfüllt, die Belohnung ist ausgezahlt' : 'nicht erfüllt, du bekommst die Belohnung zurück'));
+            $this->inbox->send($contract->getClient(), t('Auftrag beendet: {status}', ['{status}' => t($contract->statusLabel())]), t('„{kindLabel}“ für {planetName} [{coords}] ist beendet: {value}.', ['{kindLabel}' => t($contract->kindLabel()), '{planetName}' => $contract->getPlanetName(), '{coords}' => $contract->getCoordinates(), '{value}' => Contract::DONE === $contract->getStatus() ? t('erfüllt, die Belohnung ist ausgezahlt') : t('nicht erfüllt, du bekommst die Belohnung zurück')]));
         }
         $this->em->flush();
     }
@@ -153,7 +156,7 @@ final readonly class ContractService
         $taken = $this->em->getConnection()->executeStatement('UPDATE `user` SET credits = credits - ? WHERE id = ? AND credits >= ?', [$amount, $user->getId(), $amount]);
         $this->em->refresh($user);
         if (0 === $taken) {
-            throw new GameException(\sprintf('Du hast nur %s Credits.', number_format($user->getCredits(), 0, ',', '.')));
+            throw new GameException(t('Du hast nur {credits} Credits.', ['{credits}' => new Num($user->getCredits())]));
         }
     }
 

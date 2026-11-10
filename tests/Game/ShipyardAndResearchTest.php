@@ -16,6 +16,8 @@ use PHPUnit\Framework\TestCase;
 
 class ShipyardAndResearchTest extends TestCase
 {
+    use RendersMessages;
+
     private Economy $economy;
     private PlanetUpdater $updater;
     private \DateTimeImmutable $start;
@@ -78,7 +80,7 @@ class ShipyardAndResearchTest extends TestCase
 
         self::assertSame(
             ['Ionenantrieb Stufe 1', 'Impulslaser Stufe 1'],
-            $this->economy->missingRequirements(ShipType::Pfeil->spec()->requirements, $planet),
+            array_map(self::text(...), $this->economy->missingRequirements(ShipType::Pfeil->spec()->requirements, $planet)),
         );
 
         $planet->getOwner()->setResearchLevel(ResearchType::IonDrive, 1)->setResearchLevel(ResearchType::ImpulseLaser, 1);

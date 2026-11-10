@@ -19,6 +19,8 @@ use Symfony\Component\Clock\MockClock;
 
 class EspionageTest extends TestCase
 {
+    use RendersMessages;
+
     private Espionage $espionage;
     private \DateTimeImmutable $now;
 
@@ -60,7 +62,7 @@ class EspionageTest extends TestCase
         $planet->setBuildingLevel(BuildingType::CommandCenter, 4);
         $planet->addShips(\App\Game\ShipType::LaserTurret, 3);
 
-        $report = $this->espionage->report($spy, 1, 1, 7, $planet);
+        $report = self::text($this->espionage->report($spy, 1, 1, 7, $planet));
 
         foreach ($contains as $text) {
             self::assertStringContainsString($text, $report);
@@ -75,7 +77,7 @@ class EspionageTest extends TestCase
         $spy = new User('spion');
         $spy->setResearchLevel(ResearchType::Espionage, 1);
 
-        $report = $this->espionage->report($spy, 2, 50, 9, null);
+        $report = self::text($this->espionage->report($spy, 2, 50, 9, null));
 
         self::assertStringContainsString('Freier Platz [2:50:9]', $report);
         self::assertStringContainsString(Universe::planetType(2, 50, 9)->label(), $report);
@@ -114,17 +116,17 @@ class EspionageTest extends TestCase
         $spy = new User('Kraehe');
 
         $victim->setResearchLevel(ResearchType::Espionage, 24);
-        self::assertNull($this->espionage->spiedNotice($victim, $spy, 'Dein Planet Heim'));
+        self::assertNull($this->espionage->spiedNotice($victim, $spy, new \App\I18n\Raw('Dein Planet Heim')));
 
         $victim->setResearchLevel(ResearchType::Espionage, 25);
-        [$subject, $text] = $this->espionage->spiedNotice($victim, $spy, 'Dein Planet Heim');
-        self::assertSame('Ausspioniert', $subject);
-        self::assertStringNotContainsString('Kraehe', $text);
+        [$subject, $text] = $this->espionage->spiedNotice($victim, $spy, new \App\I18n\Raw('Dein Planet Heim'));
+        self::assertSame('Ausspioniert', self::text($subject));
+        self::assertStringNotContainsString('Kraehe', self::text($text));
 
         $victim->setResearchLevel(ResearchType::Espionage, 40);
-        [$subject, $text] = $this->espionage->spiedNotice($victim, $spy, 'Dein Planet Heim');
-        self::assertSame('Ausspioniert von Kraehe', $subject);
-        self::assertStringContainsString('von Kraehe', $text);
+        [$subject, $text] = $this->espionage->spiedNotice($victim, $spy, new \App\I18n\Raw('Dein Planet Heim'));
+        self::assertSame('Ausspioniert von Kraehe', self::text($subject));
+        self::assertStringContainsString('von Kraehe', self::text($text));
     }
 
     public function testHoveringFleetsNeverShowOnRadar(): void
@@ -151,7 +153,7 @@ class EspionageTest extends TestCase
 
         $spy = new User('spion');
         $spy->setResearchLevel(ResearchType::Espionage, 1);
-        $report = $espionage->report($spy, 2, 50, 9, null);
+        $report = self::text($espionage->report($spy, 2, 50, 9, null));
 
         self::assertStringContainsString('Trümmerfeld: 1.200 Eisen, 800 Titan', $report);
         $intel = array_values(array_filter($persisted, static fn (object $o): bool => $o instanceof \App\Entity\PlanetIntel));

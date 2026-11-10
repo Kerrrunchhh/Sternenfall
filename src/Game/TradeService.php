@@ -2,6 +2,8 @@
 
 namespace App\Game;
 
+use App\I18n\Goods;
+use App\I18n\Lines;
 use App\Entity\Fleet;
 use App\Entity\Planet;
 use App\Entity\TradePost;
@@ -11,7 +13,11 @@ use App\Repository\PlanetRepository;
 use App\Repository\TradePostRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
+use Symfony\Contracts\Translation\TranslatableInterface;
 use Symfony\Component\Lock\LockFactory;
+use App\I18n\Num;
+
+use function Symfony\Component\Translation\t;
 
 /**
  * Trade posts of traders: opening, prices and access, and the goods that fleets
@@ -45,16 +51,16 @@ final readonly class TradeService
         $name = $this->validName($name);
         $this->withEventLock(function () use ($trader, $name, $galaxy, $system, $position): void {
             if (LifeForm::Trader !== $trader->getLifeForm()) {
-                throw new GameException('Nur Händler können Handelsstützpunkte eröffnen.');
+                throw new GameException(t('Nur Händler können Handelsstützpunkte eröffnen.'));
             }
             if ($this->posts->countByOwner($trader) >= $this->allowedPosts($trader)) {
-                throw new GameException(\sprintf('Dein Handelsnetz reicht für %d Stützpunkt(e). Erforsche „Handelsnetz“ weiter.', $this->allowedPosts($trader)));
+                throw new GameException(t('Dein Handelsnetz reicht für {value} Stützpunkt(e). Erforsche „Handelsnetz“ weiter.', ['{value}' => $this->allowedPosts($trader)]));
             }
             if (!$this->colonizer->isValidSlot($galaxy, $system, $position)) {
-                throw new GameException('Diese Koordinaten gibt es nicht.');
+                throw new GameException(t('Diese Koordinaten gibt es nicht.'));
             }
             if (null !== $this->planets->findAt($galaxy, $system, $position) || null !== $this->posts->findAt($galaxy, $system, $position)) {
-                throw new GameException('Ein Handelsstützpunkt braucht einen freien Platz.');
+                throw new GameException(t('Ein Handelsstützpunkt braucht einen freien Platz.'));
             }
 
             $this->em->persist(new TradePost($trader, $name, $galaxy, $system, $position, $this->now()));
@@ -75,7 +81,7 @@ final readonly class TradeService
         $this->withEventLock(function () use ($post, $actor, $name, $prices, $lifeForms, $allianceIds, $buyPrices, $buyLimits): void {
             $this->assertOwner($post, $actor);
             if (!$post->isActive()) {
-                throw new GameException('Dieser Stützpunkt ist aufgegeben. Du kannst nur noch die Ware abholen.');
+                throw new GameException(t('Dieser Stützpunkt ist aufgegeben. Du kannst nur noch die Ware abholen.'));
             }
             $post->setName($name);
             $post->setPrices($prices);
@@ -91,7 +97,7 @@ final readonly class TradeService
         $this->withEventLock(function () use ($post, $actor): void {
             $this->assertOwner($post, $actor);
             if (!$post->isEmpty()) {
-                throw new GameException('Hol zuerst die restliche Ware ab (Auftrag „Handeln“ mit einer eigenen Flotte).');
+                throw new GameException(t('Hol zuerst die restliche Ware ab (Auftrag „Handeln“ mit einer eigenen Flotte).'));
             }
             $this->em->remove($post);
             $this->em->flush();
@@ -130,21 +136,16 @@ final readonly class TradeService
             $this->em->refresh($fleet);
             $this->assertOwner($post, $actor);
             if (LifeForm::Trader !== $actor->getLifeForm() || !$post->isActive()) {
-                throw new GameException('Nur Händler können Flotten von ihren Handelsstützpunkten wegschicken.');
+                throw new GameException(t('Nur Händler können Flotten von ihren Handelsstützpunkten wegschicken.'));
             }
             if (!$fleet->isIdle() || !$fleet->isAt($post->getGalaxy(), $post->getSystem(), $post->getPosition()) || $fleet->getOwner()->isSameAs($actor)) {
-                throw new GameException('Diese Flotte steht nicht als fremde Flotte an deinem Stützpunkt.');
+                throw new GameException(t('Diese Flotte steht nicht als fremde Flotte an deinem Stützpunkt.'));
             }
 
-            $plan = $this->sendAwayPlan($fleet) ?? throw new GameException('Der Besitzer dieser Flotte hat keinen Heimatplaneten.');
+            $plan = $this->sendAwayPlan($fleet) ?? throw new GameException(t('Der Besitzer dieser Flotte hat keinen Heimatplaneten.'));
             foreach ($plan['cost']->toArray() as $good => $amount) {
                 if ($post->getStock($good) < $amount) {
-                    throw new GameException(\sprintf(
-                        'Im Lager fehlt Treibstoff oder Proviant: benötigt %s Wasserstoff, %s Nahrung, %s Wasser. Die Flotte bleibt stehen.',
-                        number_format($plan['cost']->hydrogen, 0, ',', '.'),
-                        number_format($plan['cost']->food, 0, ',', '.'),
-                        number_format($plan['cost']->water, 0, ',', '.'),
-                    ));
+                    throw new GameException(t('Im Lager fehlt Treibstoff oder Proviant: benötigt {hydrogen} Wasserstoff, {food} Nahrung, {water} Wasser. Die Flotte bleibt stehen.', ['{hydrogen}' => new Num($plan['cost']->hydrogen), '{food}' => new Num($plan['cost']->food), '{water}' => new Num($plan['cost']->water)]));
                 }
             }
             foreach ($plan['cost']->toArray() as $good => $amount) {
@@ -155,14 +156,7 @@ final readonly class TradeService
 
             $home = $plan['home'];
             $fleet->depart(FleetMission::Station, $home->getGalaxy(), $home->getSystem(), $home->getPosition(), $this->now(), $plan['seconds']);
-            $this->inbox->send($fleet->getOwner(), \sprintf('Flotte „%s“ weggeschickt', $fleet->getLabel()), \sprintf(
-                '%s hat deine Flotte vom Handelsstützpunkt %s [%s] zu deinem Heimatplaneten %s [%s] zurückgeschickt.',
-                $actor->getUsername(),
-                $post->getName(),
-                $post->getCoordinates(),
-                $home->getName(),
-                $home->getCoordinates(),
-            ));
+            $this->inbox->send($fleet->getOwner(), t('Flotte „{label}“ weggeschickt', ['{label}' => $fleet->getLabel()]), t('{player} hat deine Flotte vom Handelsstützpunkt {name} [{coords}] zu deinem Heimatplaneten {name2} [{coords2}] zurückgeschickt.', ['{player}' => $actor->getUsername(), '{name}' => $post->getName(), '{coords}' => $post->getCoordinates(), '{name2}' => $home->getName(), '{coords2}' => $home->getCoordinates()]));
             $this->em->flush();
         });
     }
@@ -171,18 +165,18 @@ final readonly class TradeService
      * Arrival of a "Beliefern" fleet: the cargo goes into stock (fusionators are no trade post goods).
      * The caller holds the fleet event lock.
      */
-    public function supply(TradePost $post, Fleet $fleet): string
+    public function supply(TradePost $post, Fleet $fleet): TranslatableInterface
     {
         $delivered = [];
         foreach ($fleet->getCargo()->toArray() as $good => $amount) {
             if ($amount > 0) {
                 $post->addStock($good, $amount);
-                $delivered[] = TradeDeal::label($good).' '.number_format($amount, 0, ',', '.');
+                $delivered[$good] = $amount;
             }
         }
         $fleet->setCargo(new Resources());
 
-        return [] === $delivered ? 'nichts' : implode(', ', $delivered);
+        return [] === $delivered ? t('nichts') : Goods::summary($delivered);
     }
 
     /**
@@ -194,20 +188,20 @@ final readonly class TradeService
      * @param array<string, float> $buy  goods => wanted amount
      * @param array<string, float> $sell resources => offered amount
      */
-    public function trade(TradePost $post, Fleet $fleet, User $actor, array $buy, array $sell): string
+    public function trade(TradePost $post, Fleet $fleet, User $actor, array $buy, array $sell): TranslatableInterface
     {
         $lines = [];
         $this->withEventLock(function () use ($post, $fleet, $actor, $buy, $sell, &$lines): void {
             $this->em->refresh($post);
             $this->em->refresh($fleet);
             if (!$fleet->getOwner()->isSameAs($actor)) {
-                throw new GameException('Das ist nicht deine Flotte.');
+                throw new GameException(t('Das ist nicht deine Flotte.'));
             }
             if (!$fleet->isIdle() || !$fleet->isAt($post->getGalaxy(), $post->getSystem(), $post->getPosition())) {
-                throw new GameException(\sprintf('%s wartet nicht an diesem Handelsstützpunkt.', $fleet->getLabel()));
+                throw new GameException(t('{label} wartet nicht an diesem Handelsstützpunkt.', ['{label}' => $fleet->getLabel()]));
             }
             if (!$post->isAccessibleTo($actor)) {
-                throw new GameException('Dieser Handelsstützpunkt ist für dich gesperrt.');
+                throw new GameException(t('Dieser Handelsstützpunkt ist für dich gesperrt.'));
             }
             $trader = $post->getOwner();
             $own = $actor->isSameAs($trader);
@@ -267,17 +261,17 @@ final readonly class TradeService
             }
 
             if ([] !== $sold) {
-                $lines[] = \sprintf('%s: %s%s.', $own ? 'Eingelagert' : 'Verkauft', self::summary($sold), $own ? '' : \sprintf(' für %s Credits', number_format($income, 0, ',', '.')));
+                $lines[] = $own ? t('Eingelagert: {goods}.', ['{goods}' => self::summary($sold)]) : t('Verkauft: {goods} für {income} Credits.', ['{goods}' => self::summary($sold), '{income}' => new Num($income)]);
             }
             if (!$deal->isEmpty()) {
-                $lines[] = \sprintf('%s: %s%s.', $own ? 'Abgeholt' : 'Gekauft', self::summary($deal->bought), $own ? '' : \sprintf(' für %s Credits', number_format($deal->price, 0, ',', '.')));
+                $lines[] = $own ? t('Abgeholt: {goods}.', ['{goods}' => self::summary($deal->bought)]) : t('Gekauft: {goods} für {price} Credits.', ['{goods}' => self::summary($deal->bought), '{price}' => new Num($deal->price)]);
             }
             if ([] === $lines) {
-                throw new GameException('Es wurde nichts gehandelt: Lager, Preise, Ankaufsmengen, Credits oder Frachtraum reichten nicht.');
+                throw new GameException(t('Es wurde nichts gehandelt: Lager, Preise, Ankaufsmengen, Credits oder Frachtraum reichten nicht.'));
             }
 
             if (!$own) {
-                $this->inbox->send($trader, \sprintf('Handel mit %s an %s', $actor->getUsername(), $post->getName()), implode("\n", $lines));
+                $this->inbox->send($trader, t('Handel mit {player} an {name}', ['{player}' => $actor->getUsername(), '{name}' => $post->getName()]), new Lines($lines));
             }
             // An abandoned post disappears once its owner has collected everything.
             if (!$post->isActive() && $post->isEmpty()) {
@@ -286,13 +280,13 @@ final readonly class TradeService
             $this->em->flush();
         });
 
-        return implode(' ', $lines);
+        return new Lines($lines, ' ');
     }
 
     /** @param array<string, float> $goods "Eisen 1.000, Fusionator 2" */
-    public static function summary(array $goods): string
+    public static function summary(array $goods): TranslatableInterface
     {
-        return implode(', ', array_map(static fn (string $good, float $amount): string => TradeDeal::label($good).' '.number_format($amount, 0, ',', '.'), array_keys($goods), $goods));
+        return Goods::summary($goods);
     }
 
     /** Runs a credit change under the player's lock (all planets synchronized first). */
@@ -311,7 +305,7 @@ final readonly class TradeService
     private function assertOwner(TradePost $post, User $actor): void
     {
         if (!$post->getOwner()->isSameAs($actor)) {
-            throw new GameException('Dieser Handelsstützpunkt gehört dir nicht.');
+            throw new GameException(t('Dieser Handelsstützpunkt gehört dir nicht.'));
         }
     }
 
@@ -319,7 +313,7 @@ final readonly class TradeService
     {
         $name = trim($name);
         if ('' === $name || mb_strlen($name) > 40) {
-            throw new GameException('Der Name muss 1 bis 40 Zeichen lang sein.');
+            throw new GameException(t('Der Name muss 1 bis 40 Zeichen lang sein.'));
         }
 
         return $name;

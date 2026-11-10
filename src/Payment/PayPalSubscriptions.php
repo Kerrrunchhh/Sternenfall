@@ -10,6 +10,8 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+use function Symfony\Component\Translation\t;
+
 /**
  * Extended accounts as a PayPal subscription (plan of 5 € per month, set up in the PayPal dashboard).
  * The browser approves the subscription with PayPal's button; we confirm it here with PayPal's API
@@ -60,14 +62,14 @@ final class PayPalSubscriptions
     public function activate(User $user, string $subscriptionId): void
     {
         if (!$this->isConfigured() || 1 !== preg_match('/^I-[A-Z0-9]{6,40}$/', $subscriptionId)) {
-            throw new PaymentException('Das Abo konnte nicht bestätigt werden.');
+            throw new PaymentException(t('Das Abo konnte nicht bestätigt werden.'));
         }
         $subscription = $this->fetch($subscriptionId);
         if (($subscription['plan_id'] ?? null) !== $this->planId || (string) ($subscription['custom_id'] ?? '') !== (string) $user->getId()) {
-            throw new PaymentException('Dieses Abo gehört nicht zu deinem Account.');
+            throw new PaymentException(t('Dieses Abo gehört nicht zu deinem Account.'));
         }
         if (!\in_array($subscription['status'] ?? '', ['ACTIVE', 'APPROVED'], true)) {
-            throw new PaymentException('PayPal meldet das Abo noch nicht als aktiv. Versuche es gleich noch einmal.');
+            throw new PaymentException(t('PayPal meldet das Abo noch nicht als aktiv. Versuche es gleich noch einmal.'));
         }
         $user->setSubscription($subscriptionId, $subscription['status']);
         $this->apply($user, $subscription);
@@ -79,14 +81,14 @@ final class PayPalSubscriptions
     {
         $id = $user->getSubscriptionId();
         if (null === $id || 'CANCELLED' === $user->getSubscriptionStatus()) {
-            throw new PaymentException('Du hast kein laufendes Abo.');
+            throw new PaymentException(t('Du hast kein laufendes Abo.'));
         }
         $response = $this->httpClient->request('POST', $this->api.'/v1/billing/subscriptions/'.rawurlencode($id).'/cancel', [
             'auth_bearer' => $this->token(),
             'json' => ['reason' => 'Vom Spieler im Spiel gekündigt'],
         ]);
         if (!\in_array($response->getStatusCode(), [204, 422], true)) { // 422: already cancelled
-            throw new PaymentException('PayPal hat die Kündigung nicht angenommen. Du kannst das Abo auch direkt in deinem PayPal-Konto beenden.');
+            throw new PaymentException(t('PayPal hat die Kündigung nicht angenommen. Du kannst das Abo auch direkt in deinem PayPal-Konto beenden.'));
         }
         $user->setSubscription($id, 'CANCELLED');
         $this->em->flush();
@@ -147,7 +149,7 @@ final class PayPalSubscriptions
     {
         $response = $this->httpClient->request('GET', $this->api.'/v1/billing/subscriptions/'.rawurlencode($subscriptionId), ['auth_bearer' => $this->token()]);
         if (200 !== $response->getStatusCode()) {
-            throw new PaymentException('PayPal kennt dieses Abo nicht.');
+            throw new PaymentException(t('PayPal kennt dieses Abo nicht.'));
         }
 
         return $response->toArray();
@@ -183,7 +185,7 @@ final class PayPalSubscriptions
                 'body' => ['grant_type' => 'client_credentials'],
             ]);
             if (200 !== $response->getStatusCode()) {
-                throw new PaymentException('Die Verbindung zu PayPal ist gerade gestört.');
+                throw new PaymentException(t('Die Verbindung zu PayPal ist gerade gestört.'));
             }
             $this->token = (string) $response->toArray()['access_token'];
         }

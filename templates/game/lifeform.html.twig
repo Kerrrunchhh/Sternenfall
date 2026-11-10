@@ -1,30 +1,30 @@
 {% extends 'game/_layout.html.twig' %}
 
-{% block title %}Lebensform – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Lebensform – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    <h1>Lebensform</h1>
+    <h1>{{ 'Lebensform'|trans }}</h1>
     <p class="muted">
-        Jeder beginnt als Siedler. Frühestens 30 Tage nach Spielstart bzw. nach dem letzten Wechsel kannst du die Lebensform wechseln.
-        {% if not can_change %}Nächster möglicher Wechsel: <strong>{{ player.nextLifeFormChangeAt|date('d.m.Y H:i') }}</strong>.{% endif %}
+        {{ 'Jeder beginnt als Siedler. Frühestens 30 Tage nach Spielstart bzw. nach dem letzten Wechsel kannst du die Lebensform wechseln.'|trans }}
+        {% if not can_change %}{{ 'Nächster möglicher Wechsel: <strong>{nextLifeFormChangeAt}</strong>.'|trans({'{nextLifeFormChangeAt}': (player.nextLifeFormChangeAt|date('d.m.Y H:i'))|e})|raw }}{% endif %}
     </p>
 
     {% if posts_lost > 0 %}
-        <p class="panel warning">Wechselst du die Lebensform, verkaufen deine {{ posts_lost }} Handelsstützpunkt(e) nichts mehr. Die Ware bleibt im Lager und du kannst sie mit einer Flotte abholen.</p>
+        <p class="panel warning">{{ 'Wechselst du die Lebensform, verkaufen deine {posts_lost} Handelsstützpunkt(e) nichts mehr. Die Ware bleibt im Lager und du kannst sie mit einer Flotte abholen.'|trans({'{posts_lost}': posts_lost}) }}</p>
     {% endif %}
 
     <div class="grid">
         {% for form in life_forms %}
             {% set current = form == player.lifeForm %}
             <article class="panel lifeform {{ current ? 'current' }}">
-                <h2>{{ form.label }}{% if current %} <span class="badge">aktuell</span>{% endif %}</h2>
-                <ul>{% for trait in form.traits %}<li>{{ trait }}</li>{% endfor %}</ul>
+                <h2>{{ form.label|trans }}{% if current %} <span class="badge">{{ 'aktuell'|trans }}</span>{% endif %}</h2>
+                <ul>{% for trait in form.traits %}<li>{{ trait|trans }}</li>{% endfor %}</ul>
                 {% if not current %}
                     <form method="post" action="{{ path('app_lifeform_change', {lifeForm: form.value}) }}">
                         <input type="hidden" name="_token" value="{{ csrf_token('lifeform') }}">
                         <button class="btn btn-small" type="submit" id="lifeform-{{ form.value }}" {{ can_change ? '' : 'disabled' }}
-                                data-confirm="Wirklich zu den {{ form.label }} wechseln? Der nächste Wechsel ist erst in 30 Tagen möglich.{{ posts_lost > 0 ? ' Deine ' ~ posts_lost ~ ' Handelsstützpunkt(e) verkaufen danach nichts mehr.' }}" data-confirm-label="Wechseln">
-                            Zu {{ form.label }} wechseln
+                                data-confirm="{{ 'Wirklich zu den {label} wechseln? Der nächste Wechsel ist erst in 30 Tagen möglich.'|trans({'{label}': form.label|trans}) ~ (posts_lost > 0 ? ' ' ~ 'Deine {count} Handelsstützpunkt(e) verkaufen danach nichts mehr.'|trans({'{count}': posts_lost}) : '') }}" data-confirm-label="{{ 'Wechseln'|trans }}">
+                            {{ 'Zu {label} wechseln'|trans({'{label}': form.label|trans}) }}
                         </button>
                     </form>
                 {% endif %}

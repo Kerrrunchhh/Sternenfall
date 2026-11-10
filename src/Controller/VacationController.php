@@ -8,6 +8,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 
+use function Symfony\Component\Translation\t;
+
 /** What a player on vacation sees instead of the pages he can't use right now. */
 class VacationController extends AbstractGameController
 {
@@ -33,11 +35,11 @@ class VacationController extends AbstractGameController
         $this->currentPlanet();
         try {
             $vacations->endEarly($this->player());
-            $this->addFlash('success', 'Willkommen zurück! Dein Urlaub ist beendet, alles läuft weiter.');
+            $this->addFlash('success', t('Willkommen zurück! Dein Urlaub ist beendet, alles läuft weiter.'));
 
             return $this->redirectToRoute('app_overview');
         } catch (GameException $e) {
-            $this->addFlash('error', $e->getMessage());
+            $this->addFlash('error', $e->translatable());
 
             return $this->redirectToRoute('app_vacation');
         }

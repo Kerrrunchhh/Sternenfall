@@ -9,6 +9,9 @@ use App\Entity\User;
 use App\Repository\TransportRequestRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
+use App\I18n\Num;
+
+use function Symfony\Component\Translation\t;
 
 /**
  * Transport requests for beginners: resources to one of their planets, at most one small
@@ -40,27 +43,27 @@ final readonly class TransportRequests
     public function create(User $requester, Planet $planet, Resources $goods, float $offer): TransportRequest
     {
         if (!$planet->getOwner()->isSameAs($requester)) {
-            throw new GameException('Transportgesuche gibt es nur für deine eigenen Planeten.');
+            throw new GameException(t('Transportgesuche gibt es nur für deine eigenen Planeten.'));
         }
         foreach (ResourceType::cases() as $type) {
             if ($goods->get($type) < 0) {
-                throw new GameException('Mengen dürfen nicht negativ sein.');
+                throw new GameException(t('Mengen dürfen nicht negativ sein.'));
             }
         }
         if ($goods->total() < 1) {
-            throw new GameException('Gib an, welche Rohstoffe du brauchst.');
+            throw new GameException(t('Gib an, welche Rohstoffe du brauchst.'));
         }
         if ($goods->total() > self::maxLoad()) {
-            throw new GameException(\sprintf('Ein Gesuch umfasst höchstens eine Frachterladung (%s Rohstoffe).', number_format(self::maxLoad(), 0, ',', '.')));
+            throw new GameException(t('Ein Gesuch umfasst höchstens eine Frachterladung ({value} Rohstoffe).', ['{value}' => new Num(self::maxLoad())]));
         }
         $offer = floor($offer);
         if ($offer < 1) {
-            throw new GameException('Biete mindestens 1 Credit.');
+            throw new GameException(t('Biete mindestens 1 Credit.'));
         }
         $taken = $this->em->getConnection()->executeStatement('UPDATE `user` SET credits = credits - ? WHERE id = ? AND credits >= ?', [$offer, $requester->getId(), $offer]);
         $this->em->refresh($requester);
         if (0 === $taken) {
-            throw new GameException(\sprintf('Du hast nur %s Credits.', number_format($requester->getCredits(), 0, ',', '.')));
+            throw new GameException(t('Du hast nur {credits} Credits.', ['{credits}' => new Num($requester->getCredits())]));
         }
         $request = new TransportRequest($requester, $planet, $goods, $offer, $this->now());
         $this->em->persist($request);
@@ -72,7 +75,7 @@ final readonly class TransportRequests
     public function cancel(TransportRequest $request, User $requester): void
     {
         if (!$request->getRequester()->isSameAs($requester) || TransportRequest::OPEN !== $request->getStatus()) {
-            throw new GameException('Zurückziehen geht nur, solange niemand liefert.');
+            throw new GameException(t('Zurückziehen geht nur, solange niemand liefert.'));
         }
         $request->close(TransportRequest::CANCELLED);
         $this->credit($requester, $request->getOffer());
@@ -90,9 +93,9 @@ final readonly class TransportRequests
             $request->close(TransportRequest::DONE);
             if (null !== $trader) {
                 $this->credit($trader, $request->getOffer());
-                $this->inbox->send($trader, 'Transportgesuch erfüllt', \sprintf('Geliefert an %s [%s] von %s: %s Credits.', $request->getPlanetName(), $request->getCoordinates(), $request->getRequester()->getUsername(), number_format($request->getOffer(), 0, ',', '.')));
+                $this->inbox->send($trader, t('Transportgesuch erfüllt'), t('Geliefert an {planetName} [{coords}] von {player}: {offer} Credits.', ['{planetName}' => $request->getPlanetName(), '{coords}' => $request->getCoordinates(), '{player}' => $request->getRequester()->getUsername(), '{offer}' => new Num($request->getOffer())]));
             }
-            $this->inbox->send($request->getRequester(), 'Lieferung angekommen', \sprintf('%s hat dein Transportgesuch für %s [%s] erfüllt.', $trader?->getUsername() ?? 'Ein Händler', $request->getPlanetName(), $request->getCoordinates()));
+            $this->inbox->send($request->getRequester(), t('Lieferung angekommen'), t('{value} hat dein Transportgesuch für {planetName} [{coords}] erfüllt.', ['{value}' => $trader?->getUsername() ?? t('Ein Händler'), '{planetName}' => $request->getPlanetName(), '{coords}' => $request->getCoordinates()]));
         }
     }
 

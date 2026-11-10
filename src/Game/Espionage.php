@@ -12,6 +12,12 @@ use App\Repository\DebrisFieldRepository;
 use App\Repository\FleetRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
+use App\I18n\Num;
+use App\I18n\Goods;
+use App\I18n\Lines;
+use Symfony\Contracts\Translation\TranslatableInterface;
+
+use function Symfony\Component\Translation\t;
 
 /**
  * Probes and what they reveal. The spy's level of espionage research decides
@@ -133,17 +139,17 @@ final readonly class Espionage
     }
 
     /** Debris line of a spy report. */
-    private function debrisLine(int $galaxy, int $system, int $position): string
+    private function debrisLine(int $galaxy, int $system, int $position): TranslatableInterface
     {
         $field = $this->debrisAt($galaxy, $system, $position);
 
         return null === $field || $field->isEmpty()
-            ? 'Trümmerfeld: keins'
-            : \sprintf('Trümmerfeld: %s Eisen, %s Titan – mit Bergungsschiffen abholen', number_format($field->getIron(), 0, ',', '.'), number_format($field->getTitanium(), 0, ',', '.'));
+            ? t('Trümmerfeld: keins')
+            : t('Trümmerfeld: {iron} Eisen, {titanium} Titan – mit Bergungsschiffen abholen', ['{iron}' => new Num($field->getIron()), '{titanium}' => new Num($field->getTitanium())]);
     }
 
     /** A spy report as deep as the spy's espionage research allows. */
-    public function report(User $spy, int $galaxy, int $system, int $position, ?Planet $planet): string
+    public function report(User $spy, int $galaxy, int $system, int $position, ?Planet $planet): TranslatableInterface
     {
         $level = $spy->getResearchLevel(ResearchType::Espionage);
         $slotType = $this->remember($spy, $galaxy, $system, $position);
@@ -154,60 +160,58 @@ final readonly class Espionage
 
         $lines = [
             null === $planet
-                ? \sprintf('Freier Platz [%d:%d:%d]', $galaxy, $system, $position)
-                : \sprintf('Planet %s [%s] von %s', $planet->getName(), $planet->getCoordinates(), $planet->getOwner()->getUsername()),
-            \sprintf('Planetentyp: %s %s (%s)', $type->icon(), $type->label(), $type->effect()),
+                ? t('Freier Platz [{galaxy}:{system}:{position}]', ['{galaxy}' => $galaxy, '{system}' => $system, '{position}' => $position])
+                : t('Planet {name} [{coords}] von {player}', ['{name}' => $planet->getName(), '{coords}' => $planet->getCoordinates(), '{player}' => $planet->getOwner()->getUsername()]),
+            t('Planetentyp: {icon} {type} ({effect})', ['{icon}' => $type->icon(), '{type}' => t($type->label()), '{effect}' => t($type->effect())]),
             $this->debrisLine($galaxy, $system, $position),
         ];
         if (null === $planet) {
-            return implode("\n", $lines);
+            return new Lines($lines);
         }
 
         if ($level < self::LEVEL_BUILDINGS) {
             $lines[] = '';
-            $lines[] = \sprintf('Ab Spionagetechnik Stufe %d erfährst du Gebäude, Rohstoffe und Bevölkerung.', self::LEVEL_BUILDINGS);
+            $lines[] = t('Ab Spionagetechnik Stufe {value} erfährst du Gebäude, Rohstoffe und Bevölkerung.', ['{value}' => self::LEVEL_BUILDINGS]);
 
-            return implode("\n", $lines);
+            return new Lines($lines);
         }
 
         $lines[] = '';
-        $lines[] = 'Rohstoffe:';
-        foreach (ResourceType::cases() as $resource) {
-            $lines[] = \sprintf('  %s: %s', $resource->label(), number_format($planet->getResources()->get($resource), 0, ',', '.'));
-        }
+        $lines[] = t('Rohstoffe:');
+        $lines[] = Goods::lines($planet->getResources());
         $lines[] = '';
-        $lines[] = 'Bevölkerung: '.number_format($planet->getPopulation(), 0, ',', '.');
+        $lines[] = t('Bevölkerung: {population}', ['{population}' => new Num($planet->getPopulation())]);
         $lines[] = '';
-        $lines[] = 'Gebäude:';
+        $lines[] = t('Gebäude:');
         foreach (BuildingType::cases() as $building) {
             if ($planet->getBuildingLevel($building) > 0) {
-                $lines[] = \sprintf('  %s: Stufe %d', $building->label(), $planet->getBuildingLevel($building));
+                $lines[] = t('  {building}: Stufe {level}', ['{building}' => t($building->label()), '{level}' => $planet->getBuildingLevel($building)]);
             }
         }
         $lines[] = '';
-        $lines[] = 'Forschung:';
+        $lines[] = t('Forschung:');
         foreach (ResearchType::cases() as $research) {
             if ($planet->getOwner()->getResearchLevel($research) > 0) {
-                $lines[] = \sprintf('  %s: Stufe %d', $research->label(), $planet->getOwner()->getResearchLevel($research));
+                $lines[] = t('  {research}: Stufe {level}', ['{research}' => t($research->label()), '{level}' => $planet->getOwner()->getResearchLevel($research)]);
             }
         }
 
         if ($level < self::LEVEL_SHIPS) {
             $lines[] = '';
-            $lines[] = \sprintf('Ab Spionagetechnik Stufe %d erfährst du die stationierten Schiffe.', self::LEVEL_SHIPS);
+            $lines[] = t('Ab Spionagetechnik Stufe {value} erfährst du die stationierten Schiffe.', ['{value}' => self::LEVEL_SHIPS]);
 
-            return implode("\n", $lines);
+            return new Lines($lines);
         }
 
         $lines[] = '';
-        $lines[] = 'Stationierte Schiffe und Türme:';
+        $lines[] = t('Stationierte Schiffe und Türme:');
         $lines = [...$lines, ...$this->shipLines($planet->getShips(), '  ')];
         foreach ($this->fleets->findIdleAt($galaxy, $system, $position) as $fleet) {
-            $lines[] = \sprintf('  Flotte von %s:', $fleet->getOwner()->getUsername());
+            $lines[] = t('  Flotte von {player}:', ['{player}' => $fleet->getOwner()->getUsername()]);
             $lines = [...$lines, ...$this->shipLines($fleet->getShips(), '    ')];
         }
 
-        return implode("\n", $lines);
+        return new Lines($lines);
     }
 
     /**
@@ -231,7 +235,7 @@ final readonly class Espionage
     }
 
     /** A probe met a foreign fleet: remember and report what it carries. */
-    public function scoutFleet(User $player, Fleet $target): string
+    public function scoutFleet(User $player, Fleet $target): TranslatableInterface
     {
         $now = \DateTimeImmutable::createFromInterface($this->clock->now());
         $intel = $this->em->getRepository(FleetIntel::class)->findOneBy(['user' => $player, 'fleet' => $target]);
@@ -243,17 +247,17 @@ final readonly class Espionage
 
         [$g, $s, $p] = Radar::nextStop($target);
         $lines = [
-            \sprintf('Flotte von %s: %s nach [%d:%d:%d], Ankunft %s', $target->getOwner()->getUsername(), $target->getMission()?->label() ?? 'unterwegs', $g, $s, $p, $target->getNextEventAt()->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i:s')),
+            t('Flotte von {player}: {value} nach [{g}:{s}:{p}], Ankunft {value2}', ['{player}' => $target->getOwner()->getUsername(), '{value}' => t($target->getMission()?->label() ?? 'unterwegs'), '{g}' => $g, '{s}' => $s, '{p}' => $p, '{value2}' => $target->getNextEventAt()->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i:s')]),
             '',
-            'Schiffe:',
+            t('Schiffe:'),
             ...$this->shipLines($target->getShips(), '  '),
         ];
         if ($target->getCargo()->total() >= 1) {
             $lines[] = '';
-            $lines[] = 'Ladung: '.number_format($target->getCargo()->total(), 0, ',', '.').' Rohstoffe';
+            $lines[] = t('Ladung: {amount} Rohstoffe', ['{amount}' => new Num($target->getCargo()->total())]);
         }
 
-        return implode("\n", $lines);
+        return new Lines($lines);
     }
 
     /** Whether a player notices a probe heading for one of his planets or fleets. */
@@ -270,35 +274,35 @@ final readonly class Espionage
      * What the spied-on player learns of a probe's visit: nothing below level 25,
      * that it happened from 25 on, and who sent it from 40 on.
      *
-     * @return array{string, string}|null subject and text of the message
+     * @return array{TranslatableInterface, TranslatableInterface}|null subject and text of the message
      */
-    public function spiedNotice(User $victim, User $spy, string $what): ?array
+    public function spiedNotice(User $victim, User $spy, TranslatableInterface $what): ?array
     {
         $level = $victim->getResearchLevel(ResearchType::Espionage);
         if ($level < self::LEVEL_NOTICE_SPY) {
             return null;
         }
         if ($level < self::LEVEL_NAME_SPY) {
-            return ['Ausspioniert', "$what wurde von einer Sonde ausspioniert. Wer sie geschickt hat, erfährst du ab Spionagetechnik Stufe ".self::LEVEL_NAME_SPY.'.'];
+            return [t('Ausspioniert'), t('{what} wurde von einer Sonde ausspioniert. Wer sie geschickt hat, erfährst du ab Spionagetechnik Stufe {level}.', ['{what}' => $what, '{level}' => self::LEVEL_NAME_SPY])];
         }
 
-        return ['Ausspioniert von '.$spy->getUsername(), "$what wurde von einer Sonde von {$spy->getUsername()} ausspioniert."];
+        return [t('Ausspioniert von {player}', ['{player}' => $spy->getUsername()]), t('{what} wurde von einer Sonde von {player} ausspioniert.', ['{what}' => $what, '{player}' => $spy->getUsername()])];
     }
 
     /**
      * @param array<string, int> $ships
      *
-     * @return list<string>
+     * @return list<TranslatableInterface>
      */
     private function shipLines(array $ships, string $indent): array
     {
         $lines = [];
         foreach (ShipType::cases() as $type) {
             if (($ships[$type->value] ?? 0) > 0) {
-                $lines[] = \sprintf('%s%s: %s', $indent, $type->label(), number_format($ships[$type->value], 0, ',', '.'));
+                $lines[] = t('{indent}{ship}: {count}', ['{indent}' => $indent, '{ship}' => t($type->label()), '{count}' => new Num($ships[$type->value])]);
             }
         }
 
-        return [] === $lines ? [$indent.'keine'] : $lines;
+        return [] === $lines ? [t('{indent}keine', ['{indent}' => $indent])] : $lines;
     }
 }

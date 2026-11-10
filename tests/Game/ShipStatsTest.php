@@ -12,6 +12,8 @@ use PHPUnit\Framework\TestCase;
 
 final class ShipStatsTest extends TestCase
 {
+    use RendersMessages;
+
     private ShipStats $stats;
 
     protected function setUp(): void
@@ -32,7 +34,7 @@ final class ShipStatsTest extends TestCase
 
         self::assertSame(2 * $spec->attack, $stats['attack']['value'], 'level 25 doubles the attack');
         self::assertSame($spec->attack, $stats['attack']['base']);
-        self::assertStringContainsString('Stufe 25: Angriff +100 %', $stats['attack']['notes'][0]);
+        self::assertStringContainsString('Stufe 25: Angriff +100 %', self::text($stats['attack']['notes'][0]));
         self::assertGreaterThan($base['speed']['value'], $stats['speed']['value']);
         self::assertSame(ShipStats::attack(ShipType::Pfeil, $player), 2.0 * $spec->attack, 'battles use the same value');
 
@@ -47,7 +49,7 @@ final class ShipStatsTest extends TestCase
         $player->setResearchLevel(ResearchType::Espionage, 5);
 
         self::assertArrayNotHasKey('speed', $this->stats->describe(ShipType::LaserTurret, $player));
-        $notes = implode(' ', $this->stats->describe(ShipType::Scout, $player)['speed']['notes']);
+        $notes = implode(' ', array_map(self::text(...), $this->stats->describe(ShipType::Scout, $player)['speed']['notes']));
         self::assertStringContainsString('Spionagetechnik Stufe 5', $notes);
         self::assertStringContainsString('Lebensform', $notes);
     }

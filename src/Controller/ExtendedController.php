@@ -11,6 +11,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 
+use function Symfony\Component\Translation\t;
+
 /** Extended account: 5 € a month via a PayPal subscription. */
 class ExtendedController extends AbstractGameController
 {
@@ -35,7 +37,7 @@ class ExtendedController extends AbstractGameController
     {
         try {
             $this->paypal->activate($this->player(), $request->request->getString('subscription'));
-            $this->addFlash('success', 'Danke! Dein Account ist jetzt erweitert.');
+            $this->addFlash('success', t('Danke! Dein Account ist jetzt erweitert.'));
 
             return new JsonResponse(['ok' => true]);
         } catch (PaymentException $e) {
@@ -47,7 +49,7 @@ class ExtendedController extends AbstractGameController
     #[IsCsrfTokenValid('extended', tokenKey: '_token')]
     public function cancel(): Response
     {
-        $this->attempt(fn () => $this->paypal->cancel($this->player()), 'Abo gekündigt. Der bezahlte Zeitraum läuft noch bis zum Ende.');
+        $this->attempt(fn () => $this->paypal->cancel($this->player()), t('Abo gekündigt. Der bezahlte Zeitraum läuft noch bis zum Ende.'));
 
         return $this->redirectToRoute('app_extended');
     }

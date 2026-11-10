@@ -9,6 +9,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\EnumRequirement;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 
+use function Symfony\Component\Translation\t;
+
 class ResearchController extends AbstractGameController
 {
     #[Route('/research', name: 'app_research', methods: ['GET'])]
@@ -46,7 +48,7 @@ class ResearchController extends AbstractGameController
     public function start(ResearchType $type): Response
     {
         $planet = $this->currentPlanet();
-        $this->attempt(fn () => $this->planetService->research($planet, $type), \sprintf('Forschung an %s gestartet.', $type->label()));
+        $this->attempt(fn () => $this->planetService->research($planet, $type), t('Forschung an {type} gestartet.', ['{type}' => t($type->label())]));
 
         return $this->redirectToRoute('app_research');
     }
@@ -56,7 +58,7 @@ class ResearchController extends AbstractGameController
     public function cancel(): Response
     {
         $planet = $this->currentPlanet();
-        $this->attempt(fn () => $this->planetService->cancelResearch($planet), 'Forschung abgebrochen, Rohstoffe wurden erstattet.');
+        $this->attempt(fn () => $this->planetService->cancelResearch($planet), t('Forschung abgebrochen, Rohstoffe wurden erstattet.'));
 
         return $this->redirectToRoute('app_research');
     }

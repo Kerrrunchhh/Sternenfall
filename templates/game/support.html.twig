@@ -1,41 +1,41 @@
 {% extends 'game/_layout.html.twig' %}
 
-{% block title %}Hilfe & Meldungen – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Hilfe & Meldungen – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    <h1>Hilfe & Meldungen</h1>
-    <p class="muted small">Melde einen Spieler (z. B. wenn du beleidigt wurdest), mach einen Vorschlag oder melde einen Fehler. Die Admins sehen alles, stellen bei Bedarf Rückfragen und sagen dir, was daraus wird.</p>
+    <h1>{{ 'Hilfe & Meldungen'|trans }}</h1>
+    <p class="muted small">{{ 'Melde einen Spieler (z. B. wenn du beleidigt wurdest), mach einen Vorschlag oder melde einen Fehler. Die Admins sehen alles, stellen bei Bedarf Rückfragen und sagen dir, was daraus wird.'|trans }}</p>
 
     <section class="panel">
-        <h2>Neue Meldung</h2>
+        <h2>{{ 'Neue Meldung'|trans }}</h2>
         <form method="post" action="{{ path('app_support_create') }}" class="mail-form" data-support-form>
             <input type="hidden" name="_token" value="{{ csrf_token('support') }}">
-            <label>Art
+            <label>{{ 'Art'|trans }}
                 <select name="kind" data-support-kind>
-                    {% for k in kinds %}<option value="{{ k.value }}" {{ k == kind ? 'selected' }}>{{ k.icon }} {{ k.label }}</option>{% endfor %}
+                    {% for k in kinds %}<option value="{{ k.value }}" {{ k == kind ? 'selected' }}>{{ k.icon }} {{ k.label|trans }}</option>{% endfor %}
                 </select>
             </label>
-            <label data-report-only {{ kind.value != 'report' ? 'hidden' }}>Gemeldeter Spieler
-                <input type="text" name="reported" value="{{ reported }}" placeholder="Spielername">
+            <label data-report-only {{ kind.value != 'report' ? 'hidden' }}>{{ 'Gemeldeter Spieler'|trans }}
+                <input type="text" name="reported" value="{{ reported }}" placeholder="{{ 'Spielername'|trans }}">
             </label>
-            <label>Betreff <input type="text" name="subject" required maxlength="{{ constant('App\\Entity\\Ticket::MAX_SUBJECT') }}"></label>
-            <label>Beschreibung
-                <textarea name="body" rows="7" required maxlength="{{ constant('App\\Entity\\Ticket::MAX_BODY') }}" placeholder="Was ist passiert? Bei Beleidigungen: wo und wann (z. B. Post vom …, Ticker …, schwarzes Brett). Bei Fehlern: was hast du gemacht, was ist passiert, was hättest du erwartet?"></textarea>
+            <label>{{ 'Betreff'|trans }} <input type="text" name="subject" required maxlength="{{ constant('App\\Entity\\Ticket::MAX_SUBJECT') }}"></label>
+            <label>{{ 'Beschreibung'|trans }}
+                <textarea name="body" rows="7" required maxlength="{{ constant('App\\Entity\\Ticket::MAX_BODY') }}" placeholder="{{ 'Was ist passiert? Bei Beleidigungen: wo und wann (z. B. Post vom …, Ticker …, schwarzes Brett). Bei Fehlern: was hast du gemacht, was ist passiert, was hättest du erwartet?'|trans }}"></textarea>
             </label>
-            <button class="btn" type="submit" id="support-send">Absenden</button>
+            <button class="btn" type="submit" id="support-send">{{ 'Absenden'|trans }}</button>
         </form>
     </section>
 
     <section class="panel">
-        <h2>Deine Meldungen</h2>
+        <h2>{{ 'Deine Meldungen'|trans }}</h2>
         {% if tickets is empty %}
-            <p class="muted">Du hast noch nichts gemeldet.</p>
+            <p class="muted">{{ 'Du hast noch nichts gemeldet.'|trans }}</p>
         {% else %}
             <table class="table">
                 {% for t in tickets %}
                     <tr>
                         <td>{{ t.kind.icon }} <a href="{{ path('app_support_show', {id: t.id}) }}">{{ t.subject }}</a></td>
-                        <td class="small"><span class="ticket-status ticket-{{ t.status.value }}">{{ t.status.label }}</span></td>
+                        <td class="small"><span class="ticket-status ticket-{{ t.status.value }}">{{ t.status.label|trans }}</span></td>
                         <td class="num small muted">{{ t.updatedAt|date('d.m.Y H:i') }}</td>
                     </tr>
                 {% endfor %}

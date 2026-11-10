@@ -1,29 +1,29 @@
 {% extends 'game/_layout.html.twig' %}
 
-{% block title %}Zeitung – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Zeitung – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    <h1>Galaktische Zeitung</h1>
-    <p class="muted small">Alle Kampfberichte des Universums – sie erscheinen hier {{ delay }} Stunden nach der Schlacht und bleiben {{ days }} Tage im Archiv. {{ total|number_format(0, ',', '.') }} Bericht{{ total == 1 ? '' : 'e' }}.</p>
+    <h1>{{ 'Galaktische Zeitung'|trans }}</h1>
+    <p class="muted small">{{ 'Alle Kampfberichte des Universums – sie erscheinen hier {delay} Stunden nach der Schlacht und bleiben {days} Tage im Archiv.'|trans({'{delay}': delay, '{days}': days}) }} {{ (total == 1 ? '{count} Bericht.' : '{count} Berichte.')|trans({'{count}': total|num}) }}</p>
 
     {% for r in reports %}
         <details class="panel message newspaper-item">
             <summary>
-                <span>{{ r.subject }}</span>
+                <span>{{ r.subjectIn(app.request.locale) }}</span>
                 <span class="muted small">{{ r.createdAt|date('d.m.Y H:i') }}</span>
             </summary>
-            <pre class="message-body">{{ r.body|link_coordinates }}</pre>
-            <p class="small"><a href="{{ path('app_battle_report', {hash: r.hash}) }}">Eigene Seite</a> <button type="button" class="btn btn-small btn-secondary copy-link" data-copy-link="{{ url('app_battle_report', {hash: r.hash}) }}">Link kopieren</button></p>
+            <pre class="message-body">{{ r.bodyIn(app.request.locale)|link_coordinates }}</pre>
+            <p class="small"><a href="{{ path('app_battle_report', {hash: r.hash}) }}">{{ 'Eigene Seite'|trans }}</a> <button type="button" class="btn btn-small btn-secondary copy-link" data-copy-link="{{ url('app_battle_report', {hash: r.hash}) }}">{{ 'Link kopieren'|trans }}</button></p>
         </details>
     {% else %}
-        <p class="panel muted">Noch keine Meldungen – Kämpfe erscheinen hier {{ delay }} Stunden später.</p>
+        <p class="panel muted">{{ 'Noch keine Meldungen – Kämpfe erscheinen hier {delay} Stunden später.'|trans({'{delay}': delay}) }}</p>
     {% endfor %}
 
     {% if pages > 1 %}
-        <nav class="pager" aria-label="Seiten">
-            {% if page > 1 %}<a class="btn btn-small btn-secondary" href="{{ path('app_newspaper', {page: page - 1}) }}">← Neuere</a>{% endif %}
-            <span class="muted small">Seite {{ page }} von {{ pages }}</span>
-            {% if page < pages %}<a class="btn btn-small btn-secondary" href="{{ path('app_newspaper', {page: page + 1}) }}">Ältere →</a>{% endif %}
+        <nav class="pager" aria-label="{{ 'Seiten'|trans }}">
+            {% if page > 1 %}<a class="btn btn-small btn-secondary" href="{{ path('app_newspaper', {page: page - 1}) }}">{{ '← Neuere'|trans }}</a>{% endif %}
+            <span class="muted small">{{ 'Seite {page} von {pages}'|trans({'{page}': page, '{pages}': pages}) }}</span>
+            {% if page < pages %}<a class="btn btn-small btn-secondary" href="{{ path('app_newspaper', {page: page + 1}) }}">{{ 'Ältere →'|trans }}</a>{% endif %}
         </nav>
     {% endif %}
 {% endblock %}

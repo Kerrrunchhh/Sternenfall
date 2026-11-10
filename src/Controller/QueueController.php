@@ -12,6 +12,8 @@ use Symfony\Component\Routing\Requirement\EnumRequirement;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 
+use function Symfony\Component\Translation\t;
+
 class QueueController extends AbstractGameController
 {
     private const array RETURN_ROUTES = ['app_queues', 'app_buildings', 'app_shipyard', 'app_defense', 'app_overview'];
@@ -51,7 +53,7 @@ class QueueController extends AbstractGameController
             }
         }
 
-        $this->attempt(fn () => $this->planetService->reorder($planet, $kind, $ids), 'Reihenfolge gespeichert.');
+        $this->attempt(fn () => $this->planetService->reorder($planet, $kind, $ids), t('Reihenfolge gespeichert.'));
 
         return $this->back($request);
     }
@@ -61,7 +63,7 @@ class QueueController extends AbstractGameController
     public function cancel(Planet $planet, QueueKind $kind, int $orderId, Request $request): Response
     {
         $this->assertOwned($planet);
-        $this->attempt(fn () => $this->planetService->cancelOrder($planet, $kind, $orderId), 'Auftrag abgebrochen, Kosten wurden erstattet.');
+        $this->attempt(fn () => $this->planetService->cancelOrder($planet, $kind, $orderId), t('Auftrag abgebrochen, Kosten wurden erstattet.'));
 
         return $this->back($request);
     }

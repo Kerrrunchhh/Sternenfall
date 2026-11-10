@@ -25,7 +25,7 @@ class GalaxyController extends AbstractGameController
         try {
             $this->addFlash('success', $this->fleetService->quickSpy($this->player(), $galaxy, $system, $position));
         } catch (\App\Game\GameException $e) {
-            $this->addFlash('error', $e->getMessage());
+            $this->addFlash('error', $e->translatable());
         }
 
         return $this->redirectToRoute('app_galaxy', ['galaxy' => $galaxy, 'system' => $system]);
@@ -42,7 +42,7 @@ class GalaxyController extends AbstractGameController
         try {
             $this->addFlash('success', $this->fleetService->quickColonize($planet, $galaxy, $system, $position));
         } catch (\App\Game\GameException $e) {
-            $this->addFlash('error', $e->getMessage());
+            $this->addFlash('error', $e->translatable());
         }
 
         return $this->redirect($this->generateUrl('app_galaxy', ['galaxy' => $galaxy, 'system' => $system]).'#slot-'.$position);

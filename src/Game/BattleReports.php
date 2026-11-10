@@ -6,7 +6,10 @@ use App\Entity\BattleReport;
 use App\Repository\BattleReportRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
+use App\I18n\Locales;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Contracts\Translation\TranslatableInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Stores combat reports under a random hash so they can be shared by link for 30 days.
@@ -21,17 +24,27 @@ final readonly class BattleReports
         private BattleReportRepository $reports,
         private UrlGeneratorInterface $urls,
         private ClockInterface $clock,
+        private TranslatorInterface $translator,
+        private Locales $locales,
     ) {
     }
 
     /** Saves the report (persisted, flushed by the caller) and returns its link path. */
-    public function publish(string $subject, string $body): string
+    public function publish(TranslatableInterface $subject, TranslatableInterface $body): string
     {
         $now = \DateTimeImmutable::createFromInterface($this->clock->now());
         // Old reports go when new ones come.
         $this->reports->deleteCreatedBefore($now->modify('-'.BattleReport::DAYS_AVAILABLE.' days'));
 
-        $report = new BattleReport(bin2hex(random_bytes(12)), $subject, $body, $now);
+        // Written once in every language, so each reader gets his own.
+        $translations = [];
+        foreach ($this->locales->all() as $locale) {
+            if ($locale !== $this->locales->default()) {
+                $translations[$locale] = ['subject' => $subject->trans($this->translator, $locale), 'body' => $body->trans($this->translator, $locale)];
+            }
+        }
+        $default = $this->locales->default();
+        $report = new BattleReport(bin2hex(random_bytes(12)), $subject->trans($this->translator, $default), $body->trans($this->translator, $default), $now, $translations);
         $this->em->persist($report);
 
         return $this->urls->generate('app_battle_report', ['hash' => $report->getHash()]);

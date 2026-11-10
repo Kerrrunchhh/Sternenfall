@@ -6,6 +6,8 @@ use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
+use function Symfony\Component\Translation\t;
+
 /**
  * Named, coloured fleet filters a player saves for the fleet page. The rules are checked
  * here (only known kinds, operators, ship types), so nothing else ends up in the database.
@@ -33,17 +35,17 @@ final readonly class FleetFilters
     {
         $name = trim(preg_replace('/\s+/u', ' ', $name) ?? '');
         if ('' === $name || mb_strlen($name) > 30) {
-            throw new GameException('Der Filtername muss 1 bis 30 Zeichen lang sein.');
+            throw new GameException(t('Der Filtername muss 1 bis 30 Zeichen lang sein.'));
         }
         if (1 !== preg_match('/^#[0-9a-f]{6}$/i', $color)) {
-            throw new GameException('Bitte wähle eine Farbe.');
+            throw new GameException(t('Bitte wähle eine Farbe.'));
         }
         $data = json_decode($definition, true);
         if (!\is_array($data) || !\is_array($data['rules'] ?? null)) {
-            throw new GameException('Der Filter konnte nicht gelesen werden.');
+            throw new GameException(t('Der Filter konnte nicht gelesen werden.'));
         }
         if (\count($data['rules']) > self::MAX_RULES) {
-            throw new GameException(\sprintf('Ein Filter kann höchstens %d Regeln haben.', self::MAX_RULES));
+            throw new GameException(t('Ein Filter kann höchstens {value} Regeln haben.', ['{value}' => self::MAX_RULES]));
         }
 
         $filter = [
@@ -56,8 +58,8 @@ final readonly class FleetFilters
         $limit = $this->limitFor($player);
         if (\count($filters) >= $limit) {
             throw new GameException(self::MAX_FILTERS === $limit
-                ? \sprintf('Du kannst höchstens %d Filter speichern.', $limit)
-                : \sprintf('Ohne erweiterten Account kannst du %d Filter speichern (erweitert: %d).', $limit, self::MAX_FILTERS));
+                ? t('Du kannst höchstens {limit} Filter speichern.', ['{limit}' => $limit])
+                : t('Ohne erweiterten Account kannst du {limit} Filter speichern (erweitert: {value}).', ['{limit}' => $limit, '{value}' => self::MAX_FILTERS]));
         }
         $filters[] = $filter;
         usort($filters, static fn (array $a, array $b): int => strcasecmp($a['name'], $b['name']));
@@ -75,15 +77,15 @@ final readonly class FleetFilters
     private static function rule(mixed $rule): array
     {
         if (!\is_array($rule)) {
-            throw new GameException('Der Filter konnte nicht gelesen werden.');
+            throw new GameException(t('Der Filter konnte nicht gelesen werden.'));
         }
         $kind = (string) ($rule['kind'] ?? '');
         if (!\in_array($kind, ['starts', 'ends', 'contains', 'ships'], true)) {
-            throw new GameException('Unbekannte Filterregel.');
+            throw new GameException(t('Unbekannte Filterregel.'));
         }
         $ship = (string) ($rule['ship'] ?? '');
         if ('ships' === $kind && null === ShipType::tryFrom($ship)) {
-            throw new GameException('Unbekannter Schiffstyp im Filter.');
+            throw new GameException(t('Unbekannter Schiffstyp im Filter.'));
         }
 
         return [

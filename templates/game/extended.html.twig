@@ -1,38 +1,38 @@
 {% extends 'game/_layout.html.twig' %}
 
-{% block title %}Erweiterter Account – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Erweiterter Account – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    <h1>Erweiterter Account</h1>
+    <h1>{{ 'Erweiterter Account'|trans }}</h1>
 
     <section class="panel">
-        <h2>Was du bekommst</h2>
+        <h2>{{ 'Was du bekommst'|trans }}</h2>
         <ul>
-            <li>Bis zu <strong>{{ filters_extended }}</strong> gespeicherte Flottenfilter statt {{ filters_normal }}.</li>
-            <li>Keine Werbung auf der Startseite.</li>
-            <li>Du unterstützt den Betrieb des Spiels. Spielerische Vorteile gegenüber anderen gibt es nicht.</li>
+            <li>{{ 'Bis zu <strong>{filters_extended}</strong> gespeicherte Flottenfilter statt {filters_normal}.'|trans({'{filters_extended}': filters_extended|e, '{filters_normal}': filters_normal|e})|raw }}</li>
+            <li>{{ 'Keine Werbung auf der Startseite.'|trans }}</li>
+            <li>{{ 'Du unterstützt den Betrieb des Spiels. Spielerische Vorteile gegenüber anderen gibt es nicht.'|trans }}</li>
         </ul>
-        <p><strong>5 € im Monat</strong>, monatlich über PayPal, jederzeit kündbar. Nach der Kündigung läuft der bezahlte Monat zu Ende.</p>
+        <p>{{ '<strong>5 € im Monat</strong>, monatlich über PayPal, jederzeit kündbar. Nach der Kündigung läuft der bezahlte Monat zu Ende.'|trans|raw }}</p>
     </section>
 
     <section class="panel">
-        <h2>Dein Status</h2>
+        <h2>{{ 'Dein Status'|trans }}</h2>
         {% if player.isExtended(now) %}
-            <p>✨ Dein Account ist erweitert bis <strong>{{ player.extendedUntil|date('d.m.Y H:i') }}</strong>{% if player.subscriptionStatus == 'ACTIVE' %} und verlängert sich jeden Monat automatisch{% endif %}.</p>
+            <p>{{ '✨ Dein Account ist erweitert bis <strong>{extendedUntil}</strong>'|trans({'{extendedUntil}': (player.extendedUntil|date('d.m.Y H:i'))|e})|raw }}{% if player.subscriptionStatus == 'ACTIVE' %} {{ 'und verlängert sich jeden Monat automatisch'|trans }}{% endif %}.</p>
         {% else %}
-            <p class="muted">Dein Account ist nicht erweitert{% if player.extendedUntil %} (abgelaufen am {{ player.extendedUntil|date('d.m.Y') }}){% endif %}.</p>
+            <p class="muted">{{ 'Dein Account ist nicht erweitert'|trans }}{% if player.extendedUntil %} {{ '(abgelaufen am {extendedUntil})'|trans({'{extendedUntil}': player.extendedUntil|date('d.m.Y')}) }}{% endif %}.</p>
         {% endif %}
 
         {% if player.subscriptionId and player.subscriptionStatus not in ['CANCELLED', 'EXPIRED'] %}
             <form method="post" action="{{ path('app_extended_cancel') }}">
                 <input type="hidden" name="_token" value="{{ csrf_token('extended') }}">
-                <button class="btn btn-secondary" type="submit" data-confirm="Abo wirklich kündigen? Der bezahlte Zeitraum läuft noch zu Ende." data-confirm-label="Kündigen">Abo kündigen</button>
+                <button class="btn btn-secondary" type="submit" data-confirm="{{ 'Abo wirklich kündigen? Der bezahlte Zeitraum läuft noch zu Ende.'|trans }}" data-confirm-label="{{ 'Kündigen'|trans }}">{{ 'Abo kündigen'|trans }}</button>
             </form>
         {% elseif not paypal.configured %}
-            <p class="muted">Der erweiterte Account wird gerade noch vorbereitet und kann bald gebucht werden.</p>
+            <p class="muted">{{ 'Der erweiterte Account wird gerade noch vorbereitet und kann bald gebucht werden.'|trans }}</p>
         {% else %}
-            {% if paypal.sandbox %}<p class="muted small">Testbetrieb (PayPal-Sandbox): es wird kein echtes Geld abgebucht.</p>{% endif %}
-            <p class="small">Mit dem Abschluss akzeptierst du die <a href="{{ path('app_imprint') }}">Nutzungsbedingungen und die Widerrufsbelehrung</a>. Wie wir deine Daten bei der Zahlung verarbeiten, steht in der <a href="{{ path('app_privacy') }}">Datenschutzerklärung</a>.</p>
+            {% if paypal.sandbox %}<p class="muted small">{{ 'Testbetrieb (PayPal-Sandbox): es wird kein echtes Geld abgebucht.'|trans }}</p>{% endif %}
+            <p class="small">{{ 'Mit dem Abschluss akzeptierst du die'|trans }} <a href="{{ path('app_imprint') }}">{{ 'Nutzungsbedingungen und die Widerrufsbelehrung</a>. Wie wir deine Daten bei der Zahlung verarbeiten, steht in der'|trans|raw }} <a href="{{ path('app_privacy') }}">{{ 'Datenschutzerklärung'|trans }}</a>.</p>
             <div id="paypal-button" data-extended-subscribe data-plan="{{ paypal.planId }}" data-custom="{{ player.id }}" data-url="{{ path('app_extended_activate') }}" data-token="{{ csrf_token('extended') }}"></div>
             <p class="flash flash-error" data-paypal-error hidden></p>
             <script src="https://www.paypal.com/sdk/js?client-id={{ paypal.clientId|url_encode }}&vault=true&intent=subscription&currency=EUR&locale=de_DE" defer></script>

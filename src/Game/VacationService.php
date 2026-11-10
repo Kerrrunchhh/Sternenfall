@@ -9,6 +9,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Lock\LockFactory;
 
+use function Symfony\Component\Translation\t;
+
 /**
  * Vacation: 1 to 30 days (fractions allowed). Meanwhile everything rests – production,
  * building, research, stay limits – and nobody can attack the player's planets (spying is
@@ -36,7 +38,7 @@ final readonly class VacationService
     {
         $input = str_replace(',', '.', trim($input));
         if (!preg_match('/^\d+(\.\d+)?$/', $input)) {
-            throw new GameException('Gib die Urlaubstage als Zahl ein, z. B. 3 oder 2,5.');
+            throw new GameException(t('Gib die Urlaubstage als Zahl ein, z. B. 3 oder 2,5.'));
         }
 
         return (float) $input;
@@ -45,11 +47,11 @@ final readonly class VacationService
     public function start(User $user, float $days): \DateTimeImmutable
     {
         if ($days < self::MIN_DAYS || $days > self::MAX_DAYS) {
-            throw new GameException('Urlaub geht von 1 bis 30 Tagen (auch mit Komma, z. B. 2,5).');
+            throw new GameException(t('Urlaub geht von 1 bis 30 Tagen (auch mit Komma, z. B. 2,5).'));
         }
         foreach ($this->fleets->findByOwner($user) as $fleet) {
             if ($fleet->isMoving()) {
-                throw new GameException(\sprintf('%s ist noch unterwegs. In den Urlaub geht es erst, wenn alle deine Flotten gelandet sind.', $fleet->getLabel()));
+                throw new GameException(t('{label} ist noch unterwegs. In den Urlaub geht es erst, wenn alle deine Flotten gelandet sind.', ['{label}' => $fleet->getLabel()]));
             }
         }
 
@@ -60,14 +62,14 @@ final readonly class VacationService
     public function impose(User $user, float $days, string $reason): \DateTimeImmutable
     {
         if ($days <= 0 || $days > self::MAX_DAYS) {
-            throw new GameException('Eine Strafe dauert mehr als 0 und höchstens 30 Tage.');
+            throw new GameException(t('Eine Strafe dauert mehr als 0 und höchstens 30 Tage.'));
         }
         $now = $this->now();
         if ($user->isOnVacation($now)) {
             $this->finish($user, $now);
         }
         $until = $this->begin($user, $days, true, $reason);
-        $this->inbox->send($user, 'Strafe: Urlaub bis '.$until->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i'), \sprintf("Die Spielleitung hat dich für %s Tage in den Urlaub geschickt.\nGrund: %s", str_replace('.', ',', (string) round($days, 2)), $reason));
+        $this->inbox->send($user, t('Strafe: Urlaub bis {until}', ['{until}' => $until->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i')]), t("Die Spielleitung hat dich für {value} Tage in den Urlaub geschickt.\nGrund: {reason}", ['{value}' => str_replace('.', ',', (string) round($days, 2)), '{reason}' => $reason]));
         $this->em->flush();
 
         return $until;
@@ -77,14 +79,14 @@ final readonly class VacationService
     {
         $now = $this->now();
         if (!$user->isOnVacation($now)) {
-            throw new GameException('Du bist nicht im Urlaub.');
+            throw new GameException(t('Du bist nicht im Urlaub.'));
         }
         if ($user->isVacationForced()) {
-            throw new GameException('Diesen Urlaub hat die Spielleitung verhängt – er kann nicht vorzeitig beendet werden.');
+            throw new GameException(t('Diesen Urlaub hat die Spielleitung verhängt – er kann nicht vorzeitig beendet werden.'));
         }
         $earliest = $user->getVacationSince()->modify('+1 day');
         if ($now < $earliest) {
-            throw new GameException('Urlaub dauert mindestens einen Tag. Beenden kannst du ihn ab '.$earliest->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i').'.');
+            throw new GameException(t('Urlaub dauert mindestens einen Tag. Beenden kannst du ihn ab {earliest}.', ['{earliest}' => $earliest->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i')]));
         }
         $this->finish($user, $now);
     }

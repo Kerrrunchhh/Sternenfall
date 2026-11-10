@@ -11,6 +11,10 @@ use App\Repository\PlanetRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Lock\LockFactory;
+use App\I18n\Num;
+use Symfony\Contracts\Translation\TranslatableInterface;
+
+use function Symfony\Component\Translation\t;
 
 /**
  * The fusionator market: traders offer fusionators from a planet hangar at a price
@@ -45,21 +49,21 @@ final readonly class FusionatorMarket
     public function offer(Planet $planet, int $quantity, float $price, array $lifeForms, array $allianceIds): void
     {
         if ($quantity < 1) {
-            throw new GameException('Stelle mindestens einen Fusionator ein.');
+            throw new GameException(t('Stelle mindestens einen Fusionator ein.'));
         }
         if ($price < 0 || !is_finite($price)) {
-            throw new GameException('Der Preis darf nicht negativ sein.');
+            throw new GameException(t('Der Preis darf nicht negativ sein.'));
         }
         $alliances = [] === $allianceIds ? [] : $this->alliances->findBy(['id' => $allianceIds]);
 
         $this->withEventLock(fn () => $this->planets->transaction($planet, function (Planet $planet, \DateTimeImmutable $now) use ($quantity, $price, $lifeForms, $alliances): void {
             $seller = $planet->getOwner();
             if (LifeForm::Trader !== $seller->getLifeForm()) {
-                throw new GameException('Nur Händler können Fusionatoren verkaufen.');
+                throw new GameException(t('Nur Händler können Fusionatoren verkaufen.'));
             }
             $inHangar = $planet->getShipCount(ShipType::Fusionator);
             if ($quantity > $inHangar) {
-                throw new GameException(\sprintf('Im Hangar von %s stehen nur %d Fusionator(en).', $planet->getName(), $inHangar));
+                throw new GameException(t('Im Hangar von {name} stehen nur {inHangar} Fusionator(en).', ['{name}' => $planet->getName(), '{inHangar}' => $inHangar]));
             }
             $planet->addShips(ShipType::Fusionator, -$quantity);
             $this->em->persist(new FusionatorOffer($seller, $planet, $quantity, round($price, 2), $lifeForms, $alliances, $now));
@@ -72,12 +76,12 @@ final readonly class FusionatorMarket
         $this->withEventLock(function () use ($offer, $actor): void {
             $this->em->refresh($offer);
             if (!$offer->getSeller()->isSameAs($actor)) {
-                throw new GameException('Das ist nicht dein Angebot.');
+                throw new GameException(t('Das ist nicht dein Angebot.'));
             }
             $origin = $this->planetRepository->findAt($offer->getGalaxy(), $offer->getSystem(), $offer->getPosition());
             $hangar = null !== $origin && $origin->getOwner()->isSameAs($actor) ? $origin : $this->mainPlanet($actor);
             if (null === $hangar) {
-                throw new GameException('Du besitzt keinen Planeten, auf den die Fusionatoren zurück könnten.');
+                throw new GameException(t('Du besitzt keinen Planeten, auf den die Fusionatoren zurück könnten.'));
             }
             $count = $offer->getQuantity();
             $this->planets->transaction($hangar, function (Planet $hangar) use ($offer, $count): void {
@@ -91,31 +95,31 @@ final readonly class FusionatorMarket
      * Buys $quantity fusionators of an offer. The credits go to the seller; the fusionators
      * leave at once as a new fleet towards the buyer's main planet.
      */
-    public function buy(FusionatorOffer $offer, User $buyer, int $quantity): string
+    public function buy(FusionatorOffer $offer, User $buyer, int $quantity): TranslatableInterface
     {
         $message = '';
         $this->withEventLock(function () use ($offer, $buyer, $quantity, &$message): void {
             $this->em->refresh($offer);
             $seller = $offer->getSeller();
             if ($seller->isSameAs($buyer)) {
-                throw new GameException('Eigene Fusionatoren ziehst du mit „Zurückziehen“ zurück.');
+                throw new GameException(t('Eigene Fusionatoren ziehst du mit „Zurückziehen“ zurück.'));
             }
             if (!$offer->isAvailableTo($buyer)) {
-                throw new GameException('Dieses Angebot ist nicht für dich bestimmt.');
+                throw new GameException(t('Dieses Angebot ist nicht für dich bestimmt.'));
             }
             if ($quantity < 1 || $quantity > $offer->getQuantity()) {
-                throw new GameException(\sprintf('Es sind noch %d Fusionator(en) im Angebot.', $offer->getQuantity()));
+                throw new GameException(t('Es sind noch {quantity} Fusionator(en) im Angebot.', ['{quantity}' => $offer->getQuantity()]));
             }
             $home = $this->mainPlanet($buyer);
             if (null === $home) {
-                throw new GameException('Du brauchst einen Planeten, zu dem die Fusionatoren fliegen können.');
+                throw new GameException(t('Du brauchst einen Planeten, zu dem die Fusionatoren fliegen können.'));
             }
             $price = $offer->getPrice() * $quantity;
 
             // Pay first (under the buyer's lock): without enough credits nothing happens.
             $this->planets->transaction($home, function () use ($buyer, $price): void {
                 if ($buyer->getCredits() < $price) {
-                    throw new GameException(\sprintf('Du hast nicht genug Credits (%s benötigt).', number_format($price, 0, ',', '.')));
+                    throw new GameException(t('Du hast nicht genug Credits ({price} benötigt).', ['{price}' => new Num($price)]));
                 }
                 $buyer->addCredits(-$price);
             });
@@ -142,15 +146,9 @@ final readonly class FusionatorMarket
             $this->em->flush();
 
             $arrival = $fleet->getArriveAt()->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i:s');
-            $this->inbox->send($seller, \sprintf('Fusionatoren an %s verkauft', $buyer->getUsername()), \sprintf(
-                "%s hat %d Fusionator(en) aus deinem Angebot bei [%s] gekauft.\nEinnahme: %s Credits\nIm Angebot sind noch %d.",
-                $buyer->getUsername(), $quantity, $offer->getCoordinates(), number_format($price, 0, ',', '.'), $offer->getQuantity(),
-            ));
-            $this->inbox->send($buyer, \sprintf('%d Fusionator(en) gekauft', $quantity), \sprintf(
-                "Du hast %d Fusionator(en) von %s für %s Credits gekauft.\nSie fliegen als Flotte „%s“ von [%s] zu %s [%s], Ankunft %s.",
-                $quantity, $seller->getUsername(), number_format($price, 0, ',', '.'), $name, $offer->getCoordinates(), $home->getName(), $home->getCoordinates(), $arrival,
-            ));
-            $message = \sprintf('%d Fusionator(en) gekauft. Sie fliegen als Flotte „%s“ zu %s [%s], Ankunft %s.', $quantity, $name, $home->getName(), $home->getCoordinates(), $arrival);
+            $this->inbox->send($seller, t('Fusionatoren an {player} verkauft', ['{player}' => $buyer->getUsername()]), t("{player} hat {quantity} Fusionator(en) aus deinem Angebot bei [{coords}] gekauft.\nEinnahme: {price} Credits\nIm Angebot sind noch {quantity2}.", ['{player}' => $buyer->getUsername(), '{quantity}' => $quantity, '{coords}' => $offer->getCoordinates(), '{price}' => new Num($price), '{quantity2}' => $offer->getQuantity()]));
+            $this->inbox->send($buyer, t('{quantity} Fusionator(en) gekauft', ['{quantity}' => $quantity]), t("Du hast {quantity} Fusionator(en) von {player} für {price} Credits gekauft.\nSie fliegen als Flotte „{name}“ von [{coords}] zu {name2} [{coords2}], Ankunft {arrival}.", ['{quantity}' => $quantity, '{player}' => $seller->getUsername(), '{price}' => new Num($price), '{name}' => $name, '{coords}' => $offer->getCoordinates(), '{name2}' => $home->getName(), '{coords2}' => $home->getCoordinates(), '{arrival}' => $arrival]));
+            $message = t('{quantity} Fusionator(en) gekauft. Sie fliegen als Flotte „{name}“ zu {name2} [{coords}], Ankunft {arrival}.', ['{quantity}' => $quantity, '{name}' => $name, '{name2}' => $home->getName(), '{coords}' => $home->getCoordinates(), '{arrival}' => $arrival]);
         });
 
         return $message;

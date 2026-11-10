@@ -8,6 +8,8 @@ use App\Repository\ContactRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
+use function Symfony\Component\Translation\t;
+
 /**
  * Quick contacts: a player asks, the other accepts; then both have each other in their
  * list on the overview and see whether the other is online.
@@ -27,15 +29,15 @@ final readonly class ContactService
     public function request(User $user, User $other): Contact
     {
         if ($other->isSameAs($user)) {
-            throw new GameException('Du kannst dich nicht selbst als Schnellkontakt aufnehmen.');
+            throw new GameException(t('Du kannst dich nicht selbst als Schnellkontakt aufnehmen.'));
         }
         $existing = $this->contacts->findBetween($user, $other);
         if (null !== $existing) {
             if ($existing->isAccepted()) {
-                throw new GameException(\sprintf('%s ist schon in deinen Schnellkontakten.', $other->getUsername()));
+                throw new GameException(t('{player} ist schon in deinen Schnellkontakten.', ['{player}' => $other->getUsername()]));
             }
             if ($existing->getRequester()->isSameAs($user)) {
-                throw new GameException(\sprintf('Du hast %s schon angefragt.', $other->getUsername()));
+                throw new GameException(t('Du hast {player} schon angefragt.', ['{player}' => $other->getUsername()]));
             }
             // The other asked first: asking back accepts.
             $this->accept($existing, $user);
@@ -46,7 +48,7 @@ final readonly class ContactService
 
         $contact = new Contact($user, $other, $this->now());
         $this->em->persist($contact);
-        $this->inbox->send($other, 'Kontaktanfrage von '.$user->getUsername(), \sprintf('%s möchte dich in die Schnellkontakte aufnehmen. Annehmen oder ablehnen kannst du in der Übersicht oder unter Post.', $user->getUsername()));
+        $this->inbox->send($other, t('Kontaktanfrage von {player}', ['{player}' => $user->getUsername()]), t('{player} möchte dich in die Schnellkontakte aufnehmen. Annehmen oder ablehnen kannst du in der Übersicht oder unter Post.', ['{player}' => $user->getUsername()]));
         $this->em->flush();
 
         return $contact;
@@ -55,12 +57,12 @@ final readonly class ContactService
     public function accept(Contact $contact, User $user): void
     {
         if (!$contact->getAddressee()->isSameAs($user) || $contact->isAccepted()) {
-            throw new GameException('Diese Anfrage gibt es nicht (mehr).');
+            throw new GameException(t('Diese Anfrage gibt es nicht (mehr).'));
         }
         $this->assertRoom($user);
         $this->assertRoom($contact->getRequester());
         $contact->accept($this->now());
-        $this->inbox->send($contact->getRequester(), 'Kontaktanfrage angenommen', \sprintf('%s hat deine Anfrage angenommen und steht jetzt in deinen Schnellkontakten.', $user->getUsername()));
+        $this->inbox->send($contact->getRequester(), t('Kontaktanfrage angenommen'), t('{player} hat deine Anfrage angenommen und steht jetzt in deinen Schnellkontakten.', ['{player}' => $user->getUsername()]));
         $this->em->flush();
     }
 
@@ -68,7 +70,7 @@ final readonly class ContactService
     public function remove(Contact $contact, User $user): void
     {
         if (!$contact->involves($user)) {
-            throw new GameException('Diesen Kontakt gibt es nicht (mehr).');
+            throw new GameException(t('Diesen Kontakt gibt es nicht (mehr).'));
         }
         $this->em->remove($contact);
         $this->em->flush();
@@ -86,7 +88,7 @@ final readonly class ContactService
     private function assertRoom(User $user): void
     {
         if (\count($this->contacts->findAccepted($user)) >= self::MAX_CONTACTS) {
-            throw new GameException(\sprintf('%s hat schon %d Schnellkontakte – mehr gehen nicht.', $user->getUsername(), self::MAX_CONTACTS));
+            throw new GameException(t('{player} hat schon {value} Schnellkontakte – mehr gehen nicht.', ['{player}' => $user->getUsername(), '{value}' => self::MAX_CONTACTS]));
         }
     }
 

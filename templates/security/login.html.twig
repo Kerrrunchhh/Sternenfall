@@ -1,20 +1,20 @@
 {% extends 'security/_layout.html.twig' %}
 
-{% block title %}Anmelden – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Anmelden – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    <h2>Anmelden</h2>
+    <h2>{{ 'Anmelden'|trans }}</h2>
     {% if error %}
         <div class="flash flash-error">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
-        {% if 'E-Mail' in error.messageKey %}<p class="hint"><a href="{{ path('app_resend_email') }}">Bestätigungsmail erneut senden</a></p>{% endif %}
+        {% if 'E-Mail' in error.messageKey %}<p class="hint"><a href="{{ path('app_resend_email') }}">{{ 'Bestätigungsmail erneut senden'|trans }}</a></p>{% endif %}
     {% endif %}
     <form method="post" action="{{ path('app_login') }}">
-        <label for="username">Spielername</label>
+        <label for="username">{{ 'Spielername'|trans }}</label>
         <input type="text" id="username" name="_username" value="{{ last_username }}" autocomplete="username" required autofocus>
-        <label for="password">Passwort</label>
+        <label for="password">{{ 'Passwort'|trans }}</label>
         <input type="password" id="password" name="_password" autocomplete="current-password" required>
         <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
-        <button class="btn" type="submit">Anmelden</button>
+        <button class="btn" type="submit">{{ 'Anmelden'|trans }}</button>
     </form>
-    <p class="hint">Noch kein Konto? <a href="{{ path('app_register') }}">Registrieren</a></p>
+    <p class="hint">{{ 'Noch kein Konto?'|trans }} <a href="{{ path('app_register') }}">{{ 'Registrieren'|trans }}</a></p>
 {% endblock %}

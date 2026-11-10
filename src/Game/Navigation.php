@@ -4,6 +4,8 @@ namespace App\Game;
 
 use App\Entity\User;
 
+use function Symfony\Component\Translation\t;
+
 /**
  * Flight calculations: distance, duration, fuel, crew supplies and cargo space.
  *
@@ -60,7 +62,7 @@ final readonly class Navigation
             return self::MAX_SPEED_PERCENT;
         }
         if (!is_numeric($input) || (float) $input < self::MIN_SPEED_PERCENT || (float) $input > self::MAX_SPEED_PERCENT) {
-            throw new GameException('Die Geschwindigkeit muss zwischen 0,1 und 100 % liegen.');
+            throw new GameException(t('Die Geschwindigkeit muss zwischen 0,1 und 100 % liegen.'));
         }
 
         return round((float) $input, 2);

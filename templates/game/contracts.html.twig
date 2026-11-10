@@ -1,31 +1,30 @@
 {% extends 'game/_layout.html.twig' %}
 {% import 'game/_macros.html.twig' as ui %}
 
-{% block title %}Aufträge – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Aufträge – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    <h1>Aufträge</h1>
-    <p class="muted small">Biete Credits für den <strong>Schutz</strong> eines deiner Planeten (der Auftragnehmer darf dort so lange Schiffe stationieren) oder für eine <strong>Invasion</strong> (ist das Ziel eine Fusion, muss sie zuerst gesprengt und dann der oberste Planet invadiert werden). Die Belohnung wird beim Anlegen verwahrt und nur bei Erfolg ausgezahlt – sonst bekommst du sie zurück.</p>
+    <h1>{{ 'Aufträge'|trans }}</h1>
+    <p class="muted small">{{ 'Biete Credits für den <strong>Schutz</strong> eines deiner Planeten (der Auftragnehmer darf dort so lange Schiffe stationieren) oder für eine <strong>Invasion</strong> (ist das Ziel eine Fusion, muss sie zuerst gesprengt und dann der oberste Planet invadiert werden). Die Belohnung wird beim Anlegen verwahrt und nur bei Erfolg ausgezahlt – sonst bekommst du sie zurück.'|trans|raw }}</p>
 
     <section class="panel">
-        <h2>Offene Aufträge</h2>
+        <h2>{{ 'Offene Aufträge'|trans }}</h2>
         {% if open is empty %}
-            <p class="muted">Gerade sucht niemand Hilfe.</p>
+            <p class="muted">{{ 'Gerade sucht niemand Hilfe.'|trans }}</p>
         {% else %}
             {% for c in open %}
                 <div class="proposal">
                     <div>
-                        <strong>{{ c.isProtection ? '🛡' : '⚔' }} {{ c.kindLabel }}</strong> {{ c.planetName }} {{ ui.coords(c.coordinates) }}
-                        · <strong>{{ c.reward|number_format(0, ',', '.') }} Credits</strong> · {{ c.days }} Tage · von {{ ui.player(c.client) }}
+                        {{ '<strong>{isProtection} {kindLabel}</strong> {planetName} {coordinates} · <strong>{reward} Credits</strong> · {days} Tage · von {client}'|trans({'{isProtection}': (c.isProtection ? '🛡' : '⚔')|e, '{kindLabel}': c.kindLabel|trans|e, '{planetName}': c.planetName|e, '{coordinates}': ui.coords(c.coordinates)|e, '{reward}': c.reward|num|e, '{days}': c.days|e, '{client}': ui.player(c.client)|e})|raw }}
                         {% if c.note %}<blockquote class="proposal-message">{{ c.note }}</blockquote>{% endif %}
                     </div>
                     {% if c.applicationOf(player) %}
-                        <span class="muted small">beworben</span>
+                        <span class="muted small">{{ 'beworben'|trans }}</span>
                     {% else %}
                         <form method="post" action="{{ path('app_contract_apply', {id: c.id}) }}" class="inline-action">
                             <input type="hidden" name="_token" value="{{ csrf_token('contracts') }}">
-                            <input type="text" name="message" maxlength="500" placeholder="Nachricht (optional)" aria-label="Nachricht zur Bewerbung">
-                            <button class="btn btn-small" type="submit">Bewerben</button>
+                            <input type="text" name="message" maxlength="500" placeholder="{{ 'Nachricht (optional)'|trans }}" aria-label="{{ 'Nachricht zur Bewerbung'|trans }}">
+                            <button class="btn btn-small" type="submit">{{ 'Bewerben'|trans }}</button>
                         </form>
                     {% endif %}
                 </div>
@@ -34,18 +33,18 @@
     </section>
 
     <section class="panel">
-        <h2>Deine Aufträge</h2>
+        <h2>{{ 'Deine Aufträge'|trans }}</h2>
         {% if mine is empty %}
-            <p class="muted">Noch keine.</p>
+            <p class="muted">{{ 'Noch keine.'|trans }}</p>
         {% else %}
             {% for c in mine %}
                 <div class="proposal">
                     <div>
-                        <strong>{{ c.isProtection ? '🛡' : '⚔' }} {{ c.kindLabel }}</strong> {{ c.planetName }} {{ ui.coords(c.coordinates) }} · {{ c.reward|number_format(0, ',', '.') }} Credits · {{ c.days }} Tage
+                        {{ '<strong>{isProtection} {kindLabel}</strong> {planetName} {coordinates} · {reward} Credits · {days} Tage'|trans({'{isProtection}': (c.isProtection ? '🛡' : '⚔')|e, '{kindLabel}': c.kindLabel|trans|e, '{planetName}': c.planetName|e, '{coordinates}': ui.coords(c.coordinates)|e, '{reward}': c.reward|num|e, '{days}': c.days|e})|raw }}
                         <div class="muted small">
-                            {{ c.statusLabel }}
-                            {% if c.client.id == player.id %}· dein Auftrag{% if c.contractor %} an {{ ui.player(c.contractor) }}{% endif %}{% else %}· du bist Auftragnehmer für {{ ui.player(c.client) }}{% endif %}
-                            {% if c.endsAt %}· bis {{ c.endsAt|date('d.m.Y H:i') }}{% endif %}
+                            {{ c.statusLabel|trans }}
+                            {% if c.client.id == player.id %}{{ '· dein Auftrag'|trans }}{% if c.contractor %} {{ 'an {contractor}'|trans({'{contractor}': ui.player(c.contractor)|e})|raw }}{% endif %}{% else %}{{ '· du bist Auftragnehmer für {client}'|trans({'{client}': ui.player(c.client)|e})|raw }}{% endif %}
+                            {% if c.endsAt %}{{ '· bis {endsAt}'|trans({'{endsAt}': c.endsAt|date('d.m.Y H:i')}) }}{% endif %}
                         </div>
                         {% if c.client.id == player.id and c.status == 'open' %}
                             {% for a in c.applications %}
@@ -53,17 +52,17 @@
                                     <input type="hidden" name="_token" value="{{ csrf_token('contracts') }}">
                                     <input type="hidden" name="application" value="{{ a.id }}">
                                     {{ ui.player(a.applicant) }} {% if a.message %}<span class="small">„{{ a.message }}“</span>{% endif %}
-                                    <button class="btn btn-small" type="submit">Annehmen</button>
+                                    <button class="btn btn-small" type="submit">{{ 'Annehmen'|trans }}</button>
                                 </form>
                             {% else %}
-                                <p class="muted small">Noch keine Bewerbungen.</p>
+                                <p class="muted small">{{ 'Noch keine Bewerbungen.'|trans }}</p>
                             {% endfor %}
                         {% endif %}
                     </div>
                     {% if c.client.id == player.id and c.status == 'open' %}
                         <form method="post" action="{{ path('app_contract_cancel', {id: c.id}) }}">
                             <input type="hidden" name="_token" value="{{ csrf_token('contracts') }}">
-                            <button class="btn btn-small btn-secondary" type="submit">Zurückziehen</button>
+                            <button class="btn btn-small btn-secondary" type="submit">{{ 'Zurückziehen'|trans }}</button>
                         </form>
                     {% endif %}
                 </div>
@@ -72,26 +71,26 @@
     </section>
 
     <section class="panel">
-        <h2>Neuer Auftrag</h2>
+        <h2>{{ 'Neuer Auftrag'|trans }}</h2>
         <form method="post" action="{{ path('app_contract_create') }}" class="mail-form">
             <input type="hidden" name="_token" value="{{ csrf_token('contracts') }}">
-            <label>Art
+            <label>{{ 'Art'|trans }}
                 <select name="kind">
-                    <option value="protection" {{ prefill.kind == 'protection' ? 'selected' }}>🛡 Planetenschutz (eigener Planet)</option>
-                    <option value="invasion" {{ prefill.kind == 'invasion' ? 'selected' }}>⚔ Invasion (fremder Planet)</option>
+                    <option value="protection" {{ prefill.kind == 'protection' ? 'selected' }}>{{ '🛡 Planetenschutz (eigener Planet)'|trans }}</option>
+                    <option value="invasion" {{ prefill.kind == 'invasion' ? 'selected' }}>{{ '⚔ Invasion (fremder Planet)'|trans }}</option>
                 </select>
             </label>
             <div class="coords">
-                <label>Galaxie <input type="number" name="galaxy" min="1" value="{{ prefill.galaxy }}" required></label>
-                <label>System <input type="number" name="system" min="1" value="{{ prefill.system }}" required></label>
-                <label>Position <input type="number" name="position" min="1" value="{{ prefill.position }}" required></label>
+                <label>{{ 'Galaxie'|trans }} <input type="number" name="galaxy" min="1" value="{{ prefill.galaxy }}" required></label>
+                <label>{{ 'System'|trans }} <input type="number" name="system" min="1" value="{{ prefill.system }}" required></label>
+                <label>{{ 'Position'|trans }} <input type="number" name="position" min="1" value="{{ prefill.position }}" required></label>
             </div>
             <div class="coords">
-                <label>Belohnung (Credits) <input type="text" name="reward" inputmode="numeric" required placeholder="z. B. 50.000"></label>
-                <label>Dauer (Tage) <input type="number" name="days" min="{{ min_days }}" max="{{ max_days }}" value="7" required></label>
+                <label>{{ 'Belohnung (Credits)'|trans }} <input type="text" name="reward" inputmode="numeric" required placeholder="z. B. 50.000"></label>
+                <label>{{ 'Dauer (Tage)'|trans }} <input type="number" name="days" min="{{ min_days }}" max="{{ max_days }}" value="7" required></label>
             </div>
-            <label>Beschreibung (optional) <textarea name="note" rows="2" maxlength="1000"></textarea></label>
-            <button class="btn" type="submit" id="contract-create">Auftrag anlegen</button>
+            <label>{{ 'Beschreibung (optional)'|trans }} <textarea name="note" rows="2" maxlength="1000"></textarea></label>
+            <button class="btn" type="submit" id="contract-create">{{ 'Auftrag anlegen'|trans }}</button>
         </form>
     </section>
 {% endblock %}

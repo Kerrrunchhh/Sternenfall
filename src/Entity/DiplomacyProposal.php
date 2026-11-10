@@ -5,6 +5,10 @@ namespace App\Entity;
 use App\Game\TreatyKind;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use App\I18n\Lines;
+use Symfony\Contracts\Translation\TranslatableInterface;
+
+use function Symfony\Component\Translation\t;
 
 /**
  * A proposal to start or end a relation. First the proposing alliance votes (founder and
@@ -102,13 +106,13 @@ class DiplomacyProposal
     }
 
     /** The message as a quoted block for notifications ('' without message). */
-    public function quotedMessage(): string
+    public function quotedMessage(): ?TranslatableInterface
     {
         if (null === $this->message) {
-            return '';
+            return null;
         }
 
-        return "\n\nNachricht von „".$this->proposer->getName()."“:\n".implode("\n", array_map(static fn (string $l): string => '> '.$l, explode("\n", $this->message)));
+        return new Lines([t("\n\nNachricht von „{name}“:", ['{name}' => $this->proposer->getName()]), ...array_map(static fn (string $l): string => '> '.$l, explode("\n", $this->message))]);
     }
 
     public function getStage(): string

@@ -1,28 +1,28 @@
 {% extends 'game/_layout.html.twig' %}
 {% import 'game/_macros.html.twig' as ui %}
 
-{% block title %}Meldungen – Admin – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Meldungen – Admin – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    <h1>🛡 Meldungen</h1>
+    <h1>{{ '🛡 Meldungen'|trans }}</h1>
     <div class="highscore-filters">
-        <a class="filter-chip {{ kind is null ? 'active' }}" href="{{ path('app_admin_tickets', all ? {show: 'all'} : {}) }}">Alle Arten</a>
+        <a class="filter-chip {{ kind is null ? 'active' }}" href="{{ path('app_admin_tickets', all ? {show: 'all'} : {}) }}">{{ 'Alle Arten'|trans }}</a>
         {% for k in kinds %}
-            <a class="filter-chip {{ kind == k ? 'active' }}" href="{{ path('app_admin_tickets', {kind: k.value}|merge(all ? {show: 'all'} : {})) }}">{{ k.icon }} {{ k.label }}</a>
+            <a class="filter-chip {{ kind == k ? 'active' }}" href="{{ path('app_admin_tickets', {kind: k.value}|merge(all ? {show: 'all'} : {})) }}">{{ k.icon }} {{ k.label|trans }}</a>
         {% endfor %}
-        <a class="filter-chip {{ all ? 'active' }}" href="{{ path('app_admin_tickets', (kind ? {kind: kind.value} : {})|merge(all ? {} : {show: 'all'})) }}">{{ all ? 'Nur offene' : 'Auch erledigte' }}</a>
+        <a class="filter-chip {{ all ? 'active' }}" href="{{ path('app_admin_tickets', (kind ? {kind: kind.value} : {})|merge(all ? {} : {show: 'all'})) }}">{{ all ? ('Nur offene'|trans) : ('Auch erledigte'|trans) }}</a>
     </div>
     <section class="panel">
         {% if tickets is empty %}
-            <p class="muted">{{ all ? 'Keine Meldungen.' : 'Keine offenen Meldungen.' }}</p>
+            <p class="muted">{{ all ? ('Keine Meldungen.'|trans) : ('Keine offenen Meldungen.'|trans) }}</p>
         {% else %}
             <table class="table">
-                <tr class="table-head"><td>Meldung</td><td>Von</td><td>Status</td><td class="num">Zuletzt</td></tr>
+                <tr class="table-head"><td>{{ 'Meldung'|trans }}</td><td>{{ 'Von'|trans }}</td><td>{{ 'Status'|trans }}</td><td class="num">{{ 'Zuletzt'|trans }}</td></tr>
                 {% for t in tickets %}
                     <tr>
-                        <td>{{ t.kind.icon }} <a href="{{ path('app_admin_ticket', {id: t.id}) }}">{{ t.subject }}</a>{% if t.reported %} <span class="muted small">gegen {{ t.reported.username }}</span>{% endif %}</td>
-                        <td>{% if t.author %}{{ ui.player(t.author) }}{% else %}<span class="muted">gelöscht</span>{% endif %}</td>
-                        <td class="small"><span class="ticket-status ticket-{{ t.status.value }}">{{ t.status.label }}</span></td>
+                        <td>{{ t.kind.icon }} <a href="{{ path('app_admin_ticket', {id: t.id}) }}">{{ t.subject }}</a>{% if t.reported %} <span class="muted small">{{ 'gegen {username}'|trans({'{username}': t.reported.username}) }}</span>{% endif %}</td>
+                        <td>{% if t.author %}{{ ui.player(t.author) }}{% else %}<span class="muted">{{ 'gelöscht'|trans }}</span>{% endif %}</td>
+                        <td class="small"><span class="ticket-status ticket-{{ t.status.value }}">{{ t.status.label|trans }}</span></td>
                         <td class="num small muted">{{ t.updatedAt|date('d.m.Y H:i') }}</td>
                     </tr>
                 {% endfor %}

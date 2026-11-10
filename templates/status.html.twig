@@ -1,15 +1,15 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Status – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Status – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block body %}
     <main class="public-report">
         <a href="{{ path(app.user ? 'app_overview' : 'app_home') }}" class="public-report-logo"><img src="{{ asset('pictures/brand/logo.webp') }}" alt="{{ game_name }}" width="223" height="131"></a>
         <article class="panel">
-            <h1>Status des Universums</h1>
+            <h1>{{ 'Status des Universums'|trans }}</h1>
             {{ include('_status_stats.html.twig') }}
         </article>
         <article class="panel">{{ include('_top_experience.html.twig') }}</article>
-        <p class="muted small"><a href="{{ path(app.user ? 'app_overview' : 'app_home') }}">{{ app.user ? 'Zurück ins Spiel' : 'Zur Startseite' }}</a> · <a href="{{ path('app_imprint') }}">Impressum</a> · <a href="{{ path('app_privacy') }}">Datenschutz</a></p>
+        <p class="muted small"><a href="{{ path(app.user ? 'app_overview' : 'app_home') }}">{{ app.user ? ('Zurück ins Spiel'|trans) : ('Zur Startseite'|trans) }}</a> · <a href="{{ path('app_imprint') }}">{{ 'Impressum'|trans }}</a> · <a href="{{ path('app_privacy') }}">{{ 'Datenschutz'|trans }}</a> · {{ include('_language_switch.html.twig') }}</p>
     </main>
 {% endblock %}

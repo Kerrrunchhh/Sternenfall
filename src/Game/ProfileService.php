@@ -7,6 +7,8 @@ use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
+use function Symfony\Component\Translation\t;
+
 /**
  * A player's public profile: picture and text, shown when others click the name.
  */
@@ -26,10 +28,10 @@ final readonly class ProfileService
     public function setPlanetHidden(User $player, Planet $planet, bool $hidden): void
     {
         if (!$planet->getOwner()->isSameAs($player)) {
-            throw new GameException('Das ist nicht dein Planet.');
+            throw new GameException(t('Das ist nicht dein Planet.'));
         }
         if ($hidden && !$planet->isHiddenInProfile() && \count(self::hiddenPlanets($player)) >= self::MAX_HIDDEN_PLANETS) {
-            throw new GameException(\sprintf('Du kannst höchstens %d Planeten verbergen. Zeige zuerst einen anderen wieder an.', self::MAX_HIDDEN_PLANETS));
+            throw new GameException(t('Du kannst höchstens {value} Planeten verbergen. Zeige zuerst einen anderen wieder an.', ['{value}' => self::MAX_HIDDEN_PLANETS]));
         }
         $planet->setHiddenInProfile($hidden);
         $this->em->flush();

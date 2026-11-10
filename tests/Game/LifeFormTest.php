@@ -14,6 +14,8 @@ use PHPUnit\Framework\TestCase;
 
 class LifeFormTest extends TestCase
 {
+    use RendersMessages;
+
     private Economy $economy;
     private \DateTimeImmutable $start;
 
@@ -73,9 +75,9 @@ class LifeFormTest extends TestCase
             $traderRule = 'Nur Händler können Fusionator bauen';
 
             if (LifeForm::Trader === $form) {
-                self::assertNotContains($traderRule, $missing);
+                self::assertNotContains($traderRule, array_map(self::text(...), $missing));
             } else {
-                self::assertSame($traderRule, $missing[0], $form->label());
+                self::assertSame($traderRule, self::text($missing[0]), $form->label());
             }
         }
         // Other ships are not restricted by life form.

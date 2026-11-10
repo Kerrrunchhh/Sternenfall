@@ -3,11 +3,11 @@
 {% block body %}
     <main class="landing">
         <h1 class="logo-hero"><img src="{{ asset('pictures/brand/logo.webp') }}" alt="{{ game_name }}" width="446" height="262"></h1>
-        <p class="tagline">Baue dein Imperium zwischen den Sternen.</p>
+        <p class="tagline">{{ 'Baue dein Imperium zwischen den Sternen.'|trans }}</p>
         <div class="panel landing-panel">
             {{ include('_flashes.html.twig') }}
             {% block content %}{% endblock %}
         </div>
-        <p class="muted small landing-links"><a href="{{ path('app_imprint') }}">Impressum</a> · <a href="{{ path('app_privacy') }}">Datenschutz</a></p>
+        <p class="muted small landing-links"><a href="{{ path('app_imprint') }}">{{ 'Impressum'|trans }}</a> · <a href="{{ path('app_privacy') }}">{{ 'Datenschutz'|trans }}</a> · {{ include('_language_switch.html.twig') }}</p>
     </main>
 {% endblock %}

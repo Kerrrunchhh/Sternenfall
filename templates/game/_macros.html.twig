@@ -2,7 +2,7 @@
 {% macro cost(cost, planet, multiplier = 1) %}
     {% for type in enum_cases('App\\Game\\ResourceType') %}
         {% set amount = cost.get(type) * multiplier %}
-        {% if amount > 0 %}<span class="{{ amount > planet.resources.get(type) ? 'lacking' }}">{{ type.label }} {{ amount|number_format(0, ',', '.') }}</span>{% endif %}
+        {% if amount > 0 %}<span class="{{ amount > planet.resources.get(type) ? 'lacking' }}">{{ type.label|trans }} {{ amount|num }}</span>{% endif %}
     {% endfor %}
 {% endmacro %}
 
@@ -14,7 +14,7 @@
 {% macro coords(coordinates) %}
     {%- set parts = coordinates|split(':') -%}
     {%- set position = parts[2]|split('-')|first -%}
-    <a class="coords" href="{{ path('app_galaxy', {galaxy: parts[0], system: parts[1]}) }}#slot-{{ position }}" title="Im Universum anzeigen">[{{ coordinates }}]</a>
+    <a class="coords" href="{{ path('app_galaxy', {galaxy: parts[0], system: parts[1]}) }}#slot-{{ position }}" title="{{ 'Im Universum anzeigen'|trans }}">[{{ coordinates }}]</a>
 {%- endmacro %}
 
 {# Exact server time (seconds) for timing fleets; the date only when it is not today. #}
@@ -24,15 +24,15 @@
 
 {# Player name with life form icon, link to the profile and the alliance tag (link to its public page). #}
 {% macro player(user, with_alliance = true) %}
-    <span class="player-name"><span class="lf-icon" title="{{ user.lifeForm.label }}" aria-label="{{ user.lifeForm.label }}">{{ user.lifeForm.icon }}</span>
+    <span class="player-name"><span class="lf-icon" title="{{ user.lifeForm.label|trans }}" aria-label="{{ user.lifeForm.label|trans }}">{{ user.lifeForm.icon }}</span>
     <a href="{{ path('app_player', {id: user.id}) }}">{{ user.username }}</a>
-    {%- if with_alliance and user.alliance %} <a class="alliance-tag" href="{{ path('app_alliance_public', {id: user.alliance.id}) }}" title="{{ user.alliance.type }} {{ user.alliance.name }}">[{{ user.alliance.tag }}]</a>{% endif %}</span>
+    {%- if with_alliance and user.alliance %} <a class="alliance-tag" href="{{ path('app_alliance_public', {id: user.alliance.id}) }}" title="{{ user.alliance.type|trans }} {{ user.alliance.name }}">[{{ user.alliance.tag }}]</a>{% endif %}</span>
 {%- endmacro %}
 
 {# Online status (only shown to alliance mates and quick contacts). #}
 {% macro presence(user) %}
     {%- set st = presence(user) -%}
-    {%- if st %}<span class="presence {{ st.online ? 'presence-online' : 'presence-offline' }}" title="{{ st.text }}"><span class="presence-dot" aria-hidden="true"></span>{{ st.text }}</span>{% endif -%}
+    {%- if st %}<span class="presence {{ st.online ? 'presence-online' : 'presence-offline' }}" title="{{ st.text|trans }}"><span class="presence-dot" aria-hidden="true"></span>{{ st.text|trans }}</span>{% endif -%}
 {% endmacro %}
 
 {% macro picture(file, kind, alt, size = 'large') %}
@@ -45,9 +45,9 @@
 
 {# A value changed by research: the researched value, the base value below if it differs. #}
 {% macro ship_stat(label, st) %}
-    <div title="{{ st.notes is empty ? 'Grundwert' : 'Grundwert ' ~ st.base|number_format(0, ',', '.') ~ ' – ' ~ st.notes|join(', ') }}">
+    <div title="{{ st.notes is empty ? 'Grundwert'|trans : 'Grundwert {base} – {notes}'|trans({'{base}': st.base|num, '{notes}': st.notes|map(n => n|trans)|join(', ')}) }}">
         <dt>{{ label }}</dt>
-        <dd>{{ st.value|number_format(0, ',', '.') }}{% if st.value != st.base %} <small class="stat-base">Basis {{ st.base|number_format(0, ',', '.') }}</small>{% endif %}</dd>
+        <dd>{{ st.value|num }}{% if st.value != st.base %} <small class="stat-base">{{ 'Basis {base}'|trans({'{base}': st.base|num}) }}</small>{% endif %}</dd>
     </div>
 {% endmacro %}
 

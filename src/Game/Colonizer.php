@@ -9,6 +9,8 @@ use App\Repository\TradePostRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
+use function Symfony\Component\Translation\t;
+
 /**
  * Places new players in the universe.
  */
@@ -111,6 +113,6 @@ final readonly class Colonizer
             }
         }
 
-        throw new GameException('Das Universum ist voll. Bitte wende dich an die Spielleitung.');
+        throw new GameException(t('Das Universum ist voll. Bitte wende dich an die Spielleitung.'));
     }
 }

@@ -11,6 +11,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 
+use function Symfony\Component\Translation\t;
+
 /** Remembered coordinates: added from the universe view, named and used for fleets. */
 class BookmarkController extends AbstractGameController
 {
@@ -38,7 +40,7 @@ class BookmarkController extends AbstractGameController
         $this->currentPlanet();
         $form = $request->request;
         [$g, $s, $p] = [$form->getInt('galaxy'), $form->getInt('system'), $form->getInt('position')];
-        $this->attempt(fn () => $this->service->add($this->player(), $g, $s, $p), \sprintf('Koordinaten [%d:%d:%d] gemerkt.', $g, $s, $p));
+        $this->attempt(fn () => $this->service->add($this->player(), $g, $s, $p), t('Koordinaten [{g}:{s}:{p}] gemerkt.', ['{g}' => $g, '{s}' => $s, '{p}' => $p]));
 
         return $this->redirect($this->generateUrl('app_galaxy', ['galaxy' => $g, 'system' => $s]).'#slot-'.$p);
     }
@@ -48,7 +50,7 @@ class BookmarkController extends AbstractGameController
     public function rename(Bookmark $bookmark, Request $request): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->service->rename($bookmark, $this->player(), $request->request->getString('label')), 'Name gespeichert.');
+        $this->attempt(fn () => $this->service->rename($bookmark, $this->player(), $request->request->getString('label')), t('Name gespeichert.'));
 
         return $this->redirectToRoute('app_bookmarks');
     }
@@ -58,7 +60,7 @@ class BookmarkController extends AbstractGameController
     public function delete(Bookmark $bookmark, Request $request): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->service->remove($bookmark, $this->player()), \sprintf('[%s] vergessen.', $bookmark->getCoordinates()));
+        $this->attempt(fn () => $this->service->remove($bookmark, $this->player()), t('[{coords}] vergessen.', ['{coords}' => $bookmark->getCoordinates()]));
 
         // Removing from the universe view goes back there.
         if ('galaxy' === $request->request->getString('from')) {

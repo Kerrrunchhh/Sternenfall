@@ -1,62 +1,62 @@
 {% extends 'game/_layout.html.twig' %}
 {% import 'game/_macros.html.twig' as ui %}
 
-{% block title %}Post – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Post – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    <h1>Post</h1>
-    <p class="muted small">Nachrichten zwischen Spielern. Berichte des Spiels (Kämpfe, Spionage, Flotten) findest du weiterhin unter <a href="{{ path('app_messages') }}">Nachrichten</a>.</p>
+    <h1>{{ 'Post'|trans }}</h1>
+    <p class="muted small">{{ 'Nachrichten zwischen Spielern. Berichte des Spiels (Kämpfe, Spionage, Flotten) findest du weiterhin unter'|trans }} <a href="{{ path('app_messages') }}">{{ 'Nachrichten'|trans }}</a>.</p>
 
     <div class="mail-layout">
         <section class="panel">
             <div class="mail-head">
-                <nav class="tabs" aria-label="Postfach">
-                    <a href="{{ path('app_mail') }}" class="{{ box == 'inbox' ? 'active' }}" {{ box == 'inbox' ? 'aria-current="page"' }}>Posteingang{% if unread_mail > 0 %} <span class="badge">{{ unread_mail }}</span>{% endif %}</a>
-                    <a href="{{ path('app_mail', {box: 'sent'}) }}" class="{{ box == 'sent' ? 'active' }}" {{ box == 'sent' ? 'aria-current="page"' }}>Gesendet</a>
+                <nav class="tabs" aria-label="{{ 'Postfach'|trans }}">
+                    <a href="{{ path('app_mail') }}" class="{{ box == 'inbox' ? 'active' }}" {{ box == 'inbox' ? 'aria-current="page"' }}>{{ 'Posteingang'|trans }}{% if unread_mail > 0 %} <span class="badge">{{ unread_mail }}</span>{% endif %}</a>
+                    <a href="{{ path('app_mail', {box: 'sent'}) }}" class="{{ box == 'sent' ? 'active' }}" {{ box == 'sent' ? 'aria-current="page"' }}>{{ 'Gesendet'|trans }}</a>
                 </nav>
-                <a class="btn" href="{{ path('app_mail_compose') }}" id="mail-compose">✉ Neue Nachricht</a>
+                <a class="btn" href="{{ path('app_mail_compose') }}" id="mail-compose">{{ '✉ Neue Nachricht'|trans }}</a>
             </div>
 
             {% if letters is empty %}
-                <p class="muted">{{ box == 'sent' ? 'Du hast noch keine Nachrichten geschrieben.' : 'Keine Nachrichten.' }}</p>
+                <p class="muted">{{ box == 'sent' ? ('Du hast noch keine Nachrichten geschrieben.'|trans) : ('Keine Nachrichten.'|trans) }}</p>
             {% else %}
                 <form method="post" action="{{ path('app_mail_delete') }}" data-mail-list>
                     <input type="hidden" name="_token" value="{{ csrf_token('mail') }}">
                     <input type="hidden" name="box" value="{{ box }}">
                     <table class="table mail-table">
                         <tr class="table-head">
-                            <td><input type="checkbox" data-select-all aria-label="Alle auswählen"></td>
-                            <td>{{ box == 'sent' ? 'An' : 'Von' }}</td>
-                            <td>Betreff</td>
-                            <td class="num">Datum</td>
+                            <td><input type="checkbox" data-select-all aria-label="{{ 'Alle auswählen'|trans }}"></td>
+                            <td>{{ box == 'sent' ? 'An' : ('Von'|trans) }}</td>
+                            <td>{{ 'Betreff'|trans }}</td>
+                            <td class="num">{{ 'Datum'|trans }}</td>
                         </tr>
                         {% for l in letters %}
                             {% set other = box == 'sent' ? l.recipient : l.sender %}
                             <tr class="{{ box == 'inbox' and not l.read ? 'mail-unread' }}">
-                                <td><input type="checkbox" name="letters[]" value="{{ l.id }}" aria-label="Nachricht „{{ l.subject }}“ auswählen"></td>
-                                <td>{% if other %}{{ ui.player(other, false) }}{% else %}<span class="muted">gelöschter Spieler</span>{% endif %}</td>
-                                <td><a href="{{ path('app_mail_show', {id: l.id}) }}">{{ l.subject }}</a>{% if box == 'sent' and not l.read %} <span class="muted small">ungelesen</span>{% endif %}</td>
+                                <td><input type="checkbox" name="letters[]" value="{{ l.id }}" aria-label="{{ 'Nachricht „{subject}“ auswählen'|trans({'{subject}': l.subject}) }}"></td>
+                                <td>{% if other %}{{ ui.player(other, false) }}{% else %}<span class="muted">{{ 'gelöschter Spieler'|trans }}</span>{% endif %}</td>
+                                <td><a href="{{ path('app_mail_show', {id: l.id}) }}">{{ l.subject }}</a>{% if box == 'sent' and not l.read %} <span class="muted small">{{ 'ungelesen'|trans }}</span>{% endif %}</td>
                                 <td class="num small">{{ l.createdAt|date('d.m.Y H:i') }}</td>
                             </tr>
                         {% endfor %}
                     </table>
-                    <button class="btn btn-small btn-danger" type="submit" id="mail-delete" data-confirm="Ausgewählte Nachrichten löschen?" data-confirm-label="Löschen">Ausgewählte löschen</button>
+                    <button class="btn btn-small btn-danger" type="submit" id="mail-delete" data-confirm="{{ 'Ausgewählte Nachrichten löschen?'|trans }}" data-confirm-label="{{ 'Löschen'|trans }}">{{ 'Ausgewählte löschen'|trans }}</button>
                 </form>
                 {% if pages > 1 %}
-                    <nav class="pager" aria-label="Seiten">
-                        {% if page > 1 %}<a class="btn btn-small btn-secondary" href="{{ path('app_mail', {box: box, page: page - 1}) }}">← Neuere</a>{% endif %}
-                        <span class="muted small">Seite {{ page }} von {{ pages }}</span>
-                        {% if page < pages %}<a class="btn btn-small btn-secondary" href="{{ path('app_mail', {box: box, page: page + 1}) }}">Ältere →</a>{% endif %}
+                    <nav class="pager" aria-label="{{ 'Seiten'|trans }}">
+                        {% if page > 1 %}<a class="btn btn-small btn-secondary" href="{{ path('app_mail', {box: box, page: page - 1}) }}">{{ '← Neuere'|trans }}</a>{% endif %}
+                        <span class="muted small">{{ 'Seite {page} von {pages}'|trans({'{page}': page, '{pages}': pages}) }}</span>
+                        {% if page < pages %}<a class="btn btn-small btn-secondary" href="{{ path('app_mail', {box: box, page: page + 1}) }}">{{ 'Ältere →'|trans }}</a>{% endif %}
                     </nav>
                 {% endif %}
             {% endif %}
         </section>
 
         <section class="panel">
-            <h2>Schnellkontakte</h2>
+            <h2>{{ 'Schnellkontakte'|trans }}</h2>
             {{ include('game/_contacts.html.twig', {back: 'app_mail'}) }}
             {% if outgoing_requests is not empty %}
-                <h3 class="small muted">Deine offenen Anfragen</h3>
+                <h3 class="small muted">{{ 'Deine offenen Anfragen'|trans }}</h3>
                 <ul class="contact-list">
                     {% for c in outgoing_requests %}
                         <li>
@@ -64,13 +64,13 @@
                             <form method="post" action="{{ path('app_contact_remove', {id: c.id}) }}">
                                 <input type="hidden" name="_token" value="{{ csrf_token('contact') }}">
                                 <input type="hidden" name="to" value="app_mail">
-                                <button class="btn btn-small btn-secondary" type="submit">Zurückziehen</button>
+                                <button class="btn btn-small btn-secondary" type="submit">{{ 'Zurückziehen'|trans }}</button>
                             </form>
                         </li>
                     {% endfor %}
                 </ul>
             {% endif %}
-            {% if contacts is not empty %}<p class="muted small">Entfernen kannst du einen Kontakt in seinem Profil – er verschwindet dann bei euch beiden.</p>{% endif %}
+            {% if contacts is not empty %}<p class="muted small">{{ 'Entfernen kannst du einen Kontakt in seinem Profil – er verschwindet dann bei euch beiden.'|trans }}</p>{% endif %}
         </section>
     </div>
 {% endblock %}

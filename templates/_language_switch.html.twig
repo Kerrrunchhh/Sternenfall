@@ -1,0 +1,8 @@
+{# Language switch: keeps the current page, ?lang= is remembered (session or the player's account). #}
+<span class="lang-switch">
+    {%- for code, name in locale_names() -%}
+        {%- if not loop.first %} · {% endif -%}
+        {%- if code == app.request.locale -%}<strong title="{{ name }}">{{ code|upper }}</strong>
+        {%- else -%}<a href="{{ path(app.request.attributes.get('_route') ?: 'app_home', app.request.attributes.get('_route_params')|default({})|merge(app.request.query.all)|merge({lang: code})) }}" hreflang="{{ code }}" lang="{{ code }}" title="{{ name }}">{{ code|upper }}</a>{%- endif -%}
+    {%- endfor -%}
+</span>

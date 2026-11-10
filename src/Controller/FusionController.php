@@ -9,6 +9,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 
+use function Symfony\Component\Translation\t;
+
 class FusionController extends AbstractGameController
 {
     public function __construct(private readonly FusionService $fusion)
@@ -48,7 +50,7 @@ class FusionController extends AbstractGameController
     public function split(): Response
     {
         $planet = $this->currentPlanet();
-        $this->attempt(fn () => $this->fusion->split($planet), 'Die Fusion wurde gesprengt.');
+        $this->attempt(fn () => $this->fusion->split($planet), t('Die Fusion wurde gesprengt.'));
 
         return $this->redirectToRoute('app_fusion');
     }

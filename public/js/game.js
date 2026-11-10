@@ -1,5 +1,12 @@
 // Server clock: all fleet times follow the server, so the browser clock is corrected by
 // the offset measured when the page arrived (server render time vs. first response byte).
+// Texts in the page's language (window.I18N from the layout, German text => translation).
+const LOCALE_TAG = window.LOCALE === 'en' ? 'en-GB' : 'de-DE';
+const t = (key, params = {}) => Object.entries(params).reduce(
+    (text, [name, value]) => text.split('{' + name + '}').join(String(value)),
+    (window.I18N && window.I18N[key]) || key,
+);
+
 const serverClock = (() => {
     const el = document.querySelector('[data-server-clock]');
     let offset = 0;
@@ -10,7 +17,7 @@ const serverClock = (() => {
     }
     const now = () => new Date(Date.now() + offset);
     const zone = { timeZone: 'Europe/Berlin' };
-    const format = (date, options) => date.toLocaleString('de-DE', { ...zone, ...options });
+    const format = (date, options) => date.toLocaleString(LOCALE_TAG, { ...zone, ...options });
     const day = (date) => format(date, { year: 'numeric', month: '2-digit', day: '2-digit' });
 
     if (el) {
@@ -30,7 +37,7 @@ const serverClock = (() => {
 // Live resource counters and construction countdowns.
 (() => {
     const started = Date.now();
-    const fmt = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 });
+    const fmt = new Intl.NumberFormat(LOCALE_TAG, { maximumFractionDigits: 0 });
 
     const duration = (s) => {
         s = Math.max(0, Math.floor(s));
@@ -101,7 +108,7 @@ const serverClock = (() => {
                     const button = document.querySelector('[data-read-all] button');
                     if (button) {
                         button.disabled = true;
-                        button.title = 'Alles gelesen';
+                        button.title = t('Alles gelesen');
                     }
                 }
             }).catch(() => {});
@@ -118,13 +125,13 @@ const serverClock = (() => {
         const link = new URL(button.dataset.copyLink, location.href).href;
         const done = () => {
             const label = button.textContent;
-            button.textContent = 'Kopiert ✓';
+            button.textContent = t('Kopiert ✓');
             setTimeout(() => { button.textContent = label; }, 1500);
         };
         if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(link).then(done, () => window.prompt('Link kopieren:', link));
+            navigator.clipboard.writeText(link).then(done, () => window.prompt(t('Link kopieren:'), link));
         } else {
-            window.prompt('Link kopieren:', link);
+            window.prompt(t('Link kopieren:'), link);
         }
     });
 
@@ -188,7 +195,7 @@ const serverClock = (() => {
         area.addEventListener('input', () => {
             count.textContent = area.value.length;
             dirty = area.value !== saved;
-            state.textContent = dirty ? 'Ungespeicherte Änderungen' : state.textContent;
+            state.textContent = dirty ? t('Ungespeicherte Änderungen') : state.textContent;
         });
         area.addEventListener('keydown', (event) => {
             if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
@@ -211,8 +218,8 @@ const serverClock = (() => {
         const show = () => {
             const days = parseFloat(input.value.replace(',', '.'));
             out.textContent = days >= 1 && days <= 30
-                ? 'endet am ' + new Date(Date.now() + days * 86400000).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                : (input.value ? '1 bis 30 Tage' : '');
+                ? t('endet am {date}', { date: new Date(Date.now() + days * 86400000).toLocaleString(LOCALE_TAG, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) })
+                : (input.value ? t('1 bis 30 Tage') : '');
         };
         input.addEventListener('input', show);
     });
@@ -229,7 +236,7 @@ const serverClock = (() => {
         const error = document.querySelector('[data-paypal-error]');
         const show = (message) => { error.textContent = message; error.hidden = false; };
         const render = () => {
-            if (!window.paypal) { show('PayPal konnte nicht geladen werden.'); return; }
+            if (!window.paypal) { show(t('PayPal konnte nicht geladen werden.')); return; }
             window.paypal.Buttons({
                 style: { label: 'subscribe' },
                 createSubscription: (data, actions) => actions.subscription.create({ plan_id: box.dataset.plan, custom_id: box.dataset.custom }),
@@ -240,9 +247,9 @@ const serverClock = (() => {
                     return fetch(box.dataset.url, { method: 'POST', body, credentials: 'same-origin' })
                         .then((response) => response.json())
                         .then((result) => { if (result.ok) { window.location.reload(); } else { show(result.error); } })
-                        .catch(() => show('Die Bestätigung ist fehlgeschlagen. Lade die Seite neu – das Abo wird über PayPal nachgetragen.'));
+                        .catch(() => show(t('Die Bestätigung ist fehlgeschlagen. Lade die Seite neu – das Abo wird über PayPal nachgetragen.')));
                 },
-                onError: () => show('PayPal meldet einen Fehler. Bitte versuche es später noch einmal.'),
+                onError: () => show(t('PayPal meldet einen Fehler. Bitte versuche es später noch einmal.')),
             }).render(box);
         };
         if (window.paypal) { render(); } else { window.addEventListener('load', render); }
@@ -263,8 +270,8 @@ const serverClock = (() => {
         const update = () => {
             const total = [...form.querySelectorAll('[data-goods]')].reduce((sum, input) => sum + Math.max(0, Number(input.value) || 0), 0);
             const hint = Math.ceil(total / 10);
-            form.querySelector('[data-goods-total]').textContent = total.toLocaleString('de-DE');
-            form.querySelector('[data-offer-hint]').textContent = hint.toLocaleString('de-DE');
+            form.querySelector('[data-goods-total]').textContent = total.toLocaleString(LOCALE_TAG);
+            form.querySelector('[data-offer-hint]').textContent = hint.toLocaleString(LOCALE_TAG);
             if (!touched) { offer.value = hint > 0 ? hint : ''; }
         };
         form.querySelectorAll('[data-goods]').forEach((input) => input.addEventListener('input', update));
@@ -336,7 +343,7 @@ const serverClock = (() => {
         // Cargo room of the selected fleet: capacity, already loaded, typed in, still free.
         const room = form.querySelector('[data-cargo-room]');
         const cargoInputs = [...form.querySelectorAll('[data-cargo-input]')];
-        const number = (n) => Math.floor(n).toLocaleString('de-DE');
+        const number = (n) => Math.floor(n).toLocaleString(LOCALE_TAG);
         const showCargoRoom = (picked) => {
             if (!room) {
                 return;
@@ -348,17 +355,17 @@ const serverClock = (() => {
                 room.textContent = '';
             } else if (capacity === 0) {
                 room.textContent = picked.length === 1
-                    ? 'Diese Flotte hat keinen Frachtraum – nur Frachter und Großfrachter transportieren Ladung.'
-                    : 'Die ausgewählten Flotten haben keinen Frachtraum.';
+                    ? t('Diese Flotte hat keinen Frachtraum – nur Frachter und Großfrachter transportieren Ladung.')
+                    : t('Die ausgewählten Flotten haben keinen Frachtraum.');
             } else if (picked.length > 1) {
                 const typed = cargoInputs.reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
                 const free = capacity - loaded - typed;
-                room.textContent = `📦 Frachtraum der Auswahl ${number(capacity)} · bereits geladen ${number(loaded)} · neue Ladung ${number(typed)} · frei ${free < 0 ? '−' + number(-free) + ' (zu viel!)' : number(free)} – beim Transport im Konvoi wird die Ladung auf die Frachter verteilt.`;
+                room.textContent = t('📦 Frachtraum der Auswahl {capacity} · bereits geladen {loaded} · neue Ladung {typed} · frei {free} – beim Transport im Konvoi wird die Ladung auf die Frachter verteilt.', { capacity: number(capacity), loaded: number(loaded), typed: number(typed), free: free < 0 ? t('{free} (zu viel!)', { free: '−' + number(-free) }) : number(free) });
                 room.classList.toggle('lacking', free < 0);
             } else {
                 const typed = cargoInputs.reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
                 const free = capacity - loaded - typed;
-                room.textContent = `📦 Frachtraum ${number(capacity)} · bereits geladen ${number(loaded)} · neue Ladung ${number(typed)} · frei ${free < 0 ? '−' + number(-free) + ' (zu viel!)' : number(free)}`;
+                room.textContent = t('📦 Frachtraum {capacity} · bereits geladen {loaded} · neue Ladung {typed} · frei {free}', { capacity: number(capacity), loaded: number(loaded), typed: number(typed), free: free < 0 ? t('{free} (zu viel!)', { free: '−' + number(-free) }) : number(free) });
                 room.classList.toggle('lacking', free < 0);
             }
         };
@@ -368,7 +375,7 @@ const serverClock = (() => {
             const picked = boxes.filter((box) => box.checked);
             const value = action.value;
             const single = picked.length === 1 ? picked[0].value : null;
-            count.textContent = picked.length === 0 ? 'Keine Flotte ausgewählt' : (picked.length === 1 ? '1 Flotte ausgewählt' : `${picked.length} Flotten ausgewählt`);
+            count.textContent = picked.length === 0 ? t('Keine Flotte ausgewählt') : (picked.length === 1 ? t('1 Flotte ausgewählt') : t('{count} Flotten ausgewählt', { count: picked.length }));
             if (all) {
                 const shown = boxes.filter((box) => !box.closest('tr').hidden).length;
                 all.checked = picked.length > 0 && picked.length === shown;
@@ -411,8 +418,8 @@ const serverClock = (() => {
             const hint = form.querySelector('[data-submit-hint]');
             if (hint) {
                 hint.textContent = picked.length === 0
-                    ? '← Hake oben in der Tabelle die Flotte(n) an, die losfliegen sollen.'
-                    : (value === '' ? '← Wähle oben eine Aktion aus.' : '');
+                    ? t('← Hake oben in der Tabelle die Flotte(n) an, die losfliegen sollen.')
+                    : (value === '' ? t('← Wähle oben eine Aktion aus.') : '');
             }
             if (help) {
                 help.textContent = action.selectedOptions[0]?.dataset.help ?? '';
@@ -551,7 +558,7 @@ const serverClock = (() => {
                 head.hidden = !any;
             });
             const inView = rows.filter((row) => tab !== 'own' || row.dataset.own === '1').length;
-            summary.textContent = !enabled.checked ? '(ausgeschaltet)' : (active ? `„${active.name}“ ` : '') + (shown === inView ? '' : `– ${shown} von ${inView} Flotten`);
+            summary.textContent = !enabled.checked ? t('(ausgeschaltet)') : (active ? `„${active.name}“ ` : '') + (shown === inView ? '' : t('– {shown} von {total} Flotten', { shown, total: inView }));
             tabs?.querySelectorAll('[data-tab]').forEach((button) => button.classList.toggle('active', button.dataset.tab === tab));
             summary.style.color = active ? active.color : '';
             // Saving again under the shown filter's name updates it.
@@ -704,7 +711,7 @@ const serverClock = (() => {
             event.preventDefault();
             pending = button;
             dialog.querySelector('[data-confirm-text]').textContent = button.dataset.confirm;
-            dialog.querySelector('[data-confirm-ok]').textContent = button.dataset.confirmLabel || 'Bestätigen';
+            dialog.querySelector('[data-confirm-ok]').textContent = button.dataset.confirmLabel || t('Bestätigen');
             dialog.showModal();
         });
         dialog.addEventListener('close', () => {
@@ -766,7 +773,7 @@ const serverClock = (() => {
         // Start and speed may change (fleet selection), so they are read on every update.
         const update = () => {
             if (!form.dataset.from) {
-                preview.textContent = 'Wähle eine Flotte aus.';
+                preview.textContent = t('Wähle eine Flotte aus.');
                 return;
             }
             const from = form.dataset.from.split(':').map(Number);
@@ -774,7 +781,7 @@ const serverClock = (() => {
             const to = ['galaxy', 'system', 'position'].map((n) => parseInt(field(n).value, 10));
             const percent = parseFloat(String(field('speed').value).replace(',', '.'));
             if (to.some(Number.isNaN) || Number.isNaN(percent) || percent < 0.1 || percent > 100 || !shipSpeed) {
-                preview.textContent = 'Geschwindigkeit: 0,1 bis 100 %';
+                preview.textContent = t('Geschwindigkeit: 0,1 bis 100 %');
                 return;
             }
             const seconds = Math.max(5, Math.round(3600 * distance(from, to) / (shipSpeed * percent / 100) / gameSpeed));
@@ -783,7 +790,7 @@ const serverClock = (() => {
             const when = serverClock.format(arrival, sameDay
                 ? { hour: '2-digit', minute: '2-digit', second: '2-digit' }
                 : { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            preview.textContent = `Flugdauer ${duration(seconds)} · Ankunft ${sameDay ? 'heute' : ''} ${when} Uhr · Rückkehr ${duration(2 * seconds)} nach Start`;
+            preview.textContent = t(sameDay ? 'Flugdauer {duration} · Ankunft heute {time} Uhr · Rückkehr {back} nach Start' : 'Flugdauer {duration} · Ankunft {time} Uhr · Rückkehr {back} nach Start', { duration: duration(seconds), time: when, back: duration(2 * seconds) });
         };
         form.querySelectorAll('[data-flight-input]').forEach((input) => input.addEventListener('input', update));
         form.addEventListener('flight-origin', update);

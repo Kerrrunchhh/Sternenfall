@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\I18n\NumberInput;
 use App\Entity\Fleet;
 use App\Entity\Planet;
 use App\Entity\TradePost;
@@ -19,6 +20,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
+
+use function Symfony\Component\Translation\t;
 
 /** Page of one trade post: prices, stock, trading with waiting fleets; the owner manages it here. */
 class TradePostController extends AbstractGameController
@@ -67,14 +70,14 @@ class TradePostController extends AbstractGameController
         $this->currentPlanet();
         $form = $request->request;
         $fleet = $fleets->find($form->getInt('fleet'));
-        $amounts = static fn (array $values): array => array_map(static fn (mixed $v): float => (float) str_replace(['.', ','], ['', '.'], (string) $v), $values);
+        $amounts = static fn (array $values): array => array_map(static fn (mixed $v): float => NumberInput::amount((string) $v), $values);
         try {
             if (null === $fleet) {
-                throw new GameException('Wähle eine Flotte aus, die hier wartet.');
+                throw new GameException(t('Wähle eine Flotte aus, die hier wartet.'));
             }
             $this->addFlash('success', $this->trade->trade($post, $fleet, $this->player(), $amounts($form->all('buy')), $amounts($form->all('sell'))));
         } catch (GameException $e) {
-            $this->addFlash('error', $e->getMessage());
+            $this->addFlash('error', $e->translatable());
 
             return $this->redirectToRoute('app_trade_post', ['id' => $post->getId()]);
         }
@@ -88,14 +91,14 @@ class TradePostController extends AbstractGameController
                 ?? $planets->findFirst(static fn (int $key, Planet $p): bool => $p->isHomeworld()) ?? $planets->first();
             try {
                 if (!$home instanceof Planet) {
-                    throw new GameException('Du hast keinen Planeten, zu dem die Flotte zurückfliegen kann.');
+                    throw new GameException(t('Du hast keinen Planeten, zu dem die Flotte zurückfliegen kann.'));
                 }
                 // With cargo the way home is a transport (visible); it stays at the planet it came from.
                 $fleet->rememberHome($home->getGalaxy(), $home->getSystem(), $home->getPosition());
                 $mission = $fleet->getCargo()->isEmpty() ? FleetMission::Station : FleetMission::TransportStation;
                 $this->addFlash('success', $this->fleetService->sendFleet($fleet, $this->player(), $home->getGalaxy(), $home->getSystem(), $home->getPosition(), $mission, new Resources()));
             } catch (GameException $e) {
-                $this->addFlash('error', 'Rückflug nicht möglich: '.$e->getMessage());
+                $this->addFlash('error', t('Rückflug nicht möglich: {error}', ['{error}' => $e->translatable()]));
             }
         }
 

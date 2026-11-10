@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\I18n\NumberInput;
 use App\Entity\TradePost;
 use App\Game\GameException;
 use App\Game\LifeForm;
@@ -15,6 +16,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
+
+use function Symfony\Component\Translation\t;
 
 class TradeController extends AbstractGameController
 {
@@ -62,7 +65,7 @@ class TradeController extends AbstractGameController
         $form = $request->request;
         $this->attempt(
             fn () => $this->trade->open($this->player(), $form->getString('name'), $form->getInt('galaxy'), $form->getInt('system'), $form->getInt('position')),
-            'Handelsstützpunkt eröffnet. Lege Preise fest und beliefere ihn mit einer Flotte.',
+            t('Handelsstützpunkt eröffnet. Lege Preise fest und beliefere ihn mit einer Flotte.'),
         );
 
         return $this->redirectToRoute('app_trade');
@@ -80,13 +83,13 @@ class TradeController extends AbstractGameController
                 $post,
                 $this->player(),
                 $form->getString('name'),
-                array_map(static fn (mixed $v): float => (float) str_replace(',', '.', (string) $v), $form->all('prices')),
+                array_map(static fn (mixed $v): float => NumberInput::decimal((string) $v, $request->getLocale()), $form->all('prices')),
                 $lifeForms,
                 array_map('intval', $form->all('alliances')),
-                array_map(static fn (mixed $v): float => (float) str_replace(',', '.', (string) $v), $form->all('buy_prices')),
-                array_map(static fn (mixed $v): float => (float) str_replace(['.', ','], ['', '.'], (string) $v), $form->all('buy_limits')),
+                array_map(static fn (mixed $v): float => NumberInput::decimal((string) $v, $request->getLocale()), $form->all('buy_prices')),
+                array_map(static fn (mixed $v): float => NumberInput::amount((string) $v), $form->all('buy_limits')),
             ),
-            'Handelsstützpunkt gespeichert.',
+            t('Handelsstützpunkt gespeichert.'),
         );
 
         return $this->redirectToRoute('app_trade_post', ['id' => $post->getId()]);
@@ -101,14 +104,14 @@ class TradeController extends AbstractGameController
         $player = $this->player();
         $visitors = $fleets->findForeignIdleAt($post->getGalaxy(), $post->getSystem(), $post->getPosition(), $player);
         if ([] === $visitors) {
-            $this->addFlash('error', 'An diesem Stützpunkt wartet keine fremde Flotte.');
+            $this->addFlash('error', t('An diesem Stützpunkt wartet keine fremde Flotte.'));
         }
         foreach ($visitors as $visitor) {
             try {
                 $this->trade->sendAway($post, $player, $visitor);
-                $this->addFlash('success', \sprintf('%s von %s fliegt zurück zu ihrem Heimatplaneten.', $visitor->getLabel(), $visitor->getOwner()->getUsername()));
+                $this->addFlash('success', t('{label} von {player} fliegt zurück zu ihrem Heimatplaneten.', ['{label}' => $visitor->getLabel(), '{player}' => $visitor->getOwner()->getUsername()]));
             } catch (GameException $e) {
-                $this->addFlash('error', \sprintf('%s von %s: %s', $visitor->getLabel(), $visitor->getOwner()->getUsername(), $e->getMessage()));
+                $this->addFlash('error', t('{label} von {player}: {message}', ['{label}' => $visitor->getLabel(), '{player}' => $visitor->getOwner()->getUsername(), '{message}' => $e->getMessage()]));
             }
         }
 
@@ -122,9 +125,9 @@ class TradeController extends AbstractGameController
         $this->currentPlanet();
         $visitor = $fleets->find($fleet);
         if (null === $visitor) {
-            $this->addFlash('error', 'Diese Flotte gibt es nicht mehr.');
+            $this->addFlash('error', t('Diese Flotte gibt es nicht mehr.'));
         } else {
-            $this->attempt(fn () => $this->trade->sendAway($post, $this->player(), $visitor), \sprintf('Die Flotte von %s fliegt zurück zu ihrem Heimatplaneten.', $visitor->getOwner()->getUsername()));
+            $this->attempt(fn () => $this->trade->sendAway($post, $this->player(), $visitor), t('Die Flotte von {player} fliegt zurück zu ihrem Heimatplaneten.', ['{player}' => $visitor->getOwner()->getUsername()]));
         }
 
         return $this->redirectToRoute('app_trade_post', ['id' => $post->getId()]);
@@ -135,7 +138,7 @@ class TradeController extends AbstractGameController
     public function close(TradePost $post): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->trade->close($post, $this->player()), 'Handelsstützpunkt geschlossen.');
+        $this->attempt(fn () => $this->trade->close($post, $this->player()), t('Handelsstützpunkt geschlossen.'));
 
         return $this->redirectToRoute('app_trade');
     }

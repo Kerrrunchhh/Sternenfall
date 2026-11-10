@@ -11,6 +11,8 @@ use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
+use function Symfony\Component\Translation\t;
+
 /**
  * Deleting an account: 48 hours after the request (logging in again cancels it) the
  * account is gone. Its planets stay as ownerless planets – with resources, ships and
@@ -34,7 +36,7 @@ final readonly class AccountDeletion
     public function request(User $user, bool $destroyBuildings): \DateTimeImmutable
     {
         if ($user->isSystem()) {
-            throw new GameException('Dieses Konto kann nicht gelöscht werden.');
+            throw new GameException(t('Dieses Konto kann nicht gelöscht werden.'));
         }
         $at = $this->now()->modify(self::DELAY);
         $user->requestDeletion($at, $destroyBuildings);

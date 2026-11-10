@@ -2,10 +2,13 @@
 
 namespace App\Game;
 
+use App\I18n\Lines;
 use App\Entity\Planet;
 use App\Repository\TradePostRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Lock\LockFactory;
+
+use function Symfony\Component\Translation\t;
 
 final readonly class LifeFormService
 {
@@ -35,14 +38,14 @@ final readonly class LifeFormService
             $this->planets->transaction($planet, function (Planet $planet, \DateTimeImmutable $now) use ($lifeForm): void {
                 $player = $planet->getOwner();
                 if ($player->getLifeForm() === $lifeForm) {
-                    throw new GameException(\sprintf('Du gehörst bereits zu den %s.', $lifeForm->label()));
+                    throw new GameException(t('Du gehörst bereits zu den {lifeForm}.', ['{lifeForm}' => t($lifeForm->label())]));
                 }
                 // An alliance only has players of one life form.
                 if (null !== $alliance = $player->getAlliance()) {
-                    throw new GameException(\sprintf('Du bist in „%s“ (%s) – dort sind nur %s. Tritt erst aus, dann kannst du die Lebensform wechseln.', $alliance->getName(), $alliance->getType(), $alliance->getLifeForm()->label()));
+                    throw new GameException(t('Du bist in „{name}“ ({type}) – dort sind nur {label}. Tritt erst aus, dann kannst du die Lebensform wechseln.', ['{name}' => $alliance->getName(), '{type}' => $alliance->getType(), '{label}' => t($alliance->getLifeForm()->label())]));
                 }
                 if ($player->getNextLifeFormChangeAt() > $now) {
-                    throw new GameException(\sprintf('Ein Wechsel ist erst ab %s möglich.', $player->getNextLifeFormChangeAt()->format('d.m.Y H:i')));
+                    throw new GameException(t('Ein Wechsel ist erst ab {value} möglich.', ['{value}' => $player->getNextLifeFormChangeAt()->format('d.m.Y H:i')]));
                 }
 
                 if (LifeForm::Trader === $player->getLifeForm()) {
@@ -56,7 +59,7 @@ final readonly class LifeFormService
                         $abandoned[] = \sprintf('  %s [%s]', $post->getName(), $post->getCoordinates());
                     }
                     if ([] !== $abandoned) {
-                        $this->inbox->send($player, 'Handelsstützpunkte aufgegeben', "Mit dem Wechsel der Lebensform verkaufen deine Handelsstützpunkte nichts mehr. Die Ware bleibt im Lager; hol sie mit einer Flotte (Auftrag „Handeln“) ab. Leere Stützpunkte verschwinden.\n".implode("\n", $abandoned));
+                        $this->inbox->send($player, t('Handelsstützpunkte aufgegeben'), new Lines([t('Mit dem Wechsel der Lebensform verkaufen deine Handelsstützpunkte nichts mehr. Die Ware bleibt im Lager; hol sie mit einer Flotte (Auftrag „Handeln“) ab. Leere Stützpunkte verschwinden.'), ...$abandoned]));
                     }
                 }
 

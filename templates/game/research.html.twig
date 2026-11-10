@@ -1,33 +1,33 @@
 {% extends 'game/_layout.html.twig' %}
 {% import 'game/_macros.html.twig' as ui %}
 
-{% block title %}Forschung – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Forschung – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    <h1>Forschung</h1>
+    <h1>{{ 'Forschung'|trans }}</h1>
 
     {% if player.researching %}
         <div class="panel construction">
-            <div><strong>In Forschung:</strong> {{ player.researchType.label }} (Stufe {{ player.researchTargetLevel }})</div>
+            <div>{{ '<strong>In Forschung:</strong> {label} (Stufe {researchTargetLevel})'|trans({'{label}': player.researchType.label|trans|e, '{researchTargetLevel}': player.researchTargetLevel|e})|raw }}</div>
             <div>{{ ui.countdown(player.researchFinishesAt, now) }}</div>
             <form method="post" action="{{ path('app_research_cancel') }}">
                 <input type="hidden" name="_token" value="{{ csrf_token('research') }}">
                 <button class="btn btn-danger btn-small" type="submit"
-                        data-confirm="Forschung an {{ player.researchType.label }} (Stufe {{ player.researchTargetLevel }}) wirklich abbrechen? Die Kosten werden erstattet, der Fortschritt geht verloren."
-                        data-confirm-label="Forschung abbrechen">Abbrechen</button>
+                        data-confirm="{{ 'Forschung an {label} (Stufe {researchTargetLevel}) wirklich abbrechen? Die Kosten werden erstattet, der Fortschritt geht verloren.'|trans({'{label}': player.researchType.label|trans, '{researchTargetLevel}': player.researchTargetLevel}) }}"
+                        data-confirm-label="{{ 'Forschung abbrechen'|trans }}">{{ 'Abbrechen'|trans }}</button>
             </form>
         </div>
     {% endif %}
 
     {% if planet.buildingLevel(enum('App\\Game\\BuildingType').ResearchLab) == 0 %}
-        <p class="panel warning">Auf diesem Planeten steht noch kein Forschungslabor. Baue eines, um Technologien zu erforschen.</p>
+        <p class="panel warning">{{ 'Auf diesem Planeten steht noch kein Forschungslabor. Baue eines, um Technologien zu erforschen.'|trans }}</p>
     {% endif %}
 
     {# One tab per category; the chosen tab is remembered in the browser. #}
-    <nav class="tabs" data-tabs="research" aria-label="Forschungsbereiche">
+    <nav class="tabs" data-tabs="research" aria-label="{{ 'Forschungsbereiche'|trans }}">
         {% for category, items in categories %}
             <button type="button" data-tab-target="research-{{ loop.index }}" class="{{ loop.first ? 'active' }}">
-                {{ category }}{% if player.researching and player.researchType.category == category %} <span title="Hier wird gerade geforscht">⏳</span>{% endif %}
+                {{ category }}{% if player.researching and player.researchType.category == category %} <span title="{{ 'Hier wird gerade geforscht'|trans }}">⏳</span>{% endif %}
             </button>
         {% endfor %}
     </nav>
@@ -36,30 +36,29 @@
             {% for r in items %}
                 <article class="panel building">
                     <div class="building-head">
-                        <h2>{{ r.type.label }}</h2>
-                        <span class="level">Stufe {{ r.level }}{% if r.type.maxLevel %} / {{ r.type.maxLevel }}{% endif %}</span>
+                        <h2>{{ r.type.label|trans }}</h2>
+                        <span class="level">{{ 'Stufe {level}'|trans({'{level}': r.level}) }}{% if r.type.maxLevel %} / {{ r.type.maxLevel }}{% endif %}</span>
                     </div>
                     <p class="building-desc">
-                        {{ r.type.description }}
-                        {% if r.type.value == 'fusion_tech' and r.level > 0 %}<br>Aktuell: Fusionen aus höchstens {{ fusion_capacity }} Planeten.{% endif %}
-                        {% if r.type.value == 'colonization' %}<br>Aktuell: {{ owned_slots }} von {{ colony_slots }} Planetenplätzen belegt.{% endif %}
+                        {{ r.type.description|trans }}
+                        {% if r.type.value == 'fusion_tech' and r.level > 0 %}<br>{{ 'Aktuell: Fusionen aus höchstens {fusion_capacity} Planeten.'|trans({'{fusion_capacity}': fusion_capacity}) }}{% endif %}
+                        {% if r.type.value == 'colonization' %}<br>{{ 'Aktuell: {owned_slots} von {colony_slots} Planetenplätzen belegt.'|trans({'{owned_slots}': owned_slots, '{colony_slots}': colony_slots}) }}{% endif %}
                     </p>
                     <div class="building-foot">
                         <div class="cost">
-                            {{ ui.cost(r.cost, planet) }}
-                            <span class="duration">Dauer {{ r.seconds|format_duration }}</span>
+                            {{ '{cost} <span class="duration">Dauer {seconds}</span>'|trans({'{cost}': ui.cost(r.cost, planet)|e, '{seconds}': r.seconds|format_duration|e})|raw }}
                         </div>
                         {% if r.maxed %}
-                            <span class="muted">Höchste Stufe erreicht</span>
+                            <span class="muted">{{ 'Höchste Stufe erreicht'|trans }}</span>
                         {% elseif r.missing is not empty %}
-                            <span class="requirement">Benötigt: {{ r.missing|join(', ') }}</span>
+                            <span class="requirement">{{ 'Benötigt: {missing}'|trans({'{missing}': r.missing|map(m => m|trans)|join(', ')}) }}</span>
                         {% elseif player.researching %}
-                            <button class="btn btn-small" disabled>Labor belegt</button>
+                            <button class="btn btn-small" disabled>{{ 'Labor belegt'|trans }}</button>
                         {% else %}
                             <form method="post" action="{{ path('app_research_start', {type: r.type.value}) }}">
                                 <input type="hidden" name="_token" value="{{ csrf_token('research') }}">
                                 <button class="btn btn-small" type="submit" id="research-{{ r.type.value }}" {{ r.affordable ? '' : 'disabled' }}>
-                                    {{ r.level == 0 ? 'Erforschen' : 'Stufe ' ~ (r.level + 1) }}
+                                    {{ r.level == 0 ? 'Erforschen'|trans : 'Stufe {level}'|trans({'{level}': r.level + 1}) }}
                                 </button>
                             </form>
                         {% endif %}

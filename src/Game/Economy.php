@@ -6,6 +6,8 @@ use App\Entity\Planet;
 use App\Entity\User;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
+use function Symfony\Component\Translation\t;
+
 /**
  * Balancing formulas: production, population, raid protection, costs and build times.
  *
@@ -107,7 +109,7 @@ final readonly class Economy
     public static function assertBuildPercent(int $percent): void
     {
         if (!\in_array($percent, self::BUILD_PERCENTS, true)) {
-            throw new GameException('Gebaut werden kann nur mit 100, 125, 150, 175 oder 200 %.');
+            throw new GameException(t('Gebaut werden kann nur mit 100, 125, 150, 175 oder 200 %.'));
         }
     }
 
@@ -146,13 +148,13 @@ final readonly class Economy
         return ceil($type->spec()->cost->total() / self::RESOURCES_PER_CREDIT * $player->getLifeForm()->shipCreditFactor());
     }
 
-    /** @return list<string> reasons why a player can't build a ship (requirements and life form) */
+    /** @return list<\Symfony\Contracts\Translation\TranslatableInterface> reasons why a player can't build a ship (requirements and life form) */
     public function missingShipRequirements(ShipType $type, Planet $planet): array
     {
         $missing = $this->missingRequirements($type->spec()->requirements, $planet);
         $builder = $type->exclusiveBuilder();
         if (null !== $builder && $planet->getOwner()->getLifeForm() !== $builder) {
-            array_unshift($missing, \sprintf('Nur %s können %s bauen', $builder->label(), $type->label()));
+            array_unshift($missing, t('Nur {builder} können {type} bauen', ['{builder}' => t($builder->label()), '{type}' => t($type->label())]));
         }
 
         return $missing;
@@ -380,7 +382,7 @@ final readonly class Economy
      *
      * @param bool $planned count building upgrades that are already queued
      *
-     * @return list<string> human readable unmet requirements
+     * @return list<\Symfony\Contracts\Translation\TranslatableInterface> human readable unmet requirements
      */
     public function missingRequirements(array $requirements, Planet $planet, bool $planned = false): array
     {

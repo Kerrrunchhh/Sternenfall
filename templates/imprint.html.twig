@@ -1,20 +1,20 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Impressum – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Impressum – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block body %}
     <main class="public-report">
         <a href="{{ path(app.user ? 'app_overview' : 'app_home') }}" class="public-report-logo"><img src="{{ asset('pictures/brand/logo.webp') }}" alt="{{ game_name }}" width="223" height="131"></a>
         <article class="panel imprint">
-            <h1>Impressum</h1>
-            <h2>Angaben gemäß § 5 DDG</h2>
-            <p>Markus Döbele<br>Herdweg 130<br>71032 Böblingen<br>Deutschland</p>
-            <h2>Kontakt</h2>
-            <p>E-Mail: markus.doebele@posteo.de<br>Telefon: 0155-10042466</p>
-            <h2>Verantwortlich für den Inhalt</h2>
-            <p>Markus Döbele, Herdweg 130, 71032 Böblingen</p>
-            <p class="muted small">{{ game_name }} ist ein Browserspiel. Inhalte, die Spieler schreiben (Nachrichten, Ticker, Profile), stammen von den Spielern selbst; Verstöße können im Spiel unter „Hilfe & Meldungen“ gemeldet werden.</p>
+            <h1>{{ 'Impressum'|trans }}</h1>
+            <h2>{{ 'Angaben gemäß § 5 DDG'|trans }}</h2>
+            <p>{{ 'Markus Döbele'|trans }}<br>{{ 'Herdweg 130'|trans }}<br>{{ '71032 Böblingen'|trans }}<br>{{ 'Deutschland'|trans }}</p>
+            <h2>{{ 'Kontakt'|trans }}</h2>
+            <p>{{ 'E-Mail: markus.doebele@posteo.de'|trans }}<br>{{ 'Telefon: 0155-10042466'|trans }}</p>
+            <h2>{{ 'Verantwortlich für den Inhalt'|trans }}</h2>
+            <p>{{ 'Markus Döbele, Herdweg 130, 71032 Böblingen'|trans }}</p>
+            <p class="muted small">{{ '{game_name} ist ein Browserspiel. Inhalte, die Spieler schreiben (Nachrichten, Ticker, Profile), stammen von den Spielern selbst; Verstöße können im Spiel unter „Hilfe & Meldungen“ gemeldet werden.'|trans({'{game_name}': game_name}) }}</p>
         </article>
-        <p class="muted small"><a href="{{ path(app.user ? 'app_overview' : 'app_home') }}">{{ app.user ? 'Zurück ins Spiel' : 'Zur Startseite' }}</a> · <a href="{{ path('app_privacy') }}">Datenschutz</a></p>
+        <p class="muted small"><a href="{{ path(app.user ? 'app_overview' : 'app_home') }}">{{ app.user ? ('Zurück ins Spiel'|trans) : ('Zur Startseite'|trans) }}</a> · <a href="{{ path('app_privacy') }}">{{ 'Datenschutz'|trans }}</a> · {{ include('_language_switch.html.twig') }}</p>
     </main>
 {% endblock %}

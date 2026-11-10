@@ -3,15 +3,15 @@
 
 {% macro ship_inputs(rows, prefix = 'ships') %}
     <table class="table">
-        <tr class="table-head"><td>Schiff</td><td class="num">Verfügbar</td><td class="num">Anzahl</td></tr>
+        <tr class="table-head"><td>{{ 'Schiff'|trans }}</td><td class="num">{{ 'Verfügbar'|trans }}</td><td class="num">{{ 'Anzahl'|trans }}</td></tr>
         {% for row in rows %}
             <tr>
-                <td>{{ row.type.label }}</td>
-                <td class="num">{{ row.count|number_format(0, ',', '.') }}</td>
+                <td>{{ row.type.label|trans }}</td>
+                <td class="num">{{ row.count|num }}</td>
                 <td class="num">
                     <input type="number" name="{{ prefix }}[{{ row.type.value }}]" min="0" max="{{ row.count }}" value="0"
-                           aria-label="Anzahl {{ row.type.label }}" data-cargo="{{ row.type.cargo }}">
-                    <button type="button" class="btn btn-small btn-secondary" data-fill-max="{{ row.count }}">max</button>
+                           aria-label="{{ 'Anzahl {label}'|trans({'{label}': row.type.label|trans}) }}" data-cargo="{{ row.type.cargo }}">
+                    <button type="button" class="btn btn-small btn-secondary" data-fill-max="{{ row.count }}">{{ 'max'|trans }}</button>
                 </td>
             </tr>
         {% endfor %}
@@ -20,47 +20,47 @@
 
 {% macro target_inputs(target, missions, with_cargo, bookmarks = []) %}
     {% if bookmarks is not empty %}
-        <label class="bookmark-pick">Gemerkte Koordinaten
-            <select data-bookmark-pick aria-label="Gemerkte Koordinaten übernehmen">
-                <option value="">– auswählen –</option>
+        <label class="bookmark-pick">{{ 'Gemerkte Koordinaten'|trans }}
+            <select data-bookmark-pick aria-label="{{ 'Gemerkte Koordinaten übernehmen'|trans }}">
+                <option value="">{{ '– auswählen –'|trans }}</option>
                 {% for b in bookmarks %}
-                    <option value="{{ b.coordinates }}" data-galaxy="{{ b.galaxy }}" data-system="{{ b.system }}" data-position="{{ b.position }}">{{ b.label }} [{{ b.coordinates }}]</option>
+                    <option value="{{ b.coordinates }}" data-galaxy="{{ b.galaxy }}" data-system="{{ b.system }}" data-position="{{ b.position }}">{{ b.label|trans }} [{{ b.coordinates }}]</option>
                 {% endfor %}
             </select>
         </label>
     {% endif %}
     <div class="coords">
-        <label>Galaxie <input type="number" name="galaxy" min="1" value="{{ target.galaxy }}" required data-flight-input></label>
-        <label>System <input type="number" name="system" min="1" value="{{ target.system }}" required data-flight-input></label>
-        <label>Position <input type="number" name="position" min="1" value="{{ target.position }}" required data-flight-input></label>
-        <label>Geschwindigkeit % <input type="text" name="speed" value="100" inputmode="decimal" pattern="[0-9]+([.,][0-9]{1,2})?" class="short" title="0,1 bis 100 – z. B. 37,5" data-flight-input></label>
+        <label>{{ 'Galaxie'|trans }} <input type="number" name="galaxy" min="1" value="{{ target.galaxy }}" required data-flight-input></label>
+        <label>{{ 'System'|trans }} <input type="number" name="system" min="1" value="{{ target.system }}" required data-flight-input></label>
+        <label>{{ 'Position'|trans }} <input type="number" name="position" min="1" value="{{ target.position }}" required data-flight-input></label>
+        <label>{{ 'Geschwindigkeit %'|trans }} <input type="text" name="speed" value="100" inputmode="decimal" pattern="[0-9]+([.,][0-9]{1,2})?" class="short" title="{{ '0,1 bis 100 – z. B. 37,5'|trans }}" data-flight-input></label>
     </div>
     <p class="flight-preview small" data-flight-preview aria-live="polite"></p>
     {% if with_cargo %}
-        <h3>Ladung</h3>
+        <h3>{{ 'Ladung'|trans }}</h3>
         <div class="coords">
             {% for type in enum_cases('App\\Game\\ResourceType') %}
-                <label>{{ type.label }} <input type="number" name="cargo[{{ type.value }}]" min="0" value="0" data-cargo-input></label>
+                <label>{{ type.label|trans }} <input type="number" name="cargo[{{ type.value }}]" min="0" value="0" data-cargo-input></label>
             {% endfor %}
         </div>
         <p class="small cargo-room-info" data-cargo-room aria-live="polite"></p>
     {% endif %}
 {% endmacro %}
 
-{% block title %}Flotten – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Flotten – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    <h1>Flotten</h1>
+    <h1>{{ 'Flotten'|trans }}</h1>
 
     {% if incoming is not empty %}
         <section class="panel construction">
             <div>
-                <h2>Fremde Flotten im Anflug <small class="muted">(soweit dein Radar sie sieht)</small></h2>
+                <h2>{{ 'Fremde Flotten im Anflug <small class="muted">(soweit dein Radar sie sieht)</small>'|trans|raw }}</h2>
                 <table class="table">
                     {% for f in incoming %}
                         <tr>
                             <td>{{ ui.player(f.owner) }}</td>
-                            <td>{{ f.mission.label }}</td>
+                            <td>{{ f.mission.label|trans }}</td>
                             <td>→ {{ ui.coords(f.targetCoordinates) }}</td>
                             <td class="num">{{ ui.countdown(f.arriveAt, now) }}<br><span class="small muted">{{ ui.at(f.arriveAt, now) }}</span></td>
                         </tr>
@@ -71,29 +71,29 @@
     {% endif %}
 
     {% set rows = entries|merge(shared) %}
-    <h2 class="section-title">Deine Flotten</h2>
+    <h2 class="section-title">{{ 'Deine Flotten'|trans }}</h2>
     {% if rows is empty %}
-        <p class="panel muted">Du hast keine Flotten. Schiffe können nur als Flotte fliegen – bilde unten eine Flotte aus den Schiffen im Hangar.</p>
+        <p class="panel muted">{{ 'Du hast keine Flotten. Schiffe können nur als Flotte fliegen – bilde unten eine Flotte aus den Schiffen im Hangar.'|trans }}</p>
     {% else %}
         {# Tabs: own fleets, or own plus those released by alliance mates. #}
         {% if shared is not empty or player.alliance %}
-            <nav class="tabs fleet-tabs" data-fleet-tabs aria-label="Flotten">
-                <button type="button" data-tab="own" class="active">Eigene Flotten <small class="muted">{{ entries|length }}</small></button>
-                <button type="button" data-tab="alliance" title="Deine Flotten und die für dich freigegebenen Flotten deiner Allianz">Allianzflotten <small class="muted">{{ entries|length + shared|length }}</small></button>
+            <nav class="tabs fleet-tabs" data-fleet-tabs aria-label="{{ 'Flotten'|trans }}">
+                <button type="button" data-tab="own" class="active">{{ 'Eigene Flotten <small class="muted">{entries}</small>'|trans({'{entries}': entries|length|e})|raw }}</button>
+                <button type="button" data-tab="alliance" title="{{ 'Deine Flotten und die für dich freigegebenen Flotten deiner Allianz'|trans }}">{{ 'Allianzflotten <small class="muted">{entries}</small>'|trans({'{entries}': entries|length + shared|length|e})|raw }}</button>
             </nav>
         {% endif %}
         {# Filters work in the browser: rules joined by AND/OR (AND binds stronger); they can be switched off. #}
         <details class="panel fleet-filter" data-fleet-filter>
-            <summary>Filter <span class="muted small" data-filter-summary></span></summary>
+            <summary>{{ 'Filter <span class="muted small" data-filter-summary></span>'|trans|raw }}</summary>
             {% if player.fleetFilters is not empty %}
                 <div class="saved-filters">
                     {% for sf in player.fleetFilters %}
                         <span class="filter-chip" style="--chip: {{ sf.color }}">
-                            <button type="button" class="link-button" data-apply-filter="{{ sf|json_encode }}" title="Filter anwenden">{{ sf.name }}</button>
+                            <button type="button" class="link-button" data-apply-filter="{{ sf|json_encode }}" title="{{ 'Filter anwenden'|trans }}">{{ sf.name }}</button>
                             <form method="post" action="{{ path('app_fleet_filter_delete') }}" class="inline">
                                 <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
                                 <input type="hidden" name="name" value="{{ sf.name }}">
-                                <button type="submit" class="link-button filter-chip-delete" data-confirm="Filter „{{ sf.name }}“ löschen?" data-confirm-label="Löschen" aria-label="Filter {{ sf.name }} löschen">✕</button>
+                                <button type="submit" class="link-button filter-chip-delete" data-confirm="{{ 'Filter „{name}“ löschen?'|trans({'{name}': sf.name}) }}" data-confirm-label="{{ 'Löschen'|trans }}" aria-label="{{ 'Filter {name} löschen'|trans({'{name}': sf.name}) }}">✕</button>
                             </form>
                         </span>
                     {% endfor %}
@@ -102,51 +102,51 @@
             <div data-filter-rules></div>
             <template data-filter-rule>
                 <div class="filter-rule">
-                    <select data-join aria-label="Verknüpfung"><option value="and">UND</option><option value="or">ODER</option></select>
-                    <select data-kind aria-label="Art der Regel">
-                        <option value="starts">Name beginnt mit</option>
-                        <option value="ends">Name endet mit</option>
-                        <option value="contains">Name enthält</option>
-                        <option value="ships">Enthält Schiffe</option>
+                    <select data-join aria-label="{{ 'Verknüpfung'|trans }}"><option value="and">{{ 'UND'|trans }}</option><option value="or">{{ 'ODER'|trans }}</option></select>
+                    <select data-kind aria-label="{{ 'Art der Regel'|trans }}">
+                        <option value="starts">{{ 'Name beginnt mit'|trans }}</option>
+                        <option value="ends">{{ 'Name endet mit'|trans }}</option>
+                        <option value="contains">{{ 'Name enthält'|trans }}</option>
+                        <option value="ships">{{ 'Enthält Schiffe'|trans }}</option>
                     </select>
-                    <input type="text" data-text aria-label="Text" placeholder="Text">
+                    <input type="text" data-text aria-label="{{ 'Text'|trans }}" placeholder="{{ 'Text'|trans }}">
                     <span data-ship-fields>
-                        <select data-op aria-label="Vergleich"><option value="gte">mindestens</option><option value="lte">höchstens</option><option value="eq">genau</option></select>
-                        <input type="number" min="0" value="1" data-count class="short" aria-label="Anzahl">
+                        <select data-op aria-label="{{ 'Vergleich'|trans }}"><option value="gte">{{ 'mindestens'|trans }}</option><option value="lte">{{ 'höchstens'|trans }}</option><option value="eq">{{ 'genau'|trans }}</option></select>
+                        <input type="number" min="0" value="1" data-count class="short" aria-label="{{ 'Anzahl'|trans }}">
                         <span>×</span>
-                        <select data-ship aria-label="Schiffstyp">{% for type in ship_types|filter(t => not t.stationary and not t.probe) %}<option value="{{ type.value }}">{{ type.label }}</option>{% endfor %}</select>
+                        <select data-ship aria-label="{{ 'Schiffstyp'|trans }}">{% for type in ship_types|filter(t => not t.stationary and not t.probe) %}<option value="{{ type.value }}">{{ type.label|trans }}</option>{% endfor %}</select>
                     </span>
-                    <button type="button" class="link-button" data-remove aria-label="Regel entfernen">✕</button>
+                    <button type="button" class="link-button" data-remove aria-label="{{ 'Regel entfernen'|trans }}">✕</button>
                 </div>
             </template>
             <div class="filter-actions">
-                <button type="button" class="btn btn-small btn-secondary" data-add-rule>+ Regel</button>
-                <label class="checkbox"><input type="checkbox" data-filter-enabled checked> Filter anwenden</label>
-                <button type="button" class="link-button" data-reset>Filter zurücksetzen</button>
+                <button type="button" class="btn btn-small btn-secondary" data-add-rule>{{ '+ Regel'|trans }}</button>
+                <label class="checkbox"><input type="checkbox" data-filter-enabled checked> {{ 'Filter anwenden'|trans }}</label>
+                <button type="button" class="link-button" data-reset>{{ 'Filter zurücksetzen'|trans }}</button>
             </div>
             <form method="post" action="{{ path('app_fleet_filter_save') }}" class="filter-save" data-filter-save>
                 <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
                 <input type="hidden" name="definition">
-                <input type="text" name="name" maxlength="30" required placeholder="Name für diesen Filter" aria-label="Filtername" data-filter-name>
-                <input type="color" name="color" value="#4fc3f7" aria-label="Farbe" data-filter-color>
-                <button type="submit" class="btn btn-small">Filter speichern</button>
+                <input type="text" name="name" maxlength="30" required placeholder="{{ 'Name für diesen Filter'|trans }}" aria-label="{{ 'Filtername'|trans }}" data-filter-name>
+                <input type="color" name="color" value="#4fc3f7" aria-label="{{ 'Farbe'|trans }}" data-filter-color>
+                <button type="submit" class="btn btn-small">{{ 'Filter speichern'|trans }}</button>
             </form>
-            <p class="muted small">„UND“ bindet stärker als „ODER“: <em>A UND B ODER C</em> heißt <em>(A UND B) ODER C</em>. „genau 0 × Falke“ findet Flotten ohne Falken. Ausgefilterte Flotten werden abgewählt. „Filter anwenden“ aus zeigt alle Flotten des Reiters, die Regeln bleiben erhalten.</p>
+            <p class="muted small">{{ '„UND“ bindet stärker als „ODER“: <em>A UND B ODER C</em> heißt <em>(A UND B) ODER C</em>. „genau 0 × Falke“ findet Flotten ohne Falken. Ausgefilterte Flotten werden abgewählt. „Filter anwenden“ aus zeigt alle Flotten des Reiters, die Regeln bleiben erhalten.'|trans|raw }}</p>
         </details>
 
         {# Every place where waiting fleets are: one click selects (or deselects) all fleets there. #}
         {% set places = {} %}
         {% for e in rows|filter(e => e.fleet.idle) %}
             {% set key = e.fleet.galaxy ~ ':' ~ e.fleet.system ~ ':' ~ e.fleet.position %}
-            {% set places = places|merge({(key): {count: (places[key].count ?? 0) + 1, name: e.at ? e.at.name : 'freier Platz'}}) %}
+            {% set places = places|merge({(key): {count: (places[key].count ?? 0) + 1, name: e.at ? e.at.name : ('freier Platz'|trans)}}) %}
         {% endfor %}
         <details class="panel fleet-places" data-remember-open="fleet-places">
-            <summary>Standorte <span class="muted small">{{ places|length }}</span></summary>
+            <summary>{{ 'Standorte <span class="muted small">{places}</span>'|trans({'{places}': places|length|e})|raw }}</summary>
             <div class="place-chips">
                 {% for key, place in places %}
-                    <button type="button" class="filter-chip" data-select-place="{{ key }}" title="Alle Flotten bei [{{ key }}] aus- oder abwählen">[{{ key }}] {{ place.name }} <span class="muted">{{ place.count }}</span></button>
+                    <button type="button" class="filter-chip" data-select-place="{{ key }}" title="{{ 'Alle Flotten bei [{key}] aus- oder abwählen'|trans({'{key}': key}) }}">[{{ key }}] {{ place.name }} <span class="muted">{{ place.count }}</span></button>
                 {% else %}
-                    <span class="muted small">Keine wartenden Flotten.</span>
+                    <span class="muted small">{{ 'Keine wartenden Flotten.'|trans }}</span>
                 {% endfor %}
             </div>
         </details>
@@ -155,23 +155,23 @@
               data-flight data-game-speed="{{ game_speed }}">
             <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
             {% if squadrons is not empty %}
-                <div class="squadrons" aria-label="Geschwader">
-                    <span class="muted small">Geschwader:</span>
+                <div class="squadrons" aria-label="{{ 'Geschwader'|trans }}">
+                    <span class="muted small">{{ 'Geschwader:'|trans }}</span>
                     {% for sq in squadrons %}
                         {% set members = sq.controllableFleets %}
                         <span class="squadron-chip">
-                            <button type="button" class="link-button" data-select-fleets="{{ members|map(f => f.id)|join(',') }}" title="Alle Flotten dieses Geschwaders auswählen: {{ members|map(f => f.label)|join(', ') }}">⚑ {{ sq.name }} <span class="muted small">({{ members|length }})</span></button>
+                            <button type="button" class="link-button" data-select-fleets="{{ members|map(f => f.id)|join(',') }}" title="{{ 'Alle Flotten dieses Geschwaders auswählen: {members}'|trans({'{members}': members|map(f => f.label|trans)|join(', ')}) }}">⚑ {{ sq.name }} <span class="muted small">({{ members|length }})</span></button>
                             <button type="submit" class="link-button squadron-delete" formaction="{{ path('app_squadron_delete', {id: sq.id}) }}" formnovalidate
-                                    data-confirm="Geschwader „{{ sq.name }}“ auflösen? Die Flotten bleiben, wie sie sind." data-confirm-label="Auflösen" aria-label="Geschwader {{ sq.name }} auflösen">✕</button>
+                                    data-confirm="{{ 'Geschwader „{name}“ auflösen? Die Flotten bleiben, wie sie sind.'|trans({'{name}': sq.name}) }}" data-confirm-label="{{ 'Auflösen'|trans }}" aria-label="{{ 'Geschwader {name} auflösen'|trans({'{name}': sq.name}) }}">✕</button>
                         </span>
                     {% endfor %}
                 </div>
             {% endif %}
             <table class="table fleet-table">
                 <tr class="table-head">
-                    <td><input type="checkbox" data-select-all aria-label="Alle Flotten auswählen"></td>
-                    <td>Flotte</td>
-                    <td>Schiffe</td>
+                    <td><input type="checkbox" data-select-all aria-label="{{ 'Alle Flotten auswählen'|trans }}"></td>
+                    <td>{{ 'Flotte'|trans }}</td>
+                    <td>{{ 'Schiffe'|trans }}</td>
                 </tr>
                 {# One section per player: own fleets first, then those released by each alliance mate. #}
                 {% set owners = {} %}
@@ -183,43 +183,43 @@
                 {% for section in sections|filter(sec => sec.rows is not empty) %}
                     {% if shared is not empty %}
                         <tr class="fleet-owner-head" data-owner-head>
-                            <td colspan="3">{{ section.own ? 'Deine Flotten' : 'Flotten von ' }}{% if not section.own %}{{ ui.player(section.owner) }}{% endif %} <span class="muted small">{{ section.rows|length }}</span></td>
+                            <td colspan="3">{{ section.own ? ('Deine Flotten'|trans) : ('Flotten von'|trans ~ ' ') }}{% if not section.own %}{{ ui.player(section.owner) }}{% endif %} <span class="muted small">{{ section.rows|length }}</span></td>
                         </tr>
                     {% endif %}
                 {% for e in section.rows %}
                     {% set f = e.fleet %}
-                    <tr class="{{ f.moving ? 'moving' }}" data-fleet-row data-name="{{ f.label|lower }}" data-own="{{ e.own ? 1 : 0 }}" data-ships="{{ f.ships|json_encode }}">
+                    <tr class="{{ f.moving ? 'moving' }}" data-fleet-row data-name="{{ f.label|trans|lower }}" data-own="{{ e.own ? 1 : 0 }}" data-ships="{{ f.ships|json_encode }}">
                         <td>
-                            <input type="checkbox" name="fleets[]" value="{{ f.id }}" id="pick-{{ f.id }}" aria-label="{{ f.label }} auswählen"
+                            <input type="checkbox" name="fleets[]" value="{{ f.id }}" id="pick-{{ f.id }}" aria-label="{{ '{label} auswählen'|trans({'{label}': f.label|trans}) }}"
                                    data-from="{{ f.galaxy }}:{{ f.system }}:{{ f.position }}" data-speed="{{ e.speed }}"
                                    data-capacity="{{ e.capacity }}" data-load="{{ f.cargo.total|round(0, 'floor') }}">
                         </td>
                         <td>
-                            <label for="pick-{{ f.id }}"><strong>{{ f.label }}</strong></label>
-                            {% if e.own and (f.releasedToAlliance or f.releasedTo is not empty) %}<span class="release-chip small" title="{{ f.releasedTo|map(u => u.username)|join(', ') }}">freigegeben{{ f.releasedToAlliance ? ' (Allianz)' }}{{ f.releasedTo is not empty ? ' (' ~ f.releasedTo|length ~ ' einzeln)' }}</span>{% endif %}
+                            <label for="pick-{{ f.id }}"><strong>{{ f.label|trans }}</strong></label>
+                            {% if e.own and (f.releasedToAlliance or f.releasedTo is not empty) %}<span class="release-chip small" title="{{ f.releasedTo|map(u => u.username)|join(', ') }}">{{ 'freigegeben'|trans }}{% if f.releasedToAlliance %} {{ '(Allianz)'|trans }}{% endif %}{% if f.releasedTo is not empty %} {{ '({count} einzeln)'|trans({'{count}': f.releasedTo|length}) }}{% endif %}</span>{% endif %}
                             <span class="muted small fleet-status">
                                 {% if f.idle %}
-                                    wartet bei {{ ui.coords(f.coordinates) }}{% if e.at %} · {{ e.at.name }}{% if not e.base %} ({{ e.at.owner.username }}){% endif %}{% endif %}
+                                    {{ 'wartet bei {coordinates}'|trans({'{coordinates}': ui.coords(f.coordinates)|e})|raw }}{% if e.at %} · {{ e.at.name }}{% if not e.base %} ({{ e.at.owner.username }}){% endif %}{% endif %}
                                 {% elseif f.mission.value == 'hover' %}
-                                    schwebt über {{ ui.coords(f.coordinates) }} · landet in {{ ui.countdown(f.nextEventAt, now) }} ({{ ui.at(f.nextEventAt, now) }})
+                                    {{ 'schwebt über {coordinates} · landet in {nextEventAt} ({nextEventAt2})'|trans({'{coordinates}': ui.coords(f.coordinates)|e, '{nextEventAt}': ui.countdown(f.nextEventAt, now)|e, '{nextEventAt2}': ui.at(f.nextEventAt, now)|e})|raw }}
                                 {% else %}
-                                    {{ f.mission.label }} {{ f.returning ? '← zurück nach' : '→' }} {{ ui.coords(f.returning ? f.coordinates : f.targetCoordinates) }}
+                                    {{ f.mission.label|trans }} {{ f.returning ? ('← zurück nach'|trans) : '→' }} {{ ui.coords(f.returning ? f.coordinates : f.targetCoordinates) }}
                                     · {{ ui.countdown(f.nextEventAt, now) }} ({{ ui.at(f.nextEventAt, now) }})
                                 {% endif %}
                                 {% if f.moving and not f.returning and recall_until(f) %}
-                                    <button type="submit" class="link-button recall-link" title="Zurückrufen möglich bis {{ recall_until(f)|date('H:i:s') }} (Radartechnik)" formaction="{{ path('app_fleet_recall', {id: f.id}) }}" formnovalidate
-                                            name="to" value="app_fleet" id="recall-{{ f.id }}">{{ f.mission.value == 'hover' ? '↓ landen' : '↩ zurückrufen' }}</button>
+                                    <button type="submit" class="link-button recall-link" title="{{ 'Zurückrufen möglich bis {recall_until} (Radartechnik)'|trans({'{recall_until}': recall_until(f)|date('H:i:s')}) }}" formaction="{{ path('app_fleet_recall', {id: f.id}) }}" formnovalidate
+                                            name="to" value="app_fleet" id="recall-{{ f.id }}">{{ f.mission.value == 'hover' ? '↓ landen' : ('↩ zurückrufen'|trans) }}</button>
                                 {% endif %}
                             </span>
                         </td>
                         <td class="small">
-                            {% for s in f.shipList %}{{ s.count|number_format(0, ',', '.') }} × {{ s.type.label }}{{ not loop.last ? ', ' }}{% else %}<span class="muted">leer – Sammelpunkt, ohne Flugzeit verlegbar</span>{% endfor %}
+                            {% for s in f.shipList %}{{ s.count|num }} × {{ s.type.label|trans }}{{ not loop.last ? ', ' }}{% else %}<span class="muted">{{ 'leer – Sammelpunkt, ohne Flugzeit verlegbar'|trans }}</span>{% endfor %}
                             {% if e.capacity > 0 %}
-                                <br><span class="muted cargo-room" title="Frachtraum: geladen / Kapazität">📦 {{ f.cargo.total|number_format(0, ',', '.') }} / {{ e.capacity|number_format(0, ',', '.') }}{% if not f.cargo.empty %}:
-                                {% for type in enum_cases('App\\Game\\ResourceType') %}{% if f.cargo.get(type) > 0 %}{{ type.label }} {{ f.cargo.get(type)|number_format(0, ',', '.') }} {% endif %}{% endfor %}{% endif %}</span>
+                                <br><span class="muted cargo-room" title="{{ 'Frachtraum: geladen / Kapazität'|trans }}">📦 {{ f.cargo.total|num }} / {{ e.capacity|num }}{% if not f.cargo.empty %}:
+                                {% for type in enum_cases('App\\Game\\ResourceType') %}{% if f.cargo.get(type) > 0 %}{{ type.label|trans }} {{ f.cargo.get(type)|num }} {% endif %}{% endfor %}{% endif %}</span>
                             {% elseif not f.cargo.empty %}
-                                <br><span class="muted">Ladung {{ f.cargo.total|number_format(0, ',', '.') }}:
-                                {% for type in enum_cases('App\\Game\\ResourceType') %}{% if f.cargo.get(type) > 0 %}{{ type.label }} {{ f.cargo.get(type)|number_format(0, ',', '.') }} {% endif %}{% endfor %}</span>
+                                <br><span class="muted">{{ 'Ladung {total}:'|trans({'{total}': f.cargo.total|num}) }}
+                                {% for type in enum_cases('App\\Game\\ResourceType') %}{% if f.cargo.get(type) > 0 %}{{ type.label|trans }} {{ f.cargo.get(type)|num }} {% endif %}{% endfor %}</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -228,143 +228,142 @@
             </table>
 
             <div class="bulk-bar">
-                <label>Aktion für die ausgewählten Flotten
+                <label>{{ 'Aktion für die ausgewählten Flotten'|trans }}
                     <select name="action" data-bulk-action required>
-                        <option value="">– auswählen –</option>
+                        <option value="">{{ '– auswählen –'|trans }}</option>
                         <optgroup label="Losschicken">
                             {% for m in missions %}
-                                <option value="send:{{ m.value }}" data-help="{{ m.description }}" {{ target.mission == m ? 'selected' }}>{{ m.label }}</option>
+                                <option value="send:{{ m.value }}" data-help="{{ m.description|trans }}" {{ target.mission == m ? 'selected' }}>{{ m.label|trans }}</option>
                             {% endfor %}
                         </optgroup>
                         <optgroup label="Flotten verwalten">
                             {% for value, label in bulk_actions %}
                                 {% if player.alliance or value not in ['release_alliance', 'unrelease_alliance', 'release_member', 'revoke_member'] %}
-                                    <option value="{{ value }}">{{ label }}</option>
+                                    <option value="{{ value }}">{{ label|trans }}</option>
                                 {% endif %}
                             {% endfor %}
                         </optgroup>
                     </select>
                 </label>
-                <span class="muted small" data-selected-count>Keine Flotte ausgewählt</span>
+                <span class="muted small" data-selected-count>{{ 'Keine Flotte ausgewählt'|trans }}</span>
             </div>
             <p class="muted small" data-action-help></p>
 
             <div class="bulk-panel" data-panel="send" hidden>
                 {{ _self.target_inputs(target, missions, true, bookmarks) }}
                 <div data-panel="send:attack">
-                    <label>Verband
-                        <select name="join" aria-label="Angriff, dem die Flotten beitreten">
-                            <option value="">Neuer Angriff auf die Koordinaten oben</option>
+                    <label>{{ 'Verband'|trans }}
+                        <select name="join" aria-label="{{ 'Angriff, dem die Flotten beitreten'|trans }}">
+                            <option value="">{{ 'Neuer Angriff auf die Koordinaten oben'|trans }}</option>
                             {% for lead in joinable_attacks %}
-                                <option value="{{ lead.id }}">Dazuschicken: {{ lead.label }}{% if lead.owner.id != player.id %} ({{ lead.owner.username }}){% endif %} auf [{{ lead.targetCoordinates }}], Ankunft {{ lead.arriveAt|date('d.m. H:i:s') }}</option>
+                                <option value="{{ lead.id }}">{{ 'Dazuschicken: {label}'|trans({'{label}': lead.label|trans}) }}{% if lead.owner.id != player.id %} ({{ lead.owner.username }}){% endif %} {{ 'auf [{targetCoordinates}], Ankunft {arriveAt}'|trans({'{targetCoordinates}': lead.targetCoordinates, '{arriveAt}': lead.arriveAt|date('d.m. H:i:s')}) }}</option>
                             {% endfor %}
                         </select>
                     </label>
-                    <p class="muted small">Wählst du mehrere Flotten aus – auch solche, die Allianzmitglieder für dich freigegeben haben –, greifen sie als Verband an und kommen gemeinsam an (mit der langsamsten). Weitere Flotten kannst du einem laufenden Angriff, den du führst, dazuschicken, wenn sie rechtzeitig ankommen. Die Beute wird nach freiem Frachtraum geteilt; die Invasionsschiffe aller Flotten zählen zusammen.
-                    Mindestregel: Die Flotten jedes Spielers im Angriff müssen zusammen mindestens 1 % seiner gesamten Flottenstärke oder 10 % seiner Schiffe einer Klasse sein.</p>
+                    <p class="muted small">{{ 'Wählst du mehrere Flotten aus – auch solche, die Allianzmitglieder für dich freigegeben haben –, greifen sie als Verband an und kommen gemeinsam an (mit der langsamsten). Weitere Flotten kannst du einem laufenden Angriff, den du führst, dazuschicken, wenn sie rechtzeitig ankommen. Die Beute wird nach freiem Frachtraum geteilt; die Invasionsschiffe aller Flotten zählen zusammen. Mindestregel: Die Flotten jedes Spielers im Angriff müssen zusammen mindestens 1 % seiner gesamten Flottenstärke oder 10 % seiner Schiffe einer Klasse sein.'|trans }}</p>
                 </div>
                 <div data-panel="send:pickup">
-                    <h3>Abholen <span class="muted small">– je Flotte</span></h3>
+                    <h3>{{ 'Abholen <span class="muted small">– je Flotte</span>'|trans|raw }}</h3>
                     <div class="coords">
                         {% for type in enum_cases('App\\Game\\ResourceType') %}
-                            <label>{{ type.label }} <input type="number" name="pickup[{{ type.value }}]" min="0" value="0"></label>
+                            <label>{{ type.label|trans }} <input type="number" name="pickup[{{ type.value }}]" min="0" value="0"></label>
                         {% endfor %}
                     </div>
-                    <p class="muted small">Jede ausgewählte Flotte lädt am Ziel diese Mengen ein – höchstens, was dort im Lager liegt und in ihren Frachtraum passt – und bringt sie ins Lager ihres Startplaneten. Oben eingetragene Ladung liefert sie vorher am Ziel ab.</p>
+                    <p class="muted small">{{ 'Jede ausgewählte Flotte lädt am Ziel diese Mengen ein – höchstens, was dort im Lager liegt und in ihren Frachtraum passt – und bringt sie ins Lager ihres Startplaneten. Oben eingetragene Ladung liefert sie vorher am Ziel ab.'|trans }}</p>
                 </div>
-                <p class="muted small">Treibstoff und Proviant zahlt der Planet, an dem eine Flotte steht, sonst ihre eigene Ladung. Mehrere Flotten zum Angreifen oder als Transport (auch mit Kriegsflotten als Geleitschutz) fliegen gemeinsam und kommen zusammen an; die Ladung wird auf die Flotten mit Frachtraum verteilt. Bei anderen Aufträgen fliegt jede Flotte einzeln.</p>
+                <p class="muted small">{{ 'Treibstoff und Proviant zahlt der Planet, an dem eine Flotte steht, sonst ihre eigene Ladung. Mehrere Flotten zum Angreifen oder als Transport (auch mit Kriegsflotten als Geleitschutz) fliegen gemeinsam und kommen zusammen an; die Ladung wird auf die Flotten mit Frachtraum verteilt. Bei anderen Aufträgen fliegt jede Flotte einzeln.'|trans }}</p>
             </div>
             <div class="bulk-panel" data-panel="gather" hidden>
-                <p class="muted small">Schiffe der gewählten Typen fliegen von allen deinen Planeten zu der Flotte, wenn sie sie innerhalb der Höchstflugzeit erreichen.</p>
-                <label class="inline-action">Höchstens <input type="number" name="minutes" min="1" value="60" class="short"> Minuten entfernt</label>
+                <p class="muted small">{{ 'Schiffe der gewählten Typen fliegen von allen deinen Planeten zu der Flotte, wenn sie sie innerhalb der Höchstflugzeit erreichen.'|trans }}</p>
+                <label class="inline-action">{{ 'Höchstens'|trans }} <input type="number" name="minutes" min="1" value="60" class="short"> {{ 'Minuten entfernt'|trans }}</label>
                 <div class="type-checks">
                     {% for type in ship_types|filter(t => not t.stationary and not t.probe) %}
-                        <label><input type="checkbox" name="types[]" value="{{ type.value }}"> {{ type.label }}</label>
+                        <label><input type="checkbox" name="types[]" value="{{ type.value }}"> {{ type.label|trans }}</label>
                     {% endfor %}
                 </div>
             </div>
             <div class="bulk-panel" data-panel="split rename" hidden>
-                <label>Name <span class="muted small" data-panel="split">der neuen Flotte</span> <input type="text" name="name" maxlength="40"></label>
+                <label>{{ 'Name <span class="muted small" data-panel="split">der neuen Flotte</span>'|trans|raw }} <input type="text" name="name" maxlength="40"></label>
             </div>
             {% for e in entries %}
                 {% set f = e.fleet %}
                 <div class="bulk-panel" data-panel="split drop" data-for-fleet="{{ f.id }}" hidden>
-                    <p class="muted small" data-panel="split">Die gewählten Schiffe bilden eine neue Flotte am selben Ort. Die Ladung bleibt in {{ f.label }}.</p>
+                    <p class="muted small" data-panel="split">{{ 'Die gewählten Schiffe bilden eine neue Flotte am selben Ort. Die Ladung bleibt in {label}.'|trans({'{label}': f.label|trans}) }}</p>
                     <div data-panel="split">{{ _self.ship_inputs(f.shipList, 'split[' ~ f.id ~ ']') }}</div>
-                    <p class="muted small" data-panel="drop">{{ e.base ? 'Die gewählten Schiffe kommen in den Hangar von ' ~ e.base.name ~ '.' : 'Die Flotte steht nicht an einem eigenen Planeten: Die gewählten Schiffe warten als neue Flotte am selben Ort.' }}</p>
+                    <p class="muted small" data-panel="drop">{{ e.base ? ('Die gewählten Schiffe kommen in den Hangar von'|trans ~ ' ') ~ e.base.name ~ '.' : ('Die Flotte steht nicht an einem eigenen Planeten: Die gewählten Schiffe warten als neue Flotte am selben Ort.'|trans) }}</p>
                     <div data-panel="drop">{{ _self.ship_inputs(f.shipList, 'drop[' ~ f.id ~ ']') }}</div>
                 </div>
                 {% if e.base %}
                     {% set hangar_rows = [] %}
                     {% for type in ship_types %}{% if e.base.shipCount(type) > 0 and not type.stationary and not type.probe %}{% set hangar_rows = hangar_rows|merge([{type: type, count: e.base.shipCount(type)}]) %}{% endif %}{% endfor %}
                     <div class="bulk-panel" data-panel="load" data-for-fleet="{{ f.id }}" hidden>
-                        <p class="muted small">Aus dem Hangar von {{ e.base.name }}:</p>
-                        {% if hangar_rows is empty %}<p class="muted small">Der Hangar ist leer.</p>{% else %}{{ _self.ship_inputs(hangar_rows, 'load[' ~ f.id ~ ']') }}{% endif %}
+                        <p class="muted small">{{ 'Aus dem Hangar von {name}:'|trans({'{name}': e.base.name}) }}</p>
+                        {% if hangar_rows is empty %}<p class="muted small">{{ 'Der Hangar ist leer.'|trans }}</p>{% else %}{{ _self.ship_inputs(hangar_rows, 'load[' ~ f.id ~ ']') }}{% endif %}
                     </div>
                 {% endif %}
             {% endfor %}
             <div class="bulk-panel" data-panel="load" data-no-hangar hidden>
-                <p class="muted small">Schiffe aufnehmen geht nur, wenn die Flotte an einem eigenen Planeten wartet.</p>
+                <p class="muted small">{{ 'Schiffe aufnehmen geht nur, wenn die Flotte an einem eigenen Planeten wartet.'|trans }}</p>
             </div>
             <div class="bulk-panel" data-panel="squadron_add squadron_remove" hidden>
-                <label>Geschwader
+                <label>{{ 'Geschwader'|trans }}
                     <select name="squadron">
-                        <option value="" data-panel="squadron_add">– neues Geschwader –</option>
+                        <option value="" data-panel="squadron_add">{{ '– neues Geschwader –'|trans }}</option>
                         {% for sq in squadrons %}<option value="{{ sq.id }}">{{ sq.name }}</option>{% endfor %}
                     </select>
                 </label>
-                <label data-panel="squadron_add">Name des neuen Geschwaders <input type="text" name="squadron_name" maxlength="40" placeholder="z. B. Angriffsverband Nord"></label>
+                <label data-panel="squadron_add">{{ 'Name des neuen Geschwaders'|trans }} <input type="text" name="squadron_name" maxlength="40" placeholder="{{ 'z. B. Angriffsverband Nord'|trans }}"></label>
             </div>
             {% if allies is not empty %}
                 <div class="bulk-panel" data-panel="release_member revoke_member" hidden>
-                    <label>Mitglied
-                        <select name="member">{% for ally in allies %}<option value="{{ ally.id }}">{{ ally.username }} ({{ ally.allianceRank.label }})</option>{% endfor %}</select>
+                    <label>{{ 'Mitglied'|trans }}
+                        <select name="member">{% for ally in allies %}<option value="{{ ally.id }}">{{ ally.username }} ({{ ally.allianceRank.label|trans }})</option>{% endfor %}</select>
                     </label>
                 </div>
             {% endif %}
 
-            <button class="btn" type="submit" id="fleet-bulk-submit">Ausführen</button>
+            <button class="btn" type="submit" id="fleet-bulk-submit">{{ 'Ausführen'|trans }}</button>
             <span class="muted small submit-hint" data-submit-hint></span>
         </form>
     {% endif %}
 
     <section class="panel">
-        <h2>Hangar von {{ planet.name }}</h2>
+        <h2>{{ 'Hangar von {name}'|trans({'{name}': planet.name}) }}</h2>
         {% set scouts = planet.shipCount(enum('App\\Game\\ShipType').Scout) %}
-        {% if scouts > 0 %}<p class="muted small">{{ scouts|number_format(0, ',', '.') }} × Sonde{{ scouts == 1 ? '' : 'n' }} im Hangar: Sonden kommen nicht in Flotten, sondern starten über 🔭 im Universum oder auf dem Radar.</p>{% endif %}
+        {% if scouts > 0 %}<p class="muted small">{{ '{scouts} × Sonde(n) im Hangar: Sonden kommen nicht in Flotten, sondern starten über 🔭 im Universum oder auf dem Radar.'|trans({'{scouts}': scouts|num}) }}</p>{% endif %}
         {% if hangar is empty %}
-            <p class="muted">Keine Schiffe im Hangar. <a href="{{ path('app_shipyard') }}">Zur Werft</a></p>
+            <p class="muted">{{ 'Keine Schiffe im Hangar.'|trans }} <a href="{{ path('app_shipyard') }}">{{ 'Zur Werft'|trans }}</a></p>
         {% else %}
-            <p class="muted small">Schiffe im Hangar können nicht fliegen. Bilde eine Flotte oder hole sie mit „Schiffe zusammenziehen“ in eine bestehende Flotte.</p>
+            <p class="muted small">{{ 'Schiffe im Hangar können nicht fliegen. Bilde eine Flotte oder hole sie mit „Schiffe zusammenziehen“ in eine bestehende Flotte.'|trans }}</p>
         {% endif %}
         <details {{ hangar is not empty ? 'open' }} data-remember-open="fleet-create">
-            <summary>Neue Flotte bilden</summary>
+            <summary>{{ 'Neue Flotte bilden'|trans }}</summary>
             <form method="post" action="{{ path('app_fleets_create') }}" class="fleet-form" id="fleet-form">
                 <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
-                <label>Name <input type="text" name="name" maxlength="40" required placeholder="z. B. Heimatverteidigung"></label>
+                <label>{{ 'Name'|trans }} <input type="text" name="name" maxlength="40" required placeholder="{{ 'z. B. Heimatverteidigung'|trans }}"></label>
                 {% if hangar is not empty %}
                     {{ _self.ship_inputs(hangar) }}
-                    <p class="muted small">Ladekapazität: <span id="cargo-capacity">0</span></p>
+                    <p class="muted small">{{ 'Ladekapazität: <span id="cargo-capacity">0</span>'|trans|raw }}</p>
                 {% endif %}
-                <p class="muted small">Ohne Schiffe entsteht eine leere Flotte als Sammelpunkt: Sie lässt sich mit „Stationieren“ oder „Springen“ ohne Flugzeit verlegen. Danach ziehst du Schiffe zu ihr zusammen – solange welche unterwegs sind, bleibt sie, wo sie ist.</p>
-                <button class="btn btn-small" type="submit" id="fleet-create">Flotte bilden</button>
+                <p class="muted small">{{ 'Ohne Schiffe entsteht eine leere Flotte als Sammelpunkt: Sie lässt sich mit „Stationieren“ oder „Springen“ ohne Flugzeit verlegen. Danach ziehst du Schiffe zu ihr zusammen – solange welche unterwegs sind, bleibt sie, wo sie ist.'|trans }}</p>
+                <button class="btn btn-small" type="submit" id="fleet-create">{{ 'Flotte bilden'|trans }}</button>
             </form>
         </details>
         {% if hangar is not empty %}
             <details {{ here_fleets is not empty ? 'open' }} data-remember-open="fleet-add">
-                <summary>Zu einer bestehenden Flotte hinzufügen</summary>
+                <summary>{{ 'Zu einer bestehenden Flotte hinzufügen'|trans }}</summary>
                 {% if here_fleets is empty %}
-                    <p class="muted small">An {{ planet.name }} wartet keine deiner Flotten. Hinzufügen geht nur zu einer Flotte, die hier steht – oder ziehe Schiffe von überall mit „Schiffe zusammenziehen“ zu einer Flotte.</p>
+                    <p class="muted small">{{ 'An {name} wartet keine deiner Flotten. Hinzufügen geht nur zu einer Flotte, die hier steht – oder ziehe Schiffe von überall mit „Schiffe zusammenziehen“ zu einer Flotte.'|trans({'{name}': planet.name}) }}</p>
                 {% else %}
                     <form method="post" action="{{ path('app_fleets_add_from_hangar') }}" class="fleet-form" id="fleet-add-form">
                         <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
-                        <label>Flotte
+                        <label>{{ 'Flotte'|trans }}
                             <select name="fleet" required>
-                                {% for f in here_fleets %}<option value="{{ f.id }}">{{ f.label }}{% if f.shipList is not empty %} ({{ f.shipList|map(s => s.count ~ '× ' ~ s.type.label)|join(', ') }}){% else %} (leer){% endif %}</option>{% endfor %}
+                                {% for f in here_fleets %}<option value="{{ f.id }}">{{ f.label|trans }}{% if f.shipList is not empty %} ({{ f.shipList|map(s => s.count ~ '× ' ~ s.type.label|trans)|join(', ') }}){% else %} {{ '(leer)'|trans }}{% endif %}</option>{% endfor %}
                             </select>
                         </label>
                         {{ _self.ship_inputs(hangar) }}
-                        <button class="btn btn-small" type="submit" id="fleet-add">Zur Flotte hinzufügen</button>
+                        <button class="btn btn-small" type="submit" id="fleet-add">{{ 'Zur Flotte hinzufügen'|trans }}</button>
                     </form>
                 {% endif %}
             </details>

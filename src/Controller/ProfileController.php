@@ -12,6 +12,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 
+use function Symfony\Component\Translation\t;
+
 class ProfileController extends AbstractGameController
 {
     /** Anyone's profile; the own one can be edited here. */
@@ -40,7 +42,7 @@ class ProfileController extends AbstractGameController
         $hidden = $request->request->getBoolean('hidden');
         $this->attempt(
             fn () => $profiles->setPlanetHidden($this->player(), $planet, $hidden),
-            \sprintf('%s wird in deinem Profil %s.', $planet->getName(), $hidden ? 'nicht mehr angezeigt' : 'wieder angezeigt'),
+            t('{name} wird in deinem Profil {value}.', ['{name}' => $planet->getName(), '{value}' => $hidden ? t('nicht mehr angezeigt') : t('wieder angezeigt')]),
         );
 
         return $this->redirectToRoute('app_player', ['id' => $this->player()->getId()]);
@@ -53,7 +55,7 @@ class ProfileController extends AbstractGameController
         $this->currentPlanet();
         $this->attempt(
             fn () => $profiles->update($this->player(), $request->request->getString('text'), $request->files->get('image'), $request->request->getBoolean('remove_image')),
-            'Profil gespeichert.',
+            t('Profil gespeichert.'),
         );
 
         return $this->redirectToRoute('app_player', ['id' => $this->player()->getId()]);

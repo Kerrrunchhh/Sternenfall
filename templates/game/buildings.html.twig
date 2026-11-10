@@ -1,10 +1,10 @@
 {% extends 'game/_layout.html.twig' %}
 {% import 'game/_macros.html.twig' as ui %}
 
-{% block title %}Gebäude – {{ game_name }}{% endblock %}
+{% block title %}{{ 'Gebäude – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    <h1>Gebäude</h1>
+    <h1>{{ 'Gebäude'|trans }}</h1>
 
     {{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Buildings, entries: queue, back: 'app_buildings'}) }}
 
@@ -12,28 +12,27 @@
         {% for b in buildings %}
             {% set picture = game_picture('buildings', b.type.value) %}
             <article class="panel building {{ picture ? 'has-picture' }}">
-                {% if picture %}<img class="card-picture" src="{{ asset(picture) }}" alt="{{ b.type.label }}" width="345" height="251" loading="lazy">{% endif %}
+                {% if picture %}<img class="card-picture" src="{{ asset(picture) }}" alt="{{ b.type.label|trans }}" width="345" height="251" loading="lazy">{% endif %}
                 <div class="card-body">
                 <div class="building-head">
-                    <h2>{{ b.type.label }}</h2>
-                    <span class="level">Stufe {{ b.level }}{% if b.planned > b.level %} <span class="muted">→ {{ b.planned }} geplant</span>{% endif %}</span>
+                    <h2>{{ b.type.label|trans }}</h2>
+                    <span class="level">{{ 'Stufe {level}'|trans({'{level}': b.level}) }}{% if b.planned > b.level %} <span class="muted">{{ '→ {planned} geplant'|trans({'{planned}': b.planned}) }}</span>{% endif %}</span>
                 </div>
-                <p class="building-desc">{{ b.type.description }}</p>
+                <p class="building-desc">{{ b.type.description|trans }}</p>
                 <div class="building-foot">
                     <div class="cost">
-                        {{ ui.cost(b.cost, planet) }}
-                        <span class="duration">Dauer {{ b.seconds|format_duration }}</span>
-                        {% if surcharge and not queue_full %}<span class="requirement" title="Das zweite Gebäude in der Bauschleife kostet 30 % mehr">+30 % Zuschlag</span>{% endif %}
+                        {{ '{cost} <span class="duration">Dauer {seconds}</span>'|trans({'{cost}': ui.cost(b.cost, planet)|e, '{seconds}': b.seconds|format_duration|e})|raw }}
+                        {% if surcharge and not queue_full %}<span class="requirement" title="{{ 'Das zweite Gebäude in der Bauschleife kostet 30 % mehr'|trans }}">{{ '+30 % Zuschlag'|trans }}</span>{% endif %}
                     </div>
                     {% if b.missing is not empty %}
-                        <span class="requirement">Benötigt: {{ b.missing|join(', ') }}</span>
+                        <span class="requirement">{{ 'Benötigt: {missing}'|trans({'{missing}': b.missing|map(m => m|trans)|join(', ')}) }}</span>
                     {% elseif queue_full %}
-                        <button class="btn btn-small" disabled title="Ein Gebäude im Bau und eines in Wartestellung">Bauschleife voll</button>
+                        <button class="btn btn-small" disabled title="{{ 'Ein Gebäude im Bau und eines in Wartestellung'|trans }}">{{ 'Bauschleife voll'|trans }}</button>
                     {% else %}
                         <form method="post" action="{{ path('app_build', {type: b.type.value}) }}">
                             <input type="hidden" name="_token" value="{{ csrf_token('build') }}">
                             <button class="btn btn-small" type="submit" id="build-{{ b.type.value }}" {{ b.affordable ? '' : 'disabled' }}>
-                                {{ b.planned == 0 ? 'Bauen' : 'Ausbauen auf ' ~ (b.planned + 1) }}{{ queue is not empty ? ' (einreihen)' }}
+                                {{ b.planned == 0 ? ('Bauen'|trans) : ('Ausbauen auf'|trans ~ ' ') ~ (b.planned + 1) }}{{ queue is not empty ? ' (einreihen)' }}
                             </button>
                         </form>
                     {% endif %}
