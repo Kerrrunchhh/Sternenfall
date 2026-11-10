@@ -21,7 +21,7 @@
                 <p class="building-desc">{{ b.type.description|trans }}</p>
                 <div class="building-foot">
                     <div class="cost">
-                        {{ '{cost} <span class="duration">Dauer {seconds}</span>'|trans({'{cost}': ui.cost(b.cost, planet)|e, '{seconds}': b.seconds|format_duration|e})|raw }}
+                        {{ '{cost} <span class="duration">Dauer {seconds}</span>'|trans({'{cost}': ui.cost(b.cost, planet), '{seconds}': b.seconds|format_duration|e})|raw }}
                         {% if surcharge and not queue_full %}<span class="requirement" title="{{ 'Das zweite Gebäude in der Bauschleife kostet 30 % mehr'|trans }}">{{ '+30 % Zuschlag'|trans }}</span>{% endif %}
                     </div>
                     {% if b.missing is not empty %}

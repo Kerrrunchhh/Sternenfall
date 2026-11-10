@@ -6,7 +6,7 @@
 {% block content %}
     <h1>⚖ {{ post.name }} <small>{{ ui.coords(post.coordinates) }}</small></h1>
     <p class="muted">
-        {{ 'Handelsstützpunkt von {owner} ·'|trans({'{owner}': ui.player(post.owner)|e})|raw }}
+        {{ 'Handelsstützpunkt von {owner} ·'|trans({'{owner}': ui.player(post.owner)})|raw }}
         {% if not post.active %}{{ 'aufgegeben – nur der Besitzer kann die Ware noch abholen'|trans }}
         {% elseif not post.restricted %}{{ 'offen für alle'|trans }}
         {% else %}{{ 'nur für {allowedLifeForms}'|trans({'{allowedLifeForms}': (post.allowedLifeForms|map(l => l.label|trans)|merge(post.allowedAlliances|map(a => '[' ~ a.tag ~ ']')))|join(', ')}) }}{% endif %}
@@ -31,10 +31,10 @@
                 <table class="table">
                     {% for v in visitors %}
                         <tr>
-                            <td>{{ '{label} <span class="muted small">von {owner}</span>'|trans({'{label}': v.fleet.label|trans|e, '{owner}': ui.player(v.fleet.owner)|e})|raw }}<br>
+                            <td>{{ '{label} <span class="muted small">von {owner}</span>'|trans({'{label}': v.fleet.label|trans|e, '{owner}': ui.player(v.fleet.owner)})|raw }}<br>
                                 <span class="small">{% for s in v.fleet.shipList %}{{ s.count|num }} × {{ s.type.label|trans }}{{ not loop.last ? ', ' }}{% endfor %}</span></td>
                             <td class="num small">
-                                {% if v.plan %}{{ 'nach {name} {coordinates}, {seconds}'|trans({'{name}': v.plan.home.name|e, '{coordinates}': ui.coords(v.plan.home.coordinates)|e, '{seconds}': v.plan.seconds|format_duration|e})|raw }}<br>
+                                {% if v.plan %}{{ 'nach {name} {coordinates}, {seconds}'|trans({'{name}': v.plan.home.name|e, '{coordinates}': ui.coords(v.plan.home.coordinates), '{seconds}': v.plan.seconds|format_duration|e})|raw }}<br>
                                     {{ 'aus dem Lager: {hydrogen} Wasserstoff, {food} Nahrung, {water} Wasser'|trans({'{hydrogen}': v.plan.cost.hydrogen|num, '{food}': v.plan.cost.food|num, '{water}': v.plan.cost.water|num}) }}{% endif %}
                             </td>
                             <td class="num">

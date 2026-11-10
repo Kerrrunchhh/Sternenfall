@@ -46,7 +46,7 @@
                     </p>
                     <div class="building-foot">
                         <div class="cost">
-                            {{ '{cost} <span class="duration">Dauer {seconds}</span>'|trans({'{cost}': ui.cost(r.cost, planet)|e, '{seconds}': r.seconds|format_duration|e})|raw }}
+                            {{ '{cost} <span class="duration">Dauer {seconds}</span>'|trans({'{cost}': ui.cost(r.cost, planet), '{seconds}': r.seconds|format_duration|e})|raw }}
                         </div>
                         {% if r.maxed %}
                             <span class="muted">{{ 'Höchste Stufe erreicht'|trans }}</span>

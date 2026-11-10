@@ -14,11 +14,11 @@
                     {% set intel = incoming_intel[f.id] ?? null %}
                     <tr>
                         <td>
-                            {{ '<strong>{owner}</strong> von'|trans({'{owner}': ui.player(f.owner)|e})|raw }} {% if a.origin %}{{ a.origin.name }} {% endif %}{{ ui.coords(f.coordinates) }}
+                            {{ '<strong>{owner}</strong> von'|trans({'{owner}': ui.player(f.owner)})|raw }} {% if a.origin %}{{ a.origin.name }} {% endif %}{{ ui.coords(f.coordinates) }}
                             → <strong>{{ a.target ? a.target.name : ('Planet'|trans) }}</strong> {{ ui.coords(f.targetCoordinates) }}
                             {% if intel %}<div class="small">{{ 'erspäht {scoutedAt}:'|trans({'{scoutedAt}': intel.scoutedAt|date('H:i')}) }} {% for s in intel.shipList %}{{ s.count|num }} × {{ s.type.label|trans }}{{ not loop.last ? ', ' }}{% endfor %}</div>{% endif %}
                         </td>
-                        <td class="num attack-time">{{ 'Einschlag in {arriveAt}'|trans({'{arriveAt}': ui.countdown(f.arriveAt, now)|e})|raw }}<br><span class="small">{{ ui.at(f.arriveAt, now) }}</span></td>
+                        <td class="num attack-time">{{ 'Einschlag in {arriveAt}'|trans({'{arriveAt}': ui.countdown(f.arriveAt, now)})|raw }}<br><span class="small">{{ ui.at(f.arriveAt, now) }}</span></td>
                         <td class="num">
                             <form method="post" action="{{ path('app_radar_spy', {id: f.id}) }}">
                                 <input type="hidden" name="_token" value="{{ csrf_token('radar') }}">
@@ -61,7 +61,7 @@
 
     {% if planet.beingAbandoned %}
         <div class="panel warning abandon-warning">
-            <div>{{ '<strong>{name} wird verlassen</strong> – in {abandonAt} ({abandonAt2}). Gebäude, Rohstoffe und die Schiffe im Hangar gehen dann verloren; Flotten, die hier warten, bleiben am freien Platz zurück. Flotten ohne Treibstoff kommen nur weg, wenn du den Planeten vorher belieferst.'|trans({'{name}': planet.name|e, '{abandonAt}': ui.countdown(planet.abandonAt, now)|e, '{abandonAt2}': ui.at(planet.abandonAt, now)|e})|raw }}</div>
+            <div>{{ '<strong>{name} wird verlassen</strong> – in {abandonAt} ({abandonAt2}). Gebäude, Rohstoffe und die Schiffe im Hangar gehen dann verloren; Flotten, die hier warten, bleiben am freien Platz zurück. Flotten ohne Treibstoff kommen nur weg, wenn du den Planeten vorher belieferst.'|trans({'{name}': planet.name|e, '{abandonAt}': ui.countdown(planet.abandonAt, now), '{abandonAt2}': ui.at(planet.abandonAt, now)})|raw }}</div>
             <form method="post" action="{{ path('app_planet_abandon', {id: planet.id}) }}">
                 <input type="hidden" name="_token" value="{{ csrf_token('planet_abandon') }}">
                 <button class="btn btn-small" type="submit" name="do" value="stay" id="planet-stay">{{ 'Doch bleiben'|trans }}</button>
@@ -87,7 +87,7 @@
                     <tr class="{{ f.mission.value == 'attack' ? 'hostile' }}">
                         <td class="movement-what">
                             {% if f.mission.value == 'attack' %}<strong>{{ '⚠ Angriff'|trans }}</strong>{% else %}{{ f.mission.label|trans }}{% endif %}
-                            {{ 'von {owner} → {targetCoordinates}'|trans({'{owner}': ui.player(f.owner)|e, '{targetCoordinates}': ui.coords(f.targetCoordinates)|e})|raw }}
+                            {{ 'von {owner} → {targetCoordinates}'|trans({'{owner}': ui.player(f.owner), '{targetCoordinates}': ui.coords(f.targetCoordinates)})|raw }}
                             {% if intel %}<span class="small muted" title="{{ 'erspäht {scoutedAt}: {ships}'|trans({'{scoutedAt}': intel.scoutedAt|date('H:i'), '{ships}': ships}) }}">· {{ ships }}</span>
                             {% else %}<a class="small" href="{{ path('app_radar') }}" title="{{ 'Zusammensetzung unbekannt – auf dem Radar ausspionieren'|trans }}">{{ '· 🔭 ausspionieren'|trans }}</a>{% endif %}
                         </td>

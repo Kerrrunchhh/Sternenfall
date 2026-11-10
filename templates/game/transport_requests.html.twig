@@ -10,7 +10,7 @@
     {% if is_trader %}
         <section class="panel">
             <h2>{{ 'Gesuche beliefern'|trans }}</h2>
-            <p class="muted small">{{ 'Geliefert wird von <strong>{name}</strong> {coordinates}: je Gesuch eine leere, dort wartende Flotte nur aus Frachtern. Stationiere dafür viele kleine Handelsflotten an diesem Planeten. Bereit: <strong>{ready_fleets}</strong> {ready_fleets2}.'|trans({'{name}': planet.name|e, '{coordinates}': ui.coords(planet.coordinates)|e, '{ready_fleets}': ready_fleets|length|e, '{ready_fleets2}': (ready_fleets|length == 1 ? ('Flotte'|trans) : ('Flotten'|trans))|e})|raw }}</p>
+            <p class="muted small">{{ 'Geliefert wird von <strong>{name}</strong> {coordinates}: je Gesuch eine leere, dort wartende Flotte nur aus Frachtern. Stationiere dafür viele kleine Handelsflotten an diesem Planeten. Bereit: <strong>{ready_fleets}</strong> {ready_fleets2}.'|trans({'{name}': planet.name|e, '{coordinates}': ui.coords(planet.coordinates), '{ready_fleets}': ready_fleets|length|e, '{ready_fleets2}': (ready_fleets|length == 1 ? ('Flotte'|trans) : ('Flotten'|trans))|e})|raw }}</p>
             {% if open is empty %}
                 <p class="muted">{{ 'Gerade sucht niemand Rohstoffe.'|trans }}</p>
             {% else %}
@@ -41,7 +41,7 @@
                 <p class="muted">{{ 'Keine.'|trans }}</p>
             {% else %}
                 {% for r in open %}
-                    <div class="proposal"><div>{{ '{planetName} {coordinates} · {total} Rohstoffe für <strong>{offer} Credits</strong> · {requester}'|trans({'{planetName}': r.planetName|e, '{coordinates}': ui.coords(r.coordinates)|e, '{total}': r.goods.total|num|e, '{offer}': r.offer|num|e, '{requester}': ui.player(r.requester)|e})|raw }}</div></div>
+                    <div class="proposal"><div>{{ '{planetName} {coordinates} · {total} Rohstoffe für <strong>{offer} Credits</strong> · {requester}'|trans({'{planetName}': r.planetName|e, '{coordinates}': ui.coords(r.coordinates), '{total}': r.goods.total|num|e, '{offer}': r.offer|num|e, '{requester}': ui.player(r.requester)})|raw }}</div></div>
                 {% endfor %}
                 <p class="muted small">{{ 'Beliefern können nur Händler.'|trans }}</p>
             {% endif %}
@@ -56,10 +56,10 @@
             {% for r in mine %}
                 <div class="proposal">
                     <div>
-                        {{ '{planetName} {coordinates} · {total} Rohstoffe · {offer} Credits'|trans({'{planetName}': r.planetName|e, '{coordinates}': ui.coords(r.coordinates)|e, '{total}': r.goods.total|num|e, '{offer}': r.offer|num|e})|raw }}
+                        {{ '{planetName} {coordinates} · {total} Rohstoffe · {offer} Credits'|trans({'{planetName}': r.planetName|e, '{coordinates}': ui.coords(r.coordinates), '{total}': r.goods.total|num|e, '{offer}': r.offer|num|e})|raw }}
                         <div class="muted small">
                             {{ {open: 'offen', assigned: ('wird geliefert'|trans), done: 'geliefert', cancelled: ('zurückgezogen'|trans)}[r.status] }}
-                            {% if r.requester.id == player.id %}{% if r.trader %} {{ '· Händler {trader}'|trans({'{trader}': ui.player(r.trader)|e})|raw }}{% endif %}{% else %} {{ '· du lieferst an {requester}'|trans({'{requester}': ui.player(r.requester)|e})|raw }}{% endif %}
+                            {% if r.requester.id == player.id %}{% if r.trader %} {{ '· Händler {trader}'|trans({'{trader}': ui.player(r.trader)})|raw }}{% endif %}{% else %} {{ '· du lieferst an {requester}'|trans({'{requester}': ui.player(r.requester)})|raw }}{% endif %}
                             · {{ r.createdAt|date('d.m.Y H:i') }}
                         </div>
                     </div>

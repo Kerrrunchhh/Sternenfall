@@ -36,9 +36,9 @@
             <table class="table">
                 {% for f in own_visible %}
                     <tr>
-                        <td>{{ '<strong>{label}</strong> <span class="small muted">{label2}{Rckflug} von {coordinates} nach {targetCoordinates}</span>'|trans({'{label}': f.label|trans|e, '{label2}': f.mission.label|trans|e, '{Rckflug}': (f.returning ? (' ' ~ '(Rückflug)'|trans))|e, '{coordinates}': (ui.coords(f.returning ? f.targetCoordinates : f.coordinates))|e, '{targetCoordinates}': (ui.coords(f.returning ? f.coordinates : f.targetCoordinates))|e})|raw }}</td>
+                        <td>{{ '<strong>{label}</strong> <span class="small muted">{label2}{Rckflug} von {coordinates} nach {targetCoordinates}</span>'|trans({'{label}': f.label|trans|e, '{label2}': f.mission.label|trans|e, '{Rckflug}': (f.returning ? (' ' ~ '(Rückflug)'|trans))|e, '{coordinates}': ui.coords(f.returning ? f.targetCoordinates : f.coordinates), '{targetCoordinates}': ui.coords(f.returning ? f.coordinates : f.targetCoordinates)})|raw }}</td>
                         <td class="small">{{ f.mission.value == 'attack' and not f.returning ? ('greift an'|trans) : 'transportiert {amount} Rohstoffe'|trans({'{amount}': f.cargo.total|num}) }}</td>
-                        <td class="num small">{{ '{Ankunft} in {nextEventAt}'|trans({'{Ankunft}': (f.returning ? ('Rückkehr'|trans) : ('Ankunft'|trans))|e, '{nextEventAt}': ui.countdown(f.nextEventAt, now)|e})|raw }}</td>
+                        <td class="num small">{{ '{Ankunft} in {nextEventAt}'|trans({'{Ankunft}': (f.returning ? ('Rückkehr'|trans) : ('Ankunft'|trans))|e, '{nextEventAt}': ui.countdown(f.nextEventAt, now)})|raw }}</td>
                     </tr>
                 {% endfor %}
             </table>
@@ -51,7 +51,7 @@
         <article class="panel fleet-card {{ c.attacking ? 'moving' }}">
             <div class="building-head">
                 <h2>{{ ui.player(f.owner) }} <small class="muted">{{ c.ally ? ('(verbündet)'|trans) }}</small></h2>
-                <span class="small">{{ '{label}{Rckflug} von {coordinates} nach {targetCoordinates} · Ankunft in {nextEventAt} · {nextEventAt2}'|trans({'{label}': f.mission.label|trans|e, '{Rckflug}': (f.returning ? (' ' ~ '(Rückflug)'|trans))|e, '{coordinates}': (ui.coords(f.returning ? f.targetCoordinates : f.coordinates))|e, '{targetCoordinates}': (ui.coords(f.returning ? f.coordinates : f.targetCoordinates))|e, '{nextEventAt}': ui.countdown(f.nextEventAt, now)|e, '{nextEventAt2}': ui.at(f.nextEventAt, now)|e})|raw }}</span>
+                <span class="small">{{ '{label}{Rckflug} von {coordinates} nach {targetCoordinates} · Ankunft in {nextEventAt} · {nextEventAt2}'|trans({'{label}': f.mission.label|trans|e, '{Rckflug}': (f.returning ? (' ' ~ '(Rückflug)'|trans))|e, '{coordinates}': ui.coords(f.returning ? f.targetCoordinates : f.coordinates), '{targetCoordinates}': ui.coords(f.returning ? f.coordinates : f.targetCoordinates), '{nextEventAt}': ui.countdown(f.nextEventAt, now), '{nextEventAt2}': ui.at(f.nextEventAt, now)})|raw }}</span>
             </div>
             <p class="small">
                 {% if c.intel %}

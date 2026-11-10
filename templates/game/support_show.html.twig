@@ -9,7 +9,7 @@
         <h1>{{ ticket.kind.icon }} {{ ticket.subject }}</h1>
         <p class="muted small">
             {{ '{label} · von'|trans({'{label}': ticket.kind.label|trans}) }} {% if ticket.author %}{{ ui.player(ticket.author) }}{% else %}{{ 'gelöschter Spieler'|trans }}{% endif %}
-            {% if ticket.reported %} {{ '· gemeldet: {reported}'|trans({'{reported}': ui.player(ticket.reported)|e})|raw }}{% endif %}
+            {% if ticket.reported %} {{ '· gemeldet: {reported}'|trans({'{reported}': ui.player(ticket.reported)})|raw }}{% endif %}
             · {{ ticket.createdAt|date('d.m.Y H:i') }} · <span class="ticket-status ticket-{{ ticket.status.value }}">{{ ticket.status.label|trans }}</span>
         </p>
         <pre class="message-body">{{ ticket.body|link_coordinates }}</pre>

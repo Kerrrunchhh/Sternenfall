@@ -4,7 +4,7 @@
     <ul class="contact-list contact-requests">
         {% for c in incoming_requests %}
             <li>
-                <span>{{ '{requester} <span class="muted small">möchte dein Schnellkontakt werden</span></span> <span class="contact-actions">'|trans({'{requester}': ui.player(c.requester)|e})|raw }}
+                <span>{{ '{requester} <span class="muted small">möchte dein Schnellkontakt werden</span></span> <span class="contact-actions">'|trans({'{requester}': ui.player(c.requester)})|raw }}
                     <form method="post" action="{{ path('app_contact_accept', {id: c.id}) }}">
                         <input type="hidden" name="_token" value="{{ csrf_token('contact') }}">
                         <input type="hidden" name="to" value="{{ back }}">

@@ -13,7 +13,7 @@
             <ul class="contact-list contact-requests">
                 {% for i in invitations %}
                     <li>
-                        <span>{{ '<strong>{name}</strong> <span class="muted small">von {owner}</span>'|trans({'{name}': i.ticker.name|e, '{owner}': ui.player(i.ticker.owner)|e})|raw }}
+                        <span>{{ '<strong>{name}</strong> <span class="muted small">von {owner}</span>'|trans({'{name}': i.ticker.name|e, '{owner}': ui.player(i.ticker.owner)})|raw }}
                             {% if i.ticker.description %}<span class="ticker-description small">{{ i.ticker.description|trans }}</span>{% endif %}</span>
                         <span class="contact-actions">
                             <form method="post" action="{{ path('app_ticker_accept', {id: i.id}) }}">

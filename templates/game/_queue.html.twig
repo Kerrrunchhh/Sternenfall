@@ -23,7 +23,7 @@
                             <span class="muted small">{{ e.seconds|format_duration }}{% if e.detail %} · {{ e.detail|trans }}{% endif %}</span>
                         </span>
                         <span class="queue-time small">
-                            {% if e.active %}{{ 'läuft · {finishesAt}'|trans({'{finishesAt}': ui.countdown(e.finishesAt, now)|e})|raw }}{% else %}{{ 'fertig ca. {finishesAt}'|trans({'{finishesAt}': e.finishesAt|date('d.m. H:i')}) }}{% endif %}
+                            {% if e.active %}{{ 'läuft · {finishesAt}'|trans({'{finishesAt}': ui.countdown(e.finishesAt, now)})|raw }}{% else %}{{ 'fertig ca. {finishesAt}'|trans({'{finishesAt}': e.finishesAt|date('d.m. H:i')}) }}{% endif %}
                         </span>
                         <span class="queue-buttons">
                             <button type="submit" name="move" value="{{ e.id }}:up" class="btn btn-small btn-secondary" {{ loop.first ? 'disabled' }} aria-label="{{ '{label} nach oben'|trans({'{label}': e.label|trans}) }}">▲</button>

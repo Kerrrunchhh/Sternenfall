@@ -49,7 +49,7 @@
                 <table class="table">
                     {% for o in mine %}
                         <tr>
-                            <td>{{ '{quantity} × Fusionator bei {coordinates}'|trans({'{quantity}': o.quantity|num|e, '{coordinates}': ui.coords(o.coordinates)|e})|raw }}</td>
+                            <td>{{ '{quantity} × Fusionator bei {coordinates}'|trans({'{quantity}': o.quantity|num|e, '{coordinates}': ui.coords(o.coordinates)})|raw }}</td>
                             <td class="num">{{ '{price} Credits/Stück'|trans({'{price}': o.price|num}) }}</td>
                             <td class="muted small">{% if o.restricted %}{{ 'nur für {allowedLifeForms}'|trans({'{allowedLifeForms}': (o.allowedLifeForms|map(l => l.label|trans)|merge(o.allowedAlliances|map(a => '[' ~ a.tag ~ ']')))|join(', ')}) }}{% else %}{{ 'für alle'|trans }}{% endif %}</td>
                             <td class="num">
@@ -73,7 +73,7 @@
             {% else %}
                 <form method="post" action="{{ path('app_fusionator_offer') }}" class="fleet-form">
                     <input type="hidden" name="_token" value="{{ csrf_token('fusionator_market') }}">
-                    <p class="muted small">{{ 'Aus dem Hangar von {name} {coordinates} – dort stehen {in_hangar} Fusionator(en).'|trans({'{name}': planet.name|e, '{coordinates}': ui.coords(planet.coordinates)|e, '{in_hangar}': in_hangar|num|e})|raw }}</p>
+                    <p class="muted small">{{ 'Aus dem Hangar von {name} {coordinates} – dort stehen {in_hangar} Fusionator(en).'|trans({'{name}': planet.name|e, '{coordinates}': ui.coords(planet.coordinates), '{in_hangar}': in_hangar|num|e})|raw }}</p>
                     <label>{{ 'Anzahl'|trans }} <input type="number" name="quantity" min="1" max="{{ in_hangar }}" value="{{ in_hangar }}" required></label>
                     <label>{{ 'Preis pro Stück (Credits)'|trans }} <input type="text" name="price" inputmode="decimal" required placeholder="z. B. 250000"></label>
                     <fieldset>

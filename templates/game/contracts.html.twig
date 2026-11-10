@@ -15,7 +15,7 @@
             {% for c in open %}
                 <div class="proposal">
                     <div>
-                        {{ '<strong>{isProtection} {kindLabel}</strong> {planetName} {coordinates} · <strong>{reward} Credits</strong> · {days} Tage · von {client}'|trans({'{isProtection}': (c.isProtection ? '🛡' : '⚔')|e, '{kindLabel}': c.kindLabel|trans|e, '{planetName}': c.planetName|e, '{coordinates}': ui.coords(c.coordinates)|e, '{reward}': c.reward|num|e, '{days}': c.days|e, '{client}': ui.player(c.client)|e})|raw }}
+                        {{ '<strong>{isProtection} {kindLabel}</strong> {planetName} {coordinates} · <strong>{reward} Credits</strong> · {days} Tage · von {client}'|trans({'{isProtection}': (c.isProtection ? '🛡' : '⚔')|e, '{kindLabel}': c.kindLabel|trans|e, '{planetName}': c.planetName|e, '{coordinates}': ui.coords(c.coordinates), '{reward}': c.reward|num|e, '{days}': c.days|e, '{client}': ui.player(c.client)})|raw }}
                         {% if c.note %}<blockquote class="proposal-message">{{ c.note }}</blockquote>{% endif %}
                     </div>
                     {% if c.applicationOf(player) %}
@@ -40,10 +40,10 @@
             {% for c in mine %}
                 <div class="proposal">
                     <div>
-                        {{ '<strong>{isProtection} {kindLabel}</strong> {planetName} {coordinates} · {reward} Credits · {days} Tage'|trans({'{isProtection}': (c.isProtection ? '🛡' : '⚔')|e, '{kindLabel}': c.kindLabel|trans|e, '{planetName}': c.planetName|e, '{coordinates}': ui.coords(c.coordinates)|e, '{reward}': c.reward|num|e, '{days}': c.days|e})|raw }}
+                        {{ '<strong>{isProtection} {kindLabel}</strong> {planetName} {coordinates} · {reward} Credits · {days} Tage'|trans({'{isProtection}': (c.isProtection ? '🛡' : '⚔')|e, '{kindLabel}': c.kindLabel|trans|e, '{planetName}': c.planetName|e, '{coordinates}': ui.coords(c.coordinates), '{reward}': c.reward|num|e, '{days}': c.days|e})|raw }}
                         <div class="muted small">
                             {{ c.statusLabel|trans }}
-                            {% if c.client.id == player.id %}{{ '· dein Auftrag'|trans }}{% if c.contractor %} {{ 'an {contractor}'|trans({'{contractor}': ui.player(c.contractor)|e})|raw }}{% endif %}{% else %}{{ '· du bist Auftragnehmer für {client}'|trans({'{client}': ui.player(c.client)|e})|raw }}{% endif %}
+                            {% if c.client.id == player.id %}{{ '· dein Auftrag'|trans }}{% if c.contractor %} {{ 'an {contractor}'|trans({'{contractor}': ui.player(c.contractor)})|raw }}{% endif %}{% else %}{{ '· du bist Auftragnehmer für {client}'|trans({'{client}': ui.player(c.client)})|raw }}{% endif %}
                             {% if c.endsAt %}{{ '· bis {endsAt}'|trans({'{endsAt}': c.endsAt|date('d.m.Y H:i')}) }}{% endif %}
                         </div>
                         {% if c.client.id == player.id and c.status == 'open' %}

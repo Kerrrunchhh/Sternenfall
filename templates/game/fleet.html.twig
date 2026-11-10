@@ -199,9 +199,9 @@
                             {% if e.own and (f.releasedToAlliance or f.releasedTo is not empty) %}<span class="release-chip small" title="{{ f.releasedTo|map(u => u.username)|join(', ') }}">{{ 'freigegeben'|trans }}{% if f.releasedToAlliance %} {{ '(Allianz)'|trans }}{% endif %}{% if f.releasedTo is not empty %} {{ '({count} einzeln)'|trans({'{count}': f.releasedTo|length}) }}{% endif %}</span>{% endif %}
                             <span class="muted small fleet-status">
                                 {% if f.idle %}
-                                    {{ 'wartet bei {coordinates}'|trans({'{coordinates}': ui.coords(f.coordinates)|e})|raw }}{% if e.at %} · {{ e.at.name }}{% if not e.base %} ({{ e.at.owner.username }}){% endif %}{% endif %}
+                                    {{ 'wartet bei {coordinates}'|trans({'{coordinates}': ui.coords(f.coordinates)})|raw }}{% if e.at %} · {{ e.at.name }}{% if not e.base %} ({{ e.at.owner.username }}){% endif %}{% endif %}
                                 {% elseif f.mission.value == 'hover' %}
-                                    {{ 'schwebt über {coordinates} · landet in {nextEventAt} ({nextEventAt2})'|trans({'{coordinates}': ui.coords(f.coordinates)|e, '{nextEventAt}': ui.countdown(f.nextEventAt, now)|e, '{nextEventAt2}': ui.at(f.nextEventAt, now)|e})|raw }}
+                                    {{ 'schwebt über {coordinates} · landet in {nextEventAt} ({nextEventAt2})'|trans({'{coordinates}': ui.coords(f.coordinates), '{nextEventAt}': ui.countdown(f.nextEventAt, now), '{nextEventAt2}': ui.at(f.nextEventAt, now)})|raw }}
                                 {% else %}
                                     {{ f.mission.label|trans }} {{ f.returning ? ('← zurück nach'|trans) : '→' }} {{ ui.coords(f.returning ? f.coordinates : f.targetCoordinates) }}
                                     · {{ ui.countdown(f.nextEventAt, now) }} ({{ ui.at(f.nextEventAt, now) }})
