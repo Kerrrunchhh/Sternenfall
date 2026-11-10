@@ -678,3 +678,9 @@ label.checkbox { display: flex; gap: .4rem; align-items: center; color: var(--te
 .privacy li { margin-bottom: .35rem; }
 
 .lang-switch a, .lang-switch strong { text-decoration: none; letter-spacing: .03em; }
+
+.planet-points { white-space: nowrap; margin-left: .35rem; }
+.galaxy-table thead th { font-size: .8rem; font-weight: 600; color: var(--muted); text-align: left; border-bottom: 1px solid var(--border); padding-bottom: .3rem; white-space: nowrap; }
+.galaxy-table thead th.num { text-align: right; }
+.galaxy-table thead th:first-child { text-align: left; }
+.galaxy-table .planet-points { color: var(--muted); white-space: nowrap; }

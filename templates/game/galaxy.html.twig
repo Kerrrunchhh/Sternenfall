@@ -17,6 +17,18 @@
     <section class="panel">
         <h2>{{ 'System {galaxy}:{system} <small class="muted">· {slots} Planetenplätze</small>'|trans({'{galaxy}': galaxy|e, '{system}': system|e, '{slots}': slots|length|e})|raw }}</h2>
         <table class="table galaxy-table">
+            <thead>
+                <tr>
+                    <th class="num">{{ 'Pos.'|trans }}</th>
+                    <th></th>
+                    <th>{{ 'Typ'|trans }}</th>
+                    <th>{{ 'Planet'|trans }}</th>
+                    <th class="num" title="{{ 'Planetenpunkte: Gebäudestufen mal Punktesatz'|trans }}">{{ 'Punkte'|trans }}</th>
+                    <th>{{ 'Besitzer'|trans }}</th>
+                    <th class="num">{{ 'Aktionen'|trans }}</th>
+                </tr>
+            </thead>
+            <tbody>
             {% for position, p in slots %}
                 {% set coords = {galaxy: galaxy, system: system, position: position} %}
                 <tr id="slot-{{ position }}" class="{{ p and p.owner.id == player.id ? 'own' }} {{ not p and posts[position] is defined ? 'trade-post' }}">
@@ -27,6 +39,7 @@
                         <td class="spy-cell"></td>
                         <td class="slot-type"></td>
                         <td class="muted welded" title="{{ 'Einfusioniert in {name}'|trans({'{name}': p.name}) }}">–</td>
+                        <td class="num planet-points"></td>
                         <td class="muted welded" title="{{ 'Gehört zur Fusion {name} von {username}'|trans({'{name}': p.name, '{username}': p.owner.username}) }}">–</td>
                         <td class="actions"></td>
                     {% else %}
@@ -65,6 +78,7 @@
                         <td>
                             {% if p.homeworld %}<span title="{{ 'Heimatplanet – kann nicht invadiert werden'|trans }}">🏠</span> {% endif %}{{ p.name }}{% if p.fused %} <span class="muted small" title="{{ 'Fusion aus {fusionSize} Planeten, Plätze {position}–{lastPosition}'|trans({'{fusionSize}': p.fusionSize, '{position}': p.position, '{lastPosition}': p.lastPosition}) }}">{{ '🔗 {fusionSize} Planeten</span>'|trans({'{fusionSize}': p.fusionSize|e})|raw }}{% endif %}{% if p.integrating(now) %} <span class="muted small">{{ '(invadiert, Übergang am {integratedAt})'|trans({'{integratedAt}': p.integratedAt|date('d.m.Y')}) }}</span>{% endif %}
                         </td>
+                        <td class="num planet-points">{{ planet_points(p)|num }}</td>
                         <td>{{ ui.player(p.owner) }}{% if p.owner.onVacation(now) %} <span class="vacation-tag" title="{{ 'Im Urlaub bis {vacationUntil}'|trans({'{vacationUntil}': p.owner.vacationUntil|date('d.m.Y H:i')}) }}">{{ '🌴 Urlaub'|trans }}</span>{% endif %}</td>
                         <td class="num actions">
                             {% if p.owner.id == player.id %}
@@ -81,6 +95,7 @@
                     {% elseif posts[position] is defined %}
                         {% set post = posts[position] %}
                         <td><a href="{{ path('app_trade_post', {id: post.id}) }}" title="{{ 'Preise und Handel'|trans }}">⚖ {{ post.name }}</a> <span class="muted small">{{ post.active ? ('Handelsstützpunkt'|trans) : ('aufgegebener Handelsstützpunkt'|trans) }}</span></td>
+                        <td class="num planet-points"></td>
                         <td>{{ ui.player(post.owner) }}</td>
                         <td class="num actions">
                             {% if post.owner.id == player.id and post.active %}<a href="{{ path('app_fleet', coords|merge({mission: 'supply'})) }}">{{ 'Beliefern'|trans }}</a>{% endif %}
@@ -89,6 +104,7 @@
                         </td>
                     {% else %}
                         <td class="muted">{{ 'frei'|trans }}</td>
+                        <td class="num planet-points"></td>
                         <td></td>
                         <td class="num actions">
                             <form method="post" action="{{ path('app_galaxy_colonize') }}" class="inline-form">
@@ -103,6 +119,7 @@
                     {% endif %}
                 </tr>
             {% endfor %}
+            </tbody>
         </table>
     </section>
 {% endblock %}

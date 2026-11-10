@@ -76,6 +76,7 @@
                     <tr class="{{ p.hiddenInProfile ? 'muted' }}">
                         <td>{% if own %}<img class="planet-pic planet-pic-tiny" src="{{ asset(p.type.picture) }}" alt="{{ p.type.label|trans }}" title="{{ p.type.label|trans }}" width="22" height="22"> {% endif %}{{ p.name }}{% if p.homeworld %} <span title="{{ 'Heimatplanet'|trans }}">🏠</span>{% endif %}{% if p.fused %} <span class="muted small">{{ 'Fusion aus {fusionSize} Planeten'|trans({'{fusionSize}': p.fusionSize}) }}</span>{% endif %}</td>
                         <td class="num">{{ ui.coords(p.coordinates) }}</td>
+                        <td class="num muted small" title="{{ 'Planetenpunkte: Gebäudestufen mal Punktesatz'|trans }}">{{ '{points} Punkte'|trans({'{points}': planet_points(p)|num}) }}</td>
                         {% if own %}
                             <td class="num">
                                 <form method="post" action="{{ path('app_profile_planet_visibility', {id: p.id}) }}">
