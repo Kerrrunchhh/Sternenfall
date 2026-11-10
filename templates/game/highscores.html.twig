@@ -30,6 +30,7 @@
                 <tr class="table-head">
                     <td class="num">{{ 'Platz'|trans }}</td>
                     <td>{{ view == 'players' ? ('Spieler'|trans) : ('Allianz'|trans) }}</td>
+                    <td>{{ 'Lebensform'|trans }}</td>
                     {% if view == 'alliances' %}<td class="num">{{ 'Mitglieder'|trans }}</td>{% endif %}
                     <td class="num"><a class="sort-link {{ sort == 'points' ? 'active' }}" href="{{ path('app_highscores', params|merge({sort: 'points'})) }}" title="{{ 'Nach Punkten sortieren'|trans }}">{{ 'Punkte{points}'|trans({'{points}': (sort == 'points' ? ' ▼')}) }}</a></td>
                     <td class="num"><a class="sort-link {{ sort == 'experience' ? 'active' }}" href="{{ path('app_highscores', params|merge({sort: 'experience'})) }}" title="{{ 'Nach Kampferfahrung sortieren'|trans }}">{{ 'Kampferfahrung{experience}'|trans({'{experience}': (sort == 'experience' ? ' ▼')}) }}</a></td>
@@ -38,7 +39,7 @@
                     {{ _self.row(r, view, own) }}
                 {% endfor %}
                 {% if own_outside %}
-                    <tr class="highscore-gap"><td colspan="{{ view == 'alliances' ? 5 : 4 }}" class="muted">…</td></tr>
+                    <tr class="highscore-gap"><td colspan="{{ view == 'alliances' ? 6 : 5 }}" class="muted">…</td></tr>
                     {{ _self.row(own, view, own) }}
                 {% endif %}
             </table>
@@ -55,8 +56,10 @@
         <td class="num">{{ r.rank }}.</td>
         {% if view == 'players' %}
             <td>{{ ui.player(r.user) }}</td>
+            <td class="small">{{ r.user.lifeForm.icon }} {{ r.user.lifeForm.label|trans }}</td>
         {% else %}
-            <td><span title="{{ r.alliance.lifeForm.label|trans }}">{{ r.alliance.lifeForm.icon }}</span> <a href="{{ path('app_alliance_public', {id: r.alliance.id}) }}">{{ r.alliance.name }}</a> <span class="muted">[{{ r.alliance.tag }}]</span></td>
+            <td><a href="{{ path('app_alliance_public', {id: r.alliance.id}) }}">{{ r.alliance.name }}</a> <span class="muted">[{{ r.alliance.tag }}]</span></td>
+            <td class="small">{{ r.alliance.lifeForm.icon }} {{ r.alliance.lifeForm.label|trans }}</td>
             <td class="num">{{ r.members }}</td>
         {% endif %}
         <td class="num">{{ r.points|num }}</td>
