@@ -34,16 +34,17 @@
                         <h2>
                             {% if s.type.combatShip or s.type.stationary %}<span class="firing-order" title="Schussreihenfolge">#{{ s.type.firingOrder }}</span>{% endif %}
                             {{ s.type.label }}
+                            {% if s.type.shipClass %}<span class="ship-class">{{ s.type.shipClass.label }}</span>{% endif %}
                         </h2>
                         <span class="level">{{ defense ? 'Auf dem Planeten' : 'Im Hangar' }}: {{ s.stationed|number_format(0, ',', '.') }}</span>
                     </div>
                     <p class="building-desc">{{ s.type.description }}</p>
                     <dl class="stats">
-                        <div><dt>Angriff</dt><dd>{{ s.spec.attack|number_format(0, ',', '.') }}</dd></div>
-                        <div><dt>Schild</dt><dd>{{ s.spec.shield|number_format(0, ',', '.') }}</dd></div>
+                        {{ ui.ship_stat('Angriff', s.stats.attack) }}
+                        {{ ui.ship_stat('Schild', s.stats.shield) }}
                         <div><dt>Hülle</dt><dd>{{ s.spec.hull|number_format(0, ',', '.') }}</dd></div>
                         {% if not defense %}
-                        <div><dt>Tempo</dt><dd>{{ s.speed|number_format(0, ',', '.') }}</dd></div>
+                        {{ ui.ship_stat('Tempo', s.stats.speed) }}
                         {% if s.type.salvageCapacity > 0 %}
                             <div><dt>Bergeraum</dt><dd>{{ s.type.salvageCapacity|number_format(0, ',', '.') }}</dd></div>
                         {% else %}
@@ -54,6 +55,11 @@
                         {% if not defense %}<div><dt>Besatzung</dt><dd>{{ s.spec.crew|number_format(0, ',', '.') }}</dd></div>{% endif %}
                         {% if not defense %}<div><dt>Antrieb</dt><dd>{{ s.spec.drive.label }}</dd></div>{% endif %}
                     </dl>
+                    {# What the own research (and life form) makes of the base values. #}
+                    {% set notes = s.stats|map(st => st.notes)|reduce((all, n) => all|merge(n), []) %}
+                    {% if notes is not empty %}
+                        <p class="research-effects small"><span class="muted">Deine Forschung:</span> {{ notes|join(' · ') }}</p>
+                    {% endif %}
                     <div class="building-foot" data-build-rates>
                         {% for percent, r in s.rates|filter((r, percent) => percent == 100) %}
                             {{ _self.rate_row(percent, r, s, planet, player, true) }}

@@ -4,12 +4,17 @@ namespace App\Controller;
 
 use App\Entity\Planet;
 use App\Entity\User;
+use App\Game\Diplomacy;
 use App\Game\Economy;
+use App\Game\Radar;
 use App\Game\FleetService;
 use App\Game\GameException;
 use App\Game\PlanetService;
 use App\Game\ShipType;
 use App\Repository\AllianceRepository;
+use App\Repository\ContactRepository;
+use App\Repository\PlayerMessageRepository;
+use App\Repository\TickerRepository;
 use App\Repository\TradePostRepository;
 use App\Repository\MessageRepository;
 use Psr\Clock\ClockInterface;
@@ -30,7 +35,7 @@ abstract class AbstractGameController extends AbstractController
     /** Pages a form may send the player back to (no open redirects). */
     protected const array GAME_ROUTES = [
         'app_overview', 'app_buildings', 'app_queues', 'app_research', 'app_shipyard', 'app_defense', 'app_fleet', 'app_galaxy', 'app_trade_fusionators', 'app_bookmarks',
-        'app_radar', 'app_fusion', 'app_trade', 'app_messages', 'app_lifeform', 'app_alliance',
+        'app_radar', 'app_fusion', 'app_trade', 'app_messages', 'app_lifeform', 'app_alliance', 'app_mail', 'app_newspaper', 'app_tickers', 'app_highscores', 'app_diplomacy', 'app_notes',
     ];
 
     protected PlanetService $planetService;
@@ -38,6 +43,11 @@ abstract class AbstractGameController extends AbstractController
     protected Economy $economy;
     protected ClockInterface $clock;
     private MessageRepository $messages;
+    private PlayerMessageRepository $letters;
+    private ContactRepository $contacts;
+    private TickerRepository $tickers;
+    private Diplomacy $diplomacy;
+    private Radar $radar;
     private RequestStack $requestStack;
     private AllianceRepository $allianceRepository;
     private TradePostRepository $tradePosts;
@@ -52,7 +62,17 @@ abstract class AbstractGameController extends AbstractController
         RequestStack $requestStack,
         AllianceRepository $allianceRepository,
         TradePostRepository $tradePosts,
+        PlayerMessageRepository $letters,
+        ContactRepository $contacts,
+        TickerRepository $tickers,
+        Diplomacy $diplomacy,
+        Radar $radar,
     ): void {
+        $this->radar = $radar;
+        $this->diplomacy = $diplomacy;
+        $this->tickers = $tickers;
+        $this->letters = $letters;
+        $this->contacts = $contacts;
         $this->allianceRepository = $allianceRepository;
         $this->tradePosts = $tradePosts;
         $this->planetService = $planetService;
@@ -80,9 +100,9 @@ abstract class AbstractGameController extends AbstractController
     }
 
     /** @param array<string, mixed> $parameters */
-    protected function renderGame(string $view, Planet $planet, array $parameters = []): Response
+    protected function renderGame(string $view, Planet $planet, array $parameters = [], ?Response $response = null): Response
     {
-        return $this->render($view, [...$this->viewData($planet), ...$parameters]);
+        return $this->render($view, [...$this->viewData($planet), ...$parameters], $response);
     }
 
     /**
@@ -119,6 +139,21 @@ abstract class AbstractGameController extends AbstractController
         return $planet;
     }
 
+    /** @return array<int, true> ids of own planets an attack is heading for */
+    private function attackedPlanets(User $player): array
+    {
+        $ids = [];
+        foreach ($this->radar->incomingAttacks($player) as $fleet) {
+            foreach ($player->getPlanets() as $planet) {
+                if ($planet->getGalaxy() === $fleet->getTargetGalaxy() && $planet->getSystem() === $fleet->getTargetSystem() && $planet->covers((int) $fleet->getTargetPosition())) {
+                    $ids[(int) $planet->getId()] = true;
+                }
+            }
+        }
+
+        return $ids;
+    }
+
     /** @return array<string, mixed> */
     protected function viewData(Planet $planet): array
     {
@@ -137,6 +172,12 @@ abstract class AbstractGameController extends AbstractController
             'bunker_capacity' => $this->economy->bunkerCapacity($planet),
             'player' => $planet->getOwner(),
             'unread_messages' => $this->messages->countUnread($planet->getOwner()),
+            'unread_mail' => $this->letters->countUnread($planet->getOwner()),
+            'contact_requests' => $this->contacts->countIncomingRequests($planet->getOwner()),
+            'ticker_invitations' => $this->tickers->countInvitations($planet->getOwner()),
+            'diplomacy_votes' => $this->diplomacy->pendingVotes($planet->getOwner()),
+            // Own planets with an attack on its way (seen by the radar): red in the planet list.
+            'attacked_planets' => $this->attackedPlanets($planet->getOwner()),
             // Own trade posts are listed under the planets in the left column.
             'own_trade_posts' => $this->tradePosts->findBy(['owner' => $planet->getOwner()], ['galaxy' => 'ASC', 'system' => 'ASC', 'position' => 'ASC']),
             // The alliance black board is shown on every page.

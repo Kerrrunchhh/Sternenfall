@@ -17,8 +17,19 @@ class AllianceTest extends TestCase
         $now = new \DateTimeImmutable();
         self::assertSame('Orden', (new Alliance('A', 'AA', LifeForm::Guardian, $now))->getType());
         self::assertSame('Syndikat', (new Alliance('B', 'BB', LifeForm::Pirate, $now))->getType());
-        self::assertSame('Handelsorganisation', (new Alliance('C', 'CC', LifeForm::Trader, $now))->getType());
+        self::assertSame('Handelsgilde', (new Alliance('C', 'CC', LifeForm::Trader, $now))->getType());
         self::assertSame('Allianz', (new Alliance('D', 'DD', LifeForm::Settler, $now))->getType());
+    }
+
+    public function testOnlyPlayersOfTheAlliancesLifeFormMayJoin(): void
+    {
+        $now = new \DateTimeImmutable();
+        $orden = new Alliance('Orden', 'ORD', LifeForm::Guardian, $now);
+        $guardian = new User('wache', $now);
+        $guardian->changeLifeForm(LifeForm::Guardian, $now);
+
+        self::assertTrue($orden->admits($guardian));
+        self::assertFalse($orden->admits(new User('siedler', $now)), 'a settler is no guardian');
     }
 
     public function testRankPermissions(): void

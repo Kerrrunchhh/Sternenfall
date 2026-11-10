@@ -49,11 +49,27 @@ class Planet
     private bool $hiddenInProfile = false;
 
     /** After an invasion the planet only fully passes to its new owner after this period. */
-    public const string INTEGRATION_PERIOD = '+28 days';
+    public const string INTEGRATION_PERIOD = '+30 days';
+    /** Until then it takes 3 planet slots, after 14 days 2 (in a war 2 from the start). */
+    public const int INVADED_SLOTS = 3;
+    public const int INVADED_SLOTS_LATER = 2;
+    public const string INVADED_SLOTS_DROP = '+14 days';
 
     /** Until then the planet is invaded but not yet fully owned (e.g. it can't be fused). */
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $integratedAt = null;
+
+    /** When the planet was invaded (null for invasions before the slot rule). */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $invadedAt = null;
+
+    /** Being abandoned: at this time the planet is given up (slot free again). */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $abandonAt = null;
+
+    /** Invaded in a war between the two alliances: it takes fewer slots. */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $invadedInWar = false;
 
     /** Number of consecutive positions occupied: 1 for a normal planet, more after a fusion. */
     #[ORM\Column(type: Types::SMALLINT, options: ['default' => 1])]
@@ -170,9 +186,52 @@ class Planet
     }
 
     /** Marks the planet as freshly invaded: it becomes fully owned after the integration period. */
-    public function markInvaded(\DateTimeImmutable $now): void
+    public function markInvaded(\DateTimeImmutable $now, bool $inWar = false): void
     {
         $this->integratedAt = $now->modify(self::INTEGRATION_PERIOD);
+        $this->invadedAt = $now;
+        $this->invadedInWar = $inWar;
+    }
+
+    /** Slots an invaded planet takes while it is not fully owned: 3, after 14 days (or in a war) 2. */
+    public static function invadedSlots(\DateTimeImmutable $invadedAt, bool $inWar, \DateTimeImmutable $now): int
+    {
+        return $inWar || $now >= $invadedAt->modify(self::INVADED_SLOTS_DROP) ? self::INVADED_SLOTS_LATER : self::INVADED_SLOTS;
+    }
+
+    /** Planet slots this planet takes now (welded slots count one by one; freshly invaded ones more). */
+    public function slotCost(\DateTimeImmutable $now): int
+    {
+        if (null === $this->invadedAt || !$this->isIntegrating($now)) {
+            return $this->fusionSize;
+        }
+
+        return $this->fusionSize - 1 + self::invadedSlots($this->invadedAt, $this->invadedInWar, $now);
+    }
+
+    public function getAbandonAt(): ?\DateTimeImmutable
+    {
+        return $this->abandonAt;
+    }
+
+    public function setAbandonAt(?\DateTimeImmutable $at): void
+    {
+        $this->abandonAt = $at;
+    }
+
+    public function isBeingAbandoned(): bool
+    {
+        return null !== $this->abandonAt;
+    }
+
+    public function getInvadedAt(): ?\DateTimeImmutable
+    {
+        return $this->invadedAt;
+    }
+
+    public function isInvadedInWar(): bool
+    {
+        return $this->invadedInWar;
     }
 
     public function getIntegratedAt(): ?\DateTimeImmutable
@@ -342,7 +401,7 @@ class Planet
      * An invasion: the planet changes hands. Queues are lost, and the new owner
      * only fully owns it after the integration period.
      */
-    public function conquer(User $newOwner, \DateTimeImmutable $now): void
+    public function conquer(User $newOwner, \DateTimeImmutable $now, bool $inWar = false): void
     {
         $this->hiddenInProfile = false;
         $this->owner->getPlanets()->removeElement($this);
@@ -354,7 +413,7 @@ class Planet
         foreach ($this->shipyardOrders->toArray() as $order) {
             $this->shipyardOrders->removeElement($order);
         }
-        $this->markInvaded($now);
+        $this->markInvaded($now, $inWar);
     }
 
     /** @return array<string, int> */

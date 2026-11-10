@@ -23,9 +23,16 @@
         <p class="panel warning">Auf diesem Planeten steht noch kein Forschungslabor. Baue eines, um Technologien zu erforschen.</p>
     {% endif %}
 
+    {# One tab per category; the chosen tab is remembered in the browser. #}
+    <nav class="tabs" data-tabs="research" aria-label="Forschungsbereiche">
+        {% for category, items in categories %}
+            <button type="button" data-tab-target="research-{{ loop.index }}" class="{{ loop.first ? 'active' }}">
+                {{ category }}{% if player.researching and player.researchType.category == category %} <span title="Hier wird gerade geforscht">⏳</span>{% endif %}
+            </button>
+        {% endfor %}
+    </nav>
     {% for category, items in categories %}
-        <h2 class="section-title">{{ category }}</h2>
-        <div class="building-list">
+        <div class="building-list" data-tab-panel="research-{{ loop.index }}" aria-label="{{ category }}">
             {% for r in items %}
                 <article class="panel building">
                     <div class="building-head">

@@ -102,6 +102,18 @@ class Fleet
     #[ORM\Column]
     private bool $returning = false;
 
+    /** Since when the fleet waits where it is (trade posts and foreign planets send it home after 24 h). */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $parkedAt = null;
+
+    /** Could not pay its way home from a foreign planet: since then it loses 10 % of its ships a day. */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $strandedSince = null;
+
+    /** @var array<string, int>|null ships when it got stranded (the losses are counted from them) */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $strandedShips = null;
+
     // --- release to the alliance ---
 
     /** Visible to and controllable by all alliance members whose rank has fleet rights. */
@@ -275,6 +287,9 @@ class Fleet
 
     public function depart(FleetMission $mission, int $galaxy, int $system, int $position, \DateTimeImmutable $now, int $flightSeconds, ?self $targetFleet = null): void
     {
+        $this->parkedAt = null;
+        $this->strandedSince = null;
+        $this->strandedShips = null;
         $this->mission = $mission;
         $this->targetGalaxy = $galaxy;
         $this->targetSystem = $system;
@@ -289,6 +304,7 @@ class Fleet
     /** Ends the movement at the point of departure. */
     public function land(): void
     {
+        $this->parkedAt = ($this->returning ? $this->returnAt : $this->arriveAt) ?? $this->parkedAt;
         $this->mission = null;
         $this->targetGalaxy = $this->targetSystem = $this->targetPosition = null;
         $this->targetFleet = null;
@@ -316,6 +332,15 @@ class Fleet
         }
     }
 
+    /** An empty fleet moves without flight time. */
+    public function relocate(int $galaxy, int $system, int $position): void
+    {
+        if (!$this->isIdle() || $this->hasShips()) {
+            throw new \LogicException('Only an empty waiting fleet can be relocated.');
+        }
+        [$this->galaxy, $this->system, $this->position] = [$galaxy, $system, $position];
+    }
+
     public function rememberHome(int $galaxy, int $system, int $position): void
     {
         [$this->homeGalaxy, $this->homeSystem, $this->homePosition] = [$galaxy, $system, $position];
@@ -324,6 +349,55 @@ class Fleet
     public function forgetHome(): void
     {
         $this->homeGalaxy = $this->homeSystem = $this->homePosition = null;
+    }
+
+    public function getParkedAt(): ?\DateTimeImmutable
+    {
+        return $this->parkedAt;
+    }
+
+    public function park(\DateTimeImmutable $since): void
+    {
+        $this->parkedAt = $since;
+    }
+
+    public function unstrand(): void
+    {
+        $this->strandedSince = null;
+        $this->strandedShips = null;
+    }
+
+    public function getStrandedSince(): ?\DateTimeImmutable
+    {
+        return $this->strandedSince;
+    }
+
+    /**
+     * Stranded on a foreign planet without fuel: 10 % of the ships (counted from those
+     * it had then) are lost every full day; after 10 days nothing is left.
+     *
+     * @return int ships lost by this call
+     */
+    public function strand(\DateTimeImmutable $since, \DateTimeImmutable $now): int
+    {
+        if (null === $this->strandedSince) {
+            $this->strandedSince = $since;
+            $this->strandedShips = $this->ships;
+        }
+        $days = intdiv(max(0, $now->getTimestamp() - $this->strandedSince->getTimestamp()), 86400);
+        $share = max(0.0, 1 - 0.1 * $days);
+        $lost = 0;
+        foreach ($this->strandedShips as $type => $count) {
+            $left = (int) ceil($count * $share - 1e-9);
+            $current = $this->ships[$type] ?? 0;
+            if ($current > $left) {
+                $lost += $current - $left;
+                $this->ships[$type] = $left;
+            }
+        }
+        $this->ships = array_filter($this->ships);
+
+        return $lost;
     }
 
     /** @return array{int, int, int}|null */
@@ -410,6 +484,18 @@ class Fleet
     public function getNextEventAt(): ?\DateTimeImmutable
     {
         return $this->returning ? $this->returnAt : $this->arriveAt;
+    }
+
+    /**
+     * Joining an attack: the fleet arrives together with the leading fleet (it waits
+     * for it), the way back takes as long as its own flight.
+     */
+    public function arriveTogetherWith(self $lead): void
+    {
+        $flight = $this->arriveAt->getTimestamp() - $this->departAt->getTimestamp();
+        $this->arriveAt = $lead->getArriveAt();
+        $this->returnAt = $this->arriveAt->modify("+{$flight} seconds");
+        $this->targetFleet = $lead;
     }
 
     /** Turns around after reaching the target (return time as planned at departure). */

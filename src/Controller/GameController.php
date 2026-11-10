@@ -5,9 +5,13 @@ namespace App\Controller;
 use App\Entity\Fleet;
 use App\Entity\Planet;
 use App\Game\BuildingType;
+use App\Game\ContactService;
 use App\Game\Espionage;
 use App\Game\Radar;
 use App\Repository\FleetRepository;
+use App\Repository\PlanetRepository;
+use App\Game\FleetMission;
+use App\Repository\ContactRepository;
 use App\Repository\TradePostRepository;
 use App\Game\QueueKind;
 use App\Game\QueueTimeline;
@@ -21,7 +25,7 @@ use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 class GameController extends AbstractGameController
 {
     #[Route('/overview', name: 'app_overview', methods: ['GET'])]
-    public function overview(QueueTimeline $timeline, FleetRepository $fleets, Radar $radar, Espionage $espionage, TradePostRepository $tradePosts): Response
+    public function overview(QueueTimeline $timeline, FleetRepository $fleets, Radar $radar, Espionage $espionage, TradePostRepository $tradePosts, ContactService $contacts, ContactRepository $contactRequests, PlanetRepository $planets): Response
     {
         $planet = $this->currentPlanet();
         $player = $this->player();
@@ -41,8 +45,17 @@ class GameController extends AbstractGameController
 
         return $this->renderGame('game/overview.html.twig', $planet, [
             'at_trade_posts' => $atTradePosts,
+            'contacts' => $contacts->contactsOf($player),
+            'incoming_requests' => $contactRequests->findIncomingRequests($player),
             'own_movements' => $own,
-            'incoming' => $incoming,
+            'incoming' => array_values(array_filter($incoming, static fn (Fleet $f): bool => FleetMission::Attack !== $f->getMission())),
+            // Attacks on own planets: red alarm at the top with origin, target, impact and a spy button.
+            'attacks' => array_map(fn (Fleet $f): array => [
+                'fleet' => $f,
+                // A moving fleet keeps the coordinates it left from.
+                'origin' => $planets->findAt($f->getGalaxy(), $f->getSystem(), $f->getPosition()),
+                'target' => $planets->findAt((int) $f->getTargetGalaxy(), (int) $f->getTargetSystem(), (int) $f->getTargetPosition()),
+            ], array_values(array_filter($incoming, static fn (Fleet $f): bool => FleetMission::Attack === $f->getMission()))),
             'incoming_intel' => $espionage->fleetIntel($player, $incoming),
             'building_queue' => $timeline->entries($planet, QueueKind::Buildings),
             'shipyard_queue' => $timeline->entries($planet, QueueKind::Shipyard),
@@ -97,6 +110,25 @@ class GameController extends AbstractGameController
         $this->attempt(fn () => $this->planetService->rename($planet, $this->player(), $name), \sprintf('Planet umbenannt in „%s“.', trim($name)));
 
         return $this->backTo($request, 'app_overview');
+    }
+
+    #[Route('/planet/{id}/abandon', name: 'app_planet_abandon', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    #[IsCsrfTokenValid('planet_abandon', tokenKey: '_token')]
+    public function abandonPlanet(Planet $planet, Request $request): Response
+    {
+        $this->currentPlanet();
+        if ('stay' === $request->request->getString('do')) {
+            $this->attempt(fn () => $this->planetService->stayOn($planet, $this->player()), \sprintf('Du bleibst auf %s.', $planet->getName()));
+        } else {
+            try {
+                $at = $this->planetService->abandon($planet, $this->player());
+                $this->addFlash('success', \sprintf('%s wird am %s verlassen. Bring vorher Flotten, Schiffe und Rohstoffe in Sicherheit – oder brich ab.', $planet->getName(), $at->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i')));
+            } catch (\App\Game\GameException $e) {
+                $this->addFlash('error', $e->getMessage());
+            }
+        }
+
+        return $this->redirectToRoute('app_overview');
     }
 
     #[Route('/planet/{id}/select', name: 'app_planet_select', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]

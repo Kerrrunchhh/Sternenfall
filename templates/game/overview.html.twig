@@ -4,6 +4,33 @@
 {% block title %}Übersicht – {{ game_name }}{% endblock %}
 
 {% block content %}
+    {% if attacks is not empty %}
+        <section class="panel attack-alarm-panel" role="alert">
+            <h2>🚨 Angriff{{ attacks|length > 1 ? 'e' }} auf deine Planeten</h2>
+            <table class="table attack-table">
+                {% for a in attacks %}
+                    {% set f = a.fleet %}
+                    {% set intel = incoming_intel[f.id] ?? null %}
+                    <tr>
+                        <td>
+                            <strong>{{ ui.player(f.owner) }}</strong>
+                            von {% if a.origin %}{{ a.origin.name }} {% endif %}{{ ui.coords(f.coordinates) }}
+                            → <strong>{{ a.target ? a.target.name : 'Planet' }}</strong> {{ ui.coords(f.targetCoordinates) }}
+                            {% if intel %}<div class="small">erspäht {{ intel.scoutedAt|date('H:i') }}: {% for s in intel.shipList %}{{ s.count|number_format(0, ',', '.') }} × {{ s.type.label }}{{ not loop.last ? ', ' }}{% endfor %}</div>{% endif %}
+                        </td>
+                        <td class="num attack-time">Einschlag in {{ ui.countdown(f.arriveAt, now) }}<br><span class="small">{{ ui.at(f.arriveAt, now) }}</span></td>
+                        <td class="num">
+                            <form method="post" action="{{ path('app_radar_spy', {id: f.id}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('radar') }}">
+                                <input type="hidden" name="to" value="app_overview">
+                                <button class="btn btn-small" type="submit" id="spy-attack-{{ f.id }}" title="Die nächste Sonde fliegt der Flotte entgegen und meldet, woraus sie besteht">🔭 Spionieren</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </section>
+    {% endif %}
     {% if at_trade_posts is not empty %}
         <section class="panel trade-waiting">
             {% for w in at_trade_posts %}
@@ -17,57 +44,69 @@
 
     <h1>{{ planet.name }} <small>[{{ planet.coordinates }}]</small></h1>
     <details class="rename">
-        <summary>Umbenennen</summary>
+        <summary>Umbenennen{{ planet.homeworld ? '' : ' oder verlassen' }}</summary>
         <form method="post" action="{{ path('app_planet_rename', {id: planet.id}) }}" class="inline-action">
             <input type="hidden" name="_token" value="{{ csrf_token('planet_rename') }}">
             <input type="text" name="name" value="{{ planet.name }}" maxlength="30" required aria-label="Neuer Name für {{ planet.name }}">
             <button class="btn btn-small" type="submit" id="planet-rename">Speichern</button>
         </form>
+        {% if not planet.homeworld and not planet.beingAbandoned %}
+            <form method="post" action="{{ path('app_planet_abandon', {id: planet.id}) }}" class="abandon-form">
+                <input type="hidden" name="_token" value="{{ csrf_token('planet_abandon') }}">
+                <button class="btn btn-small btn-danger" type="submit" name="do" value="abandon" id="planet-abandon"
+                        data-confirm="{{ planet.name }} [{{ planet.coordinates }}] verlassen? Nach 48 Stunden ist der Planet weg – mit allen Gebäuden, Rohstoffen und den Schiffen im Hangar. Flotten, die hier warten, bleiben am freien Platz zurück. Bis dahin kannst du abbrechen."
+                        data-confirm-label="Planet verlassen">Planet verlassen</button>
+            </form>
+        {% endif %}
     </details>
 
+    {% if planet.beingAbandoned %}
+        <div class="panel warning abandon-warning">
+            <div><strong>{{ planet.name }} wird verlassen</strong> – in {{ ui.countdown(planet.abandonAt, now) }} ({{ ui.at(planet.abandonAt, now) }}). Gebäude, Rohstoffe und die Schiffe im Hangar gehen dann verloren; Flotten, die hier warten, bleiben am freien Platz zurück. Flotten ohne Treibstoff kommen nur weg, wenn du den Planeten vorher belieferst.</div>
+            <form method="post" action="{{ path('app_planet_abandon', {id: planet.id}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('planet_abandon') }}">
+                <button class="btn btn-small" type="submit" name="do" value="stay" id="planet-stay">Doch bleiben</button>
+            </form>
+        </div>
+    {% endif %}
     {% if planet.integrating(now) %}
         <p class="panel warning">{{ planet.name }} wurde invadiert und geht am {{ planet.integratedAt|date('d.m.Y H:i') }} vollständig in deinen Besitz über.</p>
     {% endif %}
-    {% if building_queue is not empty or shipyard_queue is not empty or defense_queue is not empty %}
-        <div class="grid">
-            {% if building_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Buildings, entries: building_queue, back: 'app_overview'}) }}{% endif %}
-            {% if shipyard_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Shipyard, entries: shipyard_queue, back: 'app_overview'}) }}{% endif %}
-            {% if defense_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Defense, entries: defense_queue, back: 'app_overview'}) }}{% endif %}
-        </div>
-    {% endif %}
-    {% if player.researching %}
-        <div class="panel construction">
-            <div><strong>Forschung:</strong> {{ player.researchType.label }} (Stufe {{ player.researchTargetLevel }})</div>
-            <div>{{ ui.countdown(player.researchFinishesAt, now) }}</div>
-        </div>
-    {% endif %}
+    <section class="panel quick-contacts">
+        <h2>Schnellkontakte <a class="small" href="{{ path('app_mail') }}">Post →</a></h2>
+        {{ include('game/_contacts.html.twig', {back: 'app_overview'}) }}
+    </section>
 
     {% if incoming is not empty or own_movements is not empty %}
         <section class="panel movements">
             <h2>Flottenbewegungen</h2>
-            <table class="table">
+            {# One line per movement: what, where, countdown, arrival time, action. #}
+            <table class="table movement-table">
                 {% for f in incoming %}
                     {% set intel = incoming_intel[f.id] ?? null %}
+                    {% set ships = intel ? intel.shipList|map(s => s.count|number_format(0, ',', '.') ~ ' × ' ~ s.type.label)|join(', ') : '' %}
                     <tr class="{{ f.mission.value == 'attack' ? 'hostile' }}">
-                        <td>
+                        <td class="movement-what">
                             {% if f.mission.value == 'attack' %}<strong>⚠ Angriff</strong>{% else %}{{ f.mission.label }}{% endif %}
-                            von {{ ui.player(f.owner) }} auf {{ ui.coords(f.targetCoordinates) }}
-                            <div class="small muted">
-                                {% if intel %}erspäht {{ intel.scoutedAt|date('H:i') }}: {% for s in intel.shipList %}{{ s.count|number_format(0, ',', '.') }} × {{ s.type.label }}{{ not loop.last ? ', ' }}{% endfor %}
-                                {% else %}Zusammensetzung unbekannt – <a href="{{ path('app_radar') }}">auf dem Radar ausspionieren</a>{% endif %}
-                            </div>
+                            von {{ ui.player(f.owner) }} → {{ ui.coords(f.targetCoordinates) }}
+                            {% if intel %}<span class="small muted" title="erspäht {{ intel.scoutedAt|date('H:i') }}: {{ ships }}">· {{ ships }}</span>
+                            {% else %}<a class="small" href="{{ path('app_radar') }}" title="Zusammensetzung unbekannt – auf dem Radar ausspionieren">· 🔭 ausspionieren</a>{% endif %}
                         </td>
-                        <td class="num">Einschlag in {{ ui.countdown(f.arriveAt, now) }}<br><span class="small muted">{{ ui.at(f.arriveAt, now) }}</span></td>
+                        <td class="num movement-time">{{ ui.countdown(f.arriveAt, now) }}</td>
+                        <td class="num small muted movement-time">{{ ui.at(f.arriveAt, now) }}</td>
+                        <td></td>
                     </tr>
                 {% endfor %}
                 {% for f in own_movements %}
+                    {% set only = f.shipList|length == 1 ? f.shipList[0].type.value : null %}
                     <tr>
-                        <td>
-                            {{ f.named ? f.name : (f.shipList|length == 1 and f.shipList[0].type.value == 'scout' ? 'Sonde' : 'Flotte') }}:
+                        <td class="movement-what">
+                            {{ f.named ? f.name : (only == 'scout' ? 'Sonde' : (only == 'colony_ship' ? 'Kolonieschiff' : 'Flotte')) }}:
                             {{ f.mission.label }}{% if f.mission.value != 'hover' %} {{ f.returning ? '← zurück nach' : '→' }} {{ ui.coords(f.returning ? f.coordinates : f.targetCoordinates) }}{% endif %}
                         </td>
-                        <td class="num">{{ f.returning ? 'Rückkehr' : (f.mission.value == 'hover' ? 'landet' : 'Ankunft') }} in {{ ui.countdown(f.nextEventAt, now) }}<br><span class="small muted">{{ ui.at(f.nextEventAt, now) }}</span></td>
-                        <td class="num">
+                        <td class="num movement-time" title="{{ f.returning ? 'Rückkehr' : (f.mission.value == 'hover' ? 'landet' : 'Ankunft') }}">{{ ui.countdown(f.nextEventAt, now) }}</td>
+                        <td class="num small muted movement-time">{{ ui.at(f.nextEventAt, now) }}</td>
+                        <td class="num movement-time">
                             {% if not f.returning and f.owner.id == player.id %}
                                 <form method="post" action="{{ path('app_fleet_recall', {id: f.id}) }}" class="inline">
                                     <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
@@ -80,6 +119,21 @@
                 {% endfor %}
             </table>
         </section>
+    {% endif %}
+
+    {# Building, shipyard and defense queues plus research, below the fleet movements. #}
+    {% if building_queue is not empty or shipyard_queue is not empty or defense_queue is not empty %}
+        <div class="grid">
+            {% if building_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Buildings, entries: building_queue, back: 'app_overview'}) }}{% endif %}
+            {% if shipyard_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Shipyard, entries: shipyard_queue, back: 'app_overview'}) }}{% endif %}
+            {% if defense_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Defense, entries: defense_queue, back: 'app_overview'}) }}{% endif %}
+        </div>
+    {% endif %}
+    {% if player.researching %}
+        <div class="panel construction">
+            <div><strong>Forschung:</strong> {{ player.researchType.label }} (Stufe {{ player.researchTargetLevel }})</div>
+            <div>{{ ui.countdown(player.researchFinishesAt, now) }}</div>
+        </div>
     {% endif %}
 
     <div class="grid">
@@ -138,7 +192,7 @@
             {% else %}
                 <table class="table">
                     {% for entry in hangar %}
-                        <tr><td>{{ entry.type.label }}</td><td class="num">{{ entry.count|number_format(0, ',', '.') }}</td></tr>
+                        <tr><td><a href="{{ path('app_ship_info', {type: entry.type.value}) }}" title="Beschreibung und Werte mit deiner Forschung">{{ entry.type.label }}</a></td><td class="num">{{ entry.count|number_format(0, ',', '.') }}</td></tr>
                     {% endfor %}
                 </table>
             {% endif %}

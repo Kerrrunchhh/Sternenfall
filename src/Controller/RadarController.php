@@ -19,7 +19,7 @@ use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 class RadarController extends AbstractGameController
 {
     #[Route('/radar', name: 'app_radar', methods: ['GET'])]
-    public function index(Radar $radar, FleetRepository $fleets, Espionage $espionage): Response
+    public function index(Radar $radar, FleetRepository $fleets, Espionage $espionage, \App\Game\Diplomacy $diplomacy): Response
     {
         $planet = $this->currentPlanet();
         $player = $this->player();
@@ -41,9 +41,9 @@ class RadarController extends AbstractGameController
                 'stop' => implode(':', Radar::nextStop($fleet)),
                 'seen_by' => $radar->coveringPlanets($player, $g, $s),
                 'attacking' => $attacking,
-                'ally' => $player->isAllyOf($fleet->getOwner()),
+                'ally' => !$diplomacy->mayAttack($player, $fleet->getOwner()),
                 'can_intercept' => $attacking && \in_array($lifeForm, [LifeForm::Guardian, LifeForm::Pirate], true),
-                'can_raid' => $fleet->getCargo()->total() >= 1 && LifeForm::Pirate === $lifeForm,
+                'can_raid' => Radar::isRaidable($fleet) && LifeForm::Pirate === $lifeForm,
                 'intel' => $intel[$fleet->getId()] ?? null,
             ];
         }
@@ -62,7 +62,7 @@ class RadarController extends AbstractGameController
 
     #[Route('/radar/{id}/spy', name: 'app_radar_spy', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('radar', tokenKey: '_token')]
-    public function spy(Fleet $target): Response
+    public function spy(Fleet $target, Request $request): Response
     {
         $this->currentPlanet();
         try {
@@ -71,7 +71,7 @@ class RadarController extends AbstractGameController
             $this->addFlash('error', $e->getMessage());
         }
 
-        return $this->redirectToRoute('app_radar');
+        return $this->backTo($request, 'app_radar');
     }
 
     #[Route('/radar/{id}/{mission}', name: 'app_radar_hunt', requirements: ['id' => Requirement::DIGITS, 'mission' => 'intercept|raid'], methods: ['POST'])]

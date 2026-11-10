@@ -40,9 +40,10 @@
         <h3>Ladung</h3>
         <div class="coords">
             {% for type in enum_cases('App\\Game\\ResourceType') %}
-                <label>{{ type.label }} <input type="number" name="cargo[{{ type.value }}]" min="0" value="0"></label>
+                <label>{{ type.label }} <input type="number" name="cargo[{{ type.value }}]" min="0" value="0" data-cargo-input></label>
             {% endfor %}
         </div>
+        <p class="small cargo-room-info" data-cargo-room aria-live="polite"></p>
     {% endif %}
 {% endmacro %}
 
@@ -74,25 +75,110 @@
     {% if rows is empty %}
         <p class="panel muted">Du hast keine Flotten. Schiffe können nur als Flotte fliegen – bilde unten eine Flotte aus den Schiffen im Hangar.</p>
     {% else %}
+        {# Tabs: own fleets, or own plus those released by alliance mates. #}
+        {% if shared is not empty or player.alliance %}
+            <nav class="tabs fleet-tabs" data-fleet-tabs aria-label="Flotten">
+                <button type="button" data-tab="own" class="active">Eigene Flotten <small class="muted">{{ entries|length }}</small></button>
+                <button type="button" data-tab="alliance" title="Deine Flotten und die für dich freigegebenen Flotten deiner Allianz">Allianzflotten <small class="muted">{{ entries|length + shared|length }}</small></button>
+            </nav>
+        {% endif %}
+        {# Filters work in the browser: rules joined by AND/OR (AND binds stronger); they can be switched off. #}
+        <details class="panel fleet-filter" data-fleet-filter>
+            <summary>Filter <span class="muted small" data-filter-summary></span></summary>
+            {% if player.fleetFilters is not empty %}
+                <div class="saved-filters">
+                    {% for sf in player.fleetFilters %}
+                        <span class="filter-chip" style="--chip: {{ sf.color }}">
+                            <button type="button" class="link-button" data-apply-filter="{{ sf|json_encode }}" title="Filter anwenden">{{ sf.name }}</button>
+                            <form method="post" action="{{ path('app_fleet_filter_delete') }}" class="inline">
+                                <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
+                                <input type="hidden" name="name" value="{{ sf.name }}">
+                                <button type="submit" class="link-button filter-chip-delete" data-confirm="Filter „{{ sf.name }}“ löschen?" data-confirm-label="Löschen" aria-label="Filter {{ sf.name }} löschen">✕</button>
+                            </form>
+                        </span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            <div data-filter-rules></div>
+            <template data-filter-rule>
+                <div class="filter-rule">
+                    <select data-join aria-label="Verknüpfung"><option value="and">UND</option><option value="or">ODER</option></select>
+                    <select data-kind aria-label="Art der Regel">
+                        <option value="starts">Name beginnt mit</option>
+                        <option value="ends">Name endet mit</option>
+                        <option value="contains">Name enthält</option>
+                        <option value="ships">Enthält Schiffe</option>
+                    </select>
+                    <input type="text" data-text aria-label="Text" placeholder="Text">
+                    <span data-ship-fields>
+                        <select data-op aria-label="Vergleich"><option value="gte">mindestens</option><option value="lte">höchstens</option><option value="eq">genau</option></select>
+                        <input type="number" min="0" value="1" data-count class="short" aria-label="Anzahl">
+                        <span>×</span>
+                        <select data-ship aria-label="Schiffstyp">{% for type in ship_types|filter(t => not t.stationary and not t.probe) %}<option value="{{ type.value }}">{{ type.label }}</option>{% endfor %}</select>
+                    </span>
+                    <button type="button" class="link-button" data-remove aria-label="Regel entfernen">✕</button>
+                </div>
+            </template>
+            <div class="filter-actions">
+                <button type="button" class="btn btn-small btn-secondary" data-add-rule>+ Regel</button>
+                <label class="checkbox"><input type="checkbox" data-filter-enabled checked> Filter anwenden</label>
+                <button type="button" class="link-button" data-reset>Filter zurücksetzen</button>
+            </div>
+            <form method="post" action="{{ path('app_fleet_filter_save') }}" class="filter-save" data-filter-save>
+                <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
+                <input type="hidden" name="definition">
+                <input type="text" name="name" maxlength="30" required placeholder="Name für diesen Filter" aria-label="Filtername" data-filter-name>
+                <input type="color" name="color" value="#4fc3f7" aria-label="Farbe" data-filter-color>
+                <button type="submit" class="btn btn-small">Filter speichern</button>
+            </form>
+            <p class="muted small">„UND“ bindet stärker als „ODER“: <em>A UND B ODER C</em> heißt <em>(A UND B) ODER C</em>. „genau 0 × Falke“ findet Flotten ohne Falken. Ausgefilterte Flotten werden abgewählt. „Filter anwenden“ aus zeigt alle Flotten des Reiters, die Regeln bleiben erhalten.</p>
+        </details>
+
         <form method="post" action="{{ path('app_fleets_bulk') }}" class="panel fleet-bulk" data-fleet-bulk
               data-flight data-game-speed="{{ game_speed }}">
             <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
+            {% if squadrons is not empty %}
+                <div class="squadrons" aria-label="Geschwader">
+                    <span class="muted small">Geschwader:</span>
+                    {% for sq in squadrons %}
+                        {% set members = sq.controllableFleets %}
+                        <span class="squadron-chip">
+                            <button type="button" class="link-button" data-select-fleets="{{ members|map(f => f.id)|join(',') }}" title="Alle Flotten dieses Geschwaders auswählen: {{ members|map(f => f.label)|join(', ') }}">⚑ {{ sq.name }} <span class="muted small">({{ members|length }})</span></button>
+                            <button type="submit" class="link-button squadron-delete" formaction="{{ path('app_squadron_delete', {id: sq.id}) }}" formnovalidate
+                                    data-confirm="Geschwader „{{ sq.name }}“ auflösen? Die Flotten bleiben, wie sie sind." data-confirm-label="Auflösen" aria-label="Geschwader {{ sq.name }} auflösen">✕</button>
+                        </span>
+                    {% endfor %}
+                </div>
+            {% endif %}
             <table class="table fleet-table">
                 <tr class="table-head">
                     <td><input type="checkbox" data-select-all aria-label="Alle Flotten auswählen"></td>
                     <td>Flotte</td>
                     <td>Schiffe</td>
                 </tr>
-                {% for e in rows %}
+                {# One section per player: own fleets first, then those released by each alliance mate. #}
+                {% set owners = {} %}
+                {% for e in shared %}{% set owners = owners|merge({('u' ~ e.fleet.owner.id): e.fleet.owner}) %}{% endfor %}
+                {% set sections = [{owner: player, own: true, rows: entries}] %}
+                {% for o in owners|sort((a, b) => a.username|lower <=> b.username|lower) %}
+                    {% set sections = sections|merge([{owner: o, own: false, rows: shared|filter(e => e.fleet.owner.id == o.id)}]) %}
+                {% endfor %}
+                {% for section in sections|filter(sec => sec.rows is not empty) %}
+                    {% if shared is not empty %}
+                        <tr class="fleet-owner-head" data-owner-head>
+                            <td colspan="3">{{ section.own ? 'Deine Flotten' : 'Flotten von ' }}{% if not section.own %}{{ ui.player(section.owner) }}{% endif %} <span class="muted small">{{ section.rows|length }}</span></td>
+                        </tr>
+                    {% endif %}
+                {% for e in section.rows %}
                     {% set f = e.fleet %}
-                    <tr class="{{ f.moving ? 'moving' }}">
+                    <tr class="{{ f.moving ? 'moving' }}" data-fleet-row data-name="{{ f.label|lower }}" data-own="{{ e.own ? 1 : 0 }}" data-ships="{{ f.ships|json_encode }}">
                         <td>
                             <input type="checkbox" name="fleets[]" value="{{ f.id }}" id="pick-{{ f.id }}" aria-label="{{ f.label }} auswählen"
-                                   data-from="{{ f.galaxy }}:{{ f.system }}:{{ f.position }}" data-speed="{{ e.speed }}">
+                                   data-from="{{ f.galaxy }}:{{ f.system }}:{{ f.position }}" data-speed="{{ e.speed }}"
+                                   data-capacity="{{ e.capacity }}" data-load="{{ f.cargo.total|round(0, 'floor') }}">
                         </td>
                         <td>
                             <label for="pick-{{ f.id }}"><strong>{{ f.label }}</strong></label>
-                            {% if not e.own %}<span class="muted small">von {{ ui.player(f.owner) }}</span>{% endif %}
                             {% if e.own and (f.releasedToAlliance or f.releasedTo is not empty) %}<span class="release-chip small" title="{{ f.releasedTo|map(u => u.username)|join(', ') }}">freigegeben{{ f.releasedToAlliance ? ' (Allianz)' }}{{ f.releasedTo is not empty ? ' (' ~ f.releasedTo|length ~ ' einzeln)' }}</span>{% endif %}
                             <span class="muted small fleet-status">
                                 {% if f.idle %}
@@ -110,13 +196,17 @@
                             </span>
                         </td>
                         <td class="small">
-                            {% for s in f.shipList %}{{ s.count|number_format(0, ',', '.') }} × {{ s.type.label }}{{ not loop.last ? ', ' }}{% endfor %}
-                            {% if not f.cargo.empty %}
-                                <br><span class="muted">Ladung {{ f.cargo.total|number_format(0, ',', '.') }}{% if e.capacity %} / {{ e.capacity|number_format(0, ',', '.') }}{% endif %}:
+                            {% for s in f.shipList %}{{ s.count|number_format(0, ',', '.') }} × {{ s.type.label }}{{ not loop.last ? ', ' }}{% else %}<span class="muted">leer – Sammelpunkt, ohne Flugzeit verlegbar</span>{% endfor %}
+                            {% if e.capacity > 0 %}
+                                <br><span class="muted cargo-room" title="Frachtraum: geladen / Kapazität">📦 {{ f.cargo.total|number_format(0, ',', '.') }} / {{ e.capacity|number_format(0, ',', '.') }}{% if not f.cargo.empty %}:
+                                {% for type in enum_cases('App\\Game\\ResourceType') %}{% if f.cargo.get(type) > 0 %}{{ type.label }} {{ f.cargo.get(type)|number_format(0, ',', '.') }} {% endif %}{% endfor %}{% endif %}</span>
+                            {% elseif not f.cargo.empty %}
+                                <br><span class="muted">Ladung {{ f.cargo.total|number_format(0, ',', '.') }}:
                                 {% for type in enum_cases('App\\Game\\ResourceType') %}{% if f.cargo.get(type) > 0 %}{{ type.label }} {{ f.cargo.get(type)|number_format(0, ',', '.') }} {% endif %}{% endfor %}</span>
                             {% endif %}
                         </td>
                     </tr>
+                {% endfor %}
                 {% endfor %}
             </table>
 
@@ -144,7 +234,28 @@
 
             <div class="bulk-panel" data-panel="send" hidden>
                 {{ _self.target_inputs(target, missions, true, bookmarks) }}
-                <p class="muted small">Jede ausgewählte Flotte fliegt einzeln los. Treibstoff und Proviant zahlt der Planet, an dem sie steht, sonst ihre eigene Ladung. Ladung kann nur eine einzelne Flotte mitnehmen.</p>
+                <div data-panel="send:attack">
+                    <label>Verband
+                        <select name="join" aria-label="Angriff, dem die Flotten beitreten">
+                            <option value="">Neuer Angriff auf die Koordinaten oben</option>
+                            {% for lead in joinable_attacks %}
+                                <option value="{{ lead.id }}">Dazuschicken: {{ lead.label }}{% if lead.owner.id != player.id %} ({{ lead.owner.username }}){% endif %} auf [{{ lead.targetCoordinates }}], Ankunft {{ lead.arriveAt|date('d.m. H:i:s') }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <p class="muted small">Wählst du mehrere Flotten aus – auch solche, die Allianzmitglieder für dich freigegeben haben –, greifen sie als Verband an und kommen gemeinsam an (mit der langsamsten). Weitere Flotten kannst du einem laufenden Angriff, den du führst, dazuschicken, wenn sie rechtzeitig ankommen. Die Beute wird nach freiem Frachtraum geteilt; die Invasionsschiffe aller Flotten zählen zusammen.
+                    Mindestregel: Die Flotten jedes Spielers im Angriff müssen zusammen mindestens 1 % seiner gesamten Flottenstärke oder 10 % seiner Schiffe einer Klasse sein.</p>
+                </div>
+                <div data-panel="send:pickup">
+                    <h3>Abholen <span class="muted small">– je Flotte</span></h3>
+                    <div class="coords">
+                        {% for type in enum_cases('App\\Game\\ResourceType') %}
+                            <label>{{ type.label }} <input type="number" name="pickup[{{ type.value }}]" min="0" value="0"></label>
+                        {% endfor %}
+                    </div>
+                    <p class="muted small">Jede ausgewählte Flotte lädt am Ziel diese Mengen ein – höchstens, was dort im Lager liegt und in ihren Frachtraum passt – und bringt sie ins Lager ihres Startplaneten. Oben eingetragene Ladung liefert sie vorher am Ziel ab.</p>
+                </div>
+                <p class="muted small">Treibstoff und Proviant zahlt der Planet, an dem eine Flotte steht, sonst ihre eigene Ladung. Mehrere Flotten zum Angreifen oder als Transport (auch mit Kriegsflotten als Geleitschutz) fliegen gemeinsam und kommen zusammen an; die Ladung wird auf die Flotten mit Frachtraum verteilt. Bei anderen Aufträgen fliegt jede Flotte einzeln.</p>
             </div>
             <div class="bulk-panel" data-panel="hover" hidden>
                 {% if hover_sources is empty %}
@@ -173,6 +284,7 @@
                 <div class="bulk-panel" data-panel="split drop" data-for-fleet="{{ f.id }}" hidden>
                     <p class="muted small" data-panel="split">Die gewählten Schiffe bilden eine neue Flotte am selben Ort. Die Ladung bleibt in {{ f.label }}.</p>
                     <div data-panel="split">{{ _self.ship_inputs(f.shipList, 'split[' ~ f.id ~ ']') }}</div>
+                    <p class="muted small" data-panel="drop">{{ e.base ? 'Die gewählten Schiffe kommen in den Hangar von ' ~ e.base.name ~ '.' : 'Die Flotte steht nicht an einem eigenen Planeten: Die gewählten Schiffe warten als neue Flotte am selben Ort.' }}</p>
                     <div data-panel="drop">{{ _self.ship_inputs(f.shipList, 'drop[' ~ f.id ~ ']') }}</div>
                 </div>
                 {% if e.base %}
@@ -187,6 +299,15 @@
             <div class="bulk-panel" data-panel="load" data-no-hangar hidden>
                 <p class="muted small">Schiffe aufnehmen geht nur, wenn die Flotte an einem eigenen Planeten wartet.</p>
             </div>
+            <div class="bulk-panel" data-panel="squadron_add squadron_remove" hidden>
+                <label>Geschwader
+                    <select name="squadron">
+                        <option value="" data-panel="squadron_add">– neues Geschwader –</option>
+                        {% for sq in squadrons %}<option value="{{ sq.id }}">{{ sq.name }}</option>{% endfor %}
+                    </select>
+                </label>
+                <label data-panel="squadron_add">Name des neuen Geschwaders <input type="text" name="squadron_name" maxlength="40" placeholder="z. B. Angriffsverband Nord"></label>
+            </div>
             {% if allies is not empty %}
                 <div class="bulk-panel" data-panel="release_member revoke_member" hidden>
                     <label>Mitglied
@@ -196,6 +317,7 @@
             {% endif %}
 
             <button class="btn" type="submit" id="fleet-bulk-submit">Ausführen</button>
+            <span class="muted small submit-hint" data-submit-hint></span>
         </form>
     {% endif %}
 
@@ -207,15 +329,37 @@
             <p class="muted">Keine Schiffe im Hangar. <a href="{{ path('app_shipyard') }}">Zur Werft</a></p>
         {% else %}
             <p class="muted small">Schiffe im Hangar können nicht fliegen. Bilde eine Flotte oder hole sie mit „Schiffe zusammenziehen“ in eine bestehende Flotte.</p>
-            <details open>
-                <summary>Neue Flotte bilden</summary>
-                <form method="post" action="{{ path('app_fleets_create') }}" class="fleet-form" id="fleet-form">
-                    <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
-                    <label>Name <input type="text" name="name" maxlength="40" required placeholder="z. B. Heimatverteidigung"></label>
+        {% endif %}
+        <details {{ hangar is not empty ? 'open' }} data-remember-open="fleet-create">
+            <summary>Neue Flotte bilden</summary>
+            <form method="post" action="{{ path('app_fleets_create') }}" class="fleet-form" id="fleet-form">
+                <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
+                <label>Name <input type="text" name="name" maxlength="40" required placeholder="z. B. Heimatverteidigung"></label>
+                {% if hangar is not empty %}
                     {{ _self.ship_inputs(hangar) }}
                     <p class="muted small">Ladekapazität: <span id="cargo-capacity">0</span></p>
-                    <button class="btn btn-small" type="submit" id="fleet-create">Flotte bilden</button>
-                </form>
+                {% endif %}
+                <p class="muted small">Ohne Schiffe entsteht eine leere Flotte als Sammelpunkt: Sie lässt sich mit „Stationieren“ oder „Springen“ ohne Flugzeit verlegen. Danach ziehst du Schiffe zu ihr zusammen – solange welche unterwegs sind, bleibt sie, wo sie ist.</p>
+                <button class="btn btn-small" type="submit" id="fleet-create">Flotte bilden</button>
+            </form>
+        </details>
+        {% if hangar is not empty %}
+            <details {{ here_fleets is not empty ? 'open' }} data-remember-open="fleet-add">
+                <summary>Zu einer bestehenden Flotte hinzufügen</summary>
+                {% if here_fleets is empty %}
+                    <p class="muted small">An {{ planet.name }} wartet keine deiner Flotten. Hinzufügen geht nur zu einer Flotte, die hier steht – oder ziehe Schiffe von überall mit „Schiffe zusammenziehen“ zu einer Flotte.</p>
+                {% else %}
+                    <form method="post" action="{{ path('app_fleets_add_from_hangar') }}" class="fleet-form" id="fleet-add-form">
+                        <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
+                        <label>Flotte
+                            <select name="fleet" required>
+                                {% for f in here_fleets %}<option value="{{ f.id }}">{{ f.label }}{% if f.shipList is not empty %} ({{ f.shipList|map(s => s.count ~ '× ' ~ s.type.label)|join(', ') }}){% else %} (leer){% endif %}</option>{% endfor %}
+                            </select>
+                        </label>
+                        {{ _self.ship_inputs(hangar) }}
+                        <button class="btn btn-small" type="submit" id="fleet-add">Zur Flotte hinzufügen</button>
+                    </form>
+                {% endif %}
             </details>
         {% endif %}
     </section>

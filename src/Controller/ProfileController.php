@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Planet;
 use App\Entity\User;
 use App\Game\ProfileService;
+use App\Repository\ContactRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -15,7 +16,7 @@ class ProfileController extends AbstractGameController
 {
     /** Anyone's profile; the own one can be edited here. */
     #[Route('/player/{id}', name: 'app_player', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
-    public function show(User $user): Response
+    public function show(User $user, ContactRepository $contacts): Response
     {
         $planet = $this->currentPlanet();
 
@@ -27,6 +28,7 @@ class ProfileController extends AbstractGameController
             'listed_planets' => ProfileService::listedPlanets($user, $own),
             'hidden_count' => \count(ProfileService::hiddenPlanets($user)),
             'max_hidden' => ProfileService::MAX_HIDDEN_PLANETS,
+            'contact' => $own ? null : $contacts->findBetween($this->player(), $user),
         ]);
     }
 

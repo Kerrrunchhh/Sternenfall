@@ -1,0 +1,110 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}Diplomatie – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h1>Diplomatie</h1>
+    <p class="muted small">
+        <strong>Bündnis</strong>: Schiffe dürfen auf allen Planeten der anderen Allianz landen und bleiben; ihr greift euch nicht an.
+        <strong>Nichtangriffspakt</strong>: weder Planeten noch Schiffe der anderen Allianz sind angreifbar.
+        <strong>Krieg</strong>: invadierte Planeten der Gegner belegen nur 2 statt 3 Planetenplätze.
+        Vorschlagen und abstimmen dürfen Gründer und Kommandanten; es entscheidet die Mehrheit. Bündnis und Nichtangriffspakt muss danach auch die andere Allianz annehmen – Krieg wird einseitig erklärt.
+        Bündnis und Pakt beendet eine Seite allein; Frieden müssen beide wollen.
+    </p>
+
+    {% if own is null %}
+        <p class="panel muted">Diplomatie gibt es nur zwischen Allianzen. <a href="{{ path('app_alliance') }}">Tritt einer bei oder gründe eine.</a></p>
+    {% else %}
+        <section class="panel">
+            <h2>Beziehungen von {{ own.name }}</h2>
+            {% if relations is empty %}
+                <p class="muted">Keine Verträge und keine Kriege.</p>
+            {% else %}
+                <table class="table">
+                    {% for r in relations %}
+                        {% set other = r.other(own) %}
+                        <tr class="relation-{{ r.kind.value }}">
+                            <td>{{ r.kind.icon }} <strong>{{ r.kind.label }}</strong></td>
+                            <td>mit <a href="{{ path('app_alliance_public', {id: other.id}) }}">{{ other.name }}</a> <span class="muted">[{{ other.tag }}]</span> <span class="muted small">{{ other.type }}</span></td>
+                            <td class="muted small">seit {{ r.since|date('d.m.Y') }}</td>
+                            <td class="num">
+                                {% if can_decide %}
+                                    <details class="relation-end">
+                                        <summary class="btn btn-small btn-secondary">{{ r.kind.value == 'war' ? 'Frieden vorschlagen' : 'Beenden' }}</summary>
+                                        <form method="post" action="{{ path('app_diplomacy_end', {id: r.id}) }}" class="board-form">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('diplomacy') }}">
+                                            <textarea name="message" rows="3" maxlength="{{ constant('App\\Entity\\DiplomacyProposal::MAX_MESSAGE') }}" aria-label="Nachricht" placeholder="Nachricht an {{ other.name }} (optional)"></textarea>
+                                            <button class="btn btn-small" type="submit">{{ r.kind.value == 'war' ? 'Frieden zur Abstimmung stellen' : 'Ende zur Abstimmung stellen' }}</button>
+                                        </form>
+                                    </details>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            {% endif %}
+        </section>
+
+        <section class="panel">
+            <h2>Abstimmungen</h2>
+            {% if proposals is empty %}
+                <p class="muted">Keine offenen Abstimmungen.</p>
+            {% else %}
+                {% for p in proposals %}
+                    {% set voting = p.votingAlliance %}
+                    {% set ours = voting.id == own.id %}
+                    {% set votes = p.votes %}
+                    {% set yes = votes|filter(v => v)|length %}
+                    {% set no = votes|length - yes %}
+                    {% set needed = (voting.members|filter(m => m.allianceRank.value in ['founder', 'commander'])|length // 2) + 1 %}
+                    <div class="proposal">
+                        <div>
+                            <strong>{{ p.kind.icon }} {{ p.title }}</strong>
+                            {% if p.proposer.id == own.id %}mit {{ p.target.name }} [{{ p.target.tag }}]{% else %}vorgeschlagen von {{ p.proposer.name }} [{{ p.proposer.tag }}]{% endif %}
+                            {% if p.message %}<blockquote class="proposal-message">{{ p.message|link_coordinates }}</blockquote>{% endif %}
+                            <div class="muted small">
+                                {% if ours %}Eure Führung stimmt ab{% else %}Wartet auf {{ voting.name }}{% endif %}
+                                · {{ yes }} Ja, {{ no }} Nein, {{ needed }} Ja nötig
+                                {% if p.createdBy %}· eingereicht von {{ p.createdBy.username }}{% endif %} am {{ p.createdAt|date('d.m.Y H:i') }}
+                            </div>
+                        </div>
+                        {% if ours and can_decide %}
+                            {% set mine = votes[player.id ~ ''] ?? null %}
+                            <form method="post" action="{{ path('app_diplomacy_vote', {id: p.id}) }}" class="contact-actions">
+                                <input type="hidden" name="_token" value="{{ csrf_token('diplomacy') }}">
+                                <button class="btn btn-small {{ mine is same as(true) ? '' : 'btn-secondary' }}" type="submit" name="vote" value="yes">Ja{{ mine is same as(true) ? ' ✓' }}</button>
+                                <button class="btn btn-small {{ mine is same as(false) ? 'btn-danger' : 'btn-secondary' }}" type="submit" name="vote" value="no">Nein{{ mine is same as(false) ? ' ✓' }}</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </section>
+
+        {% if can_decide %}
+            <section class="panel">
+                <h2>Neuer Vorschlag</h2>
+                {% if others is empty %}
+                    <p class="muted">Es gibt noch keine anderen Allianzen.</p>
+                {% else %}
+                    <form method="post" action="{{ path('app_diplomacy_propose') }}" class="inline-action diplomacy-form">
+                        <input type="hidden" name="_token" value="{{ csrf_token('diplomacy') }}">
+                        <select name="kind" aria-label="Vertragsart">
+                            {% for k in kinds %}<option value="{{ k.value }}">{{ k.icon }} {{ k.label }}</option>{% endfor %}
+                        </select>
+                        <span>mit</span>
+                        <select name="alliance" aria-label="Allianz">
+                            {% for a in others %}<option value="{{ a.id }}">{{ a.name }} [{{ a.tag }}] – {{ a.type }}</option>{% endfor %}
+                        </select>
+                        <textarea name="message" rows="4" maxlength="{{ constant('App\\Entity\\DiplomacyProposal::MAX_MESSAGE') }}" aria-label="Nachricht an die andere Allianz" placeholder="Nachricht: die Kriegserklärung, das Bündnisangebot, Bedingungen … (geht an beide Allianzen)"></textarea>
+                        <button class="btn btn-small" type="submit" id="diplomacy-propose">Zur Abstimmung stellen</button>
+                    </form>
+                    <p class="muted small">Abstimmungsberechtigt in deiner Allianz: {{ voters|map(v => v.username)|join(', ') }}.</p>
+                {% endif %}
+            </section>
+        {% else %}
+            <p class="muted small">Vorschläge machen und abstimmen dürfen nur Gründer und Kommandanten.</p>
+        {% endif %}
+    {% endif %}
+{% endblock %}

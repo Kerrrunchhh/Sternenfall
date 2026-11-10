@@ -2,8 +2,11 @@
 
 namespace App\Twig;
 
+use App\Entity\User;
+use App\Game\Scoring;
 use App\Game\TradeDeal;
 use Twig\Attribute\AsTwigFilter;
+use Twig\Attribute\AsTwigFunction;
 
 final class GameExtension
 {
@@ -12,6 +15,13 @@ final class GameExtension
     public static function goodLabel(string $good): string
     {
         return TradeDeal::label($good);
+    }
+
+    /** Points of a player: how far his planets are built up. */
+    #[AsTwigFunction('player_points')]
+    public static function playerPoints(User $player): int
+    {
+        return Scoring::points($player);
     }
 
     /** Formats seconds as e.g. "1d 02:03:04" or "02:03". */

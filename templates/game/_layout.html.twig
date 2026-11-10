@@ -68,15 +68,17 @@
             <div class="planet-list">
                 {% for p in player.planets %}
                     {# One line per planet: type, name, coordinates, what is going on. #}
-                    <a href="{{ path('app_planet_select', {id: p.id, to: route}) }}" class="planet-badge {{ p.id == planet.id ? 'current' }}" {{ p.id == planet.id ? 'aria-current="true"' }} title="{{ p.name }} [{{ p.coordinates }}] – {{ p.type.label }}">
-                        <span class="pb-icon" aria-hidden="true">{{ p.type.icon }}</span>
+                    <a href="{{ path('app_planet_select', {id: p.id, to: route}) }}" class="planet-badge {{ p.id == planet.id ? 'current' }} {{ attacked_planets[p.id] is defined ? 'under-attack' }}" {{ p.id == planet.id ? 'aria-current="true"' }} title="{{ p.name }} [{{ p.coordinates }}] – {{ p.fused ? 'Fusion aus ' ~ p.fusionSize ~ ' Planeten (zählt als blauer Planet, Rohstoffe ×1,5)' : p.type.label }}">
+                        <span class="pb-icon {{ p.fused ? 'pb-fusion' }}" aria-hidden="true">{{ p.fused ? '🔗' : p.type.icon }}</span>
                         <span class="pb-name">{{ p.name }}</span>
                         <span class="pb-coords">{{ p.coordinates }}</span>
                         <span class="planet-status">
+                            {%- if attacked_planets[p.id] is defined %}<span class="attack-alarm" title="Wird angegriffen!">🚨</span>{% endif -%}
                             {%- if p.constructing %}<span title="Gebäude im Bau">🏗</span>{% endif -%}
                             {%- if p.shipyardQueue is not empty %}<span title="Werft arbeitet">🚀</span>{% endif -%}
                             {%- if p.defenseQueue is not empty %}<span title="Verteidigung im Bau">🛡</span>{% endif -%}
                             {%- if p.integrating(now) %}<span title="Invadiert, Übergang läuft">⏳</span>{% endif -%}
+                            {%- if p.beingAbandoned %}<span title="Wird am {{ p.abandonAt|date('d.m. H:i') }} verlassen">🏳</span>{% endif -%}
                         </span>
                     </a>
                 {% endfor %}
@@ -109,10 +111,20 @@
             <a href="{{ path('app_fusion') }}" class="{{ route == 'app_fusion' ? 'active' }}">Fusion</a>
             <a href="{{ path('app_trade') }}" class="{{ route in ['app_trade', 'app_trade_fusionators', 'app_trade_post'] ? 'active' }}">Handel</a>
             <a href="{{ path('app_messages') }}" class="{{ route == 'app_messages' ? 'active' }}">
-                Nachrichten{% if unread_messages > 0 %} <span class="badge">{{ unread_messages }}</span>{% endif %}
+                Nachrichten <span class="badge" data-unread-badge {{ unread_messages > 0 ? '' : 'hidden' }}>{{ unread_messages }}</span>
             </a>
+            <a href="{{ path('app_mail') }}" class="{{ route starts with 'app_mail' ? 'active' }}" title="Nachrichten von und an Mitspieler, Schnellkontakte">
+                Post{% if unread_mail + contact_requests > 0 %} <span class="badge">{{ unread_mail + contact_requests }}</span>{% endif %}
+            </a>
+            <a href="{{ path('app_tickers') }}" class="{{ route in ['app_tickers', 'app_ticker'] ? 'active' }}" title="Langstreckenticker: Kanäle zwischen Spielern">
+                Ticker{% if ticker_invitations > 0 %} <span class="badge">{{ ticker_invitations }}</span>{% endif %}
+            </a>
+            <a href="{{ path('app_notes') }}" class="{{ route == 'app_notes' ? 'active' }}">Notizblock</a>
+            <a href="{{ path('app_highscores') }}" class="{{ route == 'app_highscores' ? 'active' }}">Highscores</a>
+            <a href="{{ path('app_newspaper') }}" class="{{ route == 'app_newspaper' ? 'active' }}" title="Alle Kampfberichte des Universums, 24 Stunden später">Zeitung</a>
             <a href="{{ path('app_lifeform') }}" class="{{ route == 'app_lifeform' ? 'active' }}">Lebensform</a>
             <a href="{{ path('app_alliance') }}" class="{{ route == 'app_alliance' ? 'active' }}">{{ player.alliance ? player.alliance.type : 'Allianz' }}</a>
+            <a href="{{ path('app_diplomacy') }}" class="{{ route == 'app_diplomacy' ? 'active' }}">Diplomatie{% if diplomacy_votes > 0 %} <span class="badge" title="Offene Abstimmungen">{{ diplomacy_votes }}</span>{% endif %}</a>
             </nav>
 
             <h2 class="sidebar-title">Schwarzes Brett{% if player.alliance %} <small>[{{ player.alliance.tag }}]</small>{% endif %}</h2>

@@ -88,12 +88,43 @@ class EspionageTest extends TestCase
         $probe = new Fleet(new User('spion'), 'Sonde', 1, 1, 1, ['scout' => 1]);
         $probe->depart(FleetMission::Spy, 1, 1, 7, $this->now, 60);
 
-        $owner->setResearchLevel(ResearchType::Espionage, 19);
+        $owner->setResearchLevel(ResearchType::Espionage, 49);
         self::assertFalse($this->espionage->seesProbe($owner, $probe, $target));
 
-        $owner->setResearchLevel(ResearchType::Espionage, 20);
+        $owner->setResearchLevel(ResearchType::Espionage, 50);
         self::assertTrue($this->espionage->seesProbe($owner, $probe, $target));
         self::assertFalse($this->espionage->seesProbe(new User('dritter'), $probe, $target), 'only the owner of the target');
+    }
+
+    public function testTopEspionageNoticesProbesChasingOwnFleets(): void
+    {
+        $owner = new User('besitzer');
+        $owner->setResearchLevel(ResearchType::Espionage, 50);
+        $prey = new Fleet($owner, 'Beute', 1, 1, 1, ['freighter' => 1]);
+        $probe = new Fleet(new User('spion'), 'Sonde', 1, 1, 1, ['scout' => 1]);
+        $probe->depart(FleetMission::Spy, 1, 2, 3, $this->now, 60, $prey);
+
+        self::assertTrue($this->espionage->seesProbe($owner, $probe, null));
+        self::assertFalse($this->espionage->seesProbe(new User('dritter'), $probe, null));
+    }
+
+    public function testSpiedPlayerLearnsMoreWithHigherEspionage(): void
+    {
+        $victim = new User('opfer');
+        $spy = new User('Kraehe');
+
+        $victim->setResearchLevel(ResearchType::Espionage, 24);
+        self::assertNull($this->espionage->spiedNotice($victim, $spy, 'Dein Planet Heim'));
+
+        $victim->setResearchLevel(ResearchType::Espionage, 25);
+        [$subject, $text] = $this->espionage->spiedNotice($victim, $spy, 'Dein Planet Heim');
+        self::assertSame('Ausspioniert', $subject);
+        self::assertStringNotContainsString('Kraehe', $text);
+
+        $victim->setResearchLevel(ResearchType::Espionage, 40);
+        [$subject, $text] = $this->espionage->spiedNotice($victim, $spy, 'Dein Planet Heim');
+        self::assertSame('Ausspioniert von Kraehe', $subject);
+        self::assertStringContainsString('von Kraehe', $text);
     }
 
     public function testHoveringFleetsNeverShowOnRadar(): void
@@ -102,5 +133,38 @@ class EspionageTest extends TestCase
         $fleet->depart(FleetMission::Hover, 1, 1, 1, $this->now, 600);
 
         self::assertFalse(Radar::emits($fleet), 'even with cargo on board');
+    }
+
+    public function testSpyReportNamesTheDebrisFieldAndRemembersIt(): void
+    {
+        $field = new \App\Entity\DebrisField(2, 50, 9);
+        $field->add(new \App\Game\Resources(iron: 1200, titanium: 800));
+        $debris = $this->createStub(\App\Repository\DebrisFieldRepository::class);
+        $debris->method('findAt')->willReturn($field);
+        $intelRepo = $this->createStub(EntityRepository::class);
+        $intelRepo->method('findOneBy')->willReturn(null);
+        $persisted = [];
+        $em = $this->createStub(EntityManagerInterface::class);
+        $em->method('getRepository')->willReturn($intelRepo);
+        $em->method('persist')->willReturnCallback(function (object $o) use (&$persisted): void { $persisted[] = $o; });
+        $espionage = new Espionage($em, $this->createStub(FleetRepository::class), new MockClock($this->now), $debris);
+
+        $spy = new User('spion');
+        $spy->setResearchLevel(ResearchType::Espionage, 1);
+        $report = $espionage->report($spy, 2, 50, 9, null);
+
+        self::assertStringContainsString('Trümmerfeld: 1.200 Eisen, 800 Titan', $report);
+        $intel = array_values(array_filter($persisted, static fn (object $o): bool => $o instanceof \App\Entity\PlanetIntel));
+        self::assertTrue($intel[0]->hasDebris(), 'the spy now knows the field');
+        self::assertSame(1200.0, $intel[0]->getDebrisIron());
+    }
+
+    public function testCollectedDebrisIsForgotten(): void
+    {
+        $intel = new \App\Entity\PlanetIntel(new User('x'), 1, 1, 1, Universe::planetType(1, 1, 1), $this->now);
+        $intel->seeDebris(500, 100, $this->now);
+        self::assertTrue($intel->hasDebris());
+        $intel->seeDebris(0, 0, $this->now);
+        self::assertFalse($intel->hasDebris());
     }
 }

@@ -42,7 +42,7 @@ enum LifeForm: string
         return match ($this) {
             self::Guardian => 'Orden',
             self::Pirate => 'Syndikat',
-            self::Trader => 'Handelsorganisation',
+            self::Trader => 'Handelsgilde',
             self::Settler => 'Allianz',
         };
     }

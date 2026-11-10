@@ -111,6 +111,64 @@ final readonly class PlanetService
         });
     }
 
+    /** How long it takes until an abandoned planet is really given up. */
+    public const string ABANDON_DELAY = '+48 hours';
+
+    /**
+     * Starts abandoning a planet: after 48 hours it is gone with everything on it –
+     * buildings, resources and the ships in its hangar. Fleets waiting there stay at the
+     * now free slot. The home planet can't be abandoned.
+     */
+    public function abandon(Planet $planet, User $actor): \DateTimeImmutable
+    {
+        $at = null;
+        $this->locked($planet, function (Planet $planet, \DateTimeImmutable $now) use ($actor, &$at): void {
+            if (!$planet->getOwner()->isSameAs($actor)) {
+                throw new GameException('Du kannst nur deine eigenen Planeten verlassen.');
+            }
+            if ($planet->isHomeworld()) {
+                throw new GameException('Den Heimatplaneten kannst du nicht verlassen.');
+            }
+            if ($planet->isBeingAbandoned()) {
+                throw new GameException(\sprintf('%s wird bereits verlassen.', $planet->getName()));
+            }
+            $at = $now->modify(self::ABANDON_DELAY);
+            $planet->setAbandonAt($at);
+        });
+
+        return $at;
+    }
+
+    public function stayOn(Planet $planet, User $actor): void
+    {
+        $this->locked($planet, function (Planet $planet) use ($actor): void {
+            if (!$planet->getOwner()->isSameAs($actor) || !$planet->isBeingAbandoned()) {
+                throw new GameException('Dieser Planet wird nicht verlassen.');
+            }
+            $planet->setAbandonAt(null);
+        });
+    }
+
+    /** Gives up a planet whose 48 hours are over (caller flushes). Returns false if it is not due. */
+    public function giveUp(Planet $planet): bool
+    {
+        $done = false;
+        $this->locked($planet, function (Planet $planet, \DateTimeImmutable $now) use (&$done): void {
+            if (null === $planet->getAbandonAt() || $planet->getAbandonAt() > $now) {
+                return;
+            }
+            $owner = $planet->getOwner();
+            if ($owner->isResearching() && $owner->getResearchPlanet() === $planet) {
+                $owner->clearResearch();
+            }
+            $owner->getPlanets()->removeElement($planet);
+            $this->em->remove($planet);
+            $done = true;
+        });
+
+        return $done;
+    }
+
     /** Abort the running research and refund its full cost to the given planet. */
     public function cancelResearch(Planet $planet): void
     {

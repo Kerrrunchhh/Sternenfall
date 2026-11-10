@@ -48,14 +48,36 @@ final readonly class Radar
         ));
     }
 
-    /** Fleets that give themselves away: attackers and resource transports. */
+    /**
+     * Fleets that give themselves away: attackers, resource transports and trade fleets
+     * on their way back from a transport, even empty.
+     */
     public static function emits(Fleet $fleet): bool
     {
         if (!$fleet->isMoving() || \in_array($fleet->getMission(), [FleetMission::Gather, FleetMission::Hover], true)) {
             return false;
         }
+        // Trade fleets on their way back, and pickups both ways, fly openly.
+        if (self::isReturningTrader($fleet) || FleetMission::Pickup === $fleet->getMission()) {
+            return true;
+        }
 
         return (FleetMission::Attack === $fleet->getMission() && !$fleet->isReturning()) || $fleet->getCargo()->total() >= 1;
+    }
+
+    /**
+     * Pirates may raid fleets carrying resources, trade fleets flying back from a
+     * transport and pickups both ways, even empty: there is no loot then, but a bomber
+     * can destroy the ships.
+     */
+    public static function isRaidable(Fleet $fleet): bool
+    {
+        return $fleet->isMoving() && ($fleet->getCargo()->total() >= 1 || self::isReturningTrader($fleet) || FleetMission::Pickup === $fleet->getMission());
+    }
+
+    private static function isReturningTrader(Fleet $fleet): bool
+    {
+        return $fleet->isReturning() && \in_array($fleet->getMission(), [FleetMission::Transport, FleetMission::Trade, FleetMission::Supply, FleetMission::Pickup], true);
     }
 
     /** Coordinates of the next place the fleet will reach. @return array{int, int, int} */
@@ -83,6 +105,19 @@ final readonly class Radar
         [$galaxy, $system] = self::nextStop($fleet);
 
         return $this->covers($player, $galaxy, $system);
+    }
+
+    /**
+     * Attacks on the player's planets that his radar sees, earliest impact first.
+     *
+     * @return list<Fleet>
+     */
+    public function incomingAttacks(User $player): array
+    {
+        return array_values(array_filter(
+            $this->fleets->findIncoming($player),
+            fn (Fleet $fleet): bool => FleetMission::Attack === $fleet->getMission() && !$fleet->isReturning() && $this->sees($player, $fleet),
+        ));
     }
 
     /** @return list<Fleet> foreign fleets on the player's radar */

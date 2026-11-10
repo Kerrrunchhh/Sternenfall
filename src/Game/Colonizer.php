@@ -80,7 +80,8 @@ final readonly class Colonizer
      */
     public function foundColony(User $user, int $galaxy, int $system, int $position, float $settlers, Resources $cargo): Planet
     {
-        $planet = new Planet($user, 'Kolonie', $galaxy, $system, $position, \DateTimeImmutable::createFromInterface($this->clock->now()));
+        $name = PlanetNames::random(array_map(static fn (Planet $p): string => $p->getName(), $user->getPlanets()->toArray()));
+        $planet = new Planet($user, $name, $galaxy, $system, $position, \DateTimeImmutable::createFromInterface($this->clock->now()));
         $planet->setResources($cargo);
         $planet->setBuildingLevel(BuildingType::BioCell, 1);
         $planet->setPopulation($settlers);

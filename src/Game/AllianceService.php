@@ -73,6 +73,7 @@ final readonly class AllianceService
             if (null !== $user->getAlliance()) {
                 throw new GameException(\sprintf('%s ist bereits in einer Allianz.', $user->getUsername()));
             }
+            $this->assertSameLifeForm($alliance, $user);
 
             $existing = $this->alliances->findRequest($alliance, $user);
             if (null !== $existing && !$existing->isInvitation()) {
@@ -98,6 +99,7 @@ final readonly class AllianceService
             if (null !== $user->getAlliance()) {
                 throw new GameException('Du bist bereits in einer Allianz.');
             }
+            $this->assertSameLifeForm($alliance, $user);
             $existing = $this->alliances->findRequest($alliance, $user);
             if (null !== $existing && $existing->isInvitation()) {
                 $this->admit($existing);
@@ -341,11 +343,23 @@ final readonly class AllianceService
             $this->em->flush();
             throw new GameException(\sprintf('%s ist inzwischen in einer anderen Allianz.', $user->getUsername()));
         }
+        if (!$alliance->admits($user)) {
+            $this->em->remove($request);
+            $this->em->flush();
+            throw new GameException(\sprintf('%s gehört inzwischen zu den %s – in „%s“ sind nur %s.', $user->getUsername(), $user->getLifeForm()->label(), $alliance->getName(), $alliance->getLifeForm()->label()));
+        }
 
         $user->joinAlliance($alliance, AllianceRank::Prospect);
         $this->removeRequestsOf($user);
         $this->inbox->send($user, 'Willkommen in '.$alliance->getName(), \sprintf('Du bist „%s“ [%s] (%s) als Anwärter beigetreten.', $alliance->getName(), $alliance->getTag(), $alliance->getType()));
         $this->em->flush();
+    }
+
+    private function assertSameLifeForm(Alliance $alliance, User $user): void
+    {
+        if (!$alliance->admits($user)) {
+            throw new GameException(\sprintf('In „%s“ (%s) sind nur %s. %s gehört zu den %s.', $alliance->getName(), $alliance->getType(), $alliance->getLifeForm()->label(), $user->getUsername(), $user->getLifeForm()->label()));
+        }
     }
 
     /** Leaving ends every fleet release from and to this player. */

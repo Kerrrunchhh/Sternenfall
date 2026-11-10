@@ -33,6 +33,8 @@ security:
     # Note: Only the *first* matching rule is applied
     access_control:
         - { path: ^/(login|register)?$, roles: PUBLIC_ACCESS }
+        # Shared combat reports can be read without logging in.
+        - { path: ^/kampfbericht/, roles: PUBLIC_ACCESS }
         - { path: ^/, roles: ROLE_USER }
 
 when@test:

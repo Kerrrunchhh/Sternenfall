@@ -48,9 +48,30 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $lifeFormSince;
 
+    /** Last request of the player (online status for alliance mates and quick contacts). */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $lastSeenAt = null;
+
+    /** Start of the current online session (how long the player has been online). */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $onlineSince = null;
+
     /** Player-wide currency, earned by the population of all planets. */
     #[ORM\Column(options: ['default' => 0])]
     private float $credits = 0;
+
+    public const int NOTES_LIMIT = 50000;
+
+    /** Private notepad of the player. */
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $notes = null;
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $notesUpdatedAt = null;
+
+    /** Gained only in battles: destroyed enemy shield points, shared by build time of the own units. */
+    #[ORM\Column(options: ['default' => 0])]
+    private float $combatExperience = 0;
 
     #[ORM\ManyToOne(inversedBy: 'members')]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
@@ -65,6 +86,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column(type: Types::TEXT, options: ['default' => ''])]
     private string $profileText = '';
+
+    /** @var list<array{name: string, color: string, alliance: bool, rules: list<array<string, mixed>>}>|null saved fleet filters */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $fleetFilters = null;
 
     /** @var array<string, int> research type value => level */
     #[ORM\Column(type: Types::JSON)]
@@ -89,7 +114,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     /** @var Collection<int, Planet> */
     #[ORM\OneToMany(targetEntity: Planet::class, mappedBy: 'owner')]
-    #[ORM\OrderBy(['id' => 'ASC'])]
+    #[ORM\OrderBy(['galaxy' => 'ASC', 'system' => 'ASC', 'position' => 'ASC'])]
     private Collection $planets;
 
     public function __construct(string $username = '', ?\DateTimeImmutable $createdAt = null)
@@ -172,6 +197,25 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->lifeForm;
     }
 
+    public function getLastSeenAt(): ?\DateTimeImmutable
+    {
+        return $this->lastSeenAt;
+    }
+
+    public function getOnlineSince(): ?\DateTimeImmutable
+    {
+        return $this->onlineSince;
+    }
+
+    /** A page view; a new online session starts if the player was offline before. */
+    public function markSeen(\DateTimeImmutable $now, bool $newSession = false): void
+    {
+        if ($newSession || null === $this->onlineSince) {
+            $this->onlineSince = $now;
+        }
+        $this->lastSeenAt = $now;
+    }
+
     public function getLifeFormSince(): \DateTimeImmutable
     {
         return $this->lifeFormSince;
@@ -240,6 +284,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->avatar = $avatar;
     }
 
+    /** @return list<array{name: string, color: string, alliance: bool, rules: list<array<string, mixed>>}> */
+    public function getFleetFilters(): array
+    {
+        return $this->fleetFilters ?? [];
+    }
+
+    /** @param list<array{name: string, color: string, alliance: bool, rules: list<array<string, mixed>>}> $filters */
+    public function setFleetFilters(array $filters): void
+    {
+        $this->fleetFilters = array_values($filters);
+    }
+
     public function getProfileText(): string
     {
         return $this->profileText;
@@ -248,6 +304,32 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setProfileText(string $text): void
     {
         $this->profileText = $text;
+    }
+
+    public function getNotes(): string
+    {
+        return $this->notes ?? '';
+    }
+
+    public function getNotesUpdatedAt(): ?\DateTimeImmutable
+    {
+        return $this->notesUpdatedAt;
+    }
+
+    public function writeNotes(string $notes, \DateTimeImmutable $now): void
+    {
+        $this->notes = '' === trim($notes) ? null : mb_substr($notes, 0, self::NOTES_LIMIT);
+        $this->notesUpdatedAt = $now;
+    }
+
+    public function getCombatExperience(): float
+    {
+        return $this->combatExperience;
+    }
+
+    public function addCombatExperience(float $experience): void
+    {
+        $this->combatExperience += max(0.0, $experience);
     }
 
     public function getCredits(): float

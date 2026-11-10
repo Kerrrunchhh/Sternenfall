@@ -20,13 +20,34 @@ class LongResearchTest extends TestCase
         $this->now = new \DateTimeImmutable('2026-01-01');
     }
 
-    public function testFusionAndColonizationAreLongTermWithLevel50AsMaximum(): void
+    public function testFusionAndColonizationAreLongTerm(): void
     {
         foreach (ResearchType::cases() as $type) {
             $long = \in_array($type, [ResearchType::FusionTech, ResearchType::Colonization], true);
             self::assertSame($long, $type->isLongTerm(), $type->label());
-            self::assertSame($long ? 50 : null, $type->maxLevel());
         }
+        self::assertSame(49, ResearchType::FusionTech->maxLevel(), 'no system has more than 50 planets');
+        foreach (ResearchType::cases() as $type) {
+            if (ResearchType::FusionTech !== $type) {
+                self::assertNull($type->maxLevel(), $type->label().' keeps improving');
+            }
+        }
+        self::assertGreaterThan($this->economy->researchSeconds(ResearchType::Colonization, 10, $this->lab(980)), $this->economy->researchSeconds(ResearchType::Colonization, 11, $this->lab(980)), 'colonization goes on beyond level 10');
+    }
+
+    public function testColonizationStartsQuicklyThenEachLevelTakesVeryLong(): void
+    {
+        // The model player's labs at each colonization level (fused planets × lab level).
+        $days = fn (int $level, int $labs): float => $this->economy->researchSeconds(ResearchType::Colonization, $level, $this->lab($labs)) / 86400;
+
+        self::assertEqualsWithDelta(1, $days(1, 4), 0.1, 'first 10 slots within a day');
+        self::assertEqualsWithDelta(14, $days(2, 75), 0.5, 'next 10 within two weeks');
+        self::assertEqualsWithDelta(341, $days(3, 214), 5, 'then as long as 10 single steps');
+        self::assertGreaterThan(500, $days(5, 685));
+        self::assertGreaterThan($days(2, 75), $days(2, 10), 'smaller labs take longer');
+
+        $costs = array_sum(array_map(static fn (int $n): float => $n ** 1.5, range(1, 10)));
+        self::assertEqualsWithDelta(2000 * $costs, $this->economy->researchCost(ResearchType::Colonization, 1)->iron, 1);
     }
 
     public function testDurationDependsOnlyOnTheResearchLabs(): void
@@ -46,7 +67,7 @@ class LongResearchTest extends TestCase
         // A well developed player: fuses as many planets as allowed, labs grow from 4 to 20.
         $total = 0;
         $durations = [];
-        foreach (range(1, 50) as $level) {
+        foreach (range(1, 49) as $level) {
             $labs = max(1, $level - 1) * (4 + 16 * $level / 50);
             $durations[$level] = $this->economy->researchSeconds(ResearchType::FusionTech, $level, $this->lab((int) round($labs)));
             $total += $durations[$level];
@@ -78,9 +99,11 @@ class LongResearchTest extends TestCase
         new Planet($player, 'D', 2, 1, 1, $this->now);
 
         self::assertSame(4, Economy::ownedSlots($player), 'fusion of three plus one planet');
-        self::assertSame(1, $this->economy->colonySlots($player));
-        $player->setResearchLevel(ResearchType::Colonization, 5);
-        self::assertSame(6, $this->economy->colonySlots($player));
+        self::assertSame(1, $this->economy->colonySlots($player), 'without research only the home planet');
+        $player->setResearchLevel(ResearchType::Colonization, 1);
+        self::assertSame(10, $this->economy->colonySlots($player));
+        $player->setResearchLevel(ResearchType::Colonization, 2);
+        self::assertSame(20, $this->economy->colonySlots($player));
     }
 
     private function lab(int $level): Planet

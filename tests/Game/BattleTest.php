@@ -83,6 +83,55 @@ class BattleTest extends TestCase
         self::assertSame(0, $result->survivingCount(BattleGroup::DEFENDER, ShipType::TachyonTurret));
     }
 
+    public function testJointAttackersFightTogetherAndEachGetsExperience(): void
+    {
+        $a = new User('a');
+        $b = new User('b');
+        $battle = new Battle();
+        $battle->add(BattleGroup::ATTACKER, $a, ['pfeil' => 30], 'attacker');
+        $battle->add(BattleGroup::ATTACKER, $b, ['pfeil' => 30], 'joiner:1');
+        $battle->add(BattleGroup::DEFENDER, new User('d'), ['falke' => 10], 'hangar');
+
+        $result = $battle->fight();
+
+        // 60 Pfeile together deal 3 000 damage: about 3 of the 10 Falken (775 hp each) fall.
+        // Both fleets come out separately and both players share the experience.
+        self::assertSame(7, $result->survivingCount(BattleGroup::DEFENDER, ShipType::Falke));
+        self::assertNotSame([], $result->survivors(BattleGroup::ATTACKER, 'attacker'));
+        self::assertNotSame([], $result->survivors(BattleGroup::ATTACKER, 'joiner:1'));
+        $users = array_map(static fn (array $e): string => $e['user']->getUsername(), $result->experience());
+        self::assertContains('a', $users);
+        self::assertContains('b', $users);
+    }
+
+    public function testReportIsWrittenFromTheReadersPointOfView(): void
+    {
+        $now = new \DateTimeImmutable();
+        $orden = new \App\Entity\Alliance('Orden', 'ORD', \App\Game\LifeForm::Settler, $now);
+        (new \ReflectionProperty(\App\Entity\Alliance::class, 'id'))->setValue($orden, 1);
+        [$me, $mate, $enemy] = [new User('ich'), new User('kamerad'), new User('feind')];
+        foreach ([[$me, 1], [$mate, 2], [$enemy, 3]] as [$user, $id]) {
+            (new \ReflectionProperty(User::class, 'id'))->setValue($user, $id);
+        }
+        $me->joinAlliance($orden, \App\Game\AllianceRank::Member);
+        $mate->joinAlliance($orden, \App\Game\AllianceRank::Member);
+
+        $battle = new Battle();
+        $battle->add(BattleGroup::ATTACKER, $enemy, ['pfeil' => 40], 'attacker');
+        $battle->add(BattleGroup::DEFENDER, $mate, ['pfeil' => 10], 'a');
+        $battle->add(BattleGroup::DEFENDER, $me, ['falke' => 5], 'hangar');
+        $result = $battle->fight();
+
+        $mine = $result->report($me);
+        self::assertMatchesRegularExpression('/Verteidiger:\n  Du \(ich\):\n    Falke: 5 → \d/', $mine, 'own units first, marked "Du"');
+        self::assertStringContainsString('kamerad [ORD] · Allianz:', $mine);
+        self::assertMatchesRegularExpression('/Pfeil: 10 → \d+ \(−\d+\)/', $mine, 'how many are left and lost');
+
+        $neutral = $result->report();
+        self::assertStringNotContainsString('Du (', $neutral);
+        self::assertStringNotContainsString('Allianz:', $neutral);
+    }
+
     public function testRaidWithoutBomberSparesTransports(): void
     {
         $battle = new Battle();
@@ -96,6 +145,22 @@ class BattleTest extends TestCase
         self::assertSame(5, $result->survivingCount(BattleGroup::DEFENDER, ShipType::Freighter));
         self::assertSame(0, $result->survivingCount(BattleGroup::DEFENDER, ShipType::Pfeil), 'escorts can be destroyed');
         self::assertTrue($result->attackerWon(), 'spared transports do not count as defenders');
+    }
+
+    public function testEmptyTradersFlyingBackCanBeRaided(): void
+    {
+        $owner = new User('haendler');
+        $trader = new \App\Entity\Fleet($owner, 'Karawane', 1, 1, 1, ['large_freighter' => 3]);
+        $trader->depart(\App\Game\FleetMission::Transport, 1, 2, 3, new \DateTimeImmutable(), 60);
+        self::assertFalse(\App\Game\Radar::isRaidable($trader), 'empty on the way out: nothing to raid');
+
+        $trader->startReturn();
+        self::assertTrue(\App\Game\Radar::isRaidable($trader), 'empty on the way back from a transport');
+
+        $attacker = new \App\Entity\Fleet($owner, 'Angriff', 1, 1, 1, ['pfeil' => 5]);
+        $attacker->depart(\App\Game\FleetMission::Attack, 1, 2, 3, new \DateTimeImmutable(), 60);
+        $attacker->startReturn();
+        self::assertFalse(\App\Game\Radar::isRaidable($attacker), 'returning attackers without cargo are no raid target');
     }
 
     public function testRaidWithBomberHitsTransports(): void
@@ -146,5 +211,18 @@ class BattleTest extends TestCase
         $transport = new \App\Entity\Fleet($owner, 'Karawane', 1, 1, 1, ['freighter' => 1], new \App\Game\Resources(iron: 100));
         $transport->depart(\App\Game\FleetMission::Transport, 1, 2, 3, new \DateTimeImmutable(), 60);
         self::assertTrue(\App\Game\Radar::emits($transport));
+
+        // Unloaded at the target, the trade fleet flies back empty – and is still seen.
+        $transport->setCargo(new \App\Game\Resources());
+        $transport->startReturn();
+        self::assertTrue(\App\Game\Radar::emits($transport), 'returning from a transport');
+
+        $attack->startReturn();
+        self::assertFalse(\App\Game\Radar::emits($attack), 'returning empty attackers stay hidden');
+
+        $pickup = new \App\Entity\Fleet($owner, 'Abholer', 1, 1, 1, ['freighter' => 2]);
+        $pickup->depart(\App\Game\FleetMission::Pickup, 1, 2, 3, new \DateTimeImmutable(), 60);
+        self::assertTrue(\App\Game\Radar::emits($pickup), 'pickups fly openly, even empty on the way out');
+        self::assertTrue(\App\Game\Radar::isRaidable($pickup), 'and can be raided on the way out');
     }
 }

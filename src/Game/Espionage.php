@@ -2,31 +2,37 @@
 
 namespace App\Game;
 
+use App\Entity\DebrisField;
 use App\Entity\Fleet;
 use App\Entity\FleetIntel;
 use App\Entity\Planet;
 use App\Entity\PlanetIntel;
 use App\Entity\User;
+use App\Repository\DebrisFieldRepository;
 use App\Repository\FleetRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
  * Probes and what they reveal. The spy's level of espionage research decides
- * the depth of a report: 1 planet type, 5 buildings/resources/population/research,
- * 10 stationed ships, 20 seeing probes that head for the own planets.
+ * the depth of a report (1 planet type, 5 buildings/resources/population/research,
+ * 10 stationed ships) and the probes' speed. The victim's level decides what he
+ * learns of being spied on: 25 that it happened, 40 who it was, 50 probes in flight.
  */
 final readonly class Espionage
 {
     public const int LEVEL_TYPE = 1;
     public const int LEVEL_BUILDINGS = 5;
     public const int LEVEL_SHIPS = 10;
-    public const int LEVEL_SEE_PROBES = 20;
+    public const int LEVEL_NOTICE_SPY = 25;
+    public const int LEVEL_NAME_SPY = 40;
+    public const int LEVEL_SEE_PROBES = 50;
 
     public function __construct(
         private EntityManagerInterface $em,
         private FleetRepository $fleets,
         private ClockInterface $clock,
+        private ?DebrisFieldRepository $debris = null,
     ) {
     }
 
@@ -53,19 +59,87 @@ final readonly class Espionage
         return $known;
     }
 
-    /** Remembers the type of a scouted slot (persisted, flushed by the caller). */
+    /** Remembers the type of a scouted slot and its debris (persisted, flushed by the caller). */
     public function remember(User $player, int $galaxy, int $system, int $position): PlanetType
     {
-        $type = Universe::planetType($galaxy, $system, $position);
-        $now = \DateTimeImmutable::createFromInterface($this->clock->now());
-        $intel = $this->em->getRepository(PlanetIntel::class)->findOneBy(['user' => $player, 'galaxy' => $galaxy, 'system' => $system, 'position' => $position]);
-        if (null === $intel) {
-            $this->em->persist(new PlanetIntel($player, $galaxy, $system, $position, $type, $now));
-        } else {
-            $intel->refresh($now);
+        $intel = $this->intel($player, $galaxy, $system, $position);
+        $intel->refresh(\DateTimeImmutable::createFromInterface($this->clock->now()));
+        $this->applyDebris($intel, $galaxy, $system, $position);
+
+        return $intel->getType();
+    }
+
+    /** The player sees the debris field at a slot as it is now (probe, battle, salvaging). */
+    public function noteDebris(User $player, int $galaxy, int $system, int $position): void
+    {
+        $this->applyDebris($this->intel($player, $galaxy, $system, $position), $galaxy, $system, $position);
+    }
+
+    private function applyDebris(PlanetIntel $intel, int $galaxy, int $system, int $position): void
+    {
+        $field = $this->debrisAt($galaxy, $system, $position);
+        $intel->seeDebris($field?->getIron(), $field?->getTitanium(), \DateTimeImmutable::createFromInterface($this->clock->now()));
+    }
+
+    /**
+     * Debris fields the player knows about in a system and that still drift there.
+     *
+     * @return array<int, PlanetIntel> position => intel with the amounts seen
+     */
+    public function knownDebris(User $player, int $galaxy, int $system): array
+    {
+        $existing = [];
+        foreach ($this->debris?->findInSystem($galaxy, $system) ?? [] as $position => $field) {
+            $existing[$field->getPosition()] = true;
+        }
+        $known = [];
+        foreach ($this->em->getRepository(PlanetIntel::class)->findBy(['user' => $player, 'galaxy' => $galaxy, 'system' => $system]) as $intel) {
+            if ($intel->hasDebris() && isset($existing[$intel->getPosition()])) {
+                $known[$intel->getPosition()] = $intel;
+            }
         }
 
-        return $type;
+        return $known;
+    }
+
+    private function intel(User $player, int $galaxy, int $system, int $position): PlanetIntel
+    {
+        $repository = $this->em->getRepository(PlanetIntel::class);
+        $intel = $repository->findOneBy(['user' => $player, 'galaxy' => $galaxy, 'system' => $system, 'position' => $position]);
+        if (null === $intel) {
+            // Created earlier in this request but not flushed yet?
+            foreach ($this->em->getUnitOfWork()->getScheduledEntityInsertions() as $entity) {
+                if ($entity instanceof PlanetIntel && $entity->isAt($player, $galaxy, $system, $position)) {
+                    return $entity;
+                }
+            }
+            $intel = new PlanetIntel($player, $galaxy, $system, $position, Universe::planetType($galaxy, $system, $position), \DateTimeImmutable::createFromInterface($this->clock->now()));
+            $this->em->persist($intel);
+        }
+
+        return $intel;
+    }
+
+    /** The debris field at a slot, also one just created in this request (not flushed yet). */
+    private function debrisAt(int $galaxy, int $system, int $position): ?DebrisField
+    {
+        foreach ($this->em->getUnitOfWork()->getScheduledEntityInsertions() as $entity) {
+            if ($entity instanceof DebrisField && $entity->getGalaxy() === $galaxy && $entity->getSystem() === $system && $entity->getPosition() === $position) {
+                return $entity;
+            }
+        }
+
+        return $this->debris?->findAt($galaxy, $system, $position);
+    }
+
+    /** Debris line of a spy report. */
+    private function debrisLine(int $galaxy, int $system, int $position): string
+    {
+        $field = $this->debrisAt($galaxy, $system, $position);
+
+        return null === $field || $field->isEmpty()
+            ? 'Trümmerfeld: keins'
+            : \sprintf('Trümmerfeld: %s Eisen, %s Titan – mit Bergungsschiffen abholen', number_format($field->getIron(), 0, ',', '.'), number_format($field->getTitanium(), 0, ',', '.'));
     }
 
     /** A spy report as deep as the spy's espionage research allows. */
@@ -83,6 +157,7 @@ final readonly class Espionage
                 ? \sprintf('Freier Platz [%d:%d:%d]', $galaxy, $system, $position)
                 : \sprintf('Planet %s [%s] von %s', $planet->getName(), $planet->getCoordinates(), $planet->getOwner()->getUsername()),
             \sprintf('Planetentyp: %s %s (%s)', $type->icon(), $type->label(), $type->effect()),
+            $this->debrisLine($galaxy, $system, $position),
         ];
         if (null === $planet) {
             return implode("\n", $lines);
@@ -181,12 +256,33 @@ final readonly class Espionage
         return implode("\n", $lines);
     }
 
-    /** Whether a player notices a probe heading for one of his planets. */
+    /** Whether a player notices a probe heading for one of his planets or fleets. */
     public function seesProbe(User $player, Fleet $probe, ?Planet $target): bool
     {
+        $victim = $probe->getTargetFleet()?->getOwner() ?? $target?->getOwner();
+
         return FleetMission::Spy === $probe->getMission() && !$probe->isReturning()
-            && null !== $target && $target->getOwner()->isSameAs($player)
+            && null !== $victim && $victim->isSameAs($player)
             && $player->getResearchLevel(ResearchType::Espionage) >= self::LEVEL_SEE_PROBES;
+    }
+
+    /**
+     * What the spied-on player learns of a probe's visit: nothing below level 25,
+     * that it happened from 25 on, and who sent it from 40 on.
+     *
+     * @return array{string, string}|null subject and text of the message
+     */
+    public function spiedNotice(User $victim, User $spy, string $what): ?array
+    {
+        $level = $victim->getResearchLevel(ResearchType::Espionage);
+        if ($level < self::LEVEL_NOTICE_SPY) {
+            return null;
+        }
+        if ($level < self::LEVEL_NAME_SPY) {
+            return ['Ausspioniert', "$what wurde von einer Sonde ausspioniert. Wer sie geschickt hat, erfährst du ab Spionagetechnik Stufe ".self::LEVEL_NAME_SPY.'.'];
+        }
+
+        return ['Ausspioniert von '.$spy->getUsername(), "$what wurde von einer Sonde von {$spy->getUsername()} ausspioniert."];
     }
 
     /**

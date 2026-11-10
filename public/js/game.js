@@ -76,6 +76,146 @@ const serverClock = (() => {
     tick();
     setInterval(tick, 1000);
 
+    // System messages: opening an unread one marks it read and lowers the counter in the menu.
+    document.querySelectorAll('details[data-read-url]').forEach((details) => {
+        details.addEventListener('toggle', () => {
+            if (!details.open || !details.dataset.readUrl) {
+                return;
+            }
+            const url = details.dataset.readUrl;
+            delete details.dataset.readUrl;
+            details.classList.remove('unread');
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+                body: new URLSearchParams({ _token: details.dataset.token }),
+            }).then((response) => (response.ok ? response.json() : null)).then((data) => {
+                if (!data) {
+                    return;
+                }
+                document.querySelectorAll('[data-unread-badge]').forEach((badge) => {
+                    badge.textContent = data.unread;
+                    badge.hidden = data.unread < 1;
+                });
+                if (data.unread < 1) {
+                    const button = document.querySelector('[data-read-all] button');
+                    if (button) {
+                        button.disabled = true;
+                        button.title = 'Alles gelesen';
+                    }
+                }
+            }).catch(() => {});
+        });
+    });
+
+    // "Link kopieren": copies the full address of a shared combat report.
+    document.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-copy-link]');
+        if (!button) {
+            return;
+        }
+        event.preventDefault();
+        const link = new URL(button.dataset.copyLink, location.href).href;
+        const done = () => {
+            const label = button.textContent;
+            button.textContent = 'Kopiert ✓';
+            setTimeout(() => { button.textContent = label; }, 1500);
+        };
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(link).then(done, () => window.prompt('Link kopieren:', link));
+        } else {
+            window.prompt('Link kopieren:', link);
+        }
+    });
+
+    // Fold-out sections marked with data-remember-open keep their open/closed state (per browser).
+    document.querySelectorAll('details[data-remember-open]').forEach((details) => {
+        const key = 'sternenfall.open.' + details.dataset.rememberOpen;
+        try {
+            const stored = localStorage.getItem(key);
+            if (stored !== null) {
+                details.open = stored === '1';
+            }
+        } catch (e) { /* ignore */ }
+        details.addEventListener('toggle', () => {
+            try {
+                localStorage.setItem(key, details.open ? '1' : '0');
+            } catch (e) { /* ignore */ }
+        });
+    });
+
+    // Simple tabs: buttons [data-tab-target] show the matching [data-tab-panel]; the choice is remembered.
+    document.querySelectorAll('[data-tabs]').forEach((nav) => {
+        const key = 'sternenfall.tab.' + nav.dataset.tabs;
+        const buttons = [...nav.querySelectorAll('[data-tab-target]')];
+        const show = (target) => {
+            buttons.forEach((b) => {
+                const on = b.dataset.tabTarget === target;
+                b.classList.toggle('active', on);
+                b.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+            document.querySelectorAll('[data-tab-panel]').forEach((panel) => {
+                if (buttons.some((b) => b.dataset.tabTarget === panel.dataset.tabPanel)) {
+                    panel.hidden = panel.dataset.tabPanel !== target;
+                }
+            });
+        };
+        let start = buttons[0]?.dataset.tabTarget;
+        try {
+            const stored = localStorage.getItem(key);
+            if (stored && buttons.some((b) => b.dataset.tabTarget === stored)) {
+                start = stored;
+            }
+        } catch (e) { /* ignore */ }
+        buttons.forEach((b) => b.addEventListener('click', () => {
+            show(b.dataset.tabTarget);
+            try {
+                localStorage.setItem(key, b.dataset.tabTarget);
+            } catch (e) { /* ignore */ }
+        }));
+        if (start) {
+            show(start);
+        }
+    });
+
+    // Notepad: character count, warning about unsaved changes, Ctrl+S saves.
+    document.querySelectorAll('[data-notes-form]').forEach((form) => {
+        const area = form.querySelector('[data-notes]');
+        const count = form.querySelector('[data-notes-count]');
+        const state = form.querySelector('[data-notes-state]');
+        const saved = area.value;
+        let dirty = false;
+        area.addEventListener('input', () => {
+            count.textContent = area.value.length;
+            dirty = area.value !== saved;
+            state.textContent = dirty ? 'Ungespeicherte Änderungen' : state.textContent;
+        });
+        area.addEventListener('keydown', (event) => {
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+                event.preventDefault();
+                dirty = false;
+                form.requestSubmit();
+            }
+        });
+        form.addEventListener('submit', () => { dirty = false; });
+        window.addEventListener('beforeunload', (event) => {
+            if (dirty) {
+                event.preventDefault();
+            }
+        });
+    });
+
+    // Mail list: one checkbox selects all letters.
+    document.querySelectorAll('[data-mail-list]').forEach((form) => {
+        const all = form.querySelector('[data-select-all]');
+        const boxes = [...form.querySelectorAll('input[name="letters[]"]')];
+        all?.addEventListener('change', () => boxes.forEach((box) => { box.checked = all.checked; }));
+        boxes.forEach((box) => box.addEventListener('change', () => {
+            all.checked = boxes.every((b) => b.checked);
+            all.indeterminate = !all.checked && boxes.some((b) => b.checked);
+        }));
+    });
+
     // Fleet table: select fleets, pick one action; only the fields of that action are shown and sent.
     document.querySelectorAll('[data-fleet-bulk]').forEach((form) => {
         const boxes = [...form.querySelectorAll('input[name="fleets[]"]')];
@@ -92,14 +232,46 @@ const serverClock = (() => {
         const help = form.querySelector('[data-action-help]');
         const setEnabled = (el, enabled) => el.querySelectorAll('input, select, textarea, button[data-fill-max]').forEach((input) => { input.disabled = !enabled; });
 
+        // Cargo room of the selected fleet: capacity, already loaded, typed in, still free.
+        const room = form.querySelector('[data-cargo-room]');
+        const cargoInputs = [...form.querySelectorAll('[data-cargo-input]')];
+        const number = (n) => Math.floor(n).toLocaleString('de-DE');
+        const showCargoRoom = (picked) => {
+            if (!room) {
+                return;
+            }
+            const capacity = picked.reduce((sum, box) => sum + (parseInt(box.dataset.capacity, 10) || 0), 0);
+            const loaded = picked.reduce((sum, box) => sum + (parseInt(box.dataset.load, 10) || 0), 0);
+            room.classList.remove('lacking');
+            if (picked.length === 0) {
+                room.textContent = '';
+            } else if (capacity === 0) {
+                room.textContent = picked.length === 1
+                    ? 'Diese Flotte hat keinen Frachtraum – nur Frachter und Großfrachter transportieren Ladung.'
+                    : 'Die ausgewählten Flotten haben keinen Frachtraum.';
+            } else if (picked.length > 1) {
+                const typed = cargoInputs.reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
+                const free = capacity - loaded - typed;
+                room.textContent = `📦 Frachtraum der Auswahl ${number(capacity)} · bereits geladen ${number(loaded)} · neue Ladung ${number(typed)} · frei ${free < 0 ? '−' + number(-free) + ' (zu viel!)' : number(free)} – beim Transport im Konvoi wird die Ladung auf die Frachter verteilt.`;
+                room.classList.toggle('lacking', free < 0);
+            } else {
+                const typed = cargoInputs.reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
+                const free = capacity - loaded - typed;
+                room.textContent = `📦 Frachtraum ${number(capacity)} · bereits geladen ${number(loaded)} · neue Ladung ${number(typed)} · frei ${free < 0 ? '−' + number(-free) + ' (zu viel!)' : number(free)}`;
+                room.classList.toggle('lacking', free < 0);
+            }
+        };
+        cargoInputs.forEach((input) => input.addEventListener('input', () => showCargoRoom(boxes.filter((box) => box.checked))));
+
         const update = () => {
             const picked = boxes.filter((box) => box.checked);
             const value = action.value;
             const single = picked.length === 1 ? picked[0].value : null;
             count.textContent = picked.length === 0 ? 'Keine Flotte ausgewählt' : (picked.length === 1 ? '1 Flotte ausgewählt' : `${picked.length} Flotten ausgewählt`);
             if (all) {
-                all.checked = picked.length > 0 && picked.length === boxes.length;
-                all.indeterminate = picked.length > 0 && picked.length < boxes.length;
+                const shown = boxes.filter((box) => !box.closest('tr').hidden).length;
+                all.checked = picked.length > 0 && picked.length === shown;
+                all.indeterminate = picked.length > 0 && picked.length < shown;
             }
 
             let fleetPanelShown = false;
@@ -133,16 +305,39 @@ const serverClock = (() => {
                 delete form.dataset.from;
             }
             form.dispatchEvent(new Event('flight-origin'));
+            showCargoRoom(picked);
             submit.disabled = picked.length === 0 || value === '';
+            const hint = form.querySelector('[data-submit-hint]');
+            if (hint) {
+                hint.textContent = picked.length === 0
+                    ? '← Hake oben in der Tabelle die Flotte(n) an, die losfliegen sollen.'
+                    : (value === '' ? '← Wähle oben eine Aktion aus.' : '');
+            }
             if (help) {
                 help.textContent = action.selectedOptions[0]?.dataset.help ?? '';
             }
         };
 
+        const visible = (box) => !box.closest('tr').hidden;
+        // A squadron selects exactly its fleets (those not filtered out).
+        form.querySelectorAll('[data-select-fleets]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const ids = button.dataset.selectFleets.split(',').filter(Boolean);
+                const kinds = new Set(boxes.filter((box) => ids.includes(box.value)).map((box) => box.closest('tr').dataset.own));
+                document.dispatchEvent(new CustomEvent('fleet-show-tab', { detail: kinds.has('0') ? 'alliance' : 'own' }));
+                boxes.forEach((box) => { box.checked = ids.includes(box.value) && visible(box); });
+                update();
+            });
+        });
+        // Filtered-out fleets are never part of an action.
+        form.addEventListener('fleet-filter', () => {
+            boxes.forEach((box) => { if (!visible(box)) { box.checked = false; } });
+            update();
+        });
         boxes.forEach((box) => box.addEventListener('change', update));
         if (all) {
             all.addEventListener('change', () => {
-                boxes.forEach((box) => { box.checked = all.checked; });
+                boxes.forEach((box) => { box.checked = all.checked && visible(box); });
                 update();
             });
         }
@@ -180,6 +375,167 @@ const serverClock = (() => {
                 input.value = Math.max(0, Math.floor(max));
             });
         });
+    });
+
+    // Fleet filters: rules on name and ship counts joined by AND/OR (AND binds stronger), and
+    // tabs (own fleets / own plus alliance fleets); filters can be switched off. Kept in the browser for the next visit.
+    document.querySelectorAll('[data-fleet-filter]').forEach((filter) => {
+        const form = document.querySelector('[data-fleet-bulk]');
+        const rows = [...document.querySelectorAll('[data-fleet-row]')];
+        const list = filter.querySelector('[data-filter-rules]');
+        const template = filter.querySelector('[data-filter-rule]');
+        const enabled = filter.querySelector('[data-filter-enabled]');
+        const tabs = document.querySelector('[data-fleet-tabs]');
+        let tab = tabs ? 'own' : 'alliance';
+        const summary = filter.querySelector('[data-filter-summary]');
+        const storageKey = 'sternenfall.fleetFilter';
+        // The saved filter currently shown (its colour marks the fleets), null after manual changes.
+        let active = null;
+
+        const ruleOf = (el) => ({
+            join: el.querySelector('[data-join]').value,
+            kind: el.querySelector('[data-kind]').value,
+            text: el.querySelector('[data-text]').value.trim().toLowerCase(),
+            op: el.querySelector('[data-op]').value,
+            count: Math.max(0, parseInt(el.querySelector('[data-count]').value, 10) || 0),
+            ship: el.querySelector('[data-ship]').value,
+        });
+        const test = (rule, row) => {
+            const name = row.dataset.name;
+            switch (rule.kind) {
+                case 'starts': return name.startsWith(rule.text);
+                case 'ends': return name.endsWith(rule.text);
+                case 'contains': return name.includes(rule.text);
+                case 'ships': {
+                    const have = (JSON.parse(row.dataset.ships || '{}') || {})[rule.ship] || 0;
+                    return rule.op === 'gte' ? have >= rule.count : (rule.op === 'lte' ? have <= rule.count : have === rule.count);
+                }
+            }
+            return true;
+        };
+        // OR separates groups; all rules of a group must hold.
+        const passes = (rules, row) => {
+            if (rules.length === 0) {
+                return true;
+            }
+            const groups = [[]];
+            rules.forEach((rule, i) => {
+                if (i > 0 && rule.join === 'or') {
+                    groups.push([]);
+                }
+                groups[groups.length - 1].push(rule);
+            });
+            return groups.some((group) => group.every((rule) => test(rule, row)));
+        };
+
+        const apply = () => {
+            const rules = [...list.children].map(ruleOf).filter((r) => r.kind === 'ships' || r.text !== '');
+            let shown = 0;
+            rows.forEach((row) => {
+                // "Allianzflotten" shows own fleets plus released ones, "Eigene Flotten" only own ones.
+                const inTab = tab !== 'own' || row.dataset.own === '1';
+                const ok = inTab && (!enabled.checked || passes(rules, row));
+                row.hidden = !ok;
+                row.style.boxShadow = active && ok && enabled.checked ? `inset 4px 0 0 ${active.color}` : '';
+                shown += ok ? 1 : 0;
+            });
+            // A player's section heading disappears when none of his fleets is shown.
+            document.querySelectorAll('[data-owner-head]').forEach((head) => {
+                let next = head.nextElementSibling;
+                let any = false;
+                while (next && !next.hasAttribute('data-owner-head')) {
+                    any = any || (next.hasAttribute('data-fleet-row') && !next.hidden);
+                    next = next.nextElementSibling;
+                }
+                head.hidden = !any;
+            });
+            const inView = rows.filter((row) => tab !== 'own' || row.dataset.own === '1').length;
+            summary.textContent = !enabled.checked ? '(ausgeschaltet)' : (active ? `„${active.name}“ ` : '') + (shown === inView ? '' : `– ${shown} von ${inView} Flotten`);
+            tabs?.querySelectorAll('[data-tab]').forEach((button) => button.classList.toggle('active', button.dataset.tab === tab));
+            summary.style.color = active ? active.color : '';
+            // Saving again under the shown filter's name updates it.
+            const saveForm = filter.querySelector('[data-filter-save]');
+            if (saveForm && active) {
+                saveForm.querySelector('[data-filter-name]').value = active.name;
+                saveForm.querySelector('[data-filter-color]').value = active.color;
+            }
+            filter.querySelectorAll('[data-apply-filter]').forEach((chip) => {
+                chip.closest('.filter-chip').classList.toggle('active', !!active && JSON.parse(chip.dataset.applyFilter).name === active.name);
+            });
+            if (form) {
+                form.dispatchEvent(new Event('fleet-filter'));
+            }
+            try {
+                localStorage.setItem(storageKey, JSON.stringify({ enabled: enabled.checked, tab, rules: [...list.children].map(ruleOf), active }));
+            } catch (e) { /* storage unavailable */ }
+        };
+        const addRule = (values = {}) => {
+            const el = template.content.firstElementChild.cloneNode(true);
+            for (const [key, field] of [['join', '[data-join]'], ['kind', '[data-kind]'], ['text', '[data-text]'], ['op', '[data-op]'], ['count', '[data-count]'], ['ship', '[data-ship]']]) {
+                if (values[key] !== undefined) {
+                    el.querySelector(field).value = values[key];
+                }
+            }
+            const kind = el.querySelector('[data-kind]');
+            const sync = () => {
+                const ships = kind.value === 'ships';
+                el.querySelector('[data-text]').hidden = ships;
+                el.querySelector('[data-ship-fields]').hidden = !ships;
+            };
+            const edited = () => { active = null; apply(); };
+            kind.addEventListener('change', () => { sync(); edited(); });
+            el.querySelectorAll('input, select').forEach((input) => input.addEventListener('input', edited));
+            el.querySelector('[data-remove]').addEventListener('click', () => { el.remove(); edited(); });
+            list.appendChild(el);
+            sync();
+        };
+
+        filter.querySelector('[data-add-rule]').addEventListener('click', () => { addRule(); filter.open = true; active = null; apply(); });
+        filter.querySelector('[data-reset]').addEventListener('click', () => { list.replaceChildren(); enabled.checked = true; active = null; apply(); });
+        enabled.addEventListener('change', apply);
+        tabs?.querySelectorAll('[data-tab]').forEach((button) => button.addEventListener('click', () => { tab = button.dataset.tab; apply(); }));
+        // A squadron may ask for the tab that shows all its fleets.
+        document.addEventListener('fleet-show-tab', (event) => { if (tabs) { tab = event.detail; apply(); } });
+
+        // Saved filters: a click shows them, their colour marks the fleets.
+        filter.querySelectorAll('[data-apply-filter]').forEach((chip) => {
+            chip.addEventListener('click', () => {
+                const saved = JSON.parse(chip.dataset.applyFilter);
+                list.replaceChildren();
+                (saved.rules || []).forEach((rule) => addRule(rule));
+                enabled.checked = true;
+                active = { name: saved.name, color: saved.color };
+                apply();
+            });
+        });
+        const save = filter.querySelector('[data-filter-save]');
+        if (save) {
+            save.addEventListener('submit', () => {
+                save.querySelector('[name="definition"]').value = JSON.stringify({ alliance: true, rules: [...list.children].map(ruleOf) });
+            });
+        }
+
+        try {
+            const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
+            if (saved) {
+                enabled.checked = saved.enabled !== false;
+                tab = tabs && ['own', 'alliance'].includes(saved.tab) ? saved.tab : tab;
+                (saved.rules || []).forEach((rule) => addRule(rule));
+                active = saved.active || null;
+                filter.open = (saved.rules || []).length > 0;
+            }
+            // Whether the filter box was open or folded is remembered on its own.
+            const open = localStorage.getItem(storageKey + '.open');
+            if (open !== null) {
+                filter.open = open === '1';
+            }
+        } catch (e) { /* ignore */ }
+        filter.addEventListener('toggle', () => {
+            try {
+                localStorage.setItem(storageKey + '.open', filter.open ? '1' : '0');
+            } catch (e) { /* ignore */ }
+        });
+        apply();
     });
 
     // Fleet forms: a remembered coordinate fills galaxy, system and position.
@@ -343,9 +699,9 @@ const serverClock = (() => {
     });
 
     const fleetForm = document.getElementById('fleet-form');
-    if (fleetForm) {
+    const capacity = document.getElementById('cargo-capacity');
+    if (fleetForm && capacity) {
         const shipInputs = [...fleetForm.querySelectorAll('input[data-cargo]')];
-        const capacity = document.getElementById('cargo-capacity');
         const updateCapacity = () => {
             const total = shipInputs.reduce((sum, input) => sum + (parseInt(input.value, 10) || 0) * parseInt(input.dataset.cargo, 10), 0);
             capacity.textContent = fmt.format(total);

@@ -125,7 +125,7 @@ class FusionCombatTest extends TestCase
         $attackers = $this->attack($planet, ['leviathan' => 1, 'invasion_ship' => 1], lucky: false);
 
         self::assertSame($this->defender, $planet->getOwner());
-        self::assertSame(1, $attackers->getShipCount(ShipType::InvasionShip), 'the invasion ships fly back');
+        self::assertSame(0, $attackers->getShipCount(ShipType::InvasionShip), 'invasion ships are lost after every attempt');
         self::assertStringContainsString('Invasion gescheitert', $this->report());
     }
 
@@ -134,10 +134,11 @@ class FusionCombatTest extends TestCase
         $planet = new Planet($this->defender, 'Heimat', 1, 1, 5, $this->now);
         $planet->markHomeworld();
 
-        $this->attack($planet, ['leviathan' => 1, 'invasion_ship' => 3], lucky: true);
+        $fleet = $this->attack($planet, ['leviathan' => 1, 'invasion_ship' => 3], lucky: true);
 
         self::assertSame($this->defender, $planet->getOwner());
         self::assertStringContainsString('Invasion fehlgeschlagen: Heimat [1:1:5] ist der Heimatplanet von verteidiger', $this->report());
+        self::assertSame(3, $fleet->getShipCount(ShipType::InvasionShip), 'only at a home planet the invasion ships come back');
     }
 
     public function testInvasionFailsAtThePlanetLimit(): void
@@ -150,7 +151,7 @@ class FusionCombatTest extends TestCase
         $this->attack($planet, ['leviathan' => 1, 'invasion_ship' => 5], lucky: true);
 
         self::assertSame($this->defender, $planet->getOwner());
-        self::assertStringContainsString('Invasion fehlgeschlagen: angreifer ist am Planetenlimit (1 von 1 Planetenplätzen belegt', $this->report());
+        self::assertStringContainsString('Invasion fehlgeschlagen: Ein invadierter Planet belegt 3 Planetenplätze (im Krieg 2) – angreifer hat nur noch 0 von 3 nötigen Planetenplätzen frei', $this->report());
     }
 
     private function fusion(int $size, int $shieldLevels): Planet
@@ -172,7 +173,60 @@ class FusionCombatTest extends TestCase
     }
 
     /** @param array<string, int> $ships */
-    private function attack(Planet $target, array $ships, bool $lucky = true): Fleet
+    public function testSalvageShipsCarryTheLootAndFreightersStayHome(): void
+    {
+        $planet = new Planet($this->defender, 'Speicher', 1, 1, 5, $this->now);
+        $planet->setResources(new Resources(iron: 500000, titanium: 500000));
+
+        $withoutSalvager = $this->attack($planet, ['leviathan' => 1]);
+        self::assertSame(0.0, $withoutSalvager->getCargo()->total(), 'no salvage ship, no loot');
+
+        $withSalvager = $this->attack($planet, ['leviathan' => 1, 'salvager' => 2]);
+        self::assertEqualsWithDelta(2 * ShipType::Salvager->salvageCapacity(), $withSalvager->getCargo()->total(), 2);
+
+        self::assertNotNull(\App\Game\FleetService::freightersInWarfleet(['pfeil' => 5, 'large_freighter' => 1]));
+        self::assertNull(\App\Game\FleetService::freightersInWarfleet(['pfeil' => 5, 'salvager' => 1]));
+    }
+
+    public function testJointInvasionAddsUpInvasionShipsAndAPlayerWithSlotsConquers(): void
+    {
+        $this->attacker->setResearchLevel(ResearchType::Colonization, 0); // no room left
+        new Planet($this->attacker, 'Heim', 2, 2, 2, $this->now);
+        $partner = new User('partner', $this->now);
+        $partner->setResearchLevel(ResearchType::Colonization, 1);
+        new Planet($partner, 'Basis', 2, 2, 3, $this->now);
+        $planet = new Planet($this->defender, 'Ziel', 1, 1, 5, $this->now);
+        $planet->setPopulation(40000);
+
+        $joiner = new Fleet($partner, 'Helfer', 1, 3, 1, ['invasion_ship' => 1]);
+        $joiner->depart(FleetMission::Attack, 1, 1, 5, $this->now, 60);
+        $lead = $this->attack($planet, ['leviathan' => 1, 'invasion_ship' => 1], lucky: true, joiners: [$joiner]);
+
+        self::assertSame($partner, $planet->getOwner(), 'only the partner has room for the planet');
+        self::assertStringContainsString('2 Invasionsschiff(e) gegen 40.000 Einwohner', $this->report(), 'both fleets\' invasion ships count');
+        self::assertSame(0, $lead->getShipCount(ShipType::InvasionShip));
+        self::assertSame(0, $joiner->getShipCount(ShipType::InvasionShip));
+    }
+
+    public function testEscortsDefendTheirConvoyInARaid(): void
+    {
+        $pirate = new User('pirat', $this->now);
+        $hunter = new Fleet($pirate, 'Jäger', 1, 1, 1, ['falke' => 20, 'heavy_bomber' => 1, 'salvager' => 1]);
+        $hunter->depart(FleetMission::Raid, 1, 1, 9, $this->now, 60);
+        $freighters = new Fleet($this->defender, 'Karawane', 1, 1, 2, ['large_freighter' => 2], new Resources(iron: 30000));
+        $freighters->depart(FleetMission::Transport, 1, 1, 9, $this->now, 600);
+        $escort = new Fleet($this->defender, 'Geleit', 1, 1, 2, ['korsar' => 10]);
+        $escort->depart(FleetMission::Transport, 1, 1, 9, $this->now, 600);
+
+        $this->combat(true)->raid($hunter, $freighters, [$escort]);
+
+        self::assertStringContainsString('Im Konvoi flogen gemeinsam: Karawane (verteidiger), Geleit (verteidiger)', $this->report());
+        self::assertLessThan(20, $hunter->getShipCount(ShipType::Falke), 'the escort fires back');
+        self::assertSame(30000.0, $freighters->getCargo()->iron, 'the cargo is saved');
+    }
+
+    /** @param list<Fleet> $joiners */
+    private function attack(Planet $target, array $ships, bool $lucky = true, array $joiners = []): Fleet
     {
         $fleet = new Fleet($this->attacker, 'Sturm', 1, 2, 1, $ships);
         $fleet->depart(FleetMission::Attack, $target->getGalaxy(), $target->getSystem(), $target->getPosition(), $this->now, 60);
@@ -188,7 +242,25 @@ class FusionCombatTest extends TestCase
         $debris = $this->createStub(DebrisFieldRepository::class);
         $debris->method('findAt')->willReturn(null);
 
-        $combat = new CombatService(
+        $this->combat($lucky)->attackPlanet($fleet, $target, $joiners);
+
+        return $fleet;
+    }
+
+    private function combat(bool $lucky): CombatService
+    {
+        $em = $this->createStub(EntityManagerInterface::class);
+        $em->method('persist')->willReturnCallback(function (object $entity): void {
+            $this->persisted[] = $entity;
+        });
+        $clock = new MockClock($this->now);
+        $economy = new Economy(1.0);
+        $fleets = $this->createStub(FleetRepository::class);
+        $fleets->method('findIdleOf')->willReturn([]);
+        $debris = $this->createStub(DebrisFieldRepository::class);
+        $debris->method('findAt')->willReturn(null);
+
+        return new CombatService(
             $em,
             new PlanetService($em, new LockFactory(new InMemoryStore()), $clock, new PlanetUpdater($economy), $economy),
             $fleets,
@@ -198,9 +270,6 @@ class FusionCombatTest extends TestCase
             $clock,
             new Randomizer(new FixedEngine($lucky)),
         );
-        $combat->attackPlanet($fleet, $target);
-
-        return $fleet;
     }
 
     /** @return list<Planet> */

@@ -14,6 +14,7 @@ enum FleetMission: string
     case Spy = 'spy';
     case Fuse = 'fuse';
     case Supply = 'supply';
+    case Pickup = 'pickup';
     case Trade = 'trade';
     case Attack = 'attack';
     case Salvage = 'salvage';
@@ -43,6 +44,7 @@ enum FleetMission: string
             self::Spy => 'Spionieren',
             self::Fuse => 'Fusionieren',
             self::Supply => 'Beliefern',
+            self::Pickup => 'Rohstoffe abholen',
             self::Trade => 'Zum Handelsstützpunkt',
             self::Attack => 'Angreifen',
             self::Salvage => 'Bergen',
@@ -60,12 +62,13 @@ enum FleetMission: string
             self::TransportStation => 'Liefert die Ladung an einen besiedelten Planeten ab und bleibt dort stationiert, statt zurückzufliegen. Mit Ladung ist die Flotte unterwegs sichtbar.',
             self::Station => 'Verlegt Schiffe und Ladung dauerhaft auf einen deiner Planeten.',
             self::Jump => 'Springt mit normaler Flugzeit zu einem besiedelten Planeten (auch fremd) und wartet dort auf Befehle. Ohne Fracht unsichtbar und unangreifbar; mit Fracht sichtbar und von Piraten abfangbar.',
-            self::Colonize => 'Gründet mit einem Kolonieschiff eine Kolonie auf einem freien Platz. Die übrigen Schiffe kehren zurück.',
+            self::Colonize => 'Gründet mit einem Kolonieschiff eine Kolonie auf einem freien Platz. Schneller geht es mit „Kolonisieren“ im Universum: dann startet ein Kolonieschiff direkt aus dem Hangar des gerade gewählten Planeten. Übrige Schiffe einer Flotte kehren zurück.',
             self::Spy => 'Eine Sonde fliegt direkt aus dem Hangar (🔭 in Universum oder Radar), schickt einen Bericht und verglüht danach. Wie viel du erfährst, hängt von deiner Spionagetechnik ab.',
             self::Fuse => 'Schicke den Fusionator zu dem Planeten, der angeschweißt werden soll: Er verschweißt ihn mit deinem Planeten direkt darüber und wird dabei verbraucht.',
             self::Gather => 'Schiffe fliegen zu einer Flotte und schließen sich ihr an.',
             self::Supply => 'Bringt die Ladung der Flotte in das Lager deines Handelsstützpunkts.',
-            self::Attack => 'Greift einen fremden Planeten an. Gewinnst du, plünderst du alle ungeschützten Rohstoffe; Bomber töten ungeschützte Einwohner, Invasionsschiffe übernehmen den Planeten mit einer Chance je nach Einwohnerzahl. Durchbricht die Flotte den Schild einer Fusion, wird deren unterster Planet abgesprengt.',
+            self::Pickup => 'Handelsschiffe fliegen zu einem deiner Planeten, laden dort die angegebene Menge Rohstoffe ein (je Flotte, höchstens was im Lager liegt und in den Frachtraum passt) und bringen sie ins Lager des Planeten, von dem sie gestartet sind. Mitgebrachte Ladung liefern sie vorher dort ab.',
+            self::Attack => 'Greift einen fremden Planeten an. Frachter fliegen nicht mit – die Beute tragen Bergungsschiffe. Gewinnst du, plünderst du die ungeschützten Rohstoffe, so weit die Bergungsschiffe sie fassen; Bomber töten ungeschützte Einwohner, Invasionsschiffe übernehmen den Planeten mit einer Chance je nach Einwohnerzahl. Durchbricht die Flotte den Schild einer Fusion, wird deren unterster Planet abgesprengt.',
             self::Salvage => 'Bergungsschiffe sammeln ein Trümmerfeld ein.',
             self::Intercept => 'Fängt eine sichtbare angreifende Flotte kurz vor ihrem Ziel ab.',
             self::Hover => 'Die Flotte schwebt unsichtbar über ihrem Standort und landet danach wieder dort.',

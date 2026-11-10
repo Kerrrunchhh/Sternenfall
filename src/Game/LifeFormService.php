@@ -37,6 +37,10 @@ final readonly class LifeFormService
                 if ($player->getLifeForm() === $lifeForm) {
                     throw new GameException(\sprintf('Du gehörst bereits zu den %s.', $lifeForm->label()));
                 }
+                // An alliance only has players of one life form.
+                if (null !== $alliance = $player->getAlliance()) {
+                    throw new GameException(\sprintf('Du bist in „%s“ (%s) – dort sind nur %s. Tritt erst aus, dann kannst du die Lebensform wechseln.', $alliance->getName(), $alliance->getType(), $alliance->getLifeForm()->label()));
+                }
                 if ($player->getNextLifeFormChangeAt() > $now) {
                     throw new GameException(\sprintf('Ein Wechsel ist erst ab %s möglich.', $player->getNextLifeFormChangeAt()->format('d.m.Y H:i')));
                 }

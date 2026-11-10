@@ -16,6 +16,9 @@
                 {% elseif request and not request.invitation %}
                     <button class="btn btn-small" type="button" disabled>Bewerbung abgeschickt</button>
                     <span class="muted small">am {{ request.createdAt|date('d.m.Y H:i') }} – die Führung entscheidet darüber.</span>
+                {% elseif not alliance.admits(player) %}
+                    <button class="btn btn-small" type="button" disabled>Bewerben</button>
+                    <span class="muted small">In {{ alliance.type == 'Allianz' ? 'dieser Allianz' : (alliance.type == 'Orden' ? 'diesem Orden' : (alliance.type == 'Syndikat' ? 'diesem Syndikat' : 'dieser Handelsgilde')) }} sind nur {{ alliance.lifeForm.label }}.</span>
                 {% elseif player.alliance %}
                     <button class="btn btn-small" type="button" disabled>Bewerben</button>
                     <span class="muted small">Du bist bereits Mitglied von [{{ player.alliance.tag }}]. Um dich hier zu bewerben, musst du dort erst austreten.</span>

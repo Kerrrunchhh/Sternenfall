@@ -4,7 +4,6 @@ namespace App\Controller;
 
 use App\Game\Espionage;
 use App\Game\Universe;
-use App\Repository\DebrisFieldRepository;
 use App\Repository\BookmarkRepository;
 use App\Repository\PlanetRepository;
 use App\Repository\TradePostRepository;
@@ -32,8 +31,25 @@ class GalaxyController extends AbstractGameController
         return $this->redirectToRoute('app_galaxy', ['galaxy' => $galaxy, 'system' => $system]);
     }
 
+    /** "Kolonisieren" in the galaxy: a colony ship leaves the hangar of the planet being looked at. */
+    #[Route('/galaxy/colonize', name: 'app_galaxy_colonize', methods: ['POST'])]
+    #[IsCsrfTokenValid('galaxy', tokenKey: '_token')]
+    public function colonize(Request $request): Response
+    {
+        $planet = $this->currentPlanet();
+        $form = $request->request;
+        [$galaxy, $system, $position] = [$form->getInt('galaxy'), $form->getInt('system'), $form->getInt('position')];
+        try {
+            $this->addFlash('success', $this->fleetService->quickColonize($planet, $galaxy, $system, $position));
+        } catch (\App\Game\GameException $e) {
+            $this->addFlash('error', $e->getMessage());
+        }
+
+        return $this->redirect($this->generateUrl('app_galaxy', ['galaxy' => $galaxy, 'system' => $system]).'#slot-'.$position);
+    }
+
     #[Route('/galaxy', name: 'app_galaxy', methods: ['GET'])]
-    public function index(Request $request, PlanetRepository $planets, TradePostRepository $tradePosts, DebrisFieldRepository $debris, Espionage $espionage, BookmarkRepository $bookmarks): Response
+    public function index(Request $request, PlanetRepository $planets, TradePostRepository $tradePosts, Espionage $espionage, BookmarkRepository $bookmarks): Response
     {
         $planet = $this->currentPlanet();
         $galaxy = max(1, min(Universe::GALAXIES, $request->query->getInt('galaxy', $planet->getGalaxy())));
@@ -74,7 +90,8 @@ class GalaxyController extends AbstractGameController
             'slots' => $slots,
             'types' => $types,
             'posts' => $posts,
-            'debris' => $debris->findInSystem($galaxy, $system),
+            // Debris fields only where the player discovered them (probe, battle, salvaging).
+            'debris' => $espionage->knownDebris($this->player(), $galaxy, $system),
             'galaxies' => Universe::GALAXIES,
             'systems' => Universe::SYSTEMS_PER_GALAXY,
         ]);

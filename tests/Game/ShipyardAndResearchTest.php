@@ -91,7 +91,10 @@ class ShipyardAndResearchTest extends TestCase
         self::assertSame(12000, $this->economy->shipSpeed(ShipType::Pfeil, $player));
 
         $player->setResearchLevel(ResearchType::IonDrive, 5);
-        self::assertSame(18000, $this->economy->shipSpeed(ShipType::Pfeil, $player));
+        self::assertSame(14400, $this->economy->shipSpeed(ShipType::Pfeil, $player), '+4 % per level');
+
+        $player->setResearchLevel(ResearchType::IonDrive, 25);
+        self::assertSame(24000, $this->economy->shipSpeed(ShipType::Pfeil, $player), 'level 25 doubles the speed');
     }
 
     /** @return iterable<string, array{array<string, int>}> */
@@ -122,7 +125,7 @@ class ShipyardAndResearchTest extends TestCase
         }
     }
 
-    public function testFusionCapacityIsCappedAtFifty(): void
+    public function testFusionCapacityIsCappedAtFortyNine(): void
     {
         $player = new User('schweisser');
         self::assertSame(0, $this->economy->fusionCapacity($player));
@@ -131,7 +134,7 @@ class ShipyardAndResearchTest extends TestCase
         self::assertSame(7, $this->economy->fusionCapacity($player));
 
         $player->setResearchLevel(ResearchType::FusionTech, 80);
-        self::assertSame(50, $this->economy->fusionCapacity($player));
+        self::assertSame(49, $this->economy->fusionCapacity($player));
     }
 
     public function testCombatShipsComeFirstInFiringOrder(): void
@@ -179,15 +182,20 @@ class ShipyardAndResearchTest extends TestCase
         }
     }
 
-    public function testSystemsHaveThirtyToFiftyPlanets(): void
+    public function testSystemsHaveTenToFiftyPlanetsMostlySmall(): void
     {
         $sizes = [];
-        for ($system = 1; $system <= Universe::SYSTEMS_PER_GALAXY; ++$system) {
-            $sizes[] = Universe::planetsInSystem(1, $system);
+        for ($galaxy = 1; $galaxy <= Universe::GALAXIES; ++$galaxy) {
+            for ($system = 1; $system <= Universe::SYSTEMS_PER_GALAXY; ++$system) {
+                $sizes[] = Universe::planetsInSystem($galaxy, $system);
+            }
         }
 
-        self::assertGreaterThanOrEqual(30, min($sizes));
+        self::assertSame(10, min($sizes));
         self::assertLessThanOrEqual(50, max($sizes));
+        self::assertGreaterThan(40, max($sizes), 'large systems exist too');
+        $small = \count(array_filter($sizes, static fn (int $n): bool => $n < 30));
+        self::assertGreaterThan(\count($sizes) / 2, $small, 'small systems are more common');
         self::assertGreaterThan(10, \count(array_unique($sizes)), 'sizes should vary between systems');
         self::assertSame(Universe::planetsInSystem(2, 17), Universe::planetsInSystem(2, 17));
     }

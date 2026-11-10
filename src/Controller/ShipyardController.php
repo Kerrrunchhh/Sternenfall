@@ -7,6 +7,7 @@ use App\Game\PlanetService;
 use App\Game\QueueKind;
 use App\Game\QueueTimeline;
 use App\Game\ResourceType;
+use App\Game\ShipStats;
 use App\Game\ShipType;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -18,19 +19,19 @@ class ShipyardController extends AbstractGameController
 {
     /** Shipyard with two tabs: warships (default) and civil ships (?tab=civil). */
     #[Route('/shipyard', name: 'app_shipyard', methods: ['GET'])]
-    public function index(QueueTimeline $timeline, Request $request): Response
+    public function index(QueueTimeline $timeline, ShipStats $shipStats, Request $request): Response
     {
-        return $this->page($timeline, defense: false, civil: 'civil' === $request->query->getString('tab'));
+        return $this->page($timeline, $shipStats, defense: false, civil: 'civil' === $request->query->getString('tab'));
     }
 
     /** Planetary defense: the turrets, built in the same shipyard queue. */
     #[Route('/defense', name: 'app_defense', methods: ['GET'])]
-    public function defense(QueueTimeline $timeline): Response
+    public function defense(QueueTimeline $timeline, ShipStats $shipStats): Response
     {
-        return $this->page($timeline, defense: true);
+        return $this->page($timeline, $shipStats, defense: true);
     }
 
-    private function page(QueueTimeline $timeline, bool $defense, bool $civil = false): Response
+    private function page(QueueTimeline $timeline, ShipStats $shipStats, bool $defense, bool $civil = false): Response
     {
         $planet = $this->currentPlanet();
         $player = $planet->getOwner();
@@ -80,7 +81,7 @@ class ShipyardController extends AbstractGameController
                 'spec' => $spec,
                 'rates' => $rates,
                 'stationed' => $planet->getShipCount($type),
-                'speed' => $this->economy->shipSpeed($type, $player),
+                'stats' => $shipStats->describe($type, $player),
                 'missing' => $this->economy->missingShipRequirements($type, $planet),
             ];
         }

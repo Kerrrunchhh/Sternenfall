@@ -4,13 +4,18 @@ namespace App\Controller;
 
 use App\Entity\Fleet;
 use App\Game\FleetMission;
+use App\Game\FleetService;
 use App\Game\Navigation;
 use App\Game\Radar;
 use App\Game\GameException;
 use App\Game\Resources;
 use App\Game\ResourceType;
 use App\Game\ShipType;
+use App\Entity\Squadron;
+use App\Game\FleetFilters;
+use App\Game\SquadronService;
 use App\Repository\BookmarkRepository;
+use App\Repository\SquadronRepository;
 use App\Repository\FleetRepository;
 use App\Repository\PlanetRepository;
 use App\Repository\UserRepository;
@@ -24,7 +29,7 @@ use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 class FleetController extends AbstractGameController
 {
     #[Route('/fleet', name: 'app_fleet', methods: ['GET'])]
-    public function index(Request $request, FleetRepository $fleets, PlanetRepository $planets, Radar $radar, Navigation $navigation, BookmarkRepository $bookmarks): Response
+    public function index(Request $request, FleetRepository $fleets, PlanetRepository $planets, Radar $radar, Navigation $navigation, BookmarkRepository $bookmarks, SquadronRepository $squadrons): Response
     {
         $planet = $this->currentPlanet();
         $player = $planet->getOwner();
@@ -82,12 +87,20 @@ class FleetController extends AbstractGameController
             'bulk_actions' => self::BULK_ACTIONS,
             'hover_sources' => $hoverSources,
             'bookmarks' => $bookmarks->findByOwner($player),
+            'squadrons' => $squadrons->findByOwner($player),
             'game_speed' => $this->economy->speed(),
             'hangar' => $hangar,
+            // Own fleets waiting at the current planet can take ships from its hangar.
+            'here_fleets' => array_values(array_map(
+                static fn (array $e): Fleet => $e['fleet'],
+                array_filter($entries, static fn (array $e): bool => $e['fleet']->isIdle() && $e['base']?->getId() === $planet->getId()),
+            )),
             'entries' => $entries,
             'shared' => $shared,
             'allies' => $allies,
             'missions' => FleetMission::selectable(),
+            // Attacks on their way that own fleets may join (joint attack).
+            'joinable_attacks' => $this->fleetService->joinableAttacks($player),
             'ship_types' => ShipType::cases(),
             // Foreign fleets heading here are only known if the radar sees them.
             'incoming' => array_values(array_filter($fleets->findIncoming($player), static fn (Fleet $f): bool => $radar->sees($player, $f))),
@@ -108,6 +121,29 @@ class FleetController extends AbstractGameController
         $planet = $this->currentPlanet();
         $name = $request->request->getString('name');
         $this->attempt(fn () => $this->fleetService->create($planet, $name, $this->ships($request)), \sprintf('Flotte „%s“ gebildet.', trim($name)));
+
+        return $this->redirectToRoute('app_fleet');
+    }
+
+    /** Hangar section: chosen ships of the current planet join a fleet waiting there. */
+    #[Route('/fleets/add-from-hangar', name: 'app_fleets_add_from_hangar', methods: ['POST'])]
+    #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
+    public function addFromHangar(Request $request, FleetRepository $fleets): Response
+    {
+        $planet = $this->currentPlanet();
+        $id = $request->request->getString('fleet');
+        $fleet = ctype_digit($id) ? $fleets->find((int) $id) : null;
+        if (null === $fleet || !$fleet->getOwner()->isSameAs($this->player())) {
+            $this->addFlash('error', 'Wähle eine deiner Flotten aus.');
+
+            return $this->redirectToRoute('app_fleet');
+        }
+        $this->attempt(function () use ($fleet, $planet, $request): void {
+            if (!$fleet->isIdle() || $fleet->getGalaxy() !== $planet->getGalaxy() || $fleet->getSystem() !== $planet->getSystem() || !$planet->covers($fleet->getPosition())) {
+                throw new GameException(\sprintf('%s wartet nicht an %s.', $fleet->getLabel(), $planet->getName()));
+            }
+            $this->fleetService->transfer($fleet, $this->player(), $this->ships($request), true);
+        }, \sprintf('Schiffe aus dem Hangar von %s zu %s hinzugefügt.', $planet->getName(), $fleet->getLabel()));
 
         return $this->redirectToRoute('app_fleet');
     }
@@ -279,7 +315,7 @@ class FleetController extends AbstractGameController
         'hover' => 'Schweben',
         'gather' => 'Schiffe zusammenziehen (eine Flotte)',
         'load' => 'Schiffe aus dem Hangar aufnehmen (eine Flotte)',
-        'drop' => 'Schiffe in den Hangar abgeben (eine Flotte)',
+        'drop' => 'Schiffe aus der Flotte entfernen (eine Flotte)',
         'split' => 'Aufteilen (eine Flotte)',
         'rename' => 'Umbenennen (eine Flotte)',
         'unload' => 'Ladung abladen',
@@ -288,12 +324,14 @@ class FleetController extends AbstractGameController
         'unrelease_alliance' => 'Allgemeine Freigabe zurücknehmen',
         'release_member' => 'Einzeln für ein Mitglied freigeben',
         'revoke_member' => 'Einzelfreigabe zurücknehmen',
+        'squadron_add' => 'Zu einem Geschwader hinzufügen',
+        'squadron_remove' => 'Aus einem Geschwader entfernen',
     ];
 
     /** Runs one action for every selected fleet; each result becomes a flash message. */
     #[Route('/fleets/bulk', name: 'app_fleets_bulk', methods: ['POST'])]
     #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
-    public function bulk(Request $request, FleetRepository $fleets, UserRepository $users): Response
+    public function bulk(Request $request, FleetRepository $fleets, UserRepository $users, SquadronRepository $squadrons, SquadronService $squadronService): Response
     {
         $this->currentPlanet();
         $player = $this->player();
@@ -329,6 +367,24 @@ class FleetController extends AbstractGameController
             return $this->redirectToRoute('app_fleet');
         }
 
+        if (\in_array($action, ['squadron_add', 'squadron_remove'], true)) {
+            // "– neues Geschwader –" sends an empty value.
+            $squadronId = $form->getString('squadron');
+            $squadron = ctype_digit($squadronId) ? $squadrons->find((int) $squadronId) : null;
+            if ('squadron_add' === $action) {
+                $this->attempt(
+                    fn () => $squadronService->add($player, $squadron, $form->getString('squadron_name'), $selected),
+                    \sprintf('%d Flotte(n) im Geschwader „%s“.', \count($selected), $squadron?->getName() ?? trim($form->getString('squadron_name'))),
+                );
+            } elseif (null === $squadron) {
+                $this->addFlash('error', 'Wähle ein Geschwader aus.');
+            } else {
+                $this->attempt(fn () => $squadronService->remove($player, $squadron, $selected), \sprintf('%d Flotte(n) aus „%s“ entfernt.', \count($selected), $squadron->getName()));
+            }
+
+            return $this->redirectToRoute('app_fleet');
+        }
+
         if ('merge' === $action) {
             $this->attempt(fn () => $this->fleetService->merge($selected, $player), \sprintf('%d Flotten zu „%s“ zusammengelegt.', \count($selected), $selected[0]->getLabel()));
 
@@ -336,12 +392,26 @@ class FleetController extends AbstractGameController
         }
 
         $cargo = $this->cargo($request);
-        if ('send' === $action && \count($selected) > 1 && !$cargo->isEmpty()) {
+        if ('send' === $action && \count($selected) > 1 && !$cargo->isEmpty() && !\in_array($mission, FleetService::GROUP_MISSIONS, true)) {
             $this->addFlash('error', 'Ladung kann nur eine einzelne Flotte mitnehmen. Wähle nur eine Flotte aus oder lass die Ladung leer.');
 
             return $this->redirectToRoute('app_fleet');
         }
         $member = \in_array($action, ['release_member', 'revoke_member'], true) ? $users->find($form->getInt('member')) : null;
+
+        // Several fleets attacking or transporting together (joint attack, convoy with escort) arrive together.
+        $lead = FleetMission::Attack === $mission ? $this->leadFleet($form->getString('join'), $fleets) : null;
+        if ('send' === $action && \in_array($mission, FleetService::GROUP_MISSIONS, true) && (\count($selected) > 1 || null !== $lead)) {
+            try {
+                foreach ($this->fleetService->sendGroup($selected, $player, $form->getInt('galaxy'), $form->getInt('system'), $form->getInt('position'), $mission, $this->cargo($request), Navigation::parsePercent($form->getString('speed')), $lead) as $line) {
+                    $this->addFlash(str_contains($line, 'gestartet') || str_contains($line, 'tritt dem Angriff') || str_contains($line, 'im Konvoi') ? 'success' : 'error', $line);
+                }
+            } catch (GameException $e) {
+                $this->addFlash('error', $e->getMessage());
+            }
+
+            return $this->redirectToRoute('app_fleet');
+        }
 
         foreach ($selected as $fleet) {
             $label = $fleet->getLabel();
@@ -350,13 +420,13 @@ class FleetController extends AbstractGameController
                 $message = match ($action) {
                     'send' => $this->fleetService->sendFleet($fleet, $player, $form->getInt('galaxy'), $form->getInt('system'), $form->getInt('position'),
                         $mission, $cargo,
-                        [], Navigation::parsePercent($form->getString('speed'))),
+                        FleetMission::Pickup === $mission ? $this->pickupOrder($request) : [], Navigation::parsePercent($form->getString('speed'))),
                     'recall' => $this->run(fn () => $this->fleetService->recall($fleet, $player), FleetMission::Hover === $fleet->getMission() ? 'ist wieder gelandet' : 'kehrt um', $label),
                     'hover' => $this->fleetService->hover($fleet, $player, $form->getString('source')),
                     'gather' => 'Schiffe werden zusammengezogen: '.implode('; ', $this->fleetService->gather($fleet, $player, $form->getInt('minutes'), array_values(array_filter(array_map(
                         static fn (mixed $v): ?ShipType => ShipType::tryFrom((string) $v), $form->all('types')))))).'.',
                     'load' => $this->run(fn () => $this->fleetService->transfer($fleet, $player, array_map('intval', $form->all('load')[$id] ?? []), true), 'hat Schiffe aus dem Hangar aufgenommen', $label),
-                    'drop' => $this->run(fn () => $this->fleetService->transfer($fleet, $player, array_map('intval', $form->all('drop')[$id] ?? []), false), 'hat Schiffe in den Hangar abgegeben', $label),
+                    'drop' => $label.' '.$this->fleetService->removeShips($fleet, $player, array_map('intval', $form->all('drop')[$id] ?? [])).'.',
                     'split' => $this->run(fn () => $this->fleetService->split($fleet, $player, $form->getString('name'), array_map('intval', $form->all('split')[$id] ?? [])), \sprintf('wurde aufgeteilt, neue Flotte „%s“', trim($form->getString('name'))), $label),
                     'rename' => $this->run(fn () => $this->fleetService->rename($fleet, $player, $form->getString('name')), \sprintf('heißt jetzt „%s“', trim($form->getString('name'))), $label),
                     'unload' => $this->run(fn () => $this->fleetService->unloadCargo($fleet, $player), 'hat die Ladung abgeladen', $label),
@@ -377,6 +447,41 @@ class FleetController extends AbstractGameController
         return $this->redirectToRoute('app_fleet');
     }
 
+    #[Route('/fleet-filters', name: 'app_fleet_filter_save', methods: ['POST'])]
+    #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
+    public function saveFilter(Request $request, FleetFilters $filters): Response
+    {
+        $this->currentPlanet();
+        $form = $request->request;
+        $this->attempt(
+            fn () => $filters->save($this->player(), $form->getString('name'), $form->getString('color'), $form->getString('definition')),
+            \sprintf('Filter „%s“ gespeichert.', trim($form->getString('name'))),
+        );
+
+        return $this->redirectToRoute('app_fleet');
+    }
+
+    #[Route('/fleet-filters/delete', name: 'app_fleet_filter_delete', methods: ['POST'])]
+    #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
+    public function deleteFilter(Request $request, FleetFilters $filters): Response
+    {
+        $this->currentPlanet();
+        $name = $request->request->getString('name');
+        $this->attempt(fn () => $filters->delete($this->player(), $name), \sprintf('Filter „%s“ gelöscht.', $name));
+
+        return $this->redirectToRoute('app_fleet');
+    }
+
+    #[Route('/squadrons/{id}/delete', name: 'app_squadron_delete', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
+    public function deleteSquadron(Squadron $squadron, SquadronService $squadronService): Response
+    {
+        $this->currentPlanet();
+        $this->attempt(fn () => $squadronService->delete($this->player(), $squadron), \sprintf('Geschwader „%s“ aufgelöst – die Flotten bleiben, wie sie sind.', $squadron->getName()));
+
+        return $this->redirectToRoute('app_fleet');
+    }
+
     /** Runs a service call and returns "<fleet> <what happened>." for the flash message. */
     private function run(callable $operation, string $outcome, string $label): string
     {
@@ -389,6 +494,27 @@ class FleetController extends AbstractGameController
     private function ships(Request $request): array
     {
         return array_map('intval', $request->request->all('ships'));
+    }
+
+    /** The attack a fleet joins (joint attack), if one was chosen. */
+    private function leadFleet(string $id, FleetRepository $fleets): ?Fleet
+    {
+        return ctype_digit($id) ? $fleets->find((int) $id) : null;
+    }
+
+    /** @return array<string, float> resource => amount each fleet picks up */
+    private function pickupOrder(Request $request): array
+    {
+        $wanted = $request->request->all('pickup');
+        $order = [];
+        foreach (ResourceType::cases() as $type) {
+            $amount = max(0, (int) ($wanted[$type->value] ?? 0));
+            if ($amount > 0) {
+                $order[$type->value] = (float) $amount;
+            }
+        }
+
+        return $order;
     }
 
     private function cargo(Request $request): Resources

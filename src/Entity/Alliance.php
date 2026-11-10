@@ -10,7 +10,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * An alliance. Its kind (Orden, Syndikat, Handelsorganisation, Allianz) follows
+ * An alliance. Only players of one life form belong to it, and its kind (Orden, Syndikat, Handelsgilde, Allianz) follows
  * the life form of its founder at the time of founding; members may have any life form.
  */
 #[ORM\Entity(repositoryClass: AllianceRepository::class)]
@@ -79,7 +79,13 @@ class Alliance
         return $this->lifeForm;
     }
 
-    /** "Orden", "Syndikat", "Handelsorganisation" or "Allianz". */
+    /** "Orden", "Syndikat", "Handelsgilde" or "Allianz". */
+    /** Only players of the alliance's life form may join. */
+    public function admits(User $user): bool
+    {
+        return $user->getLifeForm() === $this->lifeForm;
+    }
+
     public function getType(): string
     {
         return $this->lifeForm->allianceType();

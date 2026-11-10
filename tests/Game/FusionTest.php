@@ -210,15 +210,29 @@ class FusionTest extends TestCase
         self::assertTrue($top->isHomeworld(), 'after blowing apart, the top planet stays protected');
     }
 
-    public function testInvadedPlanetIntegratesAfterFourWeeks(): void
+    public function testInvadedPlanetIntegratesAfterThirtyDays(): void
     {
         $planet = $this->planet(5, 'Beute');
         self::assertFalse($planet->isIntegrating($this->now));
+        self::assertSame(1, $planet->slotCost($this->now));
 
         $planet->markInvaded($this->now);
 
-        self::assertTrue($planet->isIntegrating($this->now->modify('+27 days')));
-        self::assertFalse($planet->isIntegrating($this->now->modify('+28 days')));
+        self::assertTrue($planet->isIntegrating($this->now->modify('+29 days')));
+        self::assertFalse($planet->isIntegrating($this->now->modify('+30 days')));
+    }
+
+    public function testInvadedPlanetTakesThreeThenTwoSlotsInWarTwo(): void
+    {
+        $planet = $this->planet(5, 'Beute');
+        $planet->markInvaded($this->now);
+        self::assertSame(3, $planet->slotCost($this->now->modify('+13 days')));
+        self::assertSame(2, $planet->slotCost($this->now->modify('+14 days')));
+        self::assertSame(1, $planet->slotCost($this->now->modify('+30 days')), 'fully owned');
+
+        $war = $this->planet(6, 'Kriegsbeute');
+        $war->markInvaded($this->now, true);
+        self::assertSame(2, $war->slotCost($this->now), 'in a war only 2 from the start');
     }
 
     public function testSplitCostIsPerWeldedPlanet(): void

@@ -3,14 +3,28 @@
 {% block title %}Nachrichten – {{ game_name }}{% endblock %}
 
 {% block content %}
-    <h1>Nachrichten</h1>
+    <div class="page-head">
+        <h1>Nachrichten</h1>
+        <form method="post" action="{{ path('app_messages_read_all') }}" data-read-all>
+            <input type="hidden" name="_token" value="{{ csrf_token('messages') }}">
+            <button class="btn btn-small btn-secondary" type="submit" id="messages-read-all" {{ unread_messages > 0 ? '' : 'disabled title="Alles gelesen"' }}>Alle als gelesen markieren</button>
+        </form>
+    </div>
+    <p class="muted small">Nachrichten werden nach {{ keep_days }} Tagen automatisch gelöscht.</p>
+    {% set token = csrf_token('messages') %}
     {% for m in messages %}
-        <details class="panel message {{ m.read ? '' : 'unread' }}" {{ loop.first and not m.read ? 'open' }}>
+        {# Opening an unread message marks it read (and lowers the counter). #}
+        <details class="panel message {{ m.read ? '' : 'unread' }}" {% if not m.read %}data-read-url="{{ path('app_message_read', {id: m.id}) }}" data-token="{{ token }}"{% endif %}>
             <summary>
                 <span>{{ m.subject }}</span>
                 <span class="muted small">{{ m.createdAt|date('d.m.Y H:i') }}</span>
             </summary>
             <pre class="message-body">{{ m.body|link_coordinates }}</pre>
+            <form method="post" action="{{ path('app_message_delete', {id: m.id}) }}" class="message-actions">
+                <input type="hidden" name="_token" value="{{ token }}">
+                <span class="muted small">wird am {{ m.createdAt|date_modify('+' ~ keep_days ~ ' days')|date('d.m.Y') }} automatisch gelöscht</span>
+                <button class="btn btn-small btn-danger" type="submit" id="message-delete-{{ m.id }}">Löschen</button>
+            </form>
         </details>
     {% else %}
         <p class="panel muted">Keine Nachrichten.</p>

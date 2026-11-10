@@ -80,6 +80,39 @@ class FleetRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /** Groups of ships still flying to join the fleet ("Schiffe zusammenziehen"). */
+    public function countJoining(Fleet $fleet): int
+    {
+        return $this->count(['targetFleet' => $fleet, 'mission' => \App\Game\FleetMission::Gather, 'returning' => false]);
+    }
+
+    /**
+     * Fleets that joined an attack led by this fleet (joint attack).
+     *
+     * @return list<Fleet>
+     */
+    public function findAttackJoiners(Fleet $lead): array
+    {
+        return $this->findBy(['targetFleet' => $lead, 'mission' => \App\Game\FleetMission::Attack, 'returning' => false], ['id' => 'ASC']);
+    }
+
+    /**
+     * Attacks still on their way that the player may join: own ones, of his alliance and of
+     * bond partners (decided by the caller), each leading fleet only (no joiners).
+     *
+     * @return list<Fleet>
+     */
+    public function findLeadingAttacks(\DateTimeImmutable $now): array
+    {
+        return $this->createQueryBuilder('f')
+            ->where('f.mission = :attack AND f.returning = false AND f.targetFleet IS NULL AND f.arriveAt > :now')
+            ->setParameter('attack', \App\Game\FleetMission::Attack)
+            ->setParameter('now', $now)
+            ->orderBy('f.arriveAt', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
     /** Colony ships of a player that are on their way to found a colony. */
     public function countColonyShipsUnderway(User $owner): int
     {
@@ -91,6 +124,22 @@ class FleetRepository extends ServiceEntityRepository
         }
 
         return $count;
+    }
+
+    /**
+     * Waiting fleets whose stay has to be checked: not yet timed, waiting since before the
+     * cutoff, or stranded.
+     *
+     * @return list<Fleet>
+     */
+    public function findParkedBefore(\DateTimeImmutable $cutoff): array
+    {
+        return $this->createQueryBuilder('f')
+            ->where('f.mission IS NULL')
+            ->andWhere('f.parkedAt IS NULL OR f.parkedAt <= :cutoff OR f.strandedSince IS NOT NULL')
+            ->setParameter('cutoff', $cutoff)
+            ->getQuery()
+            ->getResult();
     }
 
     public function forget(Fleet $fleet): void

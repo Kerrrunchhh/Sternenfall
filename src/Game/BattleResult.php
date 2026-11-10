@@ -71,6 +71,38 @@ final readonly class BattleResult
         return $value;
     }
 
+    /**
+     * Combat experience: the shield points (research included) destroyed on one side go to
+     * the players of the other side, shared by the build time of the units each brought.
+     * Transports spared in a raid did not fight and get nothing.
+     *
+     * @return list<array{user: User, experience: float}>
+     */
+    public function experience(): array
+    {
+        $shares = [];
+        foreach ([BattleGroup::ATTACKER => BattleGroup::DEFENDER, BattleGroup::DEFENDER => BattleGroup::ATTACKER] as $side => $enemy) {
+            $pool = array_sum(array_map(static fn (BattleGroup $g): float => $g->destroyedShield(), $this->side($enemy)));
+            $weights = [];
+            foreach ($this->side($side) as $group) {
+                if ($this->transportsSpared && BattleGroup::DEFENDER === $side && $group->type->isTransport()) {
+                    continue;
+                }
+                $key = $group->owner->getId() ?? spl_object_id($group->owner);
+                $weights[$key] = ['user' => $group->owner, 'weight' => ($weights[$key]['weight'] ?? 0.0) + $group->buildWeight()];
+            }
+            $total = array_sum(array_column($weights, 'weight'));
+            if ($pool <= 0 || $total <= 0) {
+                continue;
+            }
+            foreach ($weights as $entry) {
+                $shares[] = ['user' => $entry['user'], 'experience' => $pool * $entry['weight'] / $total];
+            }
+        }
+
+        return $shares;
+    }
+
     /** @return list<User> everybody who took part */
     public function participants(): array
     {
@@ -83,24 +115,58 @@ final readonly class BattleResult
     }
 
     /** Human readable report of both sides. */
-    public function report(): string
+    /**
+     * Report of both sides, grouped by player. Seen by a participant ($viewer), his own
+     * units are marked "Du" and those of his alliance "Allianz"; without a viewer (shared
+     * link, newspaper) it is neutral.
+     */
+    public function report(?User $viewer = null): string
     {
         $lines = [];
         foreach ([BattleGroup::ATTACKER => 'Angreifer', BattleGroup::DEFENDER => 'Verteidiger'] as $side => $title) {
             $lines[] = $title.':';
-            $groups = $this->side($side);
-            usort($groups, static fn (BattleGroup $a, BattleGroup $b): int => [$a->owner->getUsername(), $a->type->firingOrder()] <=> [$b->owner->getUsername(), $b->type->firingOrder()]);
-            foreach ($groups as $group) {
-                $lines[] = \sprintf(
-                    '  %s – %s: %s → %s%s',
-                    $group->owner->getUsername(),
-                    $group->type->label(),
-                    number_format($group->count, 0, ',', '.'),
-                    number_format($group->alive(), 0, ',', '.'),
-                    $this->transportsSpared && BattleGroup::DEFENDER === $side && $group->type->isTransport() ? ' (verschont)' : '',
-                );
+            $byOwner = [];
+            foreach ($this->side($side) as $group) {
+                $byOwner[$group->owner->getId() ?? spl_object_id($group->owner)][] = $group;
             }
-            if ([] === $groups) {
+            $rank = static function (User $owner) use ($viewer): int {
+                if (null === $viewer) {
+                    return 2;
+                }
+
+                return $owner->isSameAs($viewer) ? 0 : ($owner->isAllyOf($viewer) ? 1 : 2);
+            };
+            uasort($byOwner, static fn (array $a, array $b): int => [$rank($a[0]->owner), mb_strtolower($a[0]->owner->getUsername())] <=> [$rank($b[0]->owner), mb_strtolower($b[0]->owner->getUsername())]);
+            foreach ($byOwner as $groups) {
+                $owner = $groups[0]->owner;
+                $tag = null !== $owner->getAlliance() ? ' ['.$owner->getAlliance()->getTag().']' : '';
+                $lines[] = '  '.match ($rank($owner)) {
+                    0 => 'Du ('.$owner->getUsername().')',
+                    1 => $owner->getUsername().$tag.' · Allianz',
+                    default => $owner->getUsername().$tag,
+                }.':';
+                // Units of one type from several fleets of a player are counted together.
+                $types = [];
+                foreach ($groups as $group) {
+                    $key = $group->type->value;
+                    $types[$key] ??= ['type' => $group->type, 'count' => 0, 'alive' => 0];
+                    $types[$key]['count'] += $group->count;
+                    $types[$key]['alive'] += $group->alive();
+                }
+                usort($types, static fn (array $a, array $b): int => $a['type']->firingOrder() <=> $b['type']->firingOrder());
+                foreach ($types as $t) {
+                    $lost = $t['count'] - $t['alive'];
+                    $lines[] = \sprintf(
+                        '    %s: %s → %s%s%s',
+                        $t['type']->label(),
+                        number_format($t['count'], 0, ',', '.'),
+                        number_format($t['alive'], 0, ',', '.'),
+                        $lost > 0 ? ' (−'.number_format($lost, 0, ',', '.').')' : '',
+                        $this->transportsSpared && BattleGroup::DEFENDER === $side && $t['type']->isTransport() ? ' (verschont)' : '',
+                    );
+                }
+            }
+            if ([] === $byOwner) {
                 $lines[] = '  keine Einheiten';
             }
             $lines[] = '';

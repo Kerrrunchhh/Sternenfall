@@ -225,7 +225,9 @@ final readonly class Economy
 
     public function researchCost(ResearchType $type, int $targetLevel): Resources
     {
-        $factor = $type->isLongTerm() ? $targetLevel ** 1.5 : 2 ** ($targetLevel - 1);
+        $factor = $type->isLongTerm()
+            ? array_sum(array_map(static fn (int $step): float => $step ** 1.5, self::longTermSteps($type, $targetLevel)))
+            : 2 ** ($targetLevel - 1);
 
         return $type->baseCost()->multiply($factor)->floor();
     }
@@ -235,15 +237,57 @@ final readonly class Economy
      * who fuses 49 planets with research labs at level 20 to research it.
      */
     public const int LONG_RESEARCH_LAB_HOURS = 1_412_640;
-    /** Steepness of the long-term curve: level n needs LONG_RESEARCH_LAB_HOURS × (n/50)^2.6 lab hours. */
+    /** Steepness of the long-term curve: step n needs LONG_RESEARCH_LAB_HOURS × (n/50)^2.6 lab hours. */
     public const float LONG_RESEARCH_EXPONENT = 2.6;
+    public const int LONG_RESEARCH_STEPS = 50;
+
+    /** Days the first colonization levels take for the model player: a quick start. */
+    public const array COLONIZATION_START_DAYS = [1 => 1, 2 => 14];
+
+    /**
+     * Lab hours of a colonization level (10 planet slots). From level 3 on, it takes the model
+     * player – who fuses all his planets with labs growing from 4 to 20 – as long as the
+     * 10 single steps it stands for did; levels 1 and 2 are quicker for a fast start.
+     */
+    public static function colonizationLabHours(int $level): float
+    {
+        $steps = self::longTermSteps(ResearchType::Colonization, $level);
+        $modelHours = isset(self::COLONIZATION_START_DAYS[$level])
+            ? 24 * self::COLONIZATION_START_DAYS[$level]
+            : array_sum(array_map(
+                static fn (int $step): float => self::LONG_RESEARCH_LAB_HOURS * ($step / self::LONG_RESEARCH_STEPS) ** self::LONG_RESEARCH_EXPONENT / (1 + self::modelLabSum($step)),
+                $steps,
+            ));
+
+        return $modelHours * (1 + self::modelLabSum($steps[0]));
+    }
+
+    /** Research lab levels the model player has at a step of the long-term curve (fused planets × lab level). */
+    private static function modelLabSum(int $step): float
+    {
+        return max(1, $step - 1) * (4 + 16 * $step / self::LONG_RESEARCH_STEPS);
+    }
+
+    /**
+     * The steps of the long-term curve a level stands for (colonization level 2 = steps 11–20).
+     *
+     * @return list<int>
+     */
+    private static function longTermSteps(ResearchType $type, int $targetLevel): array
+    {
+        $per = $type->stepsPerLevel();
+
+        return range(($targetLevel - 1) * $per + 1, $targetLevel * $per);
+    }
 
     /** Research time depends on the research lab of the planet it is started on. */
     public function researchSeconds(ResearchType $type, int $targetLevel, Planet $planet): int
     {
         $labs = 1 + $planet->getBuildingLevel(BuildingType::ResearchLab);
-        if ($type->isLongTerm()) {
-            $labHours = self::LONG_RESEARCH_LAB_HOURS * ($targetLevel / $type->maxLevel()) ** self::LONG_RESEARCH_EXPONENT;
+        if (ResearchType::Colonization === $type) {
+            $labHours = self::colonizationLabHours($targetLevel);
+        } elseif ($type->isLongTerm()) {
+            $labHours = self::LONG_RESEARCH_LAB_HOURS * ($targetLevel / self::LONG_RESEARCH_STEPS) ** self::LONG_RESEARCH_EXPONENT;
         } else {
             $cost = $this->researchCost($type, $targetLevel);
             $labHours = ($cost->iron + $cost->titanium) / 1000;
@@ -255,14 +299,21 @@ final readonly class Economy
     /** Build time of a single ship, depending on the shipyard level. */
     public function shipSeconds(ShipType $type, Planet $planet): int
     {
-        $cost = $type->spec()->cost;
-        $hours = ($cost->iron + $cost->titanium) / (2500 * (1 + $planet->getBuildingLevel(BuildingType::Shipyard)));
+        $hours = self::baseShipHours($type) / (1 + $planet->getBuildingLevel(BuildingType::Shipyard));
 
         return max(1, (int) round($hours * 3600 / $this->speed));
     }
 
+    /** Build hours of one unit in a shipyard of level 0 at normal game speed: its weight in a battle. */
+    public static function baseShipHours(ShipType $type): float
+    {
+        $cost = $type->spec()->cost;
+
+        return ($cost->iron + $cost->titanium) / 2500;
+    }
+
     /**
-     * Speed of a ship type including the bonus of its drive research (+10 % per level).
+     * Speed of a ship type including the bonus of its drive research (+4 % per level).
      *
      * Fixed order regardless of research: the fusionator is always faster than every
      * regular ship, and only the scout is faster than the fusionator.
@@ -280,7 +331,7 @@ final readonly class Economy
     {
         $spec = $type->spec();
 
-        return (int) round($spec->speed * (1 + 0.1 * $player->getResearchLevel($spec->drive)) * $player->getLifeForm()->speedFactor());
+        return (int) round($spec->speed * (1 + Battle::RESEARCH_BONUS * $player->getResearchLevel($spec->drive)) * $player->getLifeForm()->speedFactor());
     }
 
     private function fastestRegularSpeed(User $player): int
@@ -296,21 +347,25 @@ final readonly class Economy
     }
 
     /** How many planets one fusionator can weld together. */
-    /** Planet slots a player may hold through colonization: research level + 1 (welded slots count one by one). */
+    public const int SLOTS_PER_COLONIZATION_LEVEL = 10;
+
+    /** Planet slots a player may hold: only the home planet without research, then 10 per level (welded slots count one by one). */
     public function colonySlots(User $player): int
     {
-        return 1 + $player->getResearchLevel(ResearchType::Colonization);
+        return max(1, self::SLOTS_PER_COLONIZATION_LEVEL * $player->getResearchLevel(ResearchType::Colonization));
     }
 
-    public static function ownedSlots(User $player): int
+    public static function ownedSlots(User $player, ?\DateTimeImmutable $now = null): int
     {
-        return array_sum(array_map(static fn (Planet $p): int => $p->getFusionSize(), $player->getPlanets()->toArray()));
+        $now ??= new \DateTimeImmutable();
+
+        return array_sum(array_map(static fn (Planet $p): int => $p->slotCost($now), $player->getPlanets()->toArray()));
     }
 
-    /** Largest fusion allowed (and planets one fusionator welds): the fusion research level, at most 50. */
+    /** Largest fusion allowed (and planets one fusionator welds): the fusion research level, at most 49. */
     public function fusionCapacity(User $player): int
     {
-        return min(50, $player->getResearchLevel(ResearchType::FusionTech));
+        return min(ResearchType::FUSION_MAX_LEVEL, $player->getResearchLevel(ResearchType::FusionTech));
     }
 
     /**

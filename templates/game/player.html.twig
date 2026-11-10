@@ -16,10 +16,44 @@
                 · {{ listed_planets|length }} Planet{{ listed_planets|length == 1 ? '' : 'en' }}
                 · dabei seit {{ profile.createdAt|date('d.m.Y') }}
             </p>
+            <p class="player-scores">
+                <span title="Wie weit die Planeten ausgebaut sind: 1 Punkt je 1.000 in Gebäude gesteckte Rohstoffe"><strong>{{ player_points(profile)|number_format(0, ',', '.') }}</strong> Punkte</span>
+                <span title="Nur aus Schlachten: zerstörte Schildpunkte gegnerischer Einheiten, aufgeteilt nach der Bauzeit der eigenen Einheiten"><strong>{{ profile.combatExperience|number_format(0, ',', '.') }}</strong> Kampferfahrung</span>
+                {% if not own %}{{ ui.presence(profile) }}{% endif %}
+            </p>
             {% if profile.profileText %}
                 <div class="message-body">{{ profile.profileText }}</div>
             {% else %}
                 <p class="muted">{{ own ? 'Du hast noch nichts über dich geschrieben.' : profile.username ~ ' hat noch nichts über sich geschrieben.' }}</p>
+            {% endif %}
+            {% if not own %}
+                <div class="profile-actions">
+                    <a class="btn" href="{{ path('app_mail_compose', {to: profile.username}) }}" id="profile-write">✉ Nachricht schreiben</a>
+                    {% if contact is null %}
+                        <form method="post" action="{{ path('app_contact_request', {id: profile.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('contact') }}">
+                            <button class="btn btn-secondary" type="submit" id="profile-contact-request">★ Als Schnellkontakt anfragen</button>
+                        </form>
+                    {% elseif contact.accepted %}
+                        <span class="muted small">★ In deinen Schnellkontakten</span>
+                        <form method="post" action="{{ path('app_contact_remove', {id: contact.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('contact') }}">
+                            <button class="btn btn-small btn-secondary" type="submit" id="profile-contact-remove" data-confirm="{{ profile.username }} aus den Schnellkontakten entfernen? Du verschwindest auch aus seiner Liste." data-confirm-label="Entfernen">Entfernen</button>
+                        </form>
+                    {% elseif contact.requester.sameAs(player) %}
+                        <span class="muted small">Kontaktanfrage gesendet – wartet auf Antwort.</span>
+                        <form method="post" action="{{ path('app_contact_remove', {id: contact.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('contact') }}">
+                            <button class="btn btn-small btn-secondary" type="submit" id="profile-contact-withdraw">Zurückziehen</button>
+                        </form>
+                    {% else %}
+                        <span class="muted small">{{ profile.username }} möchte dein Schnellkontakt werden.</span>
+                        <form method="post" action="{{ path('app_contact_accept', {id: contact.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('contact') }}">
+                            <button class="btn btn-small" type="submit" id="profile-contact-accept">Annehmen</button>
+                        </form>
+                    {% endif %}
+                </div>
             {% endif %}
         </div>
     </section>

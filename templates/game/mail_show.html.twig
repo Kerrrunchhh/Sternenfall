@@ -1,0 +1,35 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}{{ letter.subject }} – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <p><a href="{{ path('app_mail', received ? {} : {box: 'sent'}) }}">← {{ received ? 'Posteingang' : 'Gesendet' }}</a></p>
+    <article class="panel mail-letter">
+        <h1>{{ letter.subject }}</h1>
+        <p class="muted small">
+            {% if received %}
+                Von {% if letter.sender %}{{ ui.player(letter.sender) }} {{ ui.presence(letter.sender) }}{% else %}gelöschter Spieler{% endif %}
+            {% else %}
+                An {% if letter.recipient %}{{ ui.player(letter.recipient) }} {{ ui.presence(letter.recipient) }}{% else %}gelöschter Spieler{% endif %}
+                · {{ letter.read ? 'gelesen' : 'noch nicht gelesen' }}
+            {% endif %}
+            · {{ letter.createdAt|date('d.m.Y H:i') }}
+        </p>
+        <pre class="message-body">{{ letter.body|link_coordinates }}</pre>
+        <form method="post" action="{{ path('app_mail_delete') }}" class="mail-letter-actions">
+            <input type="hidden" name="_token" value="{{ csrf_token('mail') }}">
+            <input type="hidden" name="box" value="{{ received ? 'inbox' : 'sent' }}">
+            <input type="hidden" name="letters[]" value="{{ letter.id }}">
+            {% if reply_to %}<a class="btn" href="#reply" id="mail-reply-jump">↩ Antworten</a>{% endif %}
+            <button class="btn btn-danger" type="submit" id="mail-delete-one" data-confirm="Nachricht löschen?" data-confirm-label="Löschen">Löschen</button>
+        </form>
+    </article>
+
+    {% if reply_to %}
+        <section class="panel" id="reply">
+            <h2>{{ received ? 'Antworten' : 'Noch eine Nachricht' }} an {{ reply_to.username }}</h2>
+            {{ include('game/_mail_form.html.twig', {to: reply_to.username, subject: reply_subject, body: received ? reply_body : ''}) }}
+        </section>
+    {% endif %}
+{% endblock %}

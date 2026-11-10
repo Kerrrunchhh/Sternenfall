@@ -117,6 +117,18 @@ enum ShipType: string
      * 1-based position in the firing order of a combat round. Turrets fire in
      * between the ships of their generation; civil ships fire last.
      */
+    /** Class of a warship (civil ships and defenses have none). */
+    public function shipClass(): ?ShipClass
+    {
+        return match ($this) {
+            self::Pfeil, self::Falke => ShipClass::Fighter,
+            self::Lanze, self::Korsar, self::Bastion => ShipClass::Frigate,
+            self::Mantikor, self::Hammerhai, self::Inferno, self::HeavyBomber => ShipClass::Cruiser,
+            self::Monarch, self::Koloss, self::Brecher, self::Leviathan => ShipClass::Battleship,
+            default => null,
+        };
+    }
+
     public function firingOrder(): int
     {
         return match ($this) {
@@ -147,7 +159,7 @@ enum ShipType: string
         };
     }
 
-    /** Weapon research that strengthens this unit's attack (+10 % per level), if any. */
+    /** Weapon research that strengthens this unit's attack (+4 % per level), if any. */
     public function weaponResearch(): ?ResearchType
     {
         foreach ($this->spec()->requirements as $requirement) {
@@ -159,7 +171,7 @@ enum ShipType: string
         return null;
     }
 
-    /** Shield research that strengthens this unit's shield (+10 % per level), if any. */
+    /** Shield research that strengthens this unit's shield (+4 % per level), if any. */
     public function shieldResearch(): ?ResearchType
     {
         foreach ($this->spec()->requirements as $requirement) {
@@ -187,7 +199,7 @@ enum ShipType: string
             self::Brecher => 'Spezialisiert darauf, planetare Geschütztürme zu knacken.',
             self::Leviathan => 'Das gewaltigste Kriegsschiff des Universums. Immense Kosten und Bauzeit.',
             self::HeavyBomber => 'Bombardiert Infrastruktur und Bevölkerung. Nur Einwohner in Bunkern sind sicher.',
-            self::Scout => 'Sehr billige, extrem schnelle Einweg-Sonde: startet über 🔭 direkt aus dem Hangar, späht Planeten, freie Plätze oder Flotten aus und verglüht danach – auch wenn sie nichts entdeckt. Kann nicht in Flotten aufgenommen werden.',
+            self::Scout => 'Sehr billige, extrem schnelle Einweg-Sonde: startet über 🔭 direkt aus dem Hangar, späht Planeten, freie Plätze oder Flotten aus und verglüht danach – auch wenn sie nichts entdeckt. Kann nicht in Flotten aufgenommen werden. Jede Stufe Spionagetechnik macht sie 4 % schneller.',
             self::Freighter => 'Kleines Handelsschiff für Rohstoffe zwischen Kolonien. Nur Handelsschiffe können Fracht und Beute transportieren.',
             self::LargeFreighter => 'Großes Handelsschiff mit enormer Ladekapazität. Nur Handelsschiffe können Fracht und Beute transportieren.',
             self::Salvager => 'Sammelt nach Raumschlachten die Trümmerfelder im Orbit ein. Sein Bergeraum nimmt nur Trümmer auf, keine andere Fracht.',
@@ -197,7 +209,7 @@ enum ShipType: string
             self::ElectronTurret => 'Mittelschweres Abwehrgeschütz. Steht fest auf dem Planeten.',
             self::TachyonTurret => 'Schweres Abwehrgeschütz gegen Großkampfschiffe. Steht fest auf dem Planeten.',
             self::PlasmaTurret => 'Die stärkste planetare Verteidigung. Steht fest auf dem Planeten.',
-            self::Fusionator => 'Verschweißt Planeten miteinander. Fliegt zu dem Planeten, der angeschweißt werden soll, und verschweißt ihn mit deinem Planeten direkt darüber – wie groß eine Fusion werden darf, hängt von der Fusionstechnik ab (max. 50). Nach der Sonde das schnellste Schiff. Nur Händler können ihn bauen; alle anderen kaufen ihn bei Händlern. Eine Fusion kann nur mit genug Wasserstoff wieder gesprengt werden.',
+            self::Fusionator => 'Verschweißt Planeten miteinander. Fliegt zu dem Planeten, der angeschweißt werden soll, und verschweißt ihn mit deinem Planeten direkt darüber – wie groß eine Fusion werden darf, hängt von der Fusionstechnik ab (max. 49). Nach der Sonde das schnellste Schiff. Nur Händler können ihn bauen; alle anderen kaufen ihn bei Händlern. Eine Fusion kann nur mit genug Wasserstoff wieder gesprengt werden.',
         };
     }
 
@@ -238,7 +250,7 @@ enum ShipType: string
                 [$yard(12), $tech($warp, 5), $tech(ResearchType::PlasmaLauncher, 4), $tech(ResearchType::GravitonShield, 3)]),
             self::HeavyBomber => new ShipSpec($r(40000, 35000, 10000), 60, 900, 300, 6000, 5000, 0, 700, $plasma,
                 [$yard(6), $tech($plasma, 3), $tech(ResearchType::ElectronCannon, 4), $tech(ResearchType::PhaseShield, 4)]),
-            self::Scout => new ShipSpec($r(100, 50), 1, 0, 0, 100, 60000, 0, 1, $solid,
+            self::Scout => new ShipSpec($r(100, 50), 1, 0, 0, 100, 60000, 0, 1, ResearchType::Espionage,
                 [$yard(1), $tech($solid, 1), $tech(ResearchType::Espionage, 1)]),
             self::Freighter => new ShipSpec($r(2000, 1000), 3, 5, 10, 400, 6000, 5000, 10, $solid,
                 [$yard(1), $tech($solid, 1)]),

@@ -23,13 +23,21 @@
     <div class="grid">
         <section class="panel">
             <h2>Mitglieder ({{ alliance.members|length }})</h2>
-            <table class="table">
-                {% for m in alliance.members %}
+            <table class="table member-table">
+                {# Grouped by rank, from the founder down; alphabetical inside a rank. #}
+                {% for group_rank in enum_cases('App\\Game\\AllianceRank') %}
+                {% set group = alliance.members|filter(m => m.allianceRank == group_rank)|sort((a, b) => a.username|lower <=> b.username|lower) %}
+                {% if group is not empty %}
+                    <tr class="rank-head"><td colspan="{{ rank.canManage ? 2 : 1 }}">{{ group_rank.pluralLabel }} <span class="muted">{{ group|length }}</span></td></tr>
+                {% endif %}
+                {% for m in group %}
                     <tr>
-                        <td>{{ ui.player(m, false) }}</td>
-                        <td>{{ m.allianceRank.label }}</td>
+                        <td>
+                            <div class="member-name">{{ ui.player(m, false) }} {{ ui.presence(m) }}</div>
+                            <div class="muted small">{{ player_points(m)|number_format(0, ',', '.') }} Punkte · {{ m.combatExperience|number_format(0, ',', '.') }} Kampferfahrung</div>
+                        </td>
                         {% if rank.canManage %}
-                            <td class="num">
+                            <td class="num member-manage">
                                 {% if m.id != player.id %}
                                     <form method="post" action="{{ path('app_alliance_rank', {id: m.id}) }}" class="inline-action">
                                         <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
@@ -47,6 +55,7 @@
                             </td>
                         {% endif %}
                     </tr>
+                {% endfor %}
                 {% endfor %}
             </table>
         </section>

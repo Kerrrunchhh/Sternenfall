@@ -1,0 +1,27 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ report ? report.subject : 'Kampfbericht nicht gefunden' }} – {{ game_name }}{% endblock %}
+
+{% block javascripts %}<script src="{{ asset('js/game.js') }}" defer></script>{% endblock %}
+
+{% block body %}
+    <main class="public-report">
+        <a href="{{ path(app.user ? 'app_overview' : 'app_home') }}" class="public-report-logo"><img src="{{ asset('pictures/brand/logo.webp') }}" alt="{{ game_name }}" width="223" height="90"></a>
+        {% if report %}
+            <article class="panel battle-report">
+                <h1>{{ report.subject }}</h1>
+                <p class="muted small">
+                    {{ report.createdAt|date('d.m.Y H:i') }} · Link gültig bis {{ report.expiresAt|date('d.m.Y H:i') }}
+                    <button type="button" class="btn btn-small btn-secondary copy-link" data-copy-link="{{ url('app_battle_report', {hash: report.hash}) }}" id="report-copy">Link kopieren</button>
+                </p>
+                <pre class="message-body">{{ report.body }}</pre>
+            </article>
+        {% else %}
+            <article class="panel">
+                <h1>Kampfbericht nicht gefunden</h1>
+                <p class="muted">Diesen Kampfbericht gibt es nicht oder er ist älter als {{ days }} Tage und wurde gelöscht.</p>
+            </article>
+        {% endif %}
+        <p class="muted small">{{ app.user ? '' : 'Noch kein Spieler? ' }}<a href="{{ path(app.user ? 'app_overview' : 'app_register') }}">{{ app.user ? 'Zurück ins Spiel' : 'Jetzt bei ' ~ game_name ~ ' mitspielen' }}</a></p>
+    </main>
+{% endblock %}

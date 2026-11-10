@@ -1,0 +1,29 @@
+{% extends 'game/_layout.html.twig' %}
+
+{% block title %}Zeitung – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h1>Galaktische Zeitung</h1>
+    <p class="muted small">Alle Kampfberichte des Universums – sie erscheinen hier {{ delay }} Stunden nach der Schlacht und bleiben {{ days }} Tage im Archiv. {{ total|number_format(0, ',', '.') }} Bericht{{ total == 1 ? '' : 'e' }}.</p>
+
+    {% for r in reports %}
+        <details class="panel message newspaper-item">
+            <summary>
+                <span>{{ r.subject }}</span>
+                <span class="muted small">{{ r.createdAt|date('d.m.Y H:i') }}</span>
+            </summary>
+            <pre class="message-body">{{ r.body|link_coordinates }}</pre>
+            <p class="small"><a href="{{ path('app_battle_report', {hash: r.hash}) }}">Eigene Seite</a> <button type="button" class="btn btn-small btn-secondary copy-link" data-copy-link="{{ url('app_battle_report', {hash: r.hash}) }}">Link kopieren</button></p>
+        </details>
+    {% else %}
+        <p class="panel muted">Noch keine Meldungen – Kämpfe erscheinen hier {{ delay }} Stunden später.</p>
+    {% endfor %}
+
+    {% if pages > 1 %}
+        <nav class="pager" aria-label="Seiten">
+            {% if page > 1 %}<a class="btn btn-small btn-secondary" href="{{ path('app_newspaper', {page: page - 1}) }}">← Neuere</a>{% endif %}
+            <span class="muted small">Seite {{ page }} von {{ pages }}</span>
+            {% if page < pages %}<a class="btn btn-small btn-secondary" href="{{ path('app_newspaper', {page: page + 1}) }}">Ältere →</a>{% endif %}
+        </nav>
+    {% endif %}
+{% endblock %}

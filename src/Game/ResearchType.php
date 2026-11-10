@@ -69,23 +69,23 @@ enum ResearchType: string
     public function description(): string
     {
         return match ($this) {
-            self::SolidDrive => 'Einfacher, robuster Raketenantrieb für Sonden und Frachter. Jede Stufe beschleunigt diese Schiffe um 10 %.',
-            self::IonDrive => 'Standardantrieb für Jäger und leichte Kreuzer. Jede Stufe beschleunigt diese Schiffe um 10 %.',
-            self::PlasmaDrive => 'Antrieb für Großkampfschiffe und Bomber. Jede Stufe beschleunigt diese Schiffe um 10 %.',
-            self::WarpDrive => 'Krümmt den Raum und macht selbst die gewaltigsten Schiffe mobil. Jede Stufe beschleunigt diese Schiffe um 10 %.',
-            self::ImpulseLaser => 'Gepulste Laserwaffen für leichte Jäger.',
-            self::HeavyLaser => 'Hochenergielaser mit deutlich größerer Durchschlagskraft.',
-            self::ElectronCannon => 'Beschleunigte Elektronenstrahlen für Kreuzer und Bomber.',
-            self::TachyonLauncher => 'Überlichtschnelle Partikelgeschosse für Großkampfschiffe.',
-            self::PlasmaLauncher => 'Die zerstörerischste Waffe des Universums.',
-            self::RotationShield => 'Rotierende Energiefelder lenken leichte Treffer ab.',
-            self::PhaseShield => 'Phasenverschobene Schilde für schwerere Hüllen.',
-            self::QuantumShield => 'Quantenfelder, ohne die kein Schlachtschiff überlebt.',
-            self::GravitonShield => 'Gravitationsbarrieren für die mächtigsten Schiffe.',
-            self::Espionage => 'Sensorik für Sonden. Stufe 1: Planetentyp. Stufe 5: Gebäude, Rohstoffe, Bevölkerung, Forschung. Stufe 10: stationierte Schiffe. Stufe 20: du siehst Sonden, die deine Planeten anfliegen.',
+            self::SolidDrive => 'Einfacher, robuster Raketenantrieb für Frachter. Jede Stufe beschleunigt diese Schiffe um 4 % (Stufe 25 = doppeltes Tempo).',
+            self::IonDrive => 'Standardantrieb für Jäger und leichte Kreuzer. Jede Stufe beschleunigt diese Schiffe um 4 % (Stufe 25 = doppeltes Tempo).',
+            self::PlasmaDrive => 'Antrieb für Großkampfschiffe und Bomber. Jede Stufe beschleunigt diese Schiffe um 4 % (Stufe 25 = doppeltes Tempo).',
+            self::WarpDrive => 'Krümmt den Raum und macht selbst die gewaltigsten Schiffe mobil. Jede Stufe beschleunigt diese Schiffe um 4 % (Stufe 25 = doppeltes Tempo).',
+            self::ImpulseLaser => 'Gepulste Laserwaffen für leichte Jäger. Jede Stufe +4 % Angriff für Schiffe und Türme mit dieser Waffe (Stufe 25 = doppelter Angriff).',
+            self::HeavyLaser => 'Hochenergielaser mit deutlich größerer Durchschlagskraft. Jede Stufe +4 % Angriff für Schiffe und Türme mit dieser Waffe (Stufe 25 = doppelter Angriff).',
+            self::ElectronCannon => 'Beschleunigte Elektronenstrahlen für Kreuzer und Bomber. Jede Stufe +4 % Angriff für Schiffe und Türme mit dieser Waffe (Stufe 25 = doppelter Angriff).',
+            self::TachyonLauncher => 'Überlichtschnelle Partikelgeschosse für Großkampfschiffe. Jede Stufe +4 % Angriff für Schiffe und Türme mit dieser Waffe (Stufe 25 = doppelter Angriff).',
+            self::PlasmaLauncher => 'Die zerstörerischste Waffe des Universums. Jede Stufe +4 % Angriff für Schiffe und Türme mit dieser Waffe (Stufe 25 = doppelter Angriff).',
+            self::RotationShield => 'Rotierende Energiefelder lenken leichte Treffer ab. Jede Stufe +4 % Schild für Schiffe und Türme mit diesem Schild (Stufe 25 = doppelter Schild).',
+            self::PhaseShield => 'Phasenverschobene Schilde für schwerere Hüllen. Jede Stufe +4 % Schild für Schiffe und Türme mit diesem Schild (Stufe 25 = doppelter Schild).',
+            self::QuantumShield => 'Quantenfelder, ohne die kein Schlachtschiff überlebt. Jede Stufe +4 % Schild für Schiffe und Türme mit diesem Schild (Stufe 25 = doppelter Schild).',
+            self::GravitonShield => 'Gravitationsbarrieren für die mächtigsten Schiffe. Jede Stufe +4 % Schild für Schiffe und Türme mit diesem Schild (Stufe 25 = doppelter Schild).',
+            self::Espionage => 'Sensorik und Antrieb für Sonden: jede Stufe macht Sonden 4 % schneller. Stufe 1: Planetentyp. Stufe 5: Gebäude, Rohstoffe, Bevölkerung, Forschung. Stufe 10: stationierte Schiffe. Stufe 25: du merkst, wenn du ausspioniert wurdest. Stufe 40: du erfährst auch, wer es war. Stufe 50: du siehst Sonden schon im Anflug auf deine Planeten und Flotten.',
             self::InvasionTech => 'Landungs- und Besiedlungstechnik für Kolonie- und Invasionsschiffe.',
-            self::FusionTech => 'Ermöglicht den Fusionator. Die Stufe ist die größte erlaubte Fusion: Stufe 20 verschweißt höchstens 20 Planeten (max. Stufe 50). Langzeitforschung: anfangs schnell, später sehr langsam – die Dauer hängt ganz von den Forschungslaboren ab.',
-            self::Colonization => 'Jede Stufe erlaubt einen weiteren Planeten: Stufe n erlaubt n + 1 Planetenplätze, verschweißte Plätze zählen einzeln (max. Stufe 50). Langzeitforschung: anfangs schnell, später sehr langsam – die Dauer hängt ganz von den Forschungslaboren ab.',
+            self::FusionTech => 'Ermöglicht den Fusionator. Die Stufe ist die größte erlaubte Fusion: Stufe 20 verschweißt höchstens 20 Planeten (max. Stufe 49). Langzeitforschung: anfangs schnell, später sehr langsam – die Dauer hängt ganz von den Forschungslaboren ab.',
+            self::Colonization => 'Ohne diese Forschung hast du nur deinen Heimatplaneten. Jede Stufe erlaubt 10 Planetenplätze: Stufe 1 = 10, Stufe 2 = 20 usw.; verschweißte Plätze zählen einzeln. Langzeitforschung: jede Stufe dauert sehr lange – die Dauer hängt ganz von den Forschungslaboren ab.',
             self::TradeNetwork => 'Logistik für den Fernhandel. Jede Stufe erlaubt Händlern einen weiteren Handelsstützpunkt.',
             self::Radar => 'Macht angreifende und Rohstoffe transportierende Flotten sichtbar: ab Stufe 1 im eigenen System, je 5 Stufen ein System weiter nach links und rechts.',
         };
@@ -93,16 +93,28 @@ enum ResearchType: string
 
     /**
      * Long-term research (fusion and colonization): costs grow gently, the time steeply,
-     * and only the research labs decide how long a level takes. Highest level 50.
+     * and only the research labs decide how long a level takes.
      */
     public function isLongTerm(): bool
     {
         return \in_array($this, [self::FusionTech, self::Colonization], true);
     }
 
+    /** Research has no ceiling and keeps improving; only fusion stops at 49 (no system has more than 50 planets). */
+    public const int FUSION_MAX_LEVEL = 49;
+
     public function maxLevel(): ?int
     {
-        return $this->isLongTerm() ? 50 : null;
+        return self::FusionTech === $this ? self::FUSION_MAX_LEVEL : null;
+    }
+
+    /**
+     * Steps of the long-term curve one level stands for: a colonization level gives 10 planet
+     * slots and costs and lasts as long as 10 single steps did.
+     */
+    public function stepsPerLevel(): int
+    {
+        return self::Colonization === $this ? 10 : 1;
     }
 
     /** Cost of level 1; every further level doubles (long-term research: grows with level^1.5). */

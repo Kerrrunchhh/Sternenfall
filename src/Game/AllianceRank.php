@@ -22,6 +22,17 @@ enum AllianceRank: string
         };
     }
 
+    /** Heading of the rank's group in the member list. */
+    public function pluralLabel(): string
+    {
+        return match ($this) {
+            self::Founder => 'Gründer',
+            self::Commander => 'Kommandanten',
+            self::Member => 'Mitglieder',
+            self::Prospect => 'Anwärter',
+        };
+    }
+
     /** The founder may do everything: members, ranks, description, dissolving. */
     public function canManage(): bool
     {

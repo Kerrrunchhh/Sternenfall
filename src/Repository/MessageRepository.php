@@ -28,6 +28,19 @@ class MessageRepository extends ServiceEntityRepository
         return $this->findBy(['recipient' => $recipient], ['createdAt' => 'DESC', 'id' => 'DESC'], $limit);
     }
 
+    /** Messages are kept for 30 days. */
+    public const int KEEP_DAYS = 30;
+
+    public function deleteOlderThan(\DateTimeImmutable $limit): int
+    {
+        return $this->createQueryBuilder('m')
+            ->delete()
+            ->where('m.createdAt < :limit')
+            ->setParameter('limit', $limit)
+            ->getQuery()
+            ->execute();
+    }
+
     public function markAllRead(User $recipient): void
     {
         $this->createQueryBuilder('m')

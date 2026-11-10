@@ -29,6 +29,12 @@
     {%- if with_alliance and user.alliance %} <a class="alliance-tag" href="{{ path('app_alliance_public', {id: user.alliance.id}) }}" title="{{ user.alliance.type }} {{ user.alliance.name }}">[{{ user.alliance.tag }}]</a>{% endif %}</span>
 {%- endmacro %}
 
+{# Online status (only shown to alliance mates and quick contacts). #}
+{% macro presence(user) %}
+    {%- set st = presence(user) -%}
+    {%- if st %}<span class="presence {{ st.online ? 'presence-online' : 'presence-offline' }}" title="{{ st.text }}"><span class="presence-dot" aria-hidden="true"></span>{{ st.text }}</span>{% endif -%}
+{% endmacro %}
+
 {% macro picture(file, kind, alt, size = 'large') %}
     {% if file %}
         <img class="picture picture-{{ size }}" src="{{ path('app_media', {kind: kind, name: file}) }}" alt="{{ alt }}">
@@ -36,3 +42,12 @@
         <div class="picture picture-{{ size }} picture-empty" aria-hidden="true">{{ alt|first|upper }}</div>
     {% endif %}
 {% endmacro %}
+
+{# A value changed by research: the researched value, the base value below if it differs. #}
+{% macro ship_stat(label, st) %}
+    <div title="{{ st.notes is empty ? 'Grundwert' : 'Grundwert ' ~ st.base|number_format(0, ',', '.') ~ ' – ' ~ st.notes|join(', ') }}">
+        <dt>{{ label }}</dt>
+        <dd>{{ st.value|number_format(0, ',', '.') }}{% if st.value != st.base %} <small class="stat-base">Basis {{ st.base|number_format(0, ',', '.') }}</small>{% endif %}</dd>
+    </div>
+{% endmacro %}
+

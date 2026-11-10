@@ -8,7 +8,7 @@ use App\Entity\User;
  * One combat round. Every unit fires once, in firing order; units sharing a
  * place in the order (same type on both sides) fire simultaneously. Damage of a
  * group is spread over the living enemy groups in proportion to their remaining
- * hit points (hull + shield). Weapon and shield research add 10 % per level.
+ * hit points (hull + shield). Weapon and shield research add 4 % per level (level 25 doubles a value).
  * Brecher deal triple damage to turrets. In a raid without bombers, transport
  * ships can't be hit.
  *
@@ -16,7 +16,8 @@ use App\Entity\User;
  */
 final class Battle
 {
-    public const float RESEARCH_BONUS = 0.1;
+    /** Bonus per level of weapon, shield and drive research: about level 25 doubles a value. */
+    public const float RESEARCH_BONUS = 0.04;
     public const float BREAKER_VS_TURRET = 3.0;
 
     /** @var list<BattleGroup> */
