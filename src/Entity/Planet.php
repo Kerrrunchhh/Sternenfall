@@ -552,4 +552,10 @@ class Planet
 
         return $items;
     }
+
+    /** Picture of the planet (under public/, for asset()): the fusion picture for fusions. */
+    public function getPicture(): string
+    {
+        return $this->isFused() ? 'pictures/planets/fusion.webp' : $this->getType()->picture();
+    }
 }

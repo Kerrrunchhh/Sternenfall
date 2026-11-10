@@ -69,7 +69,9 @@
                             </form>
                         {% endif %}
                     </td>
-                    {% if slot_type %}
+                    {% if p and p.fused %}
+                        <td class="slot-type" title="{{ 'Fusion aus {fusionSize} Planeten'|trans({'{fusionSize}': p.fusionSize}) }}"><img class="planet-pic planet-pic-tiny" src="{{ asset(p.picture) }}" alt="{{ 'Fusion'|trans }}" width="22" height="22" loading="lazy"></td>
+                    {% elseif slot_type %}
                         <td class="slot-type" title="{{ slot_type.label|trans }}: {{ slot_type.effect|trans }}"><img class="planet-pic planet-pic-tiny" src="{{ asset(slot_type.picture) }}" alt="{{ slot_type.label|trans }}" width="22" height="22" loading="lazy"></td>
                     {% else %}
                         <td class="slot-type unknown" title="{{ 'Planetentyp unbekannt – schicke eine Sonde hin'|trans }}">❔</td>

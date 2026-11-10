@@ -41,7 +41,7 @@
         </section>
     {% endif %}
 
-    <h1 class="planet-title"><img class="planet-pic" src="{{ asset(planet.type.picture) }}" alt="{{ planet.type.label|trans }}" width="64" height="64"> {{ planet.name }} <small>[{{ planet.coordinates }}]</small></h1>
+    <h1 class="planet-title"><img class="planet-pic" src="{{ asset(planet.picture) }}" alt="{{ planet.fused ? 'Fusion'|trans : planet.type.label|trans }}" width="64" height="64"> {{ planet.name }} <small>[{{ planet.coordinates }}]</small></h1>
     <details class="rename">
         <summary>{{ planet.homeworld ? 'Umbenennen'|trans : 'Umbenennen oder verlassen'|trans }}</summary>
         <form method="post" action="{{ path('app_planet_rename', {id: planet.id}) }}" class="inline-action">

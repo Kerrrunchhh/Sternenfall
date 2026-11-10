@@ -684,3 +684,5 @@ label.checkbox { display: flex; gap: .4rem; align-items: center; color: var(--te
 .galaxy-table thead th.num { text-align: right; }
 .galaxy-table thead th:first-child { text-align: left; }
 .galaxy-table .planet-points { color: var(--muted); white-space: nowrap; }
+
+.fusion-banner { display: block; width: 100%; max-width: 960px; height: auto; border-radius: 10px; margin: 0 0 1rem; border: 1px solid var(--border); }

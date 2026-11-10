@@ -68,7 +68,7 @@
                 {% for p in player.planets %}
                     {# One line per planet: type, name, coordinates, what is going on. #}
                     <a href="{{ path('app_planet_select', {id: p.id, to: route}) }}" class="planet-badge {{ p.id == planet.id ? 'current' }} {{ attacked_planets[p.id] is defined ? 'under-attack' }}" {{ p.id == planet.id ? 'aria-current="true"' }} title="{{ p.name }} [{{ p.coordinates }}] · {{ '{points} Punkte'|trans({'{points}': planet_points(p)|num}) }} – {{ p.fused ? 'Fusion aus {fusionSize} Planeten (zählt als blauer Planet, Rohstoffe ×1,5)'|trans({'{fusionSize}': p.fusionSize}) : p.type.label|trans }}">
-                        <span class="pb-icon {{ p.fused ? 'pb-fusion' }}" aria-hidden="true">{% if p.fused %}🔗{% else %}<img class="planet-pic planet-pic-tiny" src="{{ asset(p.type.picture) }}" alt="" width="18" height="18">{% endif %}</span>
+                        <span class="pb-icon {{ p.fused ? 'pb-fusion' }}" aria-hidden="true"><img class="planet-pic planet-pic-tiny" src="{{ asset(p.picture) }}" alt="" width="18" height="18"></span>
                         <span class="pb-name">{{ p.name }}</span>
                         <span class="pb-coords">{{ p.coordinates }}</span>
                         <span class="planet-status">
