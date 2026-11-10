@@ -7,7 +7,6 @@ use App\Form\RegistrationFormType;
 use App\Game\Colonizer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -17,13 +16,17 @@ use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 class SecurityController extends AbstractController
 {
     #[Route('/', name: 'app_home')]
-    public function home(): Response
+    public function home(\Symfony\Component\HttpFoundation\Request $request, \App\Game\GameStats $stats): Response
     {
         if ($this->getUser()) {
             return $this->redirectToRoute('app_overview');
         }
+        $deleted = $request->query->getString('geloescht');
 
-        return $this->render('security/home.html.twig');
+        return $this->render('security/home.html.twig', [
+            'top' => $stats->topExperienceToday(),
+            'deleted_at' => ctype_digit($deleted) ? (new \DateTimeImmutable('@'.$deleted)) : null,
+        ]);
     }
 
     #[Route('/login', name: 'app_login')]
@@ -45,13 +48,47 @@ class SecurityController extends AbstractController
         throw new \LogicException('Handled by the firewall.');
     }
 
+    /** The link from the confirmation mail. */
+    #[Route('/email/bestaetigen', name: 'app_verify_email', methods: ['GET'])]
+    public function verifyEmail(Request $request, \Symfony\Component\HttpFoundation\UriSigner $signer, \App\Repository\UserRepository $users, EntityManagerInterface $em): Response
+    {
+        $user = ctype_digit($id = $request->query->getString('id')) ? $users->find((int) $id) : null;
+        if (!$signer->checkRequest($request) || null === $user || $user->getEmail() !== $request->query->getString('email')) {
+            $this->addFlash('error', 'Der Bestätigungslink ist ungültig oder abgelaufen. Fordere unten einen neuen an.');
+
+            return $this->redirectToRoute('app_resend_email');
+        }
+        $user->verifyEmail(new \DateTimeImmutable());
+        $em->flush();
+        $this->addFlash('success', 'Danke! Deine E-Mail-Adresse ist bestätigt. Melde dich jetzt an – deine Heimatwelt wartet.');
+
+        return $this->redirectToRoute('app_login');
+    }
+
+    #[Route('/email/erneut', name: 'app_resend_email', methods: ['GET', 'POST'])]
+    public function resendEmail(Request $request, \App\Repository\UserRepository $users, \App\Game\GameMailer $mailer): Response
+    {
+        $devLink = null;
+        if ($request->isMethod('POST') && $this->isCsrfTokenValid('resend_email', $request->request->getString('_token'))) {
+            $user = $users->findOneBy(['email' => mb_strtolower(trim($request->request->getString('email')))]);
+            if (null !== $user && $user->needsEmailConfirmation()) {
+                $link = $mailer->sendConfirmation($user);
+                $devLink = 'dev' === $this->getParameter('kernel.environment') ? $link : null;
+            }
+            // Same answer either way: nobody learns which addresses are registered.
+            $this->addFlash('success', 'Falls zu dieser Adresse ein unbestätigtes Konto gehört, ist ein neuer Link unterwegs.');
+        }
+
+        return $this->render('security/resend_email.html.twig', ['dev_link' => $devLink]);
+    }
+
     #[Route('/register', name: 'app_register')]
     public function register(
         Request $request,
         UserPasswordHasherInterface $hasher,
         EntityManagerInterface $em,
         Colonizer $colonizer,
-        Security $security,
+        \App\Game\GameMailer $mailer,
     ): Response {
         if ($this->getUser()) {
             return $this->redirectToRoute('app_overview');
@@ -66,10 +103,13 @@ class SecurityController extends AbstractController
             $em->persist($user);
             $colonizer->createHomePlanet($user);
             $em->flush();
+            $link = $mailer->sendConfirmation($user);
 
-            $this->addFlash('success', 'Willkommen, Kommandant! Deine Heimatwelt wartet auf dich.');
-
-            return $security->login($user, 'form_login', 'main') ?? $this->redirectToRoute('app_overview');
+            // Playing starts after confirming the e-mail address.
+            return $this->render('security/confirm_email.html.twig', [
+                'email' => $user->getEmail(),
+                'dev_link' => 'dev' === $this->getParameter('kernel.environment') ? $link : null,
+            ]);
         }
 
         return $this->render('security/register.html.twig', ['form' => $form]);

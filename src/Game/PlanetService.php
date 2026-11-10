@@ -365,15 +365,17 @@ final readonly class PlanetService
             $this->em->refresh($planet->getOwner());
             $this->em->refresh($planet);
             $now = \DateTimeImmutable::createFromInterface($this->clock->now());
-            $this->updater->update($planet, $now);
+            // On vacation everything rests: production, queues and research stop at its start.
+            $at = $planet->getOwner()->clockAt($now);
+            $this->updater->update($planet, $at);
             // Credits are earned on every planet, so keep all of the player's planets up to date.
             foreach ($planet->getOwner()->getPlanets() as $other) {
                 if ($other !== $planet) {
                     $this->em->refresh($other);
-                    $this->updater->update($other, $now);
+                    $this->updater->update($other, $at);
                 }
             }
-            $this->updater->completeResearch($planet->getOwner(), $now);
+            $this->updater->completeResearch($planet->getOwner(), $at);
             $operation($planet, $now);
             $this->em->flush();
         } finally {

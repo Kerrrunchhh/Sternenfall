@@ -18,16 +18,26 @@ class MessageController extends AbstractGameController
     {
     }
 
+    public const int PER_PAGE = 50;
+
     #[Route('/messages', name: 'app_messages', methods: ['GET'])]
-    public function index(): Response
+    public function index(\Symfony\Component\HttpFoundation\Request $request): Response
     {
         $planet = $this->currentPlanet();
         // Messages older than 30 days are removed (for everybody).
         $this->messages->deleteOlderThan(\DateTimeImmutable::createFromInterface($this->clock->now())->modify('-'.MessageRepository::KEEP_DAYS.' days'));
 
+        // Many messages are split into pages of 50.
+        $total = $this->messages->countFor($this->player());
+        $pages = max(1, (int) ceil($total / self::PER_PAGE));
+        $page = min($pages, max(1, ctype_digit($p = $request->query->getString('page')) ? (int) $p : 1));
+
         return $this->renderGame('game/messages.html.twig', $planet, [
-            'messages' => $this->messages->findLatest($this->player()),
+            'messages' => $this->messages->findLatest($this->player(), self::PER_PAGE, ($page - 1) * self::PER_PAGE),
             'keep_days' => MessageRepository::KEEP_DAYS,
+            'page' => $page,
+            'pages' => $pages,
+            'total' => $total,
         ]);
     }
 

@@ -1,0 +1,11 @@
+{# Top 10 players by combat experience gained in the last 24 hours. Needs: top #}
+<h3>⚔ Meiste Kampferfahrung in den letzten 24 Stunden</h3>
+{% if top is empty %}
+    <p class="muted small">In den letzten 24 Stunden hat niemand Kampferfahrung gesammelt.</p>
+{% else %}
+    <ol class="top-list">
+        {% for row in top %}
+            <li><span>{{ row.user.lifeForm.icon }} {{ row.user.username }}{% if row.user.alliance %} <span class="muted">[{{ row.user.alliance.tag }}]</span>{% endif %}</span> <strong>{{ row.experience|number_format(0, ',', '.') }}</strong></li>
+        {% endfor %}
+    </ol>
+{% endif %}

@@ -9,6 +9,14 @@
         <div class="profile-info">
             <h1>{{ alliance.name }} <small>[{{ alliance.tag }}]</small></h1>
             <p class="muted">{{ alliance.type }} · {{ alliance.members|length }} Mitglied{{ alliance.members|length == 1 ? '' : 'er' }} · gegründet {{ alliance.createdAt|date('d.m.Y') }}</p>
+            {% set stats = alliance_stats(alliance) %}
+            <dl class="stats alliance-stats">
+                <div><dt>Planeten</dt><dd>{{ stats.planets|number_format(0, ',', '.') }}</dd></div>
+                <div><dt>Punkte</dt><dd>{{ stats.points|number_format(0, ',', '.') }}</dd></div>
+                <div><dt>Ø Punkte</dt><dd>{{ stats.avg_points|number_format(0, ',', '.') }}</dd></div>
+                <div><dt>Kampferfahrung</dt><dd>{{ stats.experience|number_format(0, ',', '.') }}</dd></div>
+                <div><dt>Ø Kampferfahrung</dt><dd>{{ stats.avg_experience|number_format(0, ',', '.') }}</dd></div>
+            </dl>
             {# Members stay private: the public page shows no member list. #}
             <div class="apply-box">
                 {% if player.alliance and player.alliance.id == alliance.id %}

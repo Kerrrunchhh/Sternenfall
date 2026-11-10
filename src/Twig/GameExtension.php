@@ -24,6 +24,30 @@ final class GameExtension
         return Scoring::points($player);
     }
 
+    /**
+     * Totals of an alliance for its public profile.
+     *
+     * @return array{planets: int, points: int, experience: float, avg_experience: float, avg_points: float}
+     */
+    #[AsTwigFunction('alliance_stats')]
+    public static function allianceStats(\App\Entity\Alliance $alliance): array
+    {
+        $members = $alliance->getMembers()->toArray();
+        $count = max(1, \count($members));
+        $planets = array_sum(array_map(static fn (User $u): int => $u->getPlanets()->count(), $members));
+        $points = array_sum(array_map(static fn (User $u): int => Scoring::points($u), $members));
+        $experience = array_sum(array_map(static fn (User $u): float => $u->getCombatExperience(), $members));
+
+        return ['planets' => $planets, 'points' => $points, 'experience' => $experience, 'avg_experience' => $experience / $count, 'avg_points' => $points / $count];
+    }
+
+    /** Points of one planet (building levels × points rate). */
+    #[AsTwigFunction('planet_points')]
+    public static function planetPoints(\App\Entity\Planet $planet): int
+    {
+        return Scoring::planetPoints($planet);
+    }
+
     /** Formats seconds as e.g. "1d 02:03:04" or "02:03". */
     #[AsTwigFilter('format_duration')]
     public static function formatDuration(int|float $seconds): string

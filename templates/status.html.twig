@@ -1,0 +1,24 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Status – {{ game_name }}{% endblock %}
+
+{% block body %}
+    <main class="public-report">
+        <a href="{{ path(app.user ? 'app_overview' : 'app_home') }}" class="public-report-logo"><img src="{{ asset('pictures/brand/logo.webp') }}" alt="{{ game_name }}" width="223" height="90"></a>
+        <article class="panel">
+            <h1>Status des Universums</h1>
+            <dl class="stats status-stats">
+                <div><dt>Spieler</dt><dd>{{ stats.players|number_format(0, ',', '.') }}</dd></div>
+                <div><dt>Planeten</dt><dd>{{ stats.planets|number_format(0, ',', '.') }}</dd></div>
+                <div><dt>Besiedelte Plätze</dt><dd>{{ stats.colonized_slots|number_format(0, ',', '.') }} von {{ stats.slots|number_format(0, ',', '.') }}</dd></div>
+                <div><dt>Herrenlose Planeten</dt><dd>{{ stats.ownerless|number_format(0, ',', '.') }}</dd></div>
+                <div><dt>Laufende Transporte</dt><dd>{{ stats.transports|number_format(0, ',', '.') }}</dd></div>
+                <div><dt>Laufende Angriffe</dt><dd>{{ stats.attacks|number_format(0, ',', '.') }}</dd></div>
+                <div><dt>Anmeldungen (24 h)</dt><dd>{{ stats.signups|number_format(0, ',', '.') }}</dd></div>
+                <div><dt>Abmeldungen (24 h)</dt><dd>{{ stats.signoffs|number_format(0, ',', '.') }}</dd></div>
+            </dl>
+        </article>
+        <article class="panel">{{ include('_top_experience.html.twig') }}</article>
+        <p class="muted small"><a href="{{ path(app.user ? 'app_overview' : 'app_home') }}">{{ app.user ? 'Zurück ins Spiel' : 'Zur Startseite' }}</a> · <a href="{{ path('app_imprint') }}">Impressum</a></p>
+    </main>
+{% endblock %}

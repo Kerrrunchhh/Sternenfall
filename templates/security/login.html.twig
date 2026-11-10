@@ -6,6 +6,7 @@
     <h2>Anmelden</h2>
     {% if error %}
         <div class="flash flash-error">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
+        {% if 'E-Mail' in error.messageKey %}<p class="hint"><a href="{{ path('app_resend_email') }}">Bestätigungsmail erneut senden</a></p>{% endif %}
     {% endif %}
     <form method="post" action="{{ path('app_login') }}">
         <label for="username">Spielername</label>

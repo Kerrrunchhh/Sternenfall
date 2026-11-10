@@ -124,6 +124,12 @@ class BuildingOrder implements QueueItem
         return $this->progressSeconds;
     }
 
+    /** Vacation: the running construction continues as if no time had passed. */
+    public function shiftClock(int $seconds): void
+    {
+        $this->startedAt = $this->startedAt?->modify("+{$seconds} seconds");
+    }
+
     /** Starts (or resumes) construction; $seconds is only used the first time. */
     public function start(\DateTimeImmutable $at, int $seconds): void
     {

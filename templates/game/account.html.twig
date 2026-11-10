@@ -1,0 +1,57 @@
+{% extends 'game/_layout.html.twig' %}
+
+{% block title %}Konto – {{ game_name }}
+    <section class="panel" id="email">
+        <h2>✉ E-Mail-Benachrichtigungen</h2>
+        <form method="post" action="{{ path('app_account_email') }}" class="mail-form">
+            <input type="hidden" name="_token" value="{{ csrf_token('account') }}">
+            <label>E-Mail-Adresse
+                <input type="email" name="email" value="{{ player.email }}" autocomplete="email" placeholder="name@example.org">
+            </label>
+            <p class="small {{ player.emailVerified ? 'muted' : 'warning' }}">
+                {% if player.email is null %}Noch keine Adresse hinterlegt – ohne Adresse gibt es keine Mails.
+                {% elseif player.emailVerified %}✓ Bestätigt.
+                {% else %}Noch nicht bestätigt – erst dann kommen Mails. <button class="link-button" type="submit" name="do" value="resend">Link erneut senden</button>{% endif %}
+            </p>
+            <fieldset class="topic-list">
+                <legend class="small muted">Mails bekomme ich bei:</legend>
+                {% for key, label in topics %}
+                    <label class="radio"><input type="checkbox" name="topics[]" value="{{ key }}" {{ key in player.mailTopics ? 'checked' }}> {{ label }}</label>
+                {% endfor %}
+            </fieldset>
+            <button class="btn btn-small" type="submit" id="email-save">Speichern</button>
+        </form>
+    </section>
+
+    <section class="panel danger-zone" id="loeschen">
+        <h2>Konto löschen</h2>
+        <p class="muted small">48 Stunden nach dem Antrag ist dein Konto gelöscht. Meldest du dich vorher wieder an, wird die Löschung abgebrochen.
+            Deine Planeten bleiben als <strong>herrenlose Planeten</strong> im Universum – mit allen Rohstoffen, Schiffen und Verteidigungsanlagen. Andere Spieler können sie angreifen und mit Invasionsschiffen übernehmen. Deine Flotten und Handelsstützpunkte bleiben ebenfalls zurück.</p>
+        <form method="post" action="{{ path('app_account_delete') }}" class="mail-form">
+            <input type="hidden" name="_token" value="{{ csrf_token('account') }}">
+            <label class="radio"><input type="radio" name="planets" value="leave" checked> Planeten nur verlassen – die Gebäude bleiben stehen</label>
+            <label class="radio"><input type="radio" name="planets" value="destroy"> Gebäude zerstören – die Planeten bleiben ohne Gebäude zurück</label>
+            <label>Passwort zur Bestätigung <input type="password" name="password" required autocomplete="current-password"></label>
+            <button class="btn btn-danger" type="submit" id="account-delete" data-confirm="Konto wirklich löschen? Du wirst abgemeldet; nach 48 Stunden ist das Konto weg. Meldest du dich vorher wieder an, bleibt es erhalten." data-confirm-label="Konto löschen">Konto löschen</button>
+        </form>
+    </section>
+{% endblock %}
+
+{% block content %}
+    <h1>Konto</h1>
+
+    <section class="panel" id="urlaub">
+        <h2>🌴 Urlaubsmodus</h2>
+        <p class="muted small">
+            Im Urlaub ruht alles: keine Produktion, kein Bau, keine Forschung, und deine Planeten können weder angegriffen noch ausspioniert werden – außer invadierten Planeten, die dir noch nicht ganz gehören.
+            Du kannst in dieser Zeit nicht spielen. Urlaub dauert {{ vacation_min|number_format(0) }} bis {{ vacation_max|number_format(0) }} Tage; Kommazahlen sind erlaubt (2,5 Tage = 60 Stunden), so endet er genau zu deiner Wunschzeit.
+            Vorzeitig beenden kannst du ihn frühestens nach einem Tag. Alle Flotten müssen gelandet sein.
+        </p>
+        <form method="post" action="{{ path('app_account_vacation') }}" class="inline-action">
+            <input type="hidden" name="_token" value="{{ csrf_token('account') }}">
+            <label>Tage <input type="text" name="days" inputmode="decimal" pattern="[0-9]+([.,][0-9]+)?" required class="short" placeholder="z. B. 2,5" data-vacation-days></label>
+            <span class="muted small" data-vacation-end></span>
+            <button class="btn btn-small" type="submit" id="vacation-start" data-confirm="Urlaub jetzt beginnen? Du kannst bis zum Ende nicht spielen (vorzeitig frühestens nach einem Tag)." data-confirm-label="Urlaub beginnen">Urlaub beginnen</button>
+        </form>
+    </section>
+{% endblock %}

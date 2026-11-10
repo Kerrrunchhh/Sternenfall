@@ -17,6 +17,7 @@ security:
         main:
             lazy: true
             provider: app_user_provider
+            user_checker: App\Security\UserChecker
             form_login:
                 login_path: app_login
                 check_path: app_login
@@ -35,6 +36,8 @@ security:
         - { path: ^/(login|register)?$, roles: PUBLIC_ACCESS }
         # Shared combat reports can be read without logging in.
         - { path: ^/kampfbericht/, roles: PUBLIC_ACCESS }
+        - { path: ^/(status|impressum)$, roles: PUBLIC_ACCESS }
+        - { path: ^/email/, roles: PUBLIC_ACCESS }
         - { path: ^/, roles: ROLE_USER }
 
 when@test:

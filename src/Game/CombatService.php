@@ -35,6 +35,7 @@ final readonly class CombatService
         private ?BattleReports $reports = null,
         private ?Espionage $espionage = null,
         private ?Diplomacy $diplomacy = null,
+        private ?GameMailer $gameMailer = null,
     ) {
     }
 
@@ -426,6 +427,9 @@ final readonly class CombatService
         $lines = [];
         foreach ($result->experience() as ['user' => $user, 'experience' => $experience]) {
             $user->addCombatExperience($experience);
+            if ($experience > 0) {
+                $this->em->persist(new \App\Entity\ExperienceGain($user, $experience, \DateTimeImmutable::createFromInterface($this->clock->now())));
+            }
             if ($experience >= 0.5) {
                 $lines[] = \sprintf('  %s +%s', $user->getUsername(), number_format($experience, 0, ',', '.'));
             }
@@ -454,6 +458,7 @@ final readonly class CombatService
             $key = $recipient->getId() ?? spl_object_id($recipient);
             if (!isset($sent[$key])) {
                 $this->inbox->send($recipient, $subject, $body($recipient).$share);
+                $this->gameMailer?->notify($recipient, 'battle', $subject, $body($recipient).$share);
                 $sent[$key] = true;
             }
         }

@@ -15,6 +15,7 @@ use App\Repository\AllianceRepository;
 use App\Repository\ContactRepository;
 use App\Repository\PlayerMessageRepository;
 use App\Repository\TickerRepository;
+use App\Repository\TicketRepository;
 use App\Repository\TradePostRepository;
 use App\Repository\MessageRepository;
 use Psr\Clock\ClockInterface;
@@ -35,7 +36,7 @@ abstract class AbstractGameController extends AbstractController
     /** Pages a form may send the player back to (no open redirects). */
     protected const array GAME_ROUTES = [
         'app_overview', 'app_buildings', 'app_queues', 'app_research', 'app_shipyard', 'app_defense', 'app_fleet', 'app_galaxy', 'app_trade_fusionators', 'app_bookmarks',
-        'app_radar', 'app_fusion', 'app_trade', 'app_messages', 'app_lifeform', 'app_alliance', 'app_mail', 'app_newspaper', 'app_tickers', 'app_highscores', 'app_diplomacy', 'app_notes',
+        'app_radar', 'app_fusion', 'app_trade', 'app_messages', 'app_lifeform', 'app_alliance', 'app_mail', 'app_newspaper', 'app_tickers', 'app_highscores', 'app_diplomacy', 'app_notes', 'app_account', 'app_support',
     ];
 
     protected PlanetService $planetService;
@@ -48,6 +49,8 @@ abstract class AbstractGameController extends AbstractController
     private TickerRepository $tickers;
     private Diplomacy $diplomacy;
     private Radar $radar;
+    private TicketRepository $tickets2;
+    private string $forumUrl;
     private RequestStack $requestStack;
     private AllianceRepository $allianceRepository;
     private TradePostRepository $tradePosts;
@@ -67,7 +70,12 @@ abstract class AbstractGameController extends AbstractController
         TickerRepository $tickers,
         Diplomacy $diplomacy,
         Radar $radar,
+        TicketRepository $ticketRepository,
+        #[\Symfony\Component\DependencyInjection\Attribute\Autowire(env: 'FORUM_URL')]
+        string $forumUrl = '',
     ): void {
+        $this->tickets2 = $ticketRepository;
+        $this->forumUrl = $forumUrl;
         $this->radar = $radar;
         $this->diplomacy = $diplomacy;
         $this->tickers = $tickers;
@@ -178,6 +186,8 @@ abstract class AbstractGameController extends AbstractController
             'diplomacy_votes' => $this->diplomacy->pendingVotes($planet->getOwner()),
             // Own planets with an attack on its way (seen by the radar): red in the planet list.
             'attacked_planets' => $this->attackedPlanets($planet->getOwner()),
+            'open_tickets' => $this->isGranted('ROLE_ADMIN') ? $this->tickets2->countOpen() : 0,
+            'forum_url' => $this->forumUrl,
             // Own trade posts are listed under the planets in the left column.
             'own_trade_posts' => $this->tradePosts->findBy(['owner' => $planet->getOwner()], ['galaxy' => 'ASC', 'system' => 'ASC', 'position' => 'ASC']),
             // The alliance black board is shown on every page.

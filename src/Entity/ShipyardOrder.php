@@ -147,6 +147,12 @@ class ShipyardOrder implements QueueItem
     }
 
     /** Starts (or resumes) work on the next ship. */
+    /** Vacation: the running order continues as if no time had passed. */
+    public function shiftClock(int $seconds): void
+    {
+        $this->startedAt = $this->startedAt?->modify("+{$seconds} seconds");
+    }
+
     public function start(\DateTimeImmutable $at): void
     {
         $this->startedAt = $at->modify('-'.min($this->progressSeconds, $this->unitSeconds - 1).' seconds');

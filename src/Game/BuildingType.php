@@ -76,6 +76,17 @@ enum BuildingType: string
     }
 
     /** Multiplier applied to the cost for each additional level. */
+    /** Points of one level of this building (a planet's points = sum of level × points). */
+    public function pointsPerLevel(): int
+    {
+        return match ($this) {
+            self::IronMine, self::TitaniumMine, self::WaterPump, self::Farm, self::Storage, self::BioCell, self::Bunker => 1,
+            self::Electrolysis => 2,
+            self::Shipyard, self::ResearchLab, self::ShieldGenerator => 3,
+            self::CommandCenter => 4,
+        };
+    }
+
     public function costFactor(): float
     {
         return match ($this) {

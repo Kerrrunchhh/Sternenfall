@@ -85,7 +85,7 @@ enum ResearchType: string
             self::Espionage => 'Sensorik und Antrieb für Sonden: jede Stufe macht Sonden 4 % schneller. Stufe 1: Planetentyp. Stufe 5: Gebäude, Rohstoffe, Bevölkerung, Forschung. Stufe 10: stationierte Schiffe. Stufe 25: du merkst, wenn du ausspioniert wurdest. Stufe 40: du erfährst auch, wer es war. Stufe 50: du siehst Sonden schon im Anflug auf deine Planeten und Flotten.',
             self::InvasionTech => 'Landungs- und Besiedlungstechnik für Kolonie- und Invasionsschiffe.',
             self::FusionTech => 'Ermöglicht den Fusionator. Die Stufe ist die größte erlaubte Fusion: Stufe 20 verschweißt höchstens 20 Planeten (max. Stufe 49). Langzeitforschung: anfangs schnell, später sehr langsam – die Dauer hängt ganz von den Forschungslaboren ab.',
-            self::Colonization => 'Ohne diese Forschung hast du nur deinen Heimatplaneten. Jede Stufe erlaubt 10 Planetenplätze: Stufe 1 = 10, Stufe 2 = 20 usw.; verschweißte Plätze zählen einzeln. Langzeitforschung: jede Stufe dauert sehr lange – die Dauer hängt ganz von den Forschungslaboren ab.',
+            self::Colonization => 'Ohne diese Forschung hast du nur deinen Heimatplaneten. Jede Stufe erlaubt 10 Planetenplätze: Stufe 1 = 10, Stufe 2 = 20 usw., ohne Obergrenze (nach rund 10 Jahren sind 500 Plätze möglich); verschweißte Plätze zählen einzeln. Langzeitforschung: jede Stufe dauert sehr lange – die Dauer hängt ganz von den Forschungslaboren ab.',
             self::TradeNetwork => 'Logistik für den Fernhandel. Jede Stufe erlaubt Händlern einen weiteren Handelsstützpunkt.',
             self::Radar => 'Macht angreifende und Rohstoffe transportierende Flotten sichtbar: ab Stufe 1 im eigenen System, je 5 Stufen ein System weiter nach links und rechts.',
         };

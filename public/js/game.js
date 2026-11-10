@@ -205,6 +205,25 @@ const serverClock = (() => {
         });
     });
 
+    // Vacation: show when it would end for the days typed in.
+    document.querySelectorAll('[data-vacation-days]').forEach((input) => {
+        const out = input.closest('form').querySelector('[data-vacation-end]');
+        const show = () => {
+            const days = parseFloat(input.value.replace(',', '.'));
+            out.textContent = days >= 1 && days <= 30
+                ? 'endet am ' + new Date(Date.now() + days * 86400000).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : (input.value ? '1 bis 30 Tage' : '');
+        };
+        input.addEventListener('input', show);
+    });
+
+    // Support form: the player field only for reports.
+    document.querySelectorAll('[data-support-form]').forEach((form) => {
+        const kind = form.querySelector('[data-support-kind]');
+        const only = form.querySelector('[data-report-only]');
+        kind.addEventListener('change', () => { only.hidden = kind.value !== 'report'; });
+    });
+
     // Mail list: one checkbox selects all letters.
     document.querySelectorAll('[data-mail-list]').forEach((form) => {
         const all = form.querySelector('[data-select-all]');

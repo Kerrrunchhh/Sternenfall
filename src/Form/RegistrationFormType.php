@@ -4,6 +4,7 @@ namespace App\Form;
 
 use App\Entity\User;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
 use Symfony\Component\Form\Extension\Core\Type\RepeatedType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -19,6 +20,12 @@ class RegistrationFormType extends AbstractType
             ->add('username', TextType::class, [
                 'label' => 'Spielername',
                 'attr' => ['autocomplete' => 'username', 'maxlength' => 30],
+            ])
+            ->add('email', EmailType::class, [
+                'label' => 'E-Mail-Adresse',
+                'help' => 'Wir schicken dir einen Link zur Bestätigung. Optional bekommst du später Warnungen bei Angriffen.',
+                'attr' => ['autocomplete' => 'email'],
+                'constraints' => [new Assert\NotBlank(message: 'Bitte gib deine E-Mail-Adresse ein.')],
             ])
             ->add('plainPassword', RepeatedType::class, [
                 'type' => PasswordType::class,

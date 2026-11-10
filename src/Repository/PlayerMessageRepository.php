@@ -18,15 +18,25 @@ class PlayerMessageRepository extends ServiceEntityRepository
     }
 
     /** @return list<PlayerMessage> */
-    public function findInbox(User $user, int $limit = 200): array
+    public function findInbox(User $user, int $limit = 200, int $offset = 0): array
     {
-        return $this->findBy(['recipient' => $user, 'deletedByRecipient' => false], ['createdAt' => 'DESC', 'id' => 'DESC'], $limit);
+        return $this->findBy(['recipient' => $user, 'deletedByRecipient' => false], ['createdAt' => 'DESC', 'id' => 'DESC'], $limit, $offset);
+    }
+
+    public function countInbox(User $user): int
+    {
+        return $this->count(['recipient' => $user, 'deletedByRecipient' => false]);
+    }
+
+    public function countSent(User $user): int
+    {
+        return $this->count(['sender' => $user, 'deletedBySender' => false]);
     }
 
     /** @return list<PlayerMessage> */
-    public function findSent(User $user, int $limit = 200): array
+    public function findSent(User $user, int $limit = 200, int $offset = 0): array
     {
-        return $this->findBy(['sender' => $user, 'deletedBySender' => false], ['createdAt' => 'DESC', 'id' => 'DESC'], $limit);
+        return $this->findBy(['sender' => $user, 'deletedBySender' => false], ['createdAt' => 'DESC', 'id' => 'DESC'], $limit, $offset);
     }
 
     public function countUnread(User $user): int

@@ -150,6 +150,14 @@ class Fleet
         return $this->owner;
     }
 
+    /** The owner's account is deleted: the fleet stays behind without an owner. */
+    public function handOverTo(User $nobody): void
+    {
+        $this->owner = $nobody;
+        $this->releasedToAlliance = false;
+        $this->releasedTo->clear();
+    }
+
     public function getName(): ?string
     {
         return $this->name;
@@ -354,6 +362,13 @@ class Fleet
     public function getParkedAt(): ?\DateTimeImmutable
     {
         return $this->parkedAt;
+    }
+
+    /** After the owner's vacation the stay limits count on from where they stopped. */
+    public function shiftParking(int $seconds): void
+    {
+        $this->parkedAt = $this->parkedAt?->modify("+{$seconds} seconds");
+        $this->strandedSince = $this->strandedSince?->modify("+{$seconds} seconds");
     }
 
     public function park(\DateTimeImmutable $since): void

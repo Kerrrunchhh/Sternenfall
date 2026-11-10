@@ -35,19 +35,21 @@ class LongResearchTest extends TestCase
         self::assertGreaterThan($this->economy->researchSeconds(ResearchType::Colonization, 10, $this->lab(980)), $this->economy->researchSeconds(ResearchType::Colonization, 11, $this->lab(980)), 'colonization goes on beyond level 10');
     }
 
-    public function testColonizationStartsQuicklyThenEachLevelTakesVeryLong(): void
+    public function testColonizationReaches500SlotsInAboutSixYearsWithoutLimit(): void
     {
-        // The model player's labs at each colonization level (fused planets × lab level).
-        $days = fn (int $level, int $labs): float => $this->economy->researchSeconds(ResearchType::Colonization, $level, $this->lab($labs)) / 86400;
+        // The model player's labs at each colonization level.
+        $days = fn (int $level): float => $this->economy->researchSeconds(ResearchType::Colonization, $level, $this->lab((int) round(Economy::colonizationModelLabs($level)))) / 86400;
 
-        self::assertEqualsWithDelta(1, $days(1, 4), 0.1, 'first 10 slots within a day');
-        self::assertEqualsWithDelta(14, $days(2, 75), 0.5, 'next 10 within two weeks');
-        self::assertEqualsWithDelta(341, $days(3, 214), 5, 'then as long as 10 single steps');
-        self::assertGreaterThan(500, $days(5, 685));
-        self::assertGreaterThan($days(2, 75), $days(2, 10), 'smaller labs take longer');
+        self::assertEqualsWithDelta(1, $days(1), 0.1, 'first 10 slots within a day');
+        self::assertEqualsWithDelta(14, $days(2), 0.5, 'next 10 within two weeks');
+        self::assertEqualsWithDelta(70, $days(50), 1, 'level 50 (500 slots): about 70 days');
+        self::assertGreaterThan($days(50), $days(60), 'no upper limit, it only gets slower');
 
-        $costs = array_sum(array_map(static fn (int $n): float => $n ** 1.5, range(1, 10)));
-        self::assertEqualsWithDelta(2000 * $costs, $this->economy->researchCost(ResearchType::Colonization, 1)->iron, 1);
+        $total = array_sum(array_map($days, range(1, 50)));
+        self::assertEqualsWithDelta(6.5, $total / 365, 0.3, '500 slots in about 6.5 years; with fusion research about 10');
+
+        self::assertGreaterThan($days(2), $this->economy->researchSeconds(ResearchType::Colonization, 2, $this->lab(5)) / 86400, 'smaller labs take longer');
+        self::assertEqualsWithDelta(2000 * 10 * 50 ** 1.5, $this->economy->researchCost(ResearchType::Colonization, 50)->iron, 1, 'costs stay payable');
     }
 
     public function testDurationDependsOnlyOnTheResearchLabs(): void

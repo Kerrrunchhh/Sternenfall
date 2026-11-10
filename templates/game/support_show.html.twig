@@ -1,0 +1,73 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}{{ ticket.subject }} – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <p><a href="{{ admin_view ? path('app_admin_tickets') : path('app_support') }}">← {{ admin_view ? 'Alle Meldungen' : 'Hilfe & Meldungen' }}</a></p>
+    <article class="panel">
+        <h1>{{ ticket.kind.icon }} {{ ticket.subject }}</h1>
+        <p class="muted small">
+            {{ ticket.kind.label }} · von {% if ticket.author %}{{ ui.player(ticket.author) }}{% else %}gelöschter Spieler{% endif %}
+            {% if ticket.reported %} · gemeldet: {{ ui.player(ticket.reported) }}{% endif %}
+            · {{ ticket.createdAt|date('d.m.Y H:i') }} · <span class="ticket-status ticket-{{ ticket.status.value }}">{{ ticket.status.label }}</span>
+        </p>
+        <pre class="message-body">{{ ticket.body|link_coordinates }}</pre>
+    </article>
+
+    {% for c in ticket.comments %}
+        <div class="panel ticket-comment {{ c.fromAdmin ? 'from-admin' }}">
+            <div class="muted small">{{ c.fromAdmin ? '🛡 Admin' : 'Spieler' }}{% if c.author %} {{ c.author.username }}{% endif %} · {{ c.createdAt|date('d.m.Y H:i') }}</div>
+            <pre class="message-body">{{ c.body|link_coordinates }}</pre>
+        </div>
+    {% endfor %}
+
+    {% if admin_view %}
+        <section class="panel">
+            <h2>Bearbeiten</h2>
+            <form method="post" action="{{ path('app_admin_ticket_answer', {id: ticket.id}) }}" class="mail-form">
+                <input type="hidden" name="_token" value="{{ csrf_token('admin') }}">
+                <label>Nachricht an {{ ticket.author ? ticket.author.username : 'den Spieler' }} (Rückfrage oder Antwort)
+                    <textarea name="body" rows="4"></textarea>
+                </label>
+                <label>Status
+                    <select name="status">
+                        {% for s in statuses|filter(s => s.value != 'forwarded') %}<option value="{{ s.value }}" {{ s == ticket.status ? 'selected' }}>{{ s.label }}</option>{% endfor %}
+                    </select>
+                </label>
+                <button class="btn" type="submit" id="admin-answer">Senden / Status setzen</button>
+            </form>
+        </section>
+        {% if ticket.kind.value != 'report' %}
+            <section class="panel">
+                <h2>An den Entwickler weiterleiten</h2>
+                <form method="post" action="{{ path('app_admin_ticket_forward', {id: ticket.id}) }}" class="mail-form">
+                    <input type="hidden" name="_token" value="{{ csrf_token('admin') }}">
+                    <label>Anmerkung (optional) <textarea name="note" rows="2"></textarea></label>
+                    <button class="btn btn-secondary" type="submit" id="admin-forward">Weiterleiten</button>
+                    <p class="muted small">Ist DEVELOPER_EMAIL eingetragen, bekommt der Entwickler die Meldung per E-Mail.</p>
+                </form>
+            </section>
+        {% elseif ticket.reported %}
+            <section class="panel">
+                <h2>Strafe für {{ ticket.reported.username }}</h2>
+                <form method="post" action="{{ path('app_admin_ticket_penalty', {id: ticket.id}) }}" class="inline-action penalty-form">
+                    <input type="hidden" name="_token" value="{{ csrf_token('admin') }}">
+                    <label>Urlaub (Tage) <input type="text" name="days" value="1" inputmode="decimal" class="short" required></label>
+                    <label>Grund <input type="text" name="reason" required maxlength="200" placeholder="z. B. Beleidigung im Ticker"></label>
+                    <button class="btn btn-danger" type="submit" id="admin-penalty" data-confirm="{{ ticket.reported.username }} bestrafen? Er wird sofort in den Urlaub geschickt und kann ihn nicht vorzeitig beenden." data-confirm-label="Strafe verhängen">Strafe verhängen</button>
+                </form>
+                <p class="muted small">Üblich sind 1–3 Tage. Der Spieler kann so lange nicht spielen; seine Planeten sind in der Zeit geschützt.</p>
+            </section>
+        {% endif %}
+    {% else %}
+        <section class="panel">
+            <h2>{{ ticket.status.value == 'question' ? 'Rückfrage beantworten' : 'Etwas ergänzen' }}</h2>
+            <form method="post" action="{{ path('app_support_reply', {id: ticket.id}) }}" class="mail-form">
+                <input type="hidden" name="_token" value="{{ csrf_token('support') }}">
+                <textarea name="body" rows="4" required maxlength="{{ constant('App\\Entity\\Ticket::MAX_BODY') }}"></textarea>
+                <button class="btn" type="submit" id="support-reply">Senden</button>
+            </form>
+        </section>
+    {% endif %}
+{% endblock %}

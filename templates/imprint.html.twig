@@ -1,0 +1,21 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Impressum – {{ game_name }}{% endblock %}
+
+{% block body %}
+    <main class="public-report">
+        <a href="{{ path(app.user ? 'app_overview' : 'app_home') }}" class="public-report-logo"><img src="{{ asset('pictures/brand/logo.webp') }}" alt="{{ game_name }}" width="223" height="90"></a>
+        <article class="panel imprint">
+            <h1>Impressum</h1>
+            {# TODO Betreiber: die Platzhalter durch die echten Angaben ersetzen (Angaben gemäß § 5 DDG). #}
+            <h2>Angaben gemäß § 5 DDG</h2>
+            <p>[Vorname Nachname]<br>[Straße Hausnummer]<br>[PLZ Ort]<br>[Land]</p>
+            <h2>Kontakt</h2>
+            <p>E-Mail: [E-Mail-Adresse]<br>Telefon: [Telefonnummer]</p>
+            <h2>Verantwortlich für den Inhalt</h2>
+            <p>[Vorname Nachname, Anschrift wie oben]</p>
+            <p class="muted small">{{ game_name }} ist ein Browserspiel. Inhalte, die Spieler schreiben (Nachrichten, Ticker, Profile), stammen von den Spielern selbst; Verstöße können im Spiel unter „Hilfe & Meldungen“ gemeldet werden.</p>
+        </article>
+        <p class="muted small"><a href="{{ path(app.user ? 'app_overview' : 'app_home') }}">{{ app.user ? 'Zurück ins Spiel' : 'Zur Startseite' }}</a></p>
+    </main>
+{% endblock %}

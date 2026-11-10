@@ -181,6 +181,7 @@
             <h2>Planet</h2>
             <table class="table">
                 <tr><td>Koordinaten</td><td class="num">{{ planet.coordinates }}</td></tr>
+                <tr><td title="Jede Gebäudestufe zählt mit dem Punktesatz des Gebäudes">Punkte</td><td class="num">{{ planet_points(planet)|number_format(0, ',', '.') }}</td></tr>
                 <tr><td>Planetentyp</td><td class="num">{{ planet.type.icon }} {{ planet.type.label }}<br><span class="muted small">{{ planet.type.effect }}{% if planet.fused %}<br>Fusion: zählt als blauer Planet, alle Rohstoffe ×1,5{% endif %}</span></td></tr>
                 <tr><td>Vor Plünderung geschützt</td><td class="num">{{ protected|number_format(0, ',', '.') }} je Rohstoff</td></tr>
             </table>

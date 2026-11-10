@@ -94,6 +94,13 @@ class TradePost
         return $this->owner;
     }
 
+    /** The owner's account is deleted: the post is left behind, abandoned. */
+    public function handOverTo(User $nobody): void
+    {
+        $this->owner = $nobody;
+        $this->abandon();
+    }
+
     public function getName(): string
     {
         return $this->name;

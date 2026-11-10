@@ -29,4 +29,11 @@
     {% else %}
         <p class="panel muted">Keine Nachrichten.</p>
     {% endfor %}
+    {% if pages > 1 %}
+        <nav class="pager" aria-label="Seiten">
+            {% if page > 1 %}<a class="btn btn-small btn-secondary" href="{{ path('app_messages', {page: page - 1}) }}">← Neuere</a>{% endif %}
+            <span class="muted small">Seite {{ page }} von {{ pages }} · {{ total|number_format(0, ',', '.') }} Nachrichten</span>
+            {% if page < pages %}<a class="btn btn-small btn-secondary" href="{{ path('app_messages', {page: page + 1}) }}">Ältere →</a>{% endif %}
+        </nav>
+    {% endif %}
 {% endblock %}

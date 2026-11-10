@@ -225,9 +225,12 @@ final readonly class Economy
 
     public function researchCost(ResearchType $type, int $targetLevel): Resources
     {
-        $factor = $type->isLongTerm()
-            ? array_sum(array_map(static fn (int $step): float => $step ** 1.5, self::longTermSteps($type, $targetLevel)))
-            : 2 ** ($targetLevel - 1);
+        $factor = match (true) {
+            // Colonization: 10 times the long-term step cost of its level (no ceiling, so it must stay payable).
+            ResearchType::Colonization === $type => 10 * $targetLevel ** 1.5,
+            $type->isLongTerm() => array_sum(array_map(static fn (int $step): float => $step ** 1.5, self::longTermSteps($type, $targetLevel))),
+            default => 2 ** ($targetLevel - 1),
+        };
 
         return $type->baseCost()->multiply($factor)->floor();
     }
@@ -241,31 +244,24 @@ final readonly class Economy
     public const float LONG_RESEARCH_EXPONENT = 2.6;
     public const int LONG_RESEARCH_STEPS = 50;
 
-    /** Days the first colonization levels take for the model player: a quick start. */
-    public const array COLONIZATION_START_DAYS = [1 => 1, 2 => 14];
-
     /**
-     * Lab hours of a colonization level (10 planet slots). From level 3 on, it takes the model
-     * player – who fuses all his planets with labs growing from 4 to 20 – as long as the
-     * 10 single steps it stands for did; levels 1 and 2 are quicker for a fast start.
+     * Colonization (10 planet slots per level, no upper limit): the model player – whose
+     * research planet grows to a fusion of 49 planets with labs at level 20 by level 50 –
+     * needs 1 day for level 1, 14 days for level 2 and 14 × √(level/2) days after that
+     * (level 50: 70 days). All 50 levels (500 slots) take him about 6 years; together with
+     * fusion research in the same slot about 10 years. Fewer labs take proportionally longer.
      */
     public static function colonizationLabHours(int $level): float
     {
-        $steps = self::longTermSteps(ResearchType::Colonization, $level);
-        $modelHours = isset(self::COLONIZATION_START_DAYS[$level])
-            ? 24 * self::COLONIZATION_START_DAYS[$level]
-            : array_sum(array_map(
-                static fn (int $step): float => self::LONG_RESEARCH_LAB_HOURS * ($step / self::LONG_RESEARCH_STEPS) ** self::LONG_RESEARCH_EXPONENT / (1 + self::modelLabSum($step)),
-                $steps,
-            ));
+        $days = 1 === $level ? 1.0 : 14 * sqrt($level / 2);
 
-        return $modelHours * (1 + self::modelLabSum($steps[0]));
+        return $days * 24 * (1 + self::colonizationModelLabs($level));
     }
 
-    /** Research lab levels the model player has at a step of the long-term curve (fused planets × lab level). */
-    private static function modelLabSum(int $step): float
+    /** Lab levels of the model player's research planet at a colonization level: 4 at first, 980 from level 50. */
+    public static function colonizationModelLabs(int $level): float
     {
-        return max(1, $step - 1) * (4 + 16 * $step / self::LONG_RESEARCH_STEPS);
+        return 4 + 976 * min(1.0, max(0, $level - 1) / 49);
     }
 
     /**

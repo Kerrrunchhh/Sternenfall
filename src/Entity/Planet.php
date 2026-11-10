@@ -185,6 +185,32 @@ class Planet
         $this->homeworld = true;
     }
 
+    /**
+     * The owner's account is deleted: the planet stays as an ownerless planet. Queued
+     * orders are refunded into its storage; resources, ships and defenses stay on it,
+     * the buildings only if they are not destroyed.
+     */
+    public function leaveToNobody(User $nobody, bool $destroyBuildings): void
+    {
+        foreach ($this->buildingOrders->toArray() as $order) {
+            $this->setResources($this->getResources()->add($order->getCost()));
+            $this->removeBuildingOrder($order);
+        }
+        foreach ($this->shipyardOrders->toArray() as $order) {
+            $this->setResources($this->getResources()->add($order->getUnitCost()->multiply($order->getRemaining())));
+            $this->removeShipyardOrder($order);
+        }
+        if ($destroyBuildings) {
+            $this->buildings = [];
+        }
+        $this->owner->getPlanets()->removeElement($this);
+        $this->owner = $nobody;
+        $nobody->addPlanet($this);
+        $this->homeworld = false;
+        $this->hiddenInProfile = false;
+        $this->abandonAt = null;
+    }
+
     /** Marks the planet as freshly invaded: it becomes fully owned after the integration period. */
     public function markInvaded(\DateTimeImmutable $now, bool $inWar = false): void
     {
@@ -207,6 +233,19 @@ class Planet
         }
 
         return $this->fusionSize - 1 + self::invadedSlots($this->invadedAt, $this->invadedInWar, $now);
+    }
+
+    /** After a vacation: production, queues and abandoning go on as if no time had passed. */
+    public function shiftClock(int $seconds): void
+    {
+        $this->resourcesUpdatedAt = $this->resourcesUpdatedAt->modify("+{$seconds} seconds");
+        $this->abandonAt = $this->abandonAt?->modify("+{$seconds} seconds");
+        foreach ($this->buildingOrders as $order) {
+            $order->shiftClock($seconds);
+        }
+        foreach ($this->shipyardOrders as $order) {
+            $order->shiftClock($seconds);
+        }
     }
 
     public function getAbandonAt(): ?\DateTimeImmutable

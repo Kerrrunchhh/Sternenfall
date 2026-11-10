@@ -23,9 +23,14 @@ class MessageRepository extends ServiceEntityRepository
     }
 
     /** @return list<Message> */
-    public function findLatest(User $recipient, int $limit = 100): array
+    public function findLatest(User $recipient, int $limit = 100, int $offset = 0): array
     {
-        return $this->findBy(['recipient' => $recipient], ['createdAt' => 'DESC', 'id' => 'DESC'], $limit);
+        return $this->findBy(['recipient' => $recipient], ['createdAt' => 'DESC', 'id' => 'DESC'], $limit, $offset);
+    }
+
+    public function countFor(User $recipient): int
+    {
+        return $this->count(['recipient' => $recipient]);
     }
 
     /** Messages are kept for 30 days. */

@@ -59,6 +59,7 @@ final readonly class Highscores
             ->from(User::class, 'u')
             ->leftJoin('u.planets', 'p')
             ->leftJoin('u.alliance', 'a')
+            ->where('u.system = false')
             ->getQuery()
             ->getResult();
     }

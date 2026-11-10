@@ -119,6 +119,11 @@
             <a href="{{ path('app_tickers') }}" class="{{ route in ['app_tickers', 'app_ticker'] ? 'active' }}" title="Langstreckenticker: Kanäle zwischen Spielern">
                 Ticker{% if ticker_invitations > 0 %} <span class="badge">{{ ticker_invitations }}</span>{% endif %}
             </a>
+            <a href="{{ path('app_account') }}" class="{{ route == 'app_account' ? 'active' }}">Konto</a>
+            <a href="{{ path('app_status') }}">Status</a>
+            <a href="{{ path('app_support') }}" class="{{ route starts with 'app_support' ? 'active' }}">Hilfe & Meldungen</a>
+            {% if forum_url %}<a href="{{ forum_url }}" target="_blank" rel="noopener">Forum ↗</a>{% endif %}
+            {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('app_admin_tickets') }}" class="{{ route starts with 'app_admin' ? 'active' }}">🛡 Admin: Meldungen{% if open_tickets > 0 %} <span class="badge">{{ open_tickets }}</span>{% endif %}</a>{% endif %}
             <a href="{{ path('app_notes') }}" class="{{ route == 'app_notes' ? 'active' }}">Notizblock</a>
             <a href="{{ path('app_highscores') }}" class="{{ route == 'app_highscores' ? 'active' }}">Highscores</a>
             <a href="{{ path('app_newspaper') }}" class="{{ route == 'app_newspaper' ? 'active' }}" title="Alle Kampfberichte des Universums, 24 Stunden später">Zeitung</a>

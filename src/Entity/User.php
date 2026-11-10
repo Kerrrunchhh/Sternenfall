@@ -18,6 +18,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: '`user`')]
 #[UniqueEntity(fields: ['username'], message: 'Dieser Name ist bereits vergeben.')]
+#[UniqueEntity(fields: ['email'], message: 'Diese E-Mail-Adresse wird schon verwendet.')]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
@@ -30,6 +31,22 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Assert\Length(min: 3, max: 30)]
     #[Assert\Regex(pattern: '/^[A-Za-z0-9_\-]+$/', message: 'Nur Buchstaben, Ziffern, _ und - sind erlaubt.')]
     private string $username = '';
+
+    /** Confirmed by a link before the player can log in (accounts from before have none). */
+    #[ORM\Column(length: 180, unique: true, nullable: true)]
+    #[Assert\Email(message: 'Bitte gib eine gültige E-Mail-Adresse ein.')]
+    private ?string $email = null;
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $emailVerifiedAt = null;
+
+    /** @var list<string> e-mail notifications the player wants (see App\Game\GameMailer::TOPICS) */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $mailTopics = null;
+
+    /** The finished research was already announced by e-mail. */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $researchMailSent = false;
 
     /** @var list<string> */
     #[ORM\Column]
@@ -61,6 +78,32 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private float $credits = 0;
 
     public const int NOTES_LIMIT = 50000;
+
+    /** The owner of ownerless planets (left behind by deleted accounts); nobody logs in as him. */
+    #[ORM\Column(name: 'is_system', options: ['default' => false])]
+    private bool $system = false;
+
+    /** Account deletion requested: at this time the account is gone (logging in cancels it). */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $deleteAt = null;
+
+    /** On deletion the buildings of the planets are destroyed (else the planets are just left). */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $deleteDestroysBuildings = false;
+
+    /** Vacation: everything rests from $vacationSince to $vacationUntil. */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $vacationSince = null;
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $vacationUntil = null;
+
+    /** A penalty: the player can't end this vacation early. */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $vacationForced = false;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $vacationReason = null;
 
     /** Private notepad of the player. */
     #[ORM\Column(type: Types::TEXT, nullable: true)]
@@ -306,6 +349,148 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->profileText = $text;
     }
 
+    public function getEmail(): ?string
+    {
+        return $this->email;
+    }
+
+    public function setEmail(?string $email): static
+    {
+        $email = null === $email ? null : mb_strtolower(trim($email));
+        if ($email !== $this->email) {
+            $this->email = '' === $email ? null : $email;
+            $this->emailVerifiedAt = null;
+        }
+
+        return $this;
+    }
+
+    public function isEmailVerified(): bool
+    {
+        return null !== $this->email && null !== $this->emailVerifiedAt;
+    }
+
+    /** Players who gave an address must confirm it before they can log in. */
+    public function needsEmailConfirmation(): bool
+    {
+        return null !== $this->email && null === $this->emailVerifiedAt;
+    }
+
+    public function verifyEmail(\DateTimeImmutable $at): void
+    {
+        $this->emailVerifiedAt = $at;
+    }
+
+    /** @return list<string> */
+    public function getMailTopics(): array
+    {
+        return $this->mailTopics ?? ['attack'];
+    }
+
+    /** @param list<string> $topics */
+    public function setMailTopics(array $topics): void
+    {
+        $this->mailTopics = array_values($topics);
+    }
+
+    public function wantsMail(string $topic): bool
+    {
+        return $this->isEmailVerified() && \in_array($topic, $this->getMailTopics(), true);
+    }
+
+    public function isResearchMailSent(): bool
+    {
+        return $this->researchMailSent;
+    }
+
+    public function markResearchMailSent(bool $sent = true): void
+    {
+        $this->researchMailSent = $sent;
+    }
+
+    public function isSystem(): bool
+    {
+        return $this->system;
+    }
+
+    public function markSystem(): void
+    {
+        $this->system = true;
+    }
+
+    public function getDeleteAt(): ?\DateTimeImmutable
+    {
+        return $this->deleteAt;
+    }
+
+    public function isDeleteDestroyingBuildings(): bool
+    {
+        return $this->deleteDestroysBuildings;
+    }
+
+    public function requestDeletion(\DateTimeImmutable $at, bool $destroyBuildings): void
+    {
+        $this->deleteAt = $at;
+        $this->deleteDestroysBuildings = $destroyBuildings;
+    }
+
+    public function cancelDeletion(): void
+    {
+        $this->deleteAt = null;
+        $this->deleteDestroysBuildings = false;
+    }
+
+    public function getVacationSince(): ?\DateTimeImmutable
+    {
+        return $this->vacationSince;
+    }
+
+    public function getVacationUntil(): ?\DateTimeImmutable
+    {
+        return $this->vacationUntil;
+    }
+
+    public function isVacationForced(): bool
+    {
+        return $this->vacationForced;
+    }
+
+    public function getVacationReason(): ?string
+    {
+        return $this->vacationReason;
+    }
+
+    /** On vacation at this moment (started, not over yet). */
+    public function isOnVacation(\DateTimeImmutable $now): bool
+    {
+        return null !== $this->vacationSince && $this->vacationSince <= $now && $now < $this->vacationUntil;
+    }
+
+    /** Production, queues and research stand still from the start of the vacation on. */
+    public function clockAt(\DateTimeImmutable $now): \DateTimeImmutable
+    {
+        return null !== $this->vacationSince && $this->vacationSince < $now ? $this->vacationSince : $now;
+    }
+
+    public function startVacation(\DateTimeImmutable $since, \DateTimeImmutable $until, bool $forced = false, ?string $reason = null): void
+    {
+        $this->vacationSince = $since;
+        $this->vacationUntil = $until;
+        $this->vacationForced = $forced;
+        $this->vacationReason = null === $reason ? null : mb_substr($reason, 0, 255);
+    }
+
+    /** Ends the vacation; returns how many seconds it lasted (for shifting all clocks). */
+    public function endVacation(\DateTimeImmutable $at): int
+    {
+        $seconds = null === $this->vacationSince ? 0 : max(0, $at->getTimestamp() - $this->vacationSince->getTimestamp());
+        $this->researchFinishesAt = $this->researchFinishesAt?->modify("+{$seconds} seconds");
+        $this->vacationSince = $this->vacationUntil = $this->vacationReason = null;
+        $this->vacationForced = false;
+
+        return $seconds;
+    }
+
     public function getNotes(): string
     {
         return $this->notes ?? '';
@@ -381,6 +566,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->researchType = $type;
         $this->researchTargetLevel = $targetLevel;
         $this->researchFinishesAt = $finishesAt;
+        $this->researchMailSent = false;
         $this->researchPlanet = $planet;
     }
 

@@ -45,6 +45,8 @@ final readonly class FleetService
         private ClockInterface $clock,
         private ?Diplomacy $diplomacy = null,
         private ?AttackRules $attackRules = null,
+        private ?AccountDeletion $accountDeletion = null,
+        private ?GameMailer $gameMailer = null,
     ) {
     }
 
@@ -224,6 +226,19 @@ final readonly class FleetService
         );
     }
 
+    /**
+     * Planets of a player on vacation can be neither attacked nor spied on – except
+     * invaded planets that don't fully belong to him yet.
+     */
+    private function vacationProtects(?Planet $target): ?string
+    {
+        if (null === $target || !$target->getOwner()->isOnVacation($this->now()) || $target->isIntegrating($this->now())) {
+            return null;
+        }
+
+        return \sprintf('%s ist im Urlaub bis %s – seine Planeten sind so lange geschützt.', $target->getOwner()->getUsername(), $this->localTime($target->getOwner()->getVacationUntil()));
+    }
+
     /** Alliance mates and partners of a bond or non-aggression pact are no targets. */
     private function mayAttack(User $attacker, User $victim): bool
     {
@@ -242,6 +257,9 @@ final readonly class FleetService
     {
         if (!$this->colonizer->isValidSlot($galaxy, $system, $position)) {
             throw new GameException('Diese Koordinaten gibt es nicht.');
+        }
+        if (null !== $reason = $this->vacationProtects($this->planetRepository->findAt($galaxy, $system, $position))) {
+            throw new GameException($reason);
         }
 
         // Nearest planet with a scout in the hangar (all scouts of a player are equally fast).
@@ -651,6 +669,9 @@ final readonly class FleetService
 
         if (FleetMission::Attack === $mission && $fleet->isMoving()) {
             $this->callGuardians($fleet);
+            if (null === $lead) {
+                $this->mailAttackWarning($fleet);
+            }
         }
 
         if ($fleet->isMoving()) {
@@ -671,6 +692,22 @@ final readonly class FleetService
         if ($joining > 0) {
             throw new GameException(\sprintf('Zu %s fliegen noch Schiffe (Schiffe zusammenziehen). Warte, bis sie angekommen sind, oder rufe sie zurück.', $fleet->getLabel()));
         }
+    }
+
+    /** E-mail to the attacked player, if his radar sees the attack and he wants such mails. */
+    private function mailAttackWarning(Fleet $attacker): void
+    {
+        $target = $this->planetRepository->findAt((int) $attacker->getTargetGalaxy(), (int) $attacker->getTargetSystem(), (int) $attacker->getTargetPosition());
+        if (null === $target || null === $this->gameMailer || !$this->radar->sees($target->getOwner(), $attacker)) {
+            return;
+        }
+        $this->gameMailer->notify($target->getOwner(), 'attack', 'Angriff auf '.$target->getName(), \sprintf(
+            "%s greift deinen Planeten %s [%s] an.\nEinschlag: %s (Serverzeit)\n\nIm Spiel siehst du den Angriff auf der Übersicht und kannst die Flotte ausspionieren.",
+            $attacker->getOwner()->getUsername(),
+            $target->getName(),
+            $target->getCoordinates(),
+            $this->localTime($attacker->getArriveAt()),
+        ));
     }
 
     /** Systems around an attacked planet in which guardians receive the distress call. */
@@ -981,6 +1018,7 @@ final readonly class FleetService
             }
             $this->sendOverstayersHome();
             $this->giveUpAbandonedPlanets();
+            $this->accountDeletion?->deleteDue();
             $this->em->flush();
         });
     }
@@ -999,8 +1037,8 @@ final readonly class FleetService
         $now = $this->now();
         $cutoff = $now->modify('-'.self::MAX_STAY);
         foreach ($this->fleetRepository->findParkedBefore($cutoff) as $fleet) {
-            if (!$this->em->contains($fleet) || !$fleet->isIdle()) {
-                continue;
+            if (!$this->em->contains($fleet) || !$fleet->isIdle() || $fleet->getOwner()->isOnVacation($now)) {
+                continue; // on vacation the stay limits rest as well
             }
             [$g, $s, $p] = [$fleet->getGalaxy(), $fleet->getSystem(), $fleet->getPosition()];
             $post = $this->tradePosts->findAt($g, $s, $p);
@@ -1280,6 +1318,7 @@ final readonly class FleetService
             },
             FleetMission::Spy => match (true) {
                 $owned => 'Deine eigenen Planeten musst du nicht ausspionieren.',
+                null !== $this->vacationProtects($target) => $this->vacationProtects($target),
                 ($ships[ShipType::Scout->value] ?? 0) < 1 => 'Zum Spionieren wird mindestens eine Sonde benötigt.',
                 default => null,
             },
@@ -1309,6 +1348,7 @@ final readonly class FleetService
                     => \sprintf('%s [%s] ist der Heimatplanet von %s und kann nicht erobert werden. Lass die Invasionsschiffe zu Hause oder wähle ein anderes Ziel.', $target->getName(), $target->getCoordinates(), $target->getOwner()->getUsername()),
                 $owned => 'Deine eigenen Planeten kannst du nicht angreifen.',
                 $player->isAllyOf($target->getOwner()) => 'Mitglieder deiner Allianz kannst du nicht angreifen.',
+                null !== $this->vacationProtects($target) => $this->vacationProtects($target),
                 !$this->mayAttack($player, $target->getOwner()) => \sprintf('Mit der Allianz von %s habt ihr ein %s – Angriffe sind ausgeschlossen.', $target->getOwner()->getUsername(), $this->diplomacy?->kindBetween($player, $target->getOwner())?->label() ?? 'Abkommen'),
                 default => null,
             },
@@ -1523,6 +1563,10 @@ final readonly class FleetService
                 }
                 if (null === $target || !$this->mayAttack($player, $target->getOwner())) {
                     $this->inbox->send($player, "Angriff auf $where abgebrochen", "Das Ziel ist kein gegnerischer Planet mehr (eigener Planet, Allianz, Bündnis oder Nichtangriffspakt). $name kehrt zurück.");
+                    break;
+                }
+                if (null !== $reason = $this->vacationProtects($target)) {
+                    $this->inbox->send($player, "Angriff auf $where abgebrochen", "$reason $name kehrt zurück.");
                     break;
                 }
                 $joiners = [];

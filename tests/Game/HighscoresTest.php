@@ -67,7 +67,7 @@ final class HighscoresTest extends TestCase
         $query = $this->createStub(Query::class);
         $query->method('getResult')->willReturn($this->users);
         $qb = $this->createStub(QueryBuilder::class);
-        foreach (['select', 'from', 'leftJoin'] as $method) {
+        foreach (['select', 'from', 'leftJoin', 'where'] as $method) {
             $qb->method($method)->willReturnSelf();
         }
         $qb->method('getQuery')->willReturn($query);

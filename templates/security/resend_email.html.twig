@@ -1,0 +1,15 @@
+{% extends 'security/_layout.html.twig' %}
+
+{% block title %}Bestätigungsmail erneut senden – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h2>Bestätigungsmail erneut senden</h2>
+    <form method="post" action="{{ path('app_resend_email') }}">
+        <input type="hidden" name="_token" value="{{ csrf_token('resend_email') }}">
+        <label for="resend-email">E-Mail-Adresse</label>
+        <input type="email" id="resend-email" name="email" required autocomplete="email">
+        <button class="btn" type="submit">Link senden</button>
+    </form>
+    {% if dev_link %}<p class="hint">Entwicklung (keine Mails): <a href="{{ dev_link }}">Bestätigungslink</a></p>{% endif %}
+    <p class="hint"><a href="{{ path('app_login') }}">Zur Anmeldung</a></p>
+{% endblock %}

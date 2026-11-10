@@ -1,0 +1,10 @@
+{% extends 'security/_layout.html.twig' %}
+
+{% block title %}E-Mail bestätigen – {{ game_name }}{% endblock %}
+
+{% block content %}
+    <h2>Fast geschafft!</h2>
+    <p>Deine Heimatwelt ist bereit. Wir haben dir an <strong>{{ email }}</strong> einen Link geschickt – bestätige damit deine Adresse, dann kannst du dich anmelden.</p>
+    <p class="hint">Keine Mail bekommen? Schau im Spam-Ordner nach oder <a href="{{ path('app_resend_email') }}">fordere einen neuen Link an</a>.</p>
+    {% if dev_link %}<p class="hint">Entwicklung (keine Mails): <a href="{{ dev_link }}">Bestätigungslink</a></p>{% endif %}
+{% endblock %}

@@ -42,6 +42,13 @@
                     </table>
                     <button class="btn btn-small btn-danger" type="submit" id="mail-delete" data-confirm="Ausgewählte Nachrichten löschen?" data-confirm-label="Löschen">Ausgewählte löschen</button>
                 </form>
+                {% if pages > 1 %}
+                    <nav class="pager" aria-label="Seiten">
+                        {% if page > 1 %}<a class="btn btn-small btn-secondary" href="{{ path('app_mail', {box: box, page: page - 1}) }}">← Neuere</a>{% endif %}
+                        <span class="muted small">Seite {{ page }} von {{ pages }}</span>
+                        {% if page < pages %}<a class="btn btn-small btn-secondary" href="{{ path('app_mail', {box: box, page: page + 1}) }}">Ältere →</a>{% endif %}
+                    </nav>
+                {% endif %}
             {% endif %}
         </section>
 

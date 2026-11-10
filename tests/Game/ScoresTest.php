@@ -29,7 +29,7 @@ final class ScoresTest extends TestCase
         $empty = Scoring::points($player);
 
         $home->setBuildingLevel(BuildingType::Shipyard, $home->getBuildingLevel(BuildingType::Shipyard) + 3);
-        self::assertGreaterThan($empty, Scoring::points($player));
+        self::assertSame($empty + 9, Scoring::points($player), 'shipyard: 3 points per level');
 
         $before = Scoring::points($player);
         $colony = new Planet($player, 'Kolonie', 1, 1, 5, $this->now);
@@ -53,7 +53,7 @@ final class ScoresTest extends TestCase
         $player->getPlanets()->removeElement($bottom);
 
         self::assertSame(12, $top->getBuildingLevel(BuildingType::Shipyard));
-        self::assertEqualsWithDelta($separate, Scoring::points($player), 1);
+        self::assertSame($separate, Scoring::points($player));
     }
 
     public function testExperienceIsTheEnemyShieldDestroyedSharedByBuildTime(): void

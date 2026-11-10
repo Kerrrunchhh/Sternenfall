@@ -33,10 +33,17 @@ class MailController extends AbstractGameController
         $planet = $this->currentPlanet();
         $player = $this->player();
         $sent = 'sent' === $request->query->getString('box');
+        $perPage = 50;
+        $total = $sent ? $this->letters->countSent($player) : $this->letters->countInbox($player);
+        $pages = max(1, (int) ceil($total / $perPage));
+        $page = min($pages, max(1, ctype_digit($p = $request->query->getString('page')) ? (int) $p : 1));
+        $offset = ($page - 1) * $perPage;
 
         return $this->renderGame('game/mail.html.twig', $planet, [
             'box' => $sent ? 'sent' : 'inbox',
-            'letters' => $sent ? $this->letters->findSent($player) : $this->letters->findInbox($player),
+            'letters' => $sent ? $this->letters->findSent($player, $perPage, $offset) : $this->letters->findInbox($player, $perPage, $offset),
+            'page' => $page,
+            'pages' => $pages,
             'contacts' => $this->contactService->contactsOf($player),
             'incoming_requests' => $this->contacts->findIncomingRequests($player),
             'outgoing_requests' => $this->contacts->findOutgoingRequests($player),
