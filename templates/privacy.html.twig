@@ -20,6 +20,11 @@
             <p>{{ 'Bei jedem Aufruf der Seite speichert der Webserver automatisch: IP-Adresse, Datum und Uhrzeit, aufgerufene Adresse, Statuscode, übertragene Datenmenge, die zuvor besuchte Seite (Referrer) und Browserkennung (User-Agent). Das ist nötig, um den Betrieb sicherzustellen, Fehler zu finden und Angriffe abzuwehren (berechtigtes Interesse, Art. 6 Abs. 1 lit. f DSGVO). Die Logdateien werden nach 14 Tagen automatisch gelöscht.'|trans }}</p>
             <p>{{ 'Zum Schutz vor dem Erraten von Passwörtern werden fehlgeschlagene Anmeldeversuche zusammen mit Benutzername und IP-Adresse für wenige Minuten zwischengespeichert.'|trans }}</p>
 
+            <h3 id="multi">{{ 'Erkennung von Mehrfach-Accounts'|trans }}</h3>
+            <p>{{ 'Mehrere Accounts einer Person verfälschen das Spiel. Bei jeder Anmeldung speichern wir deshalb die IP-Adresse, die Browserkennung (User-Agent) und den Zeitpunkt. Moderatoren und Administratoren sehen, welche Accounts sich eine IP-Adresse teilen, und entscheiden selbst, ob ein Verstoß vorliegt – automatisch gesperrt wird niemand. Rechtsgrundlage ist unser berechtigtes Interesse an einem fairen Spiel (Art. 6 Abs. 1 lit. f DSGVO). Die Einträge werden nach 30 Tagen gelöscht.'|trans }}</p>
+            <p>{{ 'Zusätzlich berechnet dein Browser beim Anmelden aus einigen Merkmalen (Bildschirm, Zeitzone, Sprache, Darstellung einer kleinen Grafik) eine Gerätekennung als nicht umkehrbaren Hashwert und schickt sie mit. Sie dient ausschließlich dazu, Mehrfach-Accounts zu erkennen; ohne diesen Schutz wäre ein faires Mehrspieler-Spiel nicht möglich. Rechtsgrundlage sind § 25 Abs. 2 Nr. 2 TDDDG (für den Dienst unbedingt erforderlich) und unser berechtigtes Interesse an einem fairen Spiel (Art. 6 Abs. 1 lit. f DSGVO). Die Kennung sehen nur Moderatoren und Administratoren; sie wird nach 30 Tagen gelöscht. Du kannst der Verarbeitung aus Gründen, die sich aus deiner besonderen Situation ergeben, widersprechen (Art. 21 DSGVO).'|trans }}</p>
+            <p>{{ 'Rohstoff-Lieferungen an andere Spieler ohne Gegenleistung werden mit Absender, Empfänger, Menge und Zeitpunkt protokolliert, um Pushing zu erkennen und zu begrenzen.'|trans }}</p>
+
             <h2>{{ '4. Registrierung und Spielkonto'|trans }}</h2>
             <p>{{ 'Für ein Spielkonto speichern wir:'|trans }}</p>
             <ul>
@@ -59,7 +64,7 @@
             <h2>{{ '8. Cookies und Speicher im Browser'|trans }}</h2>
             <p>{{ 'Wir setzen nur ein technisch notwendiges Cookie: das Sitzungs-Cookie, das dich nach der Anmeldung angemeldet hält. Es wird beim Abmelden oder Schließen des Browsers ungültig.'|trans }}</p>
             <p>{{ 'Einige Anzeigeeinstellungen, etwa welche Abschnitte auf- oder zugeklappt sind, speichert das Spiel im lokalen Speicher deines Browsers (localStorage). Diese Angaben verlassen deinen Rechner nicht.'|trans }}</p>
-            <p>{{ 'Für beides ist keine Einwilligung nötig, weil es für den angefragten Dienst unbedingt erforderlich ist (§ 25 Abs. 2 TDDDG).'|trans }}</p>
+            <p>{{ 'Für beides ist keine Einwilligung nötig, weil es für den angefragten Dienst unbedingt erforderlich ist (§ 25 Abs. 2 TDDDG).'|trans }} {{ 'Die Gerätekennung zur Multi-Erkennung beschreibt Abschnitt 3.'|trans }}</p>
 
             <h2>{{ '9. Erweiterter Account und Zahlung über PayPal'|trans }}</h2>
             <p>{{ 'Den erweiterten Account bezahlst du per Abo über PayPal (Europe) S.à r.l. et Cie, S.C.A., 22–24 Boulevard Royal, L-2449 Luxemburg. Erst wenn du die Seite „Erweiterter Account“ öffnest, lädt dein Browser die Schaltfläche von PayPal. Dabei erfährt PayPal deine IP-Adresse.'|trans }}</p>

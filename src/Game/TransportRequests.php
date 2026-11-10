@@ -82,6 +82,12 @@ final readonly class TransportRequests
         $this->em->flush();
     }
 
+    /** Whether the fleet is on its way to deliver a paid transport request. */
+    public function isPaidDelivery(Fleet $fleet): bool
+    {
+        return null !== $fleet->getId() && null !== $this->requests->findOneBy(['fleet' => $fleet, 'status' => TransportRequest::ASSIGNED]);
+    }
+
     /** A fleet unloaded at a planet: pays the trader if it delivered a request. */
     public function delivered(Fleet $fleet, Planet $planet): void
     {

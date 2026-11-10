@@ -1,0 +1,54 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}{{ 'Multis – Admin – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
+
+{% block content %}
+    <h1>{{ '🛡 Mögliche Multi-Accounts'|trans }}</h1>
+    <p class="muted small">{{ 'Accounts, die sich in den letzten {days} Tagen von derselben IP-Adresse oder demselben Gerät angemeldet haben (das Gerät nur bei Spielern, die beim Login eingewilligt haben). Gleiche IPs sind oft harmlos: Familien, WGs, Schulen und Mobilfunk teilen sie. Verdächtig wird es vor allem mit gleichem Gerät und Lieferungen zwischen den Accounts. Gesperrt wird nichts automatisch – Strafen verhängst du unter Meldungen oder Benutzer.'|trans({'{days}': keep_days}) }}</p>
+
+    <section class="panel">
+        <h2>{{ 'Gemeinsame IP oder gleiches Gerät'|trans }}</h2>
+        {% if pairs is empty %}
+            <p class="muted">{{ 'Keine Auffälligkeiten.'|trans }}</p>
+        {% else %}
+            <table class="table">
+                <thead><tr><th>{{ 'Account A'|trans }}</th><th>{{ 'Account B'|trans }}</th><th class="num">{{ 'Gleiches Gerät'|trans }}</th><th class="num">{{ 'Gemeinsame IPs'|trans }}</th><th class="num">{{ 'Lieferungen (30 Tage)'|trans }}</th><th>{{ 'Zuletzt'|trans }}</th></tr></thead>
+                <tbody>
+                {% for pair in pairs %}
+                    <tr class="{{ pair.devices > 0 ? 'suspicious-strong' : '' }}">
+                        <td>{{ ui.player(pair.a) }}</td>
+                        <td>{{ ui.player(pair.b) }}</td>
+                        <td class="num">{{ pair.devices > 0 ? '⚠ ' ~ pair.devices : '–' }}</td>
+                        <td class="num">{{ pair.ips }}</td>
+                        <td class="num">{{ pair.gifts > 0 ? pair.gifts|num : '–' }}</td>
+                        <td class="small">{{ pair.last|date('d.m.Y H:i') }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </section>
+
+    <section class="panel">
+        <h2>{{ 'Größte Lieferungen ohne Gegenleistung (7 Tage)'|trans }}</h2>
+        <p class="muted small">{{ 'Transporte an fremde Planeten, ohne bezahlte Transportgesuche und Handel. Ein kleinerer Spieler darf einem größeren höchstens {share} % seiner Wochenproduktion schicken.'|trans({'{share}': push_share}) }}</p>
+        {% if gifts is empty %}
+            <p class="muted">{{ 'Keine Lieferungen.'|trans }}</p>
+        {% else %}
+            <table class="table">
+                <thead><tr><th>{{ 'Von'|trans }}</th><th>{{ 'An'|trans }}</th><th class="num">{{ 'Rohstoffe'|trans }}</th><th class="num">{{ 'Transporte'|trans }}</th></tr></thead>
+                <tbody>
+                {% for g in gifts %}
+                    <tr>
+                        <td>{{ ui.player(g.sender) }} <span class="muted small">{{ '{points} Punkte'|trans({'{points}': player_points(g.sender)|num}) }}</span></td>
+                        <td>{{ ui.player(g.receiver) }} <span class="muted small">{{ '{points} Punkte'|trans({'{points}': player_points(g.receiver)|num}) }}</span></td>
+                        <td class="num">{{ g.amount|num }}</td>
+                        <td class="num">{{ g.count }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </section>
+{% endblock %}

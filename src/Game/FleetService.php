@@ -55,6 +55,7 @@ final readonly class FleetService
         private ?GameMailer $gameMailer = null,
         private ?ContractService $contracts = null,
         private ?TransportRequests $transportRequests = null,
+        private ?PushingGuard $pushing = null,
     ) {
     }
 
@@ -1213,6 +1214,12 @@ final readonly class FleetService
         }
         $order = array_filter(array_map(static fn (mixed $v): float => max(0, floor((float) $v)), array_intersect_key($order, array_flip(TradeDeal::goods()))));
         $this->validateMission($mission, $owner, $target, $ships, $fleet->isNamed(), $post, $order);
+        // Pushing protection: resources for another player without payment are limited
+        // (a delivery for a paid transport request is no gift).
+        if (\in_array($mission, [FleetMission::Transport, FleetMission::TransportStation], true) && null !== $target
+            && !$target->getOwner()->isSameAs($owner) && true !== $this->transportRequests?->isPaidDelivery($fleet)) {
+            $this->pushing?->checkAndRecord($owner, $target->getOwner(), $fleet->getCargo()->add($cargo)->total(), $now);
+        }
         // Cargo travels openly: a fleet with cargo has to transport, it can't be stationed.
         if (FleetMission::Station === $mission && !$fleet->getCargo()->add($cargo)->isEmpty()) {
             throw new GameException(t('Eine Flotte mit Ladung kann nicht stationieren – schicke sie mit „Transport“ (dabei ist sie auf dem Radar sichtbar) oder lade die Ladung vorher ab.'));
