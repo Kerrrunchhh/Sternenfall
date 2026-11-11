@@ -664,7 +664,9 @@ label.checkbox { display: flex; gap: .4rem; align-items: center; color: var(--te
 .admin-user-search { flex-wrap: wrap; gap: .5rem; }
 
 /* Ad slot on the start pages (none for extended accounts). */
-.ad-slot { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .25rem; min-height: 90px; margin: 1rem 0; padding: .5rem; border: 1px dashed var(--border, #334); border-radius: 8px; text-align: center; overflow: hidden; }
+.ad-slot { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .15rem; margin: .6rem 0; padding: .25rem; border: 1px dashed var(--border, #334); border-radius: 8px; text-align: center; overflow: hidden; max-height: 120px; }
+.ad-slot .ad-banner { width: 100%; max-width: 728px; height: 90px; }
+@media (max-width: 600px) { .ad-slot .ad-banner { height: 60px; } }
 .ad-slot-off { opacity: .8; }
 #paypal-button { max-width: 400px; margin-top: .75rem; }
 
