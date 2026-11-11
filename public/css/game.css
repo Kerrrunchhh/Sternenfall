@@ -507,7 +507,8 @@ label.checkbox { display: flex; gap: .4rem; align-items: center; color: var(--te
 .presence-dot { width: .55rem; height: .55rem; border-radius: 50%; background: var(--muted); }
 .presence-online { color: var(--ok); }
 .presence-online .presence-dot { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
-.profile-actions { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .75rem; }
+.profile-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-top: .75rem; }
+.profile-actions .btn[type=submit] { margin-top: 0; }
 
 .page-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
 .badge[hidden] { display: none; }
