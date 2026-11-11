@@ -10,6 +10,6 @@
             {{ include('_status_stats.html.twig') }}
         </article>
         <article class="panel">{{ include('_top_experience.html.twig') }}</article>
-        <p class="muted small"><a href="{{ path(app.user ? 'app_overview' : 'app_home') }}">{{ app.user ? ('Zurück ins Spiel'|trans) : ('Zur Startseite'|trans) }}</a> · <a href="{{ path('app_imprint') }}">{{ 'Impressum'|trans }}</a> · <a href="{{ path('app_privacy') }}">{{ 'Datenschutz'|trans }}</a> · {{ include('_privacy_settings_link.html.twig') }} {{ include('_language_switch.html.twig') }}</p>
+        <p class="muted small"><a href="{{ path(app.user ? 'app_overview' : 'app_home') }}">{{ app.user ? ('Zurück ins Spiel'|trans) : ('Zur Startseite'|trans) }}</a> · <a href="{{ path('app_imprint') }}">{{ 'Impressum'|trans }}</a> · <a href="{{ path('app_privacy') }}">{{ 'Datenschutz'|trans }}</a> · <a href="{{ path('app_terms') }}">{{ 'AGB'|trans }}</a> · {{ include('_privacy_settings_link.html.twig') }} {{ include('_language_switch.html.twig') }}</p>
     </main>
 {% endblock %}

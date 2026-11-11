@@ -54,6 +54,12 @@ final readonly class GameMailer
         return $url;
     }
 
+    /** A mail the player gets regardless of his notification settings (e.g. a contract confirmation). */
+    public function sendAlways(User $user, TranslatableInterface $subject, TranslatableInterface $text): void
+    {
+        $this->send($user, $subject, $text, t("– {game}", ['{game}' => $this->gameName]));
+    }
+
     /** A notification the player chose in his account settings. */
     public function notify(User $user, string $topic, TranslatableInterface $subject, TranslatableInterface $text): void
     {

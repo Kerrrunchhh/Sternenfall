@@ -1,0 +1,59 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'AGB – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
+
+{% block body %}
+    <main class="public-report">
+        <a href="{{ path(app.user ? 'app_overview' : 'app_home') }}" class="public-report-logo"><img src="{{ asset('pictures/brand/logo.webp') }}" alt="{{ game_name }}" width="223" height="131"></a>
+        {# ENTWURF – vor dem Live-Gang des erweiterten Accounts rechtlich prüfen lassen (Preisangabe/USt, Widerruf, Kündigungsbutton). #}
+        <article class="panel imprint privacy">
+            <h1>{{ 'Nutzungsbedingungen (AGB)'|trans }}</h1>
+            {% if app.request.locale != 'de' %}<p class="muted small">{{ 'Diese Übersetzung dient nur dem Verständnis; maßgeblich ist die deutsche Fassung.'|trans }}</p>{% endif %}
+
+            <h2>{{ '1. Geltungsbereich'|trans }}</h2>
+            <p>{{ 'Diese Bedingungen gelten für die Nutzung des Browserspiels {game_name} unter starfallnewhorizons.com und für den kostenpflichtigen erweiterten Account. Anbieter ist Markus Döbele, Herdweg 130, 71032 Böblingen (siehe Impressum).'|trans({'{game_name}': game_name}) }}</p>
+
+            <h2>{{ '2. Spielkonto'|trans }}</h2>
+            <p>{{ 'Das Spiel ist kostenlos. Jede Person darf nur ein Spielkonto haben; Mehrfach-Accounts, das Teilen oder Weitergeben eines Kontos und das Spielen für andere sind nicht erlaubt. Du musst mindestens 16 Jahre alt sein oder die Zustimmung deiner Eltern haben. Halte dein Passwort geheim.'|trans }}</p>
+
+            <h2>{{ '3. Verhaltensregeln'|trans }}</h2>
+            <p>{{ 'Nicht erlaubt sind insbesondere: Bots, Skripte und andere Automatisierung, das Ausnutzen von Fehlern (melde sie bitte unter „Hilfe & Meldungen“), Pushing (Rohstoffe oder Vorteile über andere Konten an sich selbst oder Dritte verschieben) sowie Beleidigungen, Bedrohungen, Spam und rechtswidrige Inhalte in Nachrichten, Tickern, Profilen und Allianztexten.'|trans }}</p>
+            <p>{{ 'Bei Verstößen kann die Spielleitung verwarnen, das Konto für eine Zeit in den Urlaub schicken (sperren), Inhalte löschen oder das Konto löschen. Bei einem gelöschten Konto mit erweitertem Account wird der bereits bezahlte Zeitraum nicht erstattet, wenn die Löschung auf einem schweren Verstoß beruht.'|trans }}</p>
+
+            <h2>{{ '4. Spielinhalte und Verfügbarkeit'|trans }}</h2>
+            <p>{{ 'Das Spiel befindet sich in Entwicklung. Regeln, Werte und Funktionen können sich ändern; in der Testphase kann das Universum neu gestartet werden. Es besteht kein Anspruch auf einen bestimmten Spielstand, auf bestimmte Spielinhalte oder auf ständige Erreichbarkeit. Planeten, Schiffe, Rohstoffe und Credits haben keinen Geldwert und können nicht ausgezahlt werden.'|trans }}</p>
+
+            <h2 id="erweitert">{{ '5. Erweiterter Account'|trans }}</h2>
+            <p>{{ 'Der erweiterte Account bietet zusätzliche Komfortfunktionen (derzeit bis zu 20 gespeicherte Flottenfilter statt 2) und keine Werbung. Er verschafft keine spielerischen Vorteile gegenüber anderen.'|trans }}</p>
+            <p>{{ 'Der Preis beträgt 5,00 € pro Monat. Bezahlt wird über PayPal im Voraus für jeweils einen Monat. Das Abo beginnt mit dem Abschluss und verlängert sich jeweils um einen Monat, bis es gekündigt wird.'|trans }} {# TODO Betreiber: Umsatzsteuer angeben, z. B. „inkl. 19 % USt.“ oder „Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.“ #}</p>
+            <p>{{ 'Du kannst jederzeit zum Ende des bezahlten Monats kündigen: im Spiel unter „Erweiterter Account“ mit „Abo kündigen“ oder direkt in deinem PayPal-Konto. Bereits bezahlte Zeiträume werden nicht anteilig erstattet; der erweiterte Account läuft bis zu ihrem Ende weiter.'|trans }}</p>
+
+            <h2 id="widerruf">{{ '6. Widerrufsbelehrung'|trans }}</h2>
+            <h3>{{ 'Widerrufsrecht'|trans }}</h3>
+            <p>{{ 'Du hast das Recht, binnen vierzehn Tagen ohne Angabe von Gründen diesen Vertrag zu widerrufen. Die Widerrufsfrist beträgt vierzehn Tage ab dem Tag des Vertragsabschlusses.'|trans }}</p>
+            <p>{{ 'Um dein Widerrufsrecht auszuüben, musst du uns (Markus Döbele, Herdweg 130, 71032 Böblingen, E-Mail: markus.doebele@posteo.de) mittels einer eindeutigen Erklärung (z. B. eine E-Mail) über deinen Entschluss, diesen Vertrag zu widerrufen, informieren. Du kannst dafür das unten stehende Muster-Widerrufsformular verwenden, das jedoch nicht vorgeschrieben ist. Zur Wahrung der Widerrufsfrist reicht es aus, dass du die Mitteilung über die Ausübung des Widerrufsrechts vor Ablauf der Widerrufsfrist absendest.'|trans }}</p>
+            <h3>{{ 'Folgen des Widerrufs'|trans }}</h3>
+            <p>{{ 'Wenn du diesen Vertrag widerrufst, haben wir dir alle Zahlungen, die wir von dir erhalten haben, unverzüglich und spätestens binnen vierzehn Tagen ab dem Tag zurückzuzahlen, an dem die Mitteilung über deinen Widerruf bei uns eingegangen ist. Für diese Rückzahlung verwenden wir dasselbe Zahlungsmittel, das du bei der ursprünglichen Transaktion eingesetzt hast, es sei denn, mit dir wurde ausdrücklich etwas anderes vereinbart; in keinem Fall werden dir wegen dieser Rückzahlung Entgelte berechnet.'|trans }}</p>
+            <h3>{{ 'Vorzeitiges Erlöschen des Widerrufsrechts'|trans }}</h3>
+            <p>{{ 'Der erweiterte Account ist ein digitales Produkt. Dein Widerrufsrecht erlischt, wenn wir mit der Bereitstellung begonnen haben, nachdem du ausdrücklich zugestimmt hast, dass wir vor Ablauf der Widerrufsfrist damit beginnen, und du bestätigt hast, dass dir bekannt ist, dass du dadurch dein Widerrufsrecht verlierst. Diese Zustimmung gibst du beim Abschluss mit dem Häkchen vor dem PayPal-Knopf; der erweiterte Account startet sofort. Wir bestätigen dir den Vertrag und deine Zustimmung per Nachricht im Spiel und per E-Mail.'|trans }}</p>
+            <h3>{{ 'Muster-Widerrufsformular'|trans }}</h3>
+            <p class="small">{{ '(Wenn du den Vertrag widerrufen willst, fülle bitte dieses Formular aus und sende es zurück.)'|trans }}<br>
+                {{ '– An Markus Döbele, Herdweg 130, 71032 Böblingen, E-Mail: markus.doebele@posteo.de'|trans }}<br>
+                {{ '– Hiermit widerrufe(n) ich/wir (*) den von mir/uns (*) abgeschlossenen Vertrag über die Erbringung der folgenden Dienstleistung: erweiterter Account im Spiel {game_name}'|trans({'{game_name}': game_name}) }}<br>
+                {{ '– Bestellt am (*)/erhalten am (*)'|trans }}<br>
+                {{ '– Name des/der Verbraucher(s), Spielername'|trans }}<br>
+                {{ '– Anschrift des/der Verbraucher(s)'|trans }}<br>
+                {{ '– Unterschrift des/der Verbraucher(s) (nur bei Mitteilung auf Papier)'|trans }}<br>
+                {{ '– Datum'|trans }}<br>
+                {{ '(*) Unzutreffendes streichen.'|trans }}</p>
+
+            <h2>{{ '7. Haftung'|trans }}</h2>
+            <p>{{ 'Wir haften unbeschränkt für Vorsatz und grobe Fahrlässigkeit sowie für Schäden aus der Verletzung des Lebens, des Körpers oder der Gesundheit. Bei leichter Fahrlässigkeit haften wir nur für die Verletzung wesentlicher Vertragspflichten und begrenzt auf den vorhersehbaren, typischen Schaden. Im Übrigen ist die Haftung ausgeschlossen.'|trans }}</p>
+
+            <h2>{{ '8. Änderungen und Schlussbestimmungen'|trans }}</h2>
+            <p>{{ 'Wir können diese Bedingungen ändern; über Änderungen, die den erweiterten Account betreffen, informieren wir dich vorher im Spiel. Es gilt deutsches Recht; zwingende Verbraucherschutzvorschriften deines Wohnsitzlandes bleiben unberührt. Wir sind nicht verpflichtet und nicht bereit, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.'|trans }}</p>
+            <p class="muted small">{{ 'Stand: November 2026'|trans }}</p>
+        </article>
+        <p class="muted small"><a href="{{ path(app.user ? 'app_overview' : 'app_home') }}">{{ app.user ? 'Zurück ins Spiel'|trans : 'Zur Startseite'|trans }}</a> · <a href="{{ path('app_imprint') }}">{{ 'Impressum'|trans }}</a> · <a href="{{ path('app_privacy') }}">{{ 'Datenschutz'|trans }}</a> · {{ include('_language_switch.html.twig') }}</p>
+    </main>
+{% endblock %}

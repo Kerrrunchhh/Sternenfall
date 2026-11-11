@@ -39,7 +39,7 @@ security:
         - { path: ^/(login|register)?$, roles: PUBLIC_ACCESS }
         # Shared combat reports can be read without logging in.
         - { path: ^/kampfbericht/, roles: PUBLIC_ACCESS }
-        - { path: ^/(status|impressum|datenschutz)$, roles: PUBLIC_ACCESS }
+        - { path: ^/(status|impressum|datenschutz|agb)$, roles: PUBLIC_ACCESS }
         - { path: ^/email/, roles: PUBLIC_ACCESS }
         - { path: ^/paypal/webhook$, roles: PUBLIC_ACCESS }
         - { path: ^/ads\.txt$, roles: PUBLIC_ACCESS }

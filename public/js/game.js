@@ -234,6 +234,11 @@ const serverClock = (() => {
     // Extended account: PayPal subscription button (the SDK script loads deferred).
     document.querySelectorAll('[data-extended-subscribe]').forEach((box) => {
         const error = document.querySelector('[data-paypal-error]');
+        // The PayPal button only shows once the terms and the immediate start are accepted.
+        const consent = document.querySelector('[data-subscribe-consent]');
+        const hint = document.querySelector('[data-consent-hint]');
+        const toggle = () => { box.hidden = !consent.checked; if (hint) hint.hidden = consent.checked; };
+        if (consent) { consent.addEventListener('change', toggle); toggle(); } else { box.hidden = false; }
         const show = (message) => { error.textContent = message; error.hidden = false; };
         const render = () => {
             if (!window.paypal) { show(t('PayPal konnte nicht geladen werden.')); return; }
@@ -244,6 +249,7 @@ const serverClock = (() => {
                     const body = new FormData();
                     body.append('_token', box.dataset.token);
                     body.append('subscription', data.subscriptionID);
+                    body.append('consent', consent && consent.checked ? '1' : '0');
                     return fetch(box.dataset.url, { method: 'POST', body, credentials: 'same-origin' })
                         .then((response) => response.json())
                         .then((result) => { if (result.ok) { window.location.reload(); } else { show(result.error); } })

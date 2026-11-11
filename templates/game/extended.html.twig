@@ -32,10 +32,15 @@
             <p class="muted">{{ 'Der erweiterte Account wird gerade noch vorbereitet und kann bald gebucht werden.'|trans }}</p>
         {% else %}
             {% if paypal.sandbox %}<p class="muted small">{{ 'Testbetrieb (PayPal-Sandbox): es wird kein echtes Geld abgebucht.'|trans }}</p>{% endif %}
-            <p class="small">{{ 'Mit dem Abschluss akzeptierst du die'|trans }} <a href="{{ path('app_imprint') }}">{{ 'Nutzungsbedingungen und die Widerrufsbelehrung</a>. Wie wir deine Daten bei der Zahlung verarbeiten, steht in der'|trans|raw }} <a href="{{ path('app_privacy') }}">{{ 'Datenschutzerklärung'|trans }}</a>.</p>
-            <div id="paypal-button" data-extended-subscribe data-plan="{{ paypal.planId }}" data-custom="{{ player.id }}" data-url="{{ path('app_extended_activate') }}" data-token="{{ csrf_token('extended') }}"></div>
+            <label class="consent-check small">
+                <input type="checkbox" data-subscribe-consent>
+                <span>{{ 'Ich akzeptiere die <a href="{terms}">AGB</a> und verlange ausdrücklich, dass der erweiterte Account sofort beginnt. Mir ist bekannt, dass ich damit mein <a href="{withdrawal}">Widerrufsrecht</a> verliere.'|trans({'{terms}': path('app_terms') ~ '#erweitert', '{withdrawal}': path('app_terms') ~ '#widerruf'})|raw }}</span>
+            </label>
+            <p class="small muted">{{ 'Wie wir deine Daten bei der Zahlung verarbeiten, steht in der'|trans }} <a href="{{ path('app_privacy') }}">{{ 'Datenschutzerklärung'|trans }}</a>.</p>
+            <p class="small muted" data-consent-hint>{{ 'Setze zuerst das Häkchen, dann erscheint der PayPal-Knopf.'|trans }}</p>
+            <div id="paypal-button" hidden data-extended-subscribe data-plan="{{ paypal.planId }}" data-custom="{{ player.id }}" data-url="{{ path('app_extended_activate') }}" data-token="{{ csrf_token('extended') }}"></div>
             <p class="flash flash-error" data-paypal-error hidden></p>
-            <script src="https://www.paypal.com/sdk/js?client-id={{ paypal.clientId|url_encode }}&vault=true&intent=subscription&currency=EUR&locale=de_DE" defer></script>
+            <script src="https://www.paypal.com/sdk/js?client-id={{ paypal.clientId|url_encode }}&vault=true&intent=subscription&currency=EUR&locale={{ app.request.locale == 'en' ? 'en_GB' : 'de_DE' }}" defer></script>
         {% endif %}
     </section>
 {% endblock %}

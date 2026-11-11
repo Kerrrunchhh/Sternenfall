@@ -22,6 +22,12 @@ class StatusController extends AbstractController
         return $this->render('imprint.html.twig');
     }
 
+    #[Route('/agb', name: 'app_terms', methods: ['GET'])]
+    public function terms(): Response
+    {
+        return $this->render('terms.html.twig');
+    }
+
     #[Route('/datenschutz', name: 'app_privacy', methods: ['GET'])]
     public function privacy(): Response
     {
