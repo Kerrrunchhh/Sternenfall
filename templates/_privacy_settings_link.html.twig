@@ -1,0 +1,4 @@
+{# Reopens Google's consent message (AdSense) so visitors can change their choice. Only where ads are shown. #}
+{%- if adsense_client and not (app.user and app.user.isExtended(date())) -%}
+    <a href="#" onclick="window.googlefc = window.googlefc || {}; googlefc.callbackQueue = googlefc.callbackQueue || []; googlefc.callbackQueue.push(function () { googlefc.showRevocationMessage(); }); return false;">{{ 'Datenschutzeinstellungen'|trans }}</a> ·
+{%- endif -%}

@@ -22,6 +22,6 @@
                 <p class="muted">{{ 'Diesen Kampfbericht gibt es nicht oder er ist älter als {days} Tage und wurde gelöscht.'|trans({'{days}': days}) }}</p>
             </article>
         {% endif %}
-        <p class="muted small">{{ app.user ? '' : 'Noch kein Spieler?'|trans ~ ' ' }}<a href="{{ path(app.user ? 'app_overview' : 'app_register') }}">{{ app.user ? 'Zurück ins Spiel'|trans : 'Jetzt bei {game} mitspielen'|trans({'{game}': game_name}) }}</a> · {{ include('_language_switch.html.twig') }}</p>
+        <p class="muted small">{{ app.user ? '' : 'Noch kein Spieler?'|trans ~ ' ' }}<a href="{{ path(app.user ? 'app_overview' : 'app_register') }}">{{ app.user ? 'Zurück ins Spiel'|trans : 'Jetzt bei {game} mitspielen'|trans({'{game}': game_name}) }}</a> · {{ include('_privacy_settings_link.html.twig') }} {{ include('_language_switch.html.twig') }}</p>
     </main>
 {% endblock %}

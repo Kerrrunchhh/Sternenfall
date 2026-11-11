@@ -15,6 +15,6 @@
             <p>{{ 'Markus Döbele, Herdweg 130, 71032 Böblingen'|trans }}</p>
             <p class="muted small">{{ '{game_name} ist ein Browserspiel. Inhalte, die Spieler schreiben (Nachrichten, Ticker, Profile), stammen von den Spielern selbst; Verstöße können im Spiel unter „Hilfe & Meldungen“ gemeldet werden.'|trans({'{game_name}': game_name}) }}</p>
         </article>
-        <p class="muted small"><a href="{{ path(app.user ? 'app_overview' : 'app_home') }}">{{ app.user ? ('Zurück ins Spiel'|trans) : ('Zur Startseite'|trans) }}</a> · <a href="{{ path('app_privacy') }}">{{ 'Datenschutz'|trans }}</a> · {{ include('_language_switch.html.twig') }}</p>
+        <p class="muted small"><a href="{{ path(app.user ? 'app_overview' : 'app_home') }}">{{ app.user ? ('Zurück ins Spiel'|trans) : ('Zur Startseite'|trans) }}</a> · <a href="{{ path('app_privacy') }}">{{ 'Datenschutz'|trans }}</a> · {{ include('_privacy_settings_link.html.twig') }} {{ include('_language_switch.html.twig') }}</p>
     </main>
 {% endblock %}

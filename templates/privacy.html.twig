@@ -102,6 +102,6 @@
 
             <p class="muted small">{{ 'Stand: November 2026'|trans }}</p>
         </article>
-        <p class="muted small"><a href="{{ path(app.user ? 'app_overview' : 'app_home') }}">{{ app.user ? ('Zurück ins Spiel'|trans) : ('Zur Startseite'|trans) }}</a> · <a href="{{ path('app_imprint') }}">{{ 'Impressum'|trans }}</a> · {{ include('_language_switch.html.twig') }}</p>
+        <p class="muted small"><a href="{{ path(app.user ? 'app_overview' : 'app_home') }}">{{ app.user ? ('Zurück ins Spiel'|trans) : ('Zur Startseite'|trans) }}</a> · <a href="{{ path('app_imprint') }}">{{ 'Impressum'|trans }}</a> · {{ include('_privacy_settings_link.html.twig') }} {{ include('_language_switch.html.twig') }}</p>
     </main>
 {% endblock %}
