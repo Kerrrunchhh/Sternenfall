@@ -5,7 +5,27 @@
 {% block content %}
     <h2>{{ 'Registrieren'|trans }}</h2>
     {{ form_start(form) }}
-        {{ form_widget(form) }}
+        {{ form_errors(form) }}
+        {{ form_row(form.username) }}
+        {{ form_row(form.email) }}
+        {{ form_row(form.plainPassword) }}
+        <fieldset class="lifeform-choice">
+            <legend>{{ 'Lebensform'|trans }}</legend>
+            <p class="muted small">{{ 'Wähle, wie du spielen willst. Wechseln kannst du frühestens nach 30 Tagen.'|trans }}</p>
+            {{ form_errors(form.lifeForm) }}
+            {% for child in form.lifeForm %}
+                {% set lf = life_forms|filter(l => l.value == child.vars.value)|first %}
+                <label class="lifeform-option">
+                    <input type="radio" id="{{ child.vars.id }}" name="{{ child.vars.full_name }}" value="{{ child.vars.value }}" {{ child.vars.checked ? 'checked' }}>
+                    <span class="lifeform-option-body">
+                        <strong>{{ lf.icon }} {{ lf.label|trans }}</strong>
+                        <span class="muted small">{{ lf.traits|map(t => t|trans)|join(' · ') }}</span>
+                    </span>
+                </label>
+                {% do child.setRendered %}
+            {% endfor %}
+        </fieldset>
+        {{ form_rest(form) }}
         <button class="btn" type="submit">{{ 'Kolonie gründen'|trans }}</button>
     {{ form_end(form) }}
     <p class="hint">{{ 'Schon dabei?'|trans }} <a href="{{ path('app_login') }}">{{ 'Anmelden'|trans }}</a></p>

@@ -3,8 +3,10 @@
 namespace App\Form;
 
 use App\Entity\User;
+use App\Game\LifeForm;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
+use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
 use Symfony\Component\Form\Extension\Core\Type\RepeatedType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -37,6 +39,16 @@ class RegistrationFormType extends AbstractType
                     new Assert\NotBlank(message: 'Bitte gib ein Passwort ein.'),
                     new Assert\Length(min: 8, max: 4096, minMessage: 'Das Passwort muss mindestens {{ limit }} Zeichen lang sein.'),
                 ],
+            ])
+            // The life form is chosen at the start; it can be changed after 30 days at the earliest.
+            ->add('lifeForm', EnumType::class, [
+                'class' => LifeForm::class,
+                'mapped' => false,
+                'expanded' => true,
+                'label' => 'Lebensform',
+                'choice_label' => static fn (LifeForm $form): string => $form->label(),
+                'data' => LifeForm::Settler,
+                'constraints' => [new Assert\NotNull(message: 'Bitte wähle eine Lebensform.')],
             ])
         ;
     }

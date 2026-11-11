@@ -52,8 +52,8 @@ enum LifeForm: string
     {
         return match ($this) {
             self::Settler => ['Schiffe kosten keine Credits'],
-            self::Guardian => ['Schiffe fliegen doppelt so schnell', 'Können Kriegsschiffe abfangen (kommt mit dem Kampfsystem)'],
-            self::Pirate => ['Schiffe fliegen 1,5-mal so schnell', 'Können Kriegs- und Handelsschiffe angreifen (kommt mit dem Kampfsystem)'],
+            self::Guardian => ['Schiffe fliegen doppelt so schnell', 'Können angreifende Flotten abfangen'],
+            self::Pirate => ['Schiffe fliegen 1,5-mal so schnell', 'Können angreifende Flotten abfangen und Transporte überfallen'],
             self::Trader => ['Doppelte Rohstoffproduktion', 'Schiffe kosten 1,5-mal so viel', 'Bauen als Einzige Fusionatoren', 'Können Handelsstützpunkte eröffnen (beim Wechsel der Lebensform verkaufen sie nichts mehr, die Ware bleibt abholbar)'],
         };
     }

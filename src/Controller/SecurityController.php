@@ -104,6 +104,8 @@ class SecurityController extends AbstractController
             $user->setPassword($hasher->hashPassword($user, $form->get('plainPassword')->getData()));
             // Messages and e-mails go out in the language the player signed up in.
             $user->setLocale($request->getLocale());
+            // Chosen life form from the very start (the 30-day change cooldown counts from the sign-up).
+            $user->changeLifeForm($form->get('lifeForm')->getData(), $user->getCreatedAt());
             $em->persist($user);
             $colonizer->createHomePlanet($user);
             $em->flush();
@@ -116,6 +118,6 @@ class SecurityController extends AbstractController
             ]);
         }
 
-        return $this->render('security/register.html.twig', ['form' => $form]);
+        return $this->render('security/register.html.twig', ['form' => $form, 'life_forms' => \App\Game\LifeForm::cases()]);
     }
 }

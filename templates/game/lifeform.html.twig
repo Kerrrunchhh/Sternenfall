@@ -5,7 +5,7 @@
 {% block content %}
     <h1>{{ 'Lebensform'|trans }}</h1>
     <p class="muted">
-        {{ 'Jeder beginnt als Siedler. Frühestens 30 Tage nach Spielstart bzw. nach dem letzten Wechsel kannst du die Lebensform wechseln.'|trans }}
+        {{ 'Deine Lebensform wählst du beim Spielstart. Frühestens 30 Tage danach bzw. nach dem letzten Wechsel kannst du sie wechseln.'|trans }}
         {% if not can_change %}{{ 'Nächster möglicher Wechsel: <strong>{nextLifeFormChangeAt}</strong>.'|trans({'{nextLifeFormChangeAt}': (player.nextLifeFormChangeAt|date('d.m.Y H:i'))|e})|raw }}{% endif %}
     </p>
 

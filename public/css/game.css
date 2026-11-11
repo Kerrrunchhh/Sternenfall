@@ -690,3 +690,10 @@ label.checkbox { display: flex; gap: .4rem; align-items: center; color: var(--te
 .consent-check { display: flex; gap: .45rem; align-items: flex-start; margin: .6rem 0; font-weight: normal; }
 .consent-check input { width: auto; margin-top: .15rem; }
 tr.suspicious-strong td { background: rgba(255, 138, 128, .08); }
+
+/* Life form choice at sign-up */
+.lifeform-choice { border: 1px solid var(--border); border-radius: 8px; padding: .6rem .8rem; margin: .8rem 0; }
+.lifeform-choice legend { padding: 0 .3rem; font-weight: 600; }
+.lifeform-option { display: flex; gap: .55rem; align-items: flex-start; padding: .4rem 0; font-weight: normal; cursor: pointer; }
+.lifeform-option input { width: auto; margin-top: .25rem; }
+.lifeform-option-body { display: flex; flex-direction: column; gap: .1rem; }
