@@ -23,7 +23,7 @@ class ShipInfoController extends AbstractGameController
             'stats' => $shipStats->describe($type, $player),
             'cost' => $this->economy->shipCost($type, $player),
             'credits' => $this->economy->shipCredits($type, $player),
-            'seconds' => $this->economy->shipSeconds($type, $planet),
+            'seconds' => $this->economy->shipSeconds($type, $planet, \DateTimeImmutable::createFromInterface($this->clock->now())),
             'missing' => $this->economy->missingShipRequirements($type, $planet),
             'stationed' => $planet->getShipCount($type),
         ]);

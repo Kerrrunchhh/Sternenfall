@@ -28,7 +28,7 @@ class ResearchController extends AbstractGameController
                 'level' => $nextLevel - 1,
                 'maxed' => null !== $type->maxLevel() && $nextLevel > $type->maxLevel(),
                 'cost' => $cost,
-                'seconds' => $this->economy->researchSeconds($type, $nextLevel, $planet),
+                'seconds' => $this->economy->researchSeconds($type, $nextLevel, $planet, \DateTimeImmutable::createFromInterface($this->clock->now())),
                 'missing' => $this->economy->missingRequirements($type->requirements(), $planet),
                 'affordable' => $planet->getResources()->covers($cost),
             ];

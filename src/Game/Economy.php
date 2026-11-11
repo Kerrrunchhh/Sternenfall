@@ -34,7 +34,46 @@ final readonly class Economy
         /** Extra factor for research only, on top of the game speed (1 = no extra). */
         #[Autowire('%env(float:RESEARCH_SPEED)%')]
         private float $researchSpeed = 1.0,
+        /** Whether new players get the starter bonus (on in the game, off in most unit tests). */
+        #[Autowire(param: 'game.starter_bonus')]
+        private bool $starterBonus = false,
     ) {
+    }
+
+    /** New players: during their first day everything builds and produces twice as fast. */
+    public const int STARTER_BONUS_HOURS = 24;
+    public const float STARTER_BONUS_FACTOR = 2.0;
+
+    /** End of the player's starter bonus, null if there is none. */
+    public function starterBonusUntil(User $player): ?\DateTimeImmutable
+    {
+        return $this->starterBonus ? $player->getCreatedAt()->modify('+'.self::STARTER_BONUS_HOURS.' hours') : null;
+    }
+
+    public function hasStarterBonus(User $player, ?\DateTimeImmutable $at): bool
+    {
+        $until = $this->starterBonusUntil($player);
+
+        return null !== $at && null !== $until && $at >= $player->getCreatedAt() && $at < $until;
+    }
+
+    /** Speed factor for work started at $at (2 during the starter bonus, else 1; null = no bonus). */
+    public function starterFactor(User $player, ?\DateTimeImmutable $at): float
+    {
+        return $this->hasStarterBonus($player, $at) ? self::STARTER_BONUS_FACTOR : 1.0;
+    }
+
+    /** Average factor over a stretch of time that may begin or end inside the bonus. */
+    public function starterFactorBetween(User $player, \DateTimeImmutable $from, \DateTimeImmutable $to): float
+    {
+        $until = $this->starterBonusUntil($player);
+        $length = $to->getTimestamp() - $from->getTimestamp();
+        if (null === $until || $length <= 0) {
+            return $this->starterFactor($player, $from);
+        }
+        $inside = min($to->getTimestamp(), $until->getTimestamp()) - max($from->getTimestamp(), $player->getCreatedAt()->getTimestamp());
+
+        return 1.0 + (self::STARTER_BONUS_FACTOR - 1.0) * max(0, $inside) / $length;
     }
 
     public function researchSpeed(): float
@@ -137,9 +176,9 @@ final readonly class Economy
     }
 
     /** Build time per unit shrinks with the rate: 200 % = half the time. */
-    public function shipOrderSeconds(ShipType $type, Planet $planet, int $percent): int
+    public function shipOrderSeconds(ShipType $type, Planet $planet, int $percent, ?\DateTimeImmutable $at = null): int
     {
-        return max(1, (int) round($this->shipSeconds($type, $planet) * 100 / $percent));
+        return max(1, (int) round($this->shipSeconds($type, $planet, $at) * 100 / $percent));
     }
 
     /** Credit cost of one ship for this player (settlers build ships without credits). */
@@ -217,12 +256,13 @@ final readonly class Economy
         return $alreadyQueued > 0 ? $cost->multiply(1 + self::SECOND_BUILD_SURCHARGE)->ceil() : $cost;
     }
 
-    public function buildSeconds(BuildingType $type, int $targetLevel, Planet $planet): int
+    /** Build time of an upgrade started at $at (the starter bonus halves it). */
+    public function buildSeconds(BuildingType $type, int $targetLevel, Planet $planet, ?\DateTimeImmutable $at = null): int
     {
         $cost = $this->buildCost($type, $targetLevel);
         $hours = ($cost->iron + $cost->titanium) / (2500 * (1 + $planet->getBuildingLevel(BuildingType::CommandCenter)));
 
-        return max(1, (int) round($hours * 3600 / $this->speed));
+        return max(1, (int) round($hours * 3600 / $this->speed / $this->starterFactor($planet->getOwner(), $at)));
     }
 
     public function researchCost(ResearchType $type, int $targetLevel): Resources
@@ -289,8 +329,8 @@ final readonly class Economy
         return 0 === $level ? 0 : (int) round(5 * 60 ** (($level - 1) / 19));
     }
 
-    /** Research time depends on the research lab of the planet it is started on. */
-    public function researchSeconds(ResearchType $type, int $targetLevel, Planet $planet): int
+    /** Research time depends on the research lab of the planet it is started on (and the starter bonus at $at). */
+    public function researchSeconds(ResearchType $type, int $targetLevel, Planet $planet, ?\DateTimeImmutable $at = null): int
     {
         $labs = 1 + $planet->getBuildingLevel(BuildingType::ResearchLab);
         if (ResearchType::Colonization === $type) {
@@ -302,15 +342,15 @@ final readonly class Economy
             $labHours = ($cost->iron + $cost->titanium) / 1000;
         }
 
-        return max(1, (int) round($labHours / $labs * 3600 / ($this->speed * $this->researchSpeed)));
+        return max(1, (int) round($labHours / $labs * 3600 / ($this->speed * $this->researchSpeed * $this->starterFactor($planet->getOwner(), $at))));
     }
 
-    /** Build time of a single ship, depending on the shipyard level. */
-    public function shipSeconds(ShipType $type, Planet $planet): int
+    /** Build time of a single ship, depending on the shipyard level (and the starter bonus at $at). */
+    public function shipSeconds(ShipType $type, Planet $planet, ?\DateTimeImmutable $at = null): int
     {
         $hours = self::baseShipHours($type) / (1 + $planet->getBuildingLevel(BuildingType::Shipyard));
 
-        return max(1, (int) round($hours * 3600 / $this->speed));
+        return max(1, (int) round($hours * 3600 / $this->speed / $this->starterFactor($planet->getOwner(), $at)));
     }
 
     /** Build hours of one unit in a shipyard of level 0 at normal game speed: its weight in a battle. */

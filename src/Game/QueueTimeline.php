@@ -30,7 +30,7 @@ final readonly class QueueTimeline
 
         if (QueueKind::Buildings === $kind) {
             foreach ($planet->getBuildingQueue() as $order) {
-                $seconds = $order->getSeconds() ?? $this->economy->buildSeconds($order->getBuildingType(), $order->getTargetLevel(), $planet);
+                $seconds = $order->getSeconds() ?? $this->economy->buildSeconds($order->getBuildingType(), $order->getTargetLevel(), $planet, $cursor);
                 $finishesAt = $order->getFinishesAt() ?? $cursor->modify('+'.($seconds - $order->getProgressSeconds()).' seconds');
                 $entries[] = [
                     'id' => $order->getId(),

@@ -79,7 +79,7 @@ class GameController extends AbstractGameController
                 'level' => $planet->getBuildingLevel($type),
                 'planned' => $nextLevel - 1,
                 'cost' => $this->economy->queuedBuildCost($type, $nextLevel, \count($planet->getBuildingQueue())),
-                'seconds' => $this->economy->buildSeconds($type, $nextLevel, $planet),
+                'seconds' => $this->economy->buildSeconds($type, $nextLevel, $planet, \DateTimeImmutable::createFromInterface($this->clock->now())),
                 'missing' => $this->economy->missingRequirements($type->requirements(), $planet, planned: true),
                 'affordable' => $planet->getResources()->covers($this->economy->queuedBuildCost($type, $nextLevel, \count($planet->getBuildingQueue()))),
             ];

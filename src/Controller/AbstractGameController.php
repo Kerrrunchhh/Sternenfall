@@ -166,7 +166,10 @@ abstract class AbstractGameController extends AbstractController
     /** @return array<string, mixed> */
     protected function viewData(Planet $planet): array
     {
-        $production = $this->economy->productionPerHour($planet);
+        $now = \DateTimeImmutable::createFromInterface($this->clock->now());
+        // Shown rates include the starter bonus while it lasts.
+        $bonus = $this->economy->starterFactor($planet->getOwner(), $now);
+        $production = $this->economy->productionPerHour($planet)->multiply($bonus);
         $consumption = $this->economy->consumptionPerHour($planet->getPopulation());
         $capacity = $this->economy->populationCapacity($planet);
 
@@ -177,7 +180,7 @@ abstract class AbstractGameController extends AbstractController
             'net' => $production->subtract($consumption),
             'protected' => $this->economy->protectedAmount($planet),
             'population_capacity' => $capacity,
-            'population_growth' => $planet->getPopulation() < $capacity ? $this->economy->populationGrowthPerHour($planet) : 0.0,
+            'population_growth' => $planet->getPopulation() < $capacity ? $this->economy->populationGrowthPerHour($planet) * $bonus : 0.0,
             'bunker_capacity' => $this->economy->bunkerCapacity($planet),
             'player' => $planet->getOwner(),
             'unread_messages' => $this->messages->countUnread($planet->getOwner()),
@@ -195,10 +198,11 @@ abstract class AbstractGameController extends AbstractController
             'board_posts' => true === $planet->getOwner()->getAllianceRank()?->canSeeBoard()
                 ? $this->allianceRepository->findPosts($planet->getOwner()->getAlliance(), 20)
                 : [],
-            'credits_per_hour' => $this->economy->creditsPerHour(array_sum(array_map(
+            'credits_per_hour' => $bonus * $this->economy->creditsPerHour(array_sum(array_map(
                 static fn (Planet $p): float => $p->getPopulation(),
                 $planet->getOwner()->getPlanets()->toArray(),
             ))),
+            'starter_bonus_until' => $this->economy->hasStarterBonus($planet->getOwner(), $now) ? $this->economy->starterBonusUntil($planet->getOwner()) : null,
             'hangar' => array_values(array_filter(
                 array_map(static fn (ShipType $type): array => ['type' => $type, 'count' => $planet->getShipCount($type)], ShipType::cases()),
                 static fn (array $entry): bool => $entry['count'] > 0,

@@ -660,6 +660,7 @@ label.checkbox { display: flex; gap: .4rem; align-items: center; color: var(--te
 .queue-planet > summary { cursor: pointer; list-style: revert; }
 .inline-check { display: inline-flex; align-items: center; gap: .35rem; margin: 0 0 0 .75rem; font-weight: normal; color: var(--muted); }
 .vacation-banner { border-color: var(--ok); background: rgba(102, 187, 106, .1); }
+.starter-banner { border-color: var(--accent-2); background: #ffb74d1a; }
 .place-chips { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .5rem; }
 .place-chips .filter-chip { cursor: pointer; color: var(--text); font: inherit; font-size: .85rem; }
 .payout-form { flex-wrap: wrap; gap: .4rem; margin-top: .5rem; }

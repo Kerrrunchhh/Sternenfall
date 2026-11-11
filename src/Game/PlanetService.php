@@ -92,7 +92,7 @@ final readonly class PlanetService
                 throw new GameException(t('{type} ist bereits auf der höchsten Stufe {maxLevel}.', ['{type}' => t($type->label()), '{maxLevel}' => $type->maxLevel()]));
             }
             $this->pay($planet, $this->economy->researchCost($type, $targetLevel));
-            $seconds = $this->economy->researchSeconds($type, $targetLevel, $planet);
+            $seconds = $this->economy->researchSeconds($type, $targetLevel, $planet, $now);
             $player->startResearch($type, $targetLevel, $now->modify("+{$seconds} seconds"), $planet);
         });
     }
@@ -227,7 +227,7 @@ final readonly class PlanetService
                 $planet,
                 $type,
                 $quantity,
-                $this->economy->shipOrderSeconds($type, $planet, $percent),
+                $this->economy->shipOrderSeconds($type, $planet, $percent, $now),
                 $queueIsIdle ? $now : null,
                 $unitCost,
                 $unitCredits,

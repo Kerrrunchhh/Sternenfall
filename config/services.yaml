@@ -7,6 +7,8 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    # New players build and produce twice as fast during their first 24 hours (App\Game\Economy).
+    game.starter_bonus: true
 
 services:
     # default configuration for services in *this* file

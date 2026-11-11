@@ -98,6 +98,10 @@
         </nav>
         <main class="content">
             {% if player.onVacation(now) %}<p class="panel vacation-banner">{{ '🌴 Du bist im Urlaub bis {vacationUntil} –'|trans({'{vacationUntil}': player.vacationUntil|date('d.m.Y H:i')}) }} <a href="{{ path('app_vacation') }}">{{ 'Details'|trans }}</a></p>{% endif %}
+            {% if starter_bonus_until|default(null) %}
+                {% import 'game/_macros.html.twig' as bonus_ui %}
+                <p class="panel starter-banner">{{ '🚀 <strong>Startbonus:</strong> An deinem ersten Tag baut und forscht alles doppelt so schnell, und deine Planeten liefern doppelt so viele Rohstoffe, Credits und Einwohner. Noch {countdown}.'|trans({'{countdown}': bonus_ui.countdown(starter_bonus_until, now)})|raw }}</p>
+            {% endif %}
             {{ include('_flashes.html.twig') }}
             {% block content %}{% endblock %}
             <footer class="game-footer muted small"><a href="{{ path('app_imprint') }}">{{ 'Impressum'|trans }}</a> · <a href="{{ path('app_privacy') }}">{{ 'Datenschutz'|trans }}</a> · <a href="{{ path('app_terms') }}">{{ 'AGB'|trans }}</a> · {{ include('_privacy_settings_link.html.twig') }} {{ include('_language_switch.html.twig') }}</footer>

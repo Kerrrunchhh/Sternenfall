@@ -26,6 +26,7 @@
             {% endfor %}
         </fieldset>
         {{ form_rest(form) }}
+        <p class="muted small">{{ '🚀 Startbonus: An deinem ersten Tag baut und forscht alles doppelt so schnell, und deine Planeten liefern doppelt so viele Rohstoffe, Credits und Einwohner.'|trans }}</p>
         <button class="btn" type="submit">{{ 'Kolonie gründen'|trans }}</button>
     {{ form_end(form) }}
     <p class="hint">{{ 'Schon dabei?'|trans }} <a href="{{ path('app_login') }}">{{ 'Anmelden'|trans }}</a></p>

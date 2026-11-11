@@ -70,7 +70,7 @@ class ShipyardController extends AbstractGameController
                 $rates[$percent] = [
                     'cost' => $cost,
                     'credits' => $credits,
-                    'seconds' => $this->economy->shipOrderSeconds($type, $planet, $percent),
+                    'seconds' => $this->economy->shipOrderSeconds($type, $planet, $percent, \DateTimeImmutable::createFromInterface($this->clock->now())),
                     'max' => min($max, PlanetService::maxOrderQuantity($type)),
                 ];
             }

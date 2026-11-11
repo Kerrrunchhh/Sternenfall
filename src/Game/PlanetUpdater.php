@@ -59,7 +59,7 @@ final readonly class PlanetUpdater
 
             return false;
         }
-        $order->start($at, $this->economy->buildSeconds($order->getBuildingType(), $order->getTargetLevel(), $planet));
+        $order->start($at, $this->economy->buildSeconds($order->getBuildingType(), $order->getTargetLevel(), $planet, $at));
 
         return true;
     }
@@ -117,11 +117,16 @@ final readonly class PlanetUpdater
         $perInhabitant = $this->economy->consumptionPerHour(1);
         $starvation = Economy::STARVATION_RATE * $this->economy->speed();
         $owner = $planet->getOwner();
+        $stepStart = $planet->getResourcesUpdatedAt();
 
         for ($remaining = $seconds / 3600; $remaining > 1e-9; $remaining -= $step) {
             $step = min(self::STEP_HOURS, $remaining);
-            $owner->earnCredits($this->economy->creditsPerHour($planet->getPopulation()) * $step);
-            $stock = $planet->getResources()->add($production->multiply($step));
+            // Starter bonus: production, credits and growth run faster during the player's first day.
+            $stepEnd = $stepStart->modify('+'.(int) round($step * 3600).' seconds');
+            $bonus = $this->economy->starterFactorBetween($owner, $stepStart, $stepEnd);
+            $stepStart = $stepEnd;
+            $owner->earnCredits($this->economy->creditsPerHour($planet->getPopulation()) * $bonus * $step);
+            $stock = $planet->getResources()->add($production->multiply($bonus * $step));
             $population = $planet->getPopulation();
 
             // How many inhabitants the available food and water can supply during this step.
@@ -142,7 +147,7 @@ final readonly class PlanetUpdater
                 // Overcrowded (e.g. after a fusion or when it was blown apart): people leave gradually.
                 $population = max($capacity, $population * (1 - $starvation * $step));
             } else {
-                $population = min($capacity, $population + $growth * $step);
+                $population = min($capacity, $population + $growth * $bonus * $step);
             }
             $planet->setPopulation($population);
         }
