@@ -7,7 +7,7 @@
         <a href="{{ path(app.user ? 'app_overview' : 'app_home') }}" class="public-report-logo"><img src="{{ asset('pictures/brand/logo.webp') }}" alt="{{ game_name }}" width="223" height="131"></a>
         <article class="panel imprint privacy">
             <h1>{{ 'Datenschutzerklärung'|trans }}</h1>
-            <p>{{ 'Diese Erklärung beschreibt, welche personenbezogenen Daten bei der Nutzung von {game_name} verarbeitet werden, wozu und wie lange. Wir verwenden keine Analyse- oder Tracking-Werkzeuge und geben keine Daten zu Werbezwecken weiter.'|trans({'{game_name}': game_name}) }}</p>
+            <p>{{ adsense_client ? 'Diese Erklärung beschreibt, welche personenbezogenen Daten bei der Nutzung von {game_name} verarbeitet werden, wozu und wie lange. Wir selbst verwenden keine Analyse- oder Tracking-Werkzeuge. Auf der Startseite und der Übersicht zeigen wir Werbung von Google AdSense – nur mit deiner Einwilligung personalisiert (siehe Abschnitt 8).'|trans({'{game_name}': game_name}) : 'Diese Erklärung beschreibt, welche personenbezogenen Daten bei der Nutzung von {game_name} verarbeitet werden, wozu und wie lange. Wir verwenden keine Analyse- oder Tracking-Werkzeuge und geben keine Daten zu Werbezwecken weiter.'|trans({'{game_name}': game_name}) }}</p>
 
             <h2>{{ '1. Verantwortlicher'|trans }}</h2>
             <p>{{ 'Markus Döbele'|trans }}<br>{{ 'Herdweg 130'|trans }}<br>{{ '71032 Böblingen'|trans }}<br>{{ 'Deutschland'|trans }}<br>{{ 'E-Mail: markus.doebele@posteo.de'|trans }}</p>
@@ -62,9 +62,16 @@
             <p>{{ 'Alle E-Mails des Spiels, also auch der Bestätigungslink bei der Registrierung, werden über Gmail verschickt. Anbieter ist die Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland. Google erhält dabei deine E-Mail-Adresse und den Inhalt der Nachricht. Daten können dabei auch an die Google LLC in den USA übermittelt werden. Google ist nach dem EU-US Data Privacy Framework zertifiziert, für das die EU-Kommission ein angemessenes Datenschutzniveau festgestellt hat (Art. 45 DSGVO). Mehr dazu in der <a href="https://policies.google.com/privacy?hl=de" target="_blank" rel="noopener">Datenschutzerklärung von Google</a>.'|trans|raw }}</p>
 
             <h2>{{ '8. Cookies und Speicher im Browser'|trans }}</h2>
-            <p>{{ 'Wir setzen nur ein technisch notwendiges Cookie: das Sitzungs-Cookie, das dich nach der Anmeldung angemeldet hält. Es wird beim Abmelden oder Schließen des Browsers ungültig.'|trans }}</p>
+            <p>{{ adsense_client ? 'Wir selbst setzen nur ein technisch notwendiges Cookie: das Sitzungs-Cookie, das dich nach der Anmeldung angemeldet hält. Es wird beim Abmelden oder Schließen des Browsers ungültig. Cookies von Google für die Werbung beschreibt der Absatz unten.'|trans : 'Wir setzen nur ein technisch notwendiges Cookie: das Sitzungs-Cookie, das dich nach der Anmeldung angemeldet hält. Es wird beim Abmelden oder Schließen des Browsers ungültig.'|trans }}</p>
             <p>{{ 'Einige Anzeigeeinstellungen, etwa welche Abschnitte auf- oder zugeklappt sind, speichert das Spiel im lokalen Speicher deines Browsers (localStorage). Diese Angaben verlassen deinen Rechner nicht.'|trans }}</p>
             <p>{{ 'Für beides ist keine Einwilligung nötig, weil es für den angefragten Dienst unbedingt erforderlich ist (§ 25 Abs. 2 TDDDG).'|trans }} {{ 'Die Gerätekennung zur Multi-Erkennung beschreibt Abschnitt 3.'|trans }}</p>
+
+            {% if adsense_client %}
+                <h3 id="werbung">{{ 'Werbung mit Google AdSense'|trans }}</h3>
+                <p>{{ 'Auf der Startseite und der Übersicht im Spiel zeigen wir Werbung über Google AdSense. Anbieter ist die Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland. Dazu lädt dein Browser Inhalte von Google; Google erfährt dabei deine IP-Adresse und die aufgerufene Seite und kann Cookies oder ähnliche Techniken nutzen, um Werbung auszuliefern, zu messen und – wenn du zustimmst – auf deine Interessen zuzuschneiden.'|trans }}</p>
+                <p>{{ 'Beim ersten Besuch fragt dich ein Hinweis von Google, ob du personalisierter Werbung und den dafür nötigen Cookies zustimmst. Rechtsgrundlage ist deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO, § 25 Abs. 1 TDDDG); ohne sie zeigt Google nur nicht personalisierte Werbung. Deine Wahl kannst du jederzeit über den Link „Datenschutzeinstellungen“ bzw. das Symbol von Google auf der Seite ändern. Daten können an die Google LLC in den USA übermittelt werden; Google ist nach dem EU-US Data Privacy Framework zertifiziert.'|trans }}</p>
+                <p>{{ 'Mehr dazu, wie Google Daten aus Werbung nutzt:'|trans }} <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener">policies.google.com/technologies/partner-sites</a>. {{ 'Mit einem erweiterten Account siehst du keine Werbung.'|trans }}</p>
+            {% endif %}
 
             <h2>{{ '9. Erweiterter Account und Zahlung über PayPal'|trans }}</h2>
             <p>{{ 'Den erweiterten Account bezahlst du per Abo über PayPal (Europe) S.à r.l. et Cie, S.C.A., 22–24 Boulevard Royal, L-2449 Luxemburg. Erst wenn du die Seite „Erweiterter Account“ öffnest, lädt dein Browser die Schaltfläche von PayPal. Dabei erfährt PayPal deine IP-Adresse.'|trans }}</p>

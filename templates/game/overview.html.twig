@@ -4,7 +4,7 @@
 {% block title %}{{ 'Übersicht – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    {% if not player.isExtended(now) %}{{ include('_ad.html.twig') }}{% endif %}
+    {% if not player.isExtended(now) %}{{ include('_ad.html.twig', {slot: 'overview'}) }}{% endif %}
     {% if attacks is not empty %}
         <section class="panel attack-alarm-panel" role="alert">
             <h2>{{ attacks|length > 1 ? '🚨 Angriffe auf deine Planeten'|trans : '🚨 Angriff auf deine Planeten'|trans }}</h2>

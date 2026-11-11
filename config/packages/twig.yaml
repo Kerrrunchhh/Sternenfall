@@ -4,6 +4,10 @@ twig:
     globals:
         game_name: '%env(GAME_NAME)%'
         ad_html: '%env(AD_HTML)%'
+        adsense_client: '%env(ADSENSE_CLIENT)%'
+        adsense_slots:
+            home: '%env(ADSENSE_SLOT_HOME)%'
+            overview: '%env(ADSENSE_SLOT_OVERVIEW)%'
     # Game times are stored in UTC and shown in German time.
     date:
         timezone: Europe/Berlin
