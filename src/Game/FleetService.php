@@ -1047,12 +1047,12 @@ final readonly class FleetService
             if ($fleet->isIdle() || $fleet->isReturning() || $fleet->getArriveAt() <= $now) {
                 throw new GameException(t('Die Flotte ist nicht auf dem Hinflug.'));
             }
-            // Radartechnik: only shortly after the start the fleet still hears the recall.
+            // Kommunikationstechnik: only shortly after the start the fleet still hears the recall.
             $window = Economy::recallWindow($fleet->getOwner());
             if ($now->getTimestamp() - $fleet->getDepartAt()->getTimestamp() > $window) {
                 throw new GameException(0 === $window
-                    ? 'Ohne Radartechnik lässt sich eine gestartete Flotte nicht zurückrufen.'
-                    : t('Zu spät: Mit deiner Radartechnik lässt sich eine Flotte nur in den ersten {value} nach dem Start zurückrufen.', ['{value}' => GameExtension::formatDuration($window)]));
+                    ? 'Ohne Kommunikationstechnik lässt sich eine gestartete Flotte nicht zurückrufen.'
+                    : t('Zu spät: Mit deiner Kommunikationstechnik lässt sich eine Flotte nur in den ersten {value} nach dem Start zurückrufen.', ['{value}' => GameExtension::formatDuration($window)]));
             }
 
             $fleet->recall($now);

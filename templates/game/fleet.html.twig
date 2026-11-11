@@ -207,7 +207,7 @@
                                     · {{ ui.countdown(f.nextEventAt, now) }} ({{ ui.at(f.nextEventAt, now) }})
                                 {% endif %}
                                 {% if f.moving and not f.returning and recall_until(f) %}
-                                    <button type="submit" class="link-button recall-link" title="{{ 'Zurückrufen möglich bis {recall_until} (Radartechnik)'|trans({'{recall_until}': recall_until(f)|date('H:i:s')}) }}" formaction="{{ path('app_fleet_recall', {id: f.id}) }}" formnovalidate
+                                    <button type="submit" class="link-button recall-link" title="{{ 'Zurückrufen möglich bis {recall_until} (Kommunikationstechnik)'|trans({'{recall_until}': recall_until(f)|date('H:i:s')}) }}" formaction="{{ path('app_fleet_recall', {id: f.id}) }}" formnovalidate
                                             name="to" value="app_fleet" id="recall-{{ f.id }}">{{ f.mission.value == 'hover' ? '↓ landen'|trans : '↩ zurückrufen'|trans }}</button>
                                 {% endif %}
                             </span>

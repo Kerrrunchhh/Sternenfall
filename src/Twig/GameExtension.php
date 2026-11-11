@@ -41,7 +41,7 @@ final class GameExtension
         return ['planets' => $planets, 'points' => $points, 'experience' => $experience, 'avg_experience' => $experience / $count, 'avg_points' => $points / $count];
     }
 
-    /** Until when a moving fleet can still be recalled (Radartechnik), null if no more. */
+    /** Until when a moving fleet can still be recalled (Kommunikationstechnik), null if no more. */
     #[AsTwigFunction('recall_until')]
     public static function recallUntil(\App\Entity\Fleet $fleet): ?\DateTimeImmutable
     {

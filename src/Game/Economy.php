@@ -279,7 +279,7 @@ final readonly class Economy
     }
 
     /**
-     * Seconds after the start during which a fleet can be recalled (Radartechnik):
+     * Seconds after the start during which a fleet can be recalled (Kommunikationstechnik):
      * none without it, 5 s at level 1, 5 minutes at level 20, growing further.
      */
     public static function recallWindow(User $player): int

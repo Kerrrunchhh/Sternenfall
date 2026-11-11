@@ -54,7 +54,7 @@ enum ResearchType: string
             self::Colonization => 'Kolonisationstechnik',
             self::TradeNetwork => 'Handelsnetz',
             self::Radar => 'Radar',
-            self::RadarTech => 'Radartechnik',
+            self::RadarTech => 'Kommunikationstechnik',
         };
     }
 
@@ -90,7 +90,7 @@ enum ResearchType: string
             self::Colonization => 'Ohne diese Forschung hast du nur deinen Heimatplaneten. Jede Stufe erlaubt 10 Planetenplätze: Stufe 1 = 10, Stufe 2 = 20 usw., ohne Obergrenze (nach rund 10 Jahren sind 500 Plätze möglich); verschweißte Plätze zählen einzeln. Langzeitforschung: jede Stufe dauert sehr lange – die Dauer hängt ganz von den Forschungslaboren ab.',
             self::TradeNetwork => 'Logistik für den Fernhandel. Jede Stufe erlaubt Händlern einen weiteren Handelsstützpunkt.',
             self::Radar => 'Macht angreifende und Rohstoffe transportierende Flotten sichtbar: ab Stufe 1 im eigenen System, je 5 Stufen ein System weiter nach links und rechts.',
-            self::RadarTech => 'Hält die Funkverbindung zu startenden Flotten: Nur so lange nach dem Start kannst du sie zurückrufen. Ohne Radartechnik gar nicht, Stufe 1: 5 Sekunden, Stufe 10: knapp 1 Minute, Stufe 20: 5 Minuten – und weiter steigend.',
+            self::RadarTech => 'Hält die Funkverbindung zu startenden Flotten: Nur so lange nach dem Start kannst du sie zurückrufen. Ohne Kommunikationstechnik gar nicht, Stufe 1: 5 Sekunden, Stufe 10: knapp 1 Minute, Stufe 20: 5 Minuten – und weiter steigend.',
         };
     }
 

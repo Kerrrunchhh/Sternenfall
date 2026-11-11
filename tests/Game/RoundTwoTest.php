@@ -15,7 +15,7 @@ final class RoundTwoTest extends TestCase
     public function testRadarTechSetsTheRecallWindow(): void
     {
         $player = new User('funker');
-        self::assertSame(0, Economy::recallWindow($player), 'without Radartechnik no recall');
+        self::assertSame(0, Economy::recallWindow($player), 'without Kommunikationstechnik no recall');
         $player->setResearchLevel(ResearchType::RadarTech, 1);
         self::assertSame(5, Economy::recallWindow($player));
         $player->setResearchLevel(ResearchType::RadarTech, 20);
