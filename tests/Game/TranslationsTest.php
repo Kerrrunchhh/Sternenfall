@@ -34,7 +34,7 @@ final class TranslationsTest extends TestCase
                 continue;
             }
             foreach ($class::cases() as $case) {
-                foreach (['label', 'effect', 'description', 'pluralLabel'] as $method) {
+                foreach (['label', 'effect', 'description', 'pluralLabel', 'category'] as $method) {
                     if (method_exists($case, $method) && \is_string($text = $case->$method()) && '' !== $text) {
                         yield $class.'::'.$case->name.'->'.$method => [$text];
                     }
