@@ -127,6 +127,17 @@ class ShipyardAndResearchTest extends TestCase
         }
     }
 
+    public function testProbesCrossThirteenGalaxiesInAboutAnHour(): void
+    {
+        $player = new User('spaeher');
+        $player->setResearchLevel(ResearchType::Espionage, 1);
+        $navigation = new \App\Game\Navigation($this->economy);
+
+        $seconds = $navigation->flightSeconds($navigation->distance(3, 277, 1, 16, 185, 1), $this->economy->shipSpeed(ShipType::Scout, $player));
+        self::assertEqualsWithDelta(3600, $seconds, 300, '3:277 → 16:185 with espionage 1');
+        self::assertLessThan(5 * 60, $navigation->flightSeconds($navigation->distance(3, 277, 1, 3, 300, 1), $this->economy->shipSpeed(ShipType::Scout, $player)), 'another system: minutes');
+    }
+
     public function testFusionCapacityIsCappedAtFortyNine(): void
     {
         $player = new User('schweisser');

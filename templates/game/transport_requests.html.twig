@@ -5,7 +5,7 @@
 
 {% block content %}
     <h1>{{ 'Transportgesuche'|trans }}</h1>
-    <p class="muted small">{{ 'Dir fehlen Rohstoffe? Stelle ein Gesuch über höchstens eine Frachterladung ({max_load} Rohstoffe) und biete Credits dafür. Händler liefern; bezahlt wird erst, wenn die Ladung ankommt – bis dahin sind deine Credits verwahrt. Als Richtwert gilt ein Zehntel der Menge in Credits.'|trans({'{max_load}': max_load|num}) }}</p>
+    <p class="muted small">{{ 'Dir fehlen Rohstoffe? Stelle ein Gesuch über höchstens eine Frachterladung ({max_load} Rohstoffe). Der Preis ist fest: 1 Credit je {per} Rohstoffe. Händler liefern; bezahlt wird erst, wenn die Ladung ankommt – bis dahin sind deine Credits verwahrt.'|trans({'{max_load}': max_load|num, '{per}': resources_per_credit|num}) }}</p>
 
     {% if is_trader %}
         <section class="panel">
@@ -17,7 +17,7 @@
                 <form method="post" action="{{ path('app_transport_request_serve') }}">
                     <input type="hidden" name="_token" value="{{ csrf_token('transport_requests') }}">
                     <table class="table">
-                        <thead><tr><th><input type="checkbox" data-check-all="requests[]" aria-label="{{ 'Alle auswählen'|trans }}"></th><th>{{ 'Ziel'|trans }}</th><th>{{ 'Ware'|trans }}</th><th>{{ 'Angebot'|trans }}</th><th>{{ 'Von'|trans }}</th></tr></thead>
+                        <thead><tr><th><input type="checkbox" data-check-all="requests[]" aria-label="{{ 'Alle auswählen'|trans }}"></th><th>{{ 'Ziel'|trans }}</th><th>{{ 'Ware'|trans }}</th><th>{{ 'Preis'|trans }}</th><th>{{ 'Von'|trans }}</th></tr></thead>
                         <tbody>
                         {% for r in open %}
                             <tr>
@@ -76,7 +76,7 @@
 
     <section class="panel">
         <h2>{{ 'Neues Gesuch'|trans }}</h2>
-        <form method="post" action="{{ path('app_transport_request_create') }}" class="mail-form" data-transport-offer>
+        <form method="post" action="{{ path('app_transport_request_create') }}" class="mail-form" data-transport-offer data-resources-per-credit="{{ resources_per_credit }}">
             <input type="hidden" name="_token" value="{{ csrf_token('transport_requests') }}">
             <label>{{ 'Lieferung an'|trans }}
                 <select name="planet">
@@ -88,8 +88,7 @@
                     <label>{{ type.label|trans }} <input type="number" name="goods[{{ type.value }}]" min="0" max="{{ max_load }}" value="0" data-goods></label>
                 {% endfor %}
             </div>
-            <label>{{ 'Angebot (Credits)'|trans }} <input type="number" name="offer" min="1" required data-offer></label>
-            <p class="muted small">{{ 'Summe: <span data-goods-total>0</span> von {max_load} · Richtwert: <span data-offer-hint>0</span> Credits'|trans({'{max_load}': max_load|num|e})|raw }}</p>
+            <p class="muted small">{{ 'Summe: <span data-goods-total>0</span> von {max_load} · Preis: <strong><span data-offer-hint>0</span> Credits</strong>'|trans({'{max_load}': max_load|num|e})|raw }}</p>
             <button class="btn" type="submit" id="transport-request-create">{{ 'Gesuch einstellen'|trans }}</button>
         </form>
     </section>

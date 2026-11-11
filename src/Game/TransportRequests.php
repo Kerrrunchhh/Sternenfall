@@ -15,7 +15,8 @@ use function Symfony\Component\Translation\t;
 
 /**
  * Transport requests for beginners: resources to one of their planets, at most one small
- * freighter load, paid with credits held in escrow. Traders serve many at once with small
+ * freighter load, for a fixed price in credits held in escrow (no haggling, so beginners
+ * neither overpay nor wait for nobody). Traders serve many at once with small
  * trade fleets stationed at one planet; the trader is paid when the goods arrive.
  * (Sending the fleets is done by TransportRequestDispatcher; this class keeps the books.)
  */
@@ -34,13 +35,16 @@ final readonly class TransportRequests
         return ShipType::Freighter->cargo();
     }
 
-    /** What one should offer: a tenth of the amount in credits. */
-    public static function suggestedOffer(float $amount): int
+    /** Resources delivered per credit. */
+    public const int RESOURCES_PER_CREDIT = 10;
+
+    /** The fixed price of a request: one credit per ten resources, rounded up. */
+    public static function price(float $amount): int
     {
-        return (int) ceil($amount / 10);
+        return (int) ceil($amount / self::RESOURCES_PER_CREDIT);
     }
 
-    public function create(User $requester, Planet $planet, Resources $goods, float $offer): TransportRequest
+    public function create(User $requester, Planet $planet, Resources $goods): TransportRequest
     {
         if (!$planet->getOwner()->isSameAs($requester)) {
             throw new GameException(t('Transportgesuche gibt es nur für deine eigenen Planeten.'));
@@ -56,10 +60,7 @@ final readonly class TransportRequests
         if ($goods->total() > self::maxLoad()) {
             throw new GameException(t('Ein Gesuch umfasst höchstens eine Frachterladung ({value} Rohstoffe).', ['{value}' => new Num(self::maxLoad())]));
         }
-        $offer = floor($offer);
-        if ($offer < 1) {
-            throw new GameException(t('Biete mindestens 1 Credit.'));
-        }
+        $offer = self::price($goods->total());
         $taken = $this->em->getConnection()->executeStatement('UPDATE `user` SET credits = credits - ? WHERE id = ? AND credits >= ?', [$offer, $requester->getId(), $offer]);
         $this->em->refresh($requester);
         if (0 === $taken) {

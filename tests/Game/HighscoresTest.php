@@ -52,6 +52,19 @@ final class HighscoresTest extends TestCase
         self::assertSame([1, 2], array_column($scores->players(Highscores::BY_POINTS, LifeForm::Guardian), 'rank'));
     }
 
+    public function testPlayersAndAlliancesSortByCredits(): void
+    {
+        foreach ([300, 100, 0, 5000] as $i => $credits) {
+            $this->users[$i]->addCredits($credits);
+        }
+        $scores = $this->highscores();
+
+        self::assertSame(['Dora', 'Anna', 'Bert', 'Carla'], $this->names($scores->players(Highscores::BY_CREDITS)));
+        $alliances = $scores->alliances(Highscores::BY_CREDITS);
+        self::assertSame('Orden', $alliances[0]['alliance']->getName());
+        self::assertEqualsWithDelta($this->users[0]->getCredits() + $this->users[2]->getCredits(), $alliances[0]['credits'], 0.001);
+    }
+
     public function testAlliancesAddUpTheirMembers(): void
     {
         $rows = $this->highscores()->alliances(Highscores::BY_EXPERIENCE);

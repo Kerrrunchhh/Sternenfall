@@ -268,17 +268,13 @@ const serverClock = (() => {
         });
     });
 
-    // Transport request form: running total and suggested offer (a tenth of the amount).
+    // Transport request form: running total and the fixed price (one credit per N resources).
     document.querySelectorAll('[data-transport-offer]').forEach((form) => {
-        const offer = form.querySelector('[data-offer]');
-        let touched = false;
-        offer.addEventListener('input', () => { touched = true; });
+        const per = Number(form.dataset.resourcesPerCredit) || 10;
         const update = () => {
             const total = [...form.querySelectorAll('[data-goods]')].reduce((sum, input) => sum + Math.max(0, Number(input.value) || 0), 0);
-            const hint = Math.ceil(total / 10);
             form.querySelector('[data-goods-total]').textContent = total.toLocaleString(LOCALE_TAG);
-            form.querySelector('[data-offer-hint]').textContent = hint.toLocaleString(LOCALE_TAG);
-            if (!touched) { offer.value = hint > 0 ? hint : ''; }
+            form.querySelector('[data-offer-hint]').textContent = Math.ceil(total / per).toLocaleString(LOCALE_TAG);
         };
         form.querySelectorAll('[data-goods]').forEach((input) => input.addEventListener('input', update));
         update();

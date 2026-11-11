@@ -250,7 +250,7 @@ enum ShipType: string
                 [$yard(12), $tech($warp, 5), $tech(ResearchType::PlasmaLauncher, 4), $tech(ResearchType::GravitonShield, 3)]),
             self::HeavyBomber => new ShipSpec($r(40000, 35000, 10000), 60, 900, 300, 6000, 5000, 0, 700, $plasma,
                 [$yard(6), $tech($plasma, 3), $tech(ResearchType::ElectronCannon, 4), $tech(ResearchType::PhaseShield, 4)]),
-            self::Scout => new ShipSpec($r(100, 50), 1, 0, 0, 100, 60000, 0, 1, ResearchType::Espionage,
+            self::Scout => new ShipSpec($r(100, 50), 1, 0, 0, 100, 1200000, 0, 1, ResearchType::Espionage,
                 [$yard(1), $tech($solid, 1), $tech(ResearchType::Espionage, 1)]),
             self::Freighter => new ShipSpec($r(2000, 1000), 3, 5, 10, 400, 6000, 5000, 10, $solid,
                 [$yard(1), $tech($solid, 1)]),

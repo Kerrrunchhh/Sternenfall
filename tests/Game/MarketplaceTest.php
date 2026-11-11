@@ -71,30 +71,30 @@ final class MarketplaceTest extends TestCase
         $service = $this->transportRequests(taken: 1);
 
         self::assertSame(ShipType::Freighter->cargo(), TransportRequests::maxLoad());
-        self::assertSame(100, TransportRequests::suggestedOffer(1000));
-        self::assertSame(1, TransportRequests::suggestedOffer(3));
+        self::assertSame(100, TransportRequests::price(1000));
+        self::assertSame(1, TransportRequests::price(3));
 
         foreach ([
-            [$stranger, new Resources(iron: 100), 10, 'eigenen Planeten'],
-            [$beginner, new Resources(), 10, 'welche Rohstoffe'],
-            [$beginner, new Resources(iron: TransportRequests::maxLoad() + 1), 10, 'Frachterladung'],
-            [$beginner, new Resources(iron: 100), 0, 'mindestens 1 Credit'],
-        ] as [$who, $goods, $offer, $error]) {
+            [$stranger, new Resources(iron: 100), 'eigenen Planeten'],
+            [$beginner, new Resources(), 'welche Rohstoffe'],
+            [$beginner, new Resources(iron: TransportRequests::maxLoad() + 1), 'Frachterladung'],
+        ] as [$who, $goods, $error]) {
             try {
-                $service->create($who, $home, $goods, $offer);
+                $service->create($who, $home, $goods);
                 self::fail('expected: '.$error);
             } catch (GameException $e) {
                 self::assertStringContainsString($error, $e->getMessage());
             }
         }
 
-        $request = $service->create($beginner, $home, new Resources(iron: 500, water: 200), 70);
+        $request = $service->create($beginner, $home, new Resources(iron: 500, water: 205));
         self::assertSame(TransportRequest::OPEN, $request->getStatus());
+        self::assertEqualsWithDelta(71, $request->getOffer(), 0.001, 'fixed price: 705 resources = 71 credits');
         self::assertSame('1:1:1', $request->getCoordinates());
-        self::assertEqualsWithDelta(700, $request->getGoods()->total(), 0.001);
+        self::assertEqualsWithDelta(705, $request->getGoods()->total(), 0.001);
 
         $this->expectException(GameException::class);
-        $this->transportRequests(taken: 0)->create($beginner, $home, new Resources(iron: 100), 10_000);
+        $this->transportRequests(taken: 0)->create($beginner, $home, new Resources(iron: 100));
     }
 
     public function testCancelOnlyWhileOpen(): void

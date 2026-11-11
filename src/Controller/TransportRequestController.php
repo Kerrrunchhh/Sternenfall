@@ -41,6 +41,7 @@ class TransportRequestController extends AbstractGameController
             'open' => array_values(array_filter($this->requests->findOpen(), static fn (TransportRequest $r): bool => !$r->getRequester()->isSameAs($player))),
             'mine' => $this->requests->findOf($player),
             'max_load' => TransportRequests::maxLoad(),
+            'resources_per_credit' => TransportRequests::RESOURCES_PER_CREDIT,
             'resource_types' => ResourceType::cases(),
             'is_trader' => $trader,
             'ready_fleets' => $trader ? $this->dispatcher->readyFleets($player, $planet) : [],
@@ -55,12 +56,12 @@ class TransportRequestController extends AbstractGameController
         $f = $request->request;
         $target = $this->player()->getPlanets()->findFirst(static fn (int $k, Planet $p): bool => $p->getId() === $f->getInt('planet'));
         $goods = Resources::fromArray(array_map(static fn ($v): float => max(0, NumberInput::amount((string) $v)), $f->all('goods')));
-        $this->attempt(function () use ($target, $goods, $f): void {
+        $this->attempt(function () use ($target, $goods): void {
             if (null === $target) {
                 throw new GameException(t('Wähle einen deiner Planeten.'));
             }
-            $this->service->create($this->player(), $target, $goods, NumberInput::amount($f->getString('offer')));
-        }, t('Transportgesuch eingestellt – das Angebot ist verwahrt, bis die Lieferung ankommt.'));
+            $this->service->create($this->player(), $target, $goods);
+        }, t('Transportgesuch eingestellt – der Preis ist verwahrt, bis die Lieferung ankommt.'));
 
         return $this->redirectToRoute('app_transport_requests');
     }

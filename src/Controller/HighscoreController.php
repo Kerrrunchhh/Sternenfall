@@ -8,7 +8,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
-/** Highscores of players and alliances, by points or combat experience, per life form. */
+/** Highscores of players and alliances, by points, combat experience or credits, per life form. */
 class HighscoreController extends AbstractGameController
 {
     private const int TOP = 100;
@@ -20,7 +20,7 @@ class HighscoreController extends AbstractGameController
         $player = $this->player();
         $query = $request->query;
         $view = 'alliances' === $query->getString('view') ? 'alliances' : 'players';
-        $sort = Highscores::BY_EXPERIENCE === $query->getString('sort') ? Highscores::BY_EXPERIENCE : Highscores::BY_POINTS;
+        $sort = \in_array($query->getString('sort'), Highscores::SORTS, true) ? $query->getString('sort') : Highscores::BY_POINTS;
         $lifeForm = LifeForm::tryFrom($query->getString('lifeform'));
 
         $rows = 'alliances' === $view ? $highscores->alliances($sort, $lifeForm) : $highscores->players($sort, $lifeForm);

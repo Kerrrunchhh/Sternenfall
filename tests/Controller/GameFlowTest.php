@@ -280,6 +280,25 @@ class GameFlowTest extends WebTestCase
         self::assertSelectorTextContains('.message', 'Neue Kolonie');
     }
 
+    public function testTransportRequestCostsAFixedPrice(): void
+    {
+        $this->register('Neuling');
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $player = $this->planet('Neuling')->getOwner();
+        $before = $player->getCredits();
+
+        $this->client->request('GET', '/transportgesuche');
+        self::assertSelectorNotExists('input[name="offer"]');
+        $this->client->submitForm('transport-request-create', ['goods[iron]' => 500, 'goods[water]' => 205]);
+        self::assertResponseRedirects('/transportgesuche');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.flash-success', 'Transportgesuch eingestellt');
+
+        $em->clear();
+        $player = $em->getRepository(User::class)->findOneBy(['username' => 'Neuling']);
+        self::assertEqualsWithDelta($before - 71, $player->getCredits(), 0.001, '705 resources cost 71 credits');
+    }
+
     private function register(string $username): void
     {
         $this->client->request('GET', '/register');

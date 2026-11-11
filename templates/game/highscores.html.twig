@@ -34,12 +34,13 @@
                     {% if view == 'alliances' %}<td class="num">{{ 'Mitglieder'|trans }}</td>{% endif %}
                     <td class="num"><a class="sort-link {{ sort == 'points' ? 'active' }}" href="{{ path('app_highscores', params|merge({sort: 'points'})) }}" title="{{ 'Nach Punkten sortieren'|trans }}">{{ 'Punkte{points}'|trans({'{points}': (sort == 'points' ? ' ▼')}) }}</a></td>
                     <td class="num"><a class="sort-link {{ sort == 'experience' ? 'active' }}" href="{{ path('app_highscores', params|merge({sort: 'experience'})) }}" title="{{ 'Nach Kampferfahrung sortieren'|trans }}">{{ 'Kampferfahrung{experience}'|trans({'{experience}': (sort == 'experience' ? ' ▼')}) }}</a></td>
+                    <td class="num"><a class="sort-link {{ sort == 'credits' ? 'active' }}" href="{{ path('app_highscores', params|merge({sort: 'credits'})) }}" title="{{ 'Nach Credits sortieren'|trans }}">{{ 'Credits'|trans }}{{ sort == 'credits' ? ' ▼' }}</a></td>
                 </tr>
                 {% for r in rows %}
                     {{ _self.row(r, view, own) }}
                 {% endfor %}
                 {% if own_outside %}
-                    <tr class="highscore-gap"><td colspan="{{ view == 'alliances' ? 6 : 5 }}" class="muted">…</td></tr>
+                    <tr class="highscore-gap"><td colspan="{{ view == 'alliances' ? 7 : 6 }}" class="muted">…</td></tr>
                     {{ _self.row(own, view, own) }}
                 {% endif %}
             </table>
@@ -64,5 +65,6 @@
         {% endif %}
         <td class="num">{{ r.points|num }}</td>
         <td class="num">{{ r.experience|num }}</td>
+        <td class="num">{{ r.credits|round(0, 'floor')|num }}</td>
     </tr>
 {% endmacro %}
