@@ -152,7 +152,7 @@
         </details>
 
         <form method="post" action="{{ path('app_fleets_bulk') }}" class="panel fleet-bulk" data-fleet-bulk
-              data-flight data-game-speed="{{ game_speed }}">
+              data-flight data-game-speed="{{ game_speed }}" data-food-per-crew="{{ constant('App\\Game\\Economy::FOOD_PER_INHABITANT') }}" data-water-per-crew="{{ constant('App\\Game\\Economy::WATER_PER_INHABITANT') }}">
             <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
             {% if squadrons is not empty %}
                 <div class="squadrons" aria-label="{{ 'Geschwader'|trans }}">
@@ -191,7 +191,7 @@
                     <tr class="{{ f.moving ? 'moving' }}" data-fleet-row data-name="{{ f.label|trans|lower }}" data-own="{{ e.own ? 1 : 0 }}" data-ships="{{ f.ships|json_encode }}">
                         <td>
                             <input type="checkbox" name="fleets[]" value="{{ f.id }}" id="pick-{{ f.id }}" aria-label="{{ '{label} auswählen'|trans({'{label}': f.label|trans}) }}"
-                                   data-from="{{ f.galaxy }}:{{ f.system }}:{{ f.position }}" data-speed="{{ e.speed }}"
+                                   data-from="{{ f.galaxy }}:{{ f.system }}:{{ f.position }}" data-speed="{{ e.speed }}" data-fuel="{{ e.fuel }}" data-crew="{{ e.crew }}" data-named="{{ f.named ? 1 : 0 }}"
                                    data-capacity="{{ e.capacity }}" data-load="{{ f.cargo.total|round(0, 'floor') }}">
                         </td>
                         <td>
@@ -208,7 +208,7 @@
                                 {% endif %}
                                 {% if f.moving and not f.returning and recall_until(f) %}
                                     <button type="submit" class="link-button recall-link" title="{{ 'Zurückrufen möglich bis {recall_until} (Radartechnik)'|trans({'{recall_until}': recall_until(f)|date('H:i:s')}) }}" formaction="{{ path('app_fleet_recall', {id: f.id}) }}" formnovalidate
-                                            name="to" value="app_fleet" id="recall-{{ f.id }}">{{ f.mission.value == 'hover' ? '↓ landen' : ('↩ zurückrufen'|trans) }}</button>
+                                            name="to" value="app_fleet" id="recall-{{ f.id }}">{{ f.mission.value == 'hover' ? '↓ landen'|trans : '↩ zurückrufen'|trans }}</button>
                                 {% endif %}
                             </span>
                         </td>
@@ -231,7 +231,7 @@
                 <label>{{ 'Aktion für die ausgewählten Flotten'|trans }}
                     <select name="action" data-bulk-action required>
                         <option value="">{{ '– auswählen –'|trans }}</option>
-                        <optgroup label="Losschicken">
+                        <optgroup label="{{ 'Losschicken'|trans }}">
                             {% for m in missions %}
                                 <option value="send:{{ m.value }}" data-help="{{ m.description|trans }}" {{ target.mission == m ? 'selected' }}>{{ m.label|trans }}</option>
                             {% endfor %}

@@ -409,6 +409,9 @@ const serverClock = (() => {
             if (picked.length > 0) {
                 form.dataset.from = picked[0].dataset.from;
                 form.dataset.speed = Math.min(...picked.map((box) => parseFloat(box.dataset.speed) || Infinity));
+                form.dataset.fuel = picked.reduce((sum, box) => sum + (parseFloat(box.dataset.fuel) || 0), 0);
+                form.dataset.crew = picked.reduce((sum, box) => sum + (parseFloat(box.dataset.crew) || 0), 0);
+                form.dataset.named = picked.every((box) => box.dataset.named === '1') ? '1' : '0';
             } else {
                 delete form.dataset.from;
             }
@@ -790,11 +793,31 @@ const serverClock = (() => {
             const when = serverClock.format(arrival, sameDay
                 ? { hour: '2-digit', minute: '2-digit', second: '2-digit' }
                 : { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            preview.textContent = t(sameDay ? 'Flugdauer {duration} · Ankunft heute {time} Uhr · Rückkehr {back} nach Start' : 'Flugdauer {duration} · Ankunft {time} Uhr · Rückkehr {back} nach Start', { duration: duration(seconds), time: when, back: duration(2 * seconds) });
+            // Fleets that stay at the target don't fly back (same rule as FleetMission::isOneWay).
+            const actionValue = form.querySelector('[data-bulk-action]')?.value || '';
+            const mission = actionValue.startsWith('send:') ? actionValue.slice(5) : '';
+            const oneWay = ['spy', 'station', 'jump', 'trade'].includes(mission) || (mission === 'transport_station' && form.dataset.named === '1');
+            const legs = oneWay ? 1 : 2;
+            let text = oneWay
+                ? t(sameDay ? 'Flugdauer {duration} · Ankunft heute {time} Uhr · die Flotte bleibt am Ziel' : 'Flugdauer {duration} · Ankunft {time} Uhr · die Flotte bleibt am Ziel', { duration: duration(seconds), time: when })
+                : t(sameDay ? 'Flugdauer {duration} · Ankunft heute {time} Uhr · Rückkehr {back} nach Start' : 'Flugdauer {duration} · Ankunft {time} Uhr · Rückkehr {back} nach Start', { duration: duration(seconds), time: when, back: duration(2 * seconds) });
+            // Consumption: hydrogen shrinks with the speed, food and water grow with the flight time.
+            if (form.dataset.fuel !== undefined) {
+                const fmt = (n) => Math.ceil(n).toLocaleString(LOCALE_TAG);
+                const hydrogen = legs * parseFloat(form.dataset.fuel) * (1 + distance(from, to) / 10000) * percent / 100;
+                const crew = parseFloat(form.dataset.crew) || 0;
+                const hours = legs * seconds / 3600;
+                const food = crew * (parseFloat(form.dataset.foodPerCrew) || 0) * gameSpeed * hours;
+                const water = crew * (parseFloat(form.dataset.waterPerCrew) || 0) * gameSpeed * hours;
+                text += '\n' + t(oneWay ? 'Verbrauch für den Hinflug: {hydrogen} Wasserstoff · {food} Nahrung · {water} Wasser' : 'Verbrauch hin und zurück: {hydrogen} Wasserstoff · {food} Nahrung · {water} Wasser', { hydrogen: fmt(hydrogen), food: fmt(food), water: fmt(water) });
+            }
+            preview.textContent = text;
         };
         form.querySelectorAll('[data-flight-input]').forEach((input) => input.addEventListener('input', update));
         form.addEventListener('flight-origin', update);
         update();
+        // The arrival moves with the clock: refreshed every second, so it is right for "now".
+        setInterval(() => { if (form.dataset.from && !document.hidden) update(); }, 1000);
     });
 
     // Fleet form: "max" buttons and live cargo capacity.

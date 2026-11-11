@@ -69,18 +69,30 @@ final readonly class Navigation
     }
 
     /**
-     * Hydrogen for the round trip (or one way only).
+     * Hydrogen for the round trip (or one way only). Slower flights burn less: the hydrogen
+     * shrinks in proportion to the speed (50 % speed = half the hydrogen), while food and
+     * water grow with the longer flight time (see supplies()).
      *
      * @param array<string, int> $ships
      */
-    public function fuel(array $ships, int $distance, bool $oneWay = false): float
+    public function fuel(array $ships, int $distance, bool $oneWay = false, float $percent = 100.0): float
+    {
+        return ceil(($oneWay ? 1 : 2) * $this->fuelBase($ships) * (1 + $distance / 10000) * self::clampPercent($percent) / 100);
+    }
+
+    /**
+     * Hydrogen per unit of the distance factor at full speed (sum over the ships), for the flight preview.
+     *
+     * @param array<string, int> $ships
+     */
+    public function fuelBase(array $ships): float
     {
         $base = 0;
         foreach ($this->each($ships) as [$type, $count]) {
             $base += $type->spec()->fuel * $count;
         }
 
-        return ceil(($oneWay ? 1 : 2) * $base * (1 + $distance / 10000));
+        return $base;
     }
 
     /**

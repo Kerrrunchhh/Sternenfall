@@ -59,6 +59,8 @@ class FleetController extends AbstractGameController
             $entries[] = [
                 'own' => true,
                 'speed' => $navigation->slowestSpeed($fleet->getShips(), $player),
+                'fuel' => $navigation->fuelBase($fleet->getShips()),
+                'crew' => $navigation->crew($fleet->getShips()),
                 'hover' => $hover,
                 'fleet' => $fleet,
                 'at' => $at,
@@ -76,6 +78,8 @@ class FleetController extends AbstractGameController
                 'hover' => [],
                 'capacity' => 0,
                 'speed' => $navigation->slowestSpeed($fleet->getShips(), $fleet->getOwner()),
+                'fuel' => $navigation->fuelBase($fleet->getShips()),
+                'crew' => $navigation->crew($fleet->getShips()),
                 'fleet' => $fleet,
                 'at' => $at,
                 'base' => null !== $at && $at->getOwner()->isSameAs($fleet->getOwner()) ? $at : null,

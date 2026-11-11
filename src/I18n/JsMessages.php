@@ -42,6 +42,10 @@ final class JsMessages
             t('Flugdauer {duration} · Ankunft heute {time} Uhr · Rückkehr {back} nach Start'),
             t('Flugdauer {duration} · Ankunft {time} Uhr · Rückkehr {back} nach Start'),
             t('Bestätigen'),
+            t('Verbrauch hin und zurück: {hydrogen} Wasserstoff · {food} Nahrung · {water} Wasser'),
+            t('Verbrauch für den Hinflug: {hydrogen} Wasserstoff · {food} Nahrung · {water} Wasser'),
+            t('Flugdauer {duration} · Ankunft heute {time} Uhr · die Flotte bleibt am Ziel'),
+            t('Flugdauer {duration} · Ankunft {time} Uhr · die Flotte bleibt am Ziel'),
         ];
     }
 }

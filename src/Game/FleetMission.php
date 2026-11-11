@@ -33,6 +33,20 @@ enum FleetMission: string
         return array_values(array_filter(self::cases(), static fn (self $m): bool => !\in_array($m, [self::Gather, self::Intercept, self::Raid, self::Hover, self::Spy, self::Trade], true)));
     }
 
+    /**
+     * Missions after which the fleet stays at the target (or burns up): only the way there costs
+     * fuel and provisions. Stationing unnamed ships puts them into the hangar, so it stays too;
+     * "transport and station" only stays with a named fleet.
+     */
+    public function isOneWay(bool $named): bool
+    {
+        return match ($this) {
+            self::Spy, self::Station, self::Jump, self::Trade => true,
+            self::TransportStation => $named,
+            default => false,
+        };
+    }
+
     public function label(): string
     {
         return match ($this) {

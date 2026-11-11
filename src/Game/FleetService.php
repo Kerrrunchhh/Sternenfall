@@ -212,7 +212,8 @@ final readonly class FleetService
                 if (null !== $lead && $this->now()->modify("+{$seconds} seconds") > $lead->getArriveAt()) {
                     throw new GameException(t('Zu langsam: {label} ist {value} am Ziel.', ['{label}' => $lead->getLabel(), '{value}' => $this->localTime($lead->getArriveAt())]));
                 }
-                $travel = $this->navigation->supplies($ships, $seconds, false)->add(new Resources(hydrogen: $this->navigation->fuel($ships, $distance, false)));
+                $oneWay = $mission->isOneWay($fleet->isNamed());
+                $travel = $this->navigation->supplies($ships, $seconds, $oneWay)->add(new Resources(hydrogen: $this->navigation->fuel($ships, $distance, $oneWay, $speedPercent)));
                 $base = $this->ownPlanetAt($fleet);
                 if (null !== $base) {
                     $needed = ($loads[spl_object_id($fleet)] ?? new Resources())->add($travel);
@@ -1266,9 +1267,9 @@ final readonly class FleetService
         if (null !== $mustArriveBefore && $now->modify("+{$seconds} seconds") >= $mustArriveBefore) {
             throw new GameException(t('Zu langsam: deine Flotte bräuchte {value}, das Ziel ist in {value2} dort.', ['{value}' => GameExtension::formatDuration($seconds), '{value2}' => GameExtension::formatDuration($mustArriveBefore->getTimestamp() - $now->getTimestamp())]));
         }
-        // Probes never come back, so they only need fuel and provisions for one way.
-        $oneWay = FleetMission::Spy === $mission;
-        $fuel = $this->navigation->fuel($ships, $distance, $oneWay);
+        // Fleets that stay at the target (and probes, which burn up) pay for one way only.
+        $oneWay = $mission->isOneWay($fleet->isNamed());
+        $fuel = $this->navigation->fuel($ships, $distance, $oneWay, $speedPercent);
         $supplies = $this->navigation->supplies($ships, $seconds, $oneWay);
         $travel = $supplies->add(new Resources(hydrogen: $fuel));
         $missing = t('Treibstoff ({fuel} Wasserstoff) und Proviant ({food} Nahrung, {water} Wasser)', ['{fuel}' => new Num($fuel), '{food}' => new Num($supplies->food), '{water}' => new Num($supplies->water)]);
