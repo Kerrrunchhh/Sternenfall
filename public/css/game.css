@@ -503,6 +503,10 @@ label.checkbox { display: flex; gap: .4rem; align-items: center; color: var(--te
 .contact-list li:last-child { border-bottom: none; }
 .contact-requests li { background: #ffb74d14; border: 1px solid #ffb74d55; border-radius: 6px; padding: .4rem .6rem; }
 .contact-actions { display: flex; gap: .4rem; }
+.contact-chips { list-style: none; margin: 0 0 .75rem; padding: 0; display: flex; flex-wrap: wrap; gap: .4rem; }
+.contact-chip { display: inline-flex; align-items: center; gap: .35rem; padding: .25rem .7rem; border: 1px solid var(--border); border-radius: 999px; color: var(--text); text-decoration: none; white-space: nowrap; }
+.contact-chip:hover { border-color: var(--accent); background: #4fc3f71a; }
+.contact-chip.presence-online { color: var(--text); border-color: #66bb6a66; }
 .presence { display: inline-flex; align-items: center; gap: .3rem; font-size: .75rem; color: var(--muted); white-space: nowrap; }
 .presence-dot { width: .55rem; height: .55rem; border-radius: 50%; background: var(--muted); }
 .presence-online { color: var(--ok); }

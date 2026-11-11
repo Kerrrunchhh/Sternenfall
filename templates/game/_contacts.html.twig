@@ -23,12 +23,13 @@
 {% if contacts is empty %}
     <p class="muted small">{{ 'Noch keine Schnellkontakte. Im Profil eines Mitspielers kannst du ihn anfragen; nimmt er an, steht er hier mit seinem Online-Status.'|trans }}</p>
 {% else %}
-    <ul class="contact-list">
+    {# All contacts in one row; a click on the name opens a new message to them. #}
+    <ul class="contact-chips">
         {% for c in contacts %}
-            <li>
-                <span>{{ ui.player(c) }} {{ ui.presence(c) }}</span>
-                <a class="btn btn-small btn-secondary" href="{{ path('app_mail_compose', {to: c.username}) }}" title="{{ 'Nachricht an {username}'|trans({'{username}': c.username}) }}">{{ '✉ Schreiben'|trans }}</a>
-            </li>
+            {% set st = presence(c) %}
+            <li><a class="contact-chip {{ st ? (st.online ? 'presence-online' : 'presence-offline') }}" href="{{ path('app_mail_compose', {to: c.username}) }}" title="{{ 'Nachricht an {username}'|trans({'{username}': c.username}) }}{{ st ? ' · ' ~ st.text|trans }}">
+                {%- if st %}<span class="presence-dot" aria-hidden="true"></span>{% endif %}<span aria-hidden="true">{{ c.lifeForm.icon }}</span> {{ c.username -}}
+            </a></li>
         {% endfor %}
     </ul>
 {% endif %}
