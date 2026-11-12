@@ -110,6 +110,14 @@ class Fleet
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $parkedAt = null;
 
+    /**
+     * The fleet may stay where it waits (own planet, alliance, bond, contract, free slot): then
+     * parkedAt is only the time of the last check, and it is checked again every hour. Once
+     * that ends, parkedAt is when the 24 hours started.
+     */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $stayAllowed = false;
+
     /** Could not pay its way home from a foreign planet: since then it loses 10 % of its ships a day. */
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $strandedSince = null;
@@ -301,6 +309,7 @@ class Fleet
     public function depart(FleetMission $mission, int $galaxy, int $system, int $position, \DateTimeImmutable $now, int $flightSeconds, ?self $targetFleet = null): void
     {
         $this->parkedAt = null;
+        $this->stayAllowed = false;
         $this->strandedSince = null;
         $this->strandedShips = null;
         $this->mission = $mission;
@@ -352,6 +361,7 @@ class Fleet
             throw new \LogicException('Only an empty waiting fleet can be relocated.');
         }
         [$this->galaxy, $this->system, $this->position] = [$galaxy, $system, $position];
+        $this->stayAllowed = false;
     }
 
     public function rememberHome(int $galaxy, int $system, int $position): void
@@ -379,6 +389,18 @@ class Fleet
     public function park(\DateTimeImmutable $since): void
     {
         $this->parkedAt = $since;
+    }
+
+    public function isStayAllowed(): bool
+    {
+        return $this->stayAllowed;
+    }
+
+    /** Checked: the fleet may stay (true, look again in an hour) or the 24 hours run (false). */
+    public function allowStay(bool $allowed, \DateTimeImmutable $now): void
+    {
+        $this->stayAllowed = $allowed;
+        $this->parkedAt = $now;
     }
 
     public function unstrand(): void

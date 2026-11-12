@@ -1120,6 +1120,8 @@ final readonly class FleetService
 
     /** How long a fleet may wait at a trade post or on a planet without a bond. */
     public const string MAX_STAY = '24 hours';
+    /** How often fleets that may stay are checked again. */
+    public const string STAY_RECHECK = '1 hour';
 
     /**
      * Fleets waiting 24 hours at a trade post fly home for free. Fleets on the planet of a
@@ -1131,7 +1133,7 @@ final readonly class FleetService
     {
         $now = $this->now();
         $cutoff = $now->modify('-'.self::MAX_STAY);
-        foreach ($this->fleetRepository->findParkedBefore($cutoff) as $fleet) {
+        foreach ($this->fleetRepository->findParkedBefore($cutoff, $now->modify('-'.self::STAY_RECHECK)) as $fleet) {
             if (!$this->em->contains($fleet) || !$fleet->isIdle() || $fleet->getOwner()->isOnVacation($now)) {
                 continue; // on vacation the stay limits rest as well
             }
@@ -1143,10 +1145,19 @@ final readonly class FleetService
                 || (null !== $planet && !($this->diplomacy?->mayStay($owner, $planet->getOwner()) ?? ($owner->isSameAs($planet->getOwner()) || $owner->isAllyOf($planet->getOwner())))
                     && !($this->contracts?->protects($owner, $planet) ?? false));
 
-            // Allowed to stay (own planet, alliance, bond, free slot): look again in a day.
-            if (!$limited || null === $fleet->getParkedAt()) {
-                $fleet->park($now);
+            // Allowed to stay (own planet, alliance, bond, contract, free slot): look again in an hour.
+            if (!$limited) {
+                $fleet->allowStay(true, $now);
                 $fleet->unstrand();
+                continue;
+            }
+            // Just lost the permission (left the alliance, bond ended, planet changed hands): the 24 hours start now.
+            if ($fleet->isStayAllowed() || null === $fleet->getParkedAt()) {
+                $wasAllowed = $fleet->isStayAllowed();
+                $fleet->allowStay(false, $now);
+                if ($wasAllowed && null !== $planet) {
+                    $this->inbox->send($owner, t('{label} muss heim', ['{label}' => $fleet->getLabel()]), t('{label} darf nicht mehr auf {name} [{coords}] von {player} bleiben – ihr seid nicht mehr in einer Allianz und habt kein Bündnis. Sie fliegt in 24 Stunden von selbst heim, wenn du sie nicht vorher wegschickst.', ['{label}' => $fleet->getLabel(), '{name}' => $planet->getName(), '{coords}' => $planet->getCoordinates(), '{player}' => $planet->getOwner()->getUsername()]));
+                }
                 continue;
             }
             if ($fleet->getParkedAt() > $cutoff && null === $fleet->getStrandedSince()) {

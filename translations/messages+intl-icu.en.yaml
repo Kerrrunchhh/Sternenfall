@@ -2410,3 +2410,5 @@
 "In welchen Sprachen gibt es das Spiel?": "Which languages is the game available in?"
 "Auf Deutsch und Englisch.": "In German and English."
 "Jetzt kostenlos spielen": "Play for free now"
+"{label} muss heim": "{label} has to go home"
+"{label} darf nicht mehr auf {name} [{coords}] von {player} bleiben – ihr seid nicht mehr in einer Allianz und habt kein Bündnis. Sie fliegt in 24 Stunden von selbst heim, wenn du sie nicht vorher wegschickst.": "{label} may no longer stay on {name} [{coords}] of {player} – you are no longer in one alliance and have no pact. It flies home by itself in 24 hours unless you send it away before."

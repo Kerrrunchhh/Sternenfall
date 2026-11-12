@@ -144,12 +144,15 @@ class FleetRepository extends ServiceEntityRepository
      *
      * @return list<Fleet>
      */
-    public function findParkedBefore(\DateTimeImmutable $cutoff): array
+    public function findParkedBefore(\DateTimeImmutable $cutoff, ?\DateTimeImmutable $recheck = null): array
     {
+        // Fleets allowed to stay are looked at again every hour (from $recheck), so the
+        // 24 hours start soon after the permission ends.
         return $this->createQueryBuilder('f')
             ->where('f.mission IS NULL')
-            ->andWhere('f.parkedAt IS NULL OR f.parkedAt <= :cutoff OR f.strandedSince IS NOT NULL')
+            ->andWhere('f.parkedAt IS NULL OR f.parkedAt <= :cutoff OR f.strandedSince IS NOT NULL OR (f.stayAllowed = true AND f.parkedAt <= :recheck)')
             ->setParameter('cutoff', $cutoff)
+            ->setParameter('recheck', $recheck ?? $cutoff)
             ->getQuery()
             ->getResult();
     }
