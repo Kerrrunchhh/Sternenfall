@@ -328,6 +328,16 @@ class Planet
         return $this->fusedPlanets;
     }
 
+    /** The trade guild's central exchange: one fusion over the slots down to $lastPosition (nobody else may be there). */
+    public function spanTo(int $lastPosition, string $partName): void
+    {
+        $this->fusedPlanets = [];
+        for ($position = $this->position + 1; $position <= $lastPosition; ++$position) {
+            $this->fusedPlanets[] = ['position' => $position, 'name' => $partName];
+        }
+        $this->fusionSize = max(1, $lastPosition - $this->position + 1);
+    }
+
     /** Takes over the slots of a planet directly below (which may itself be fused). */
     public function absorb(self $planet): void
     {

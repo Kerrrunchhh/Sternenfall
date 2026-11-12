@@ -100,7 +100,7 @@ final readonly class AccountDeletion
     /** The owner of all ownerless planets, created on first use. */
     public function nobody(): User
     {
-        $nobody = $this->users->findOneBy(['system' => true]);
+        $nobody = $this->users->findOneBy(['system' => true, 'username' => self::NOBODY]);
         if (null === $nobody) {
             $nobody = new User(self::NOBODY, $this->now());
             $nobody->setPassword('!'); // no password hash matches: nobody can log in

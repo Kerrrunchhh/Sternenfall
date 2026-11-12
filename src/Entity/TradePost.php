@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Game\Resources;
 use App\Game\BuyerAccess;
 use App\Game\LifeForm;
 use App\Game\ResourceType;
@@ -69,6 +70,14 @@ class TradePost
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
+    /**
+     * The trader's colony the post is set up on: its resources are the stock, and it is
+     * attacked and invaded like any planet. Null only for the trade guild's central exchanges.
+     */
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'CASCADE')]
+    private ?Planet $planet = null;
+
     /** Abandoned posts (owner stopped being a trader) sell nothing; the owner can still collect the stock. */
     #[ORM\Column(options: ['default' => true])]
     private bool $active = true;
@@ -82,6 +91,20 @@ class TradePost
         $this->position = $position;
         $this->createdAt = $createdAt;
         $this->allowedAlliances = new ArrayCollection();
+    }
+
+    /** A post on one of the trader's planets (the planet's resources are its stock). */
+    public static function onPlanet(Planet $planet, string $name, \DateTimeImmutable $createdAt): self
+    {
+        $post = new self($planet->getOwner(), $name, $planet->getGalaxy(), $planet->getSystem(), $planet->getPosition(), $createdAt);
+        $post->planet = $planet;
+
+        return $post;
+    }
+
+    public function getPlanet(): ?Planet
+    {
+        return $this->planet;
     }
 
     public function getId(): ?int
@@ -209,26 +232,42 @@ class TradePost
         }
     }
 
+    /** Stock of a good: on a planet its resources, otherwise (the guild) the post's own stock. */
     public function getStock(string $good): float
     {
+        if (null !== $this->planet) {
+            return null === ResourceType::tryFrom($good) ? 0.0 : $this->planet->getResources()->get(ResourceType::from($good));
+        }
+
         return (float) ($this->stock[$good] ?? 0);
     }
 
     /** @return array<string, float> */
     public function getStockList(): array
     {
+        if (null !== $this->planet) {
+            return array_filter($this->planet->getResources()->toArray(), static fn (float $v): bool => $v > 0);
+        }
+
         return $this->stock;
     }
 
+    /** Changes the stock; on a planet the caller holds the owner's planet lock. */
     public function addStock(string $good, float $amount): void
     {
+        if (null !== $this->planet) {
+            $this->planet->setResources($this->planet->getResources()->add(Resources::fromArray([$good => $amount])));
+
+            return;
+        }
         $this->stock[$good] = $this->getStock($good) + $amount;
         $this->stock = array_filter($this->stock, static fn (float|int $v): bool => $v > 0);
     }
 
+    /** Nothing left to collect (a post on a planet keeps nothing of its own). */
     public function isEmpty(): bool
     {
-        return [] === $this->stock;
+        return null !== $this->planet || [] === $this->stock;
     }
 
     /** @return list<LifeForm> */

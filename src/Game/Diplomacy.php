@@ -66,7 +66,8 @@ final class Diplomacy
     /** Own players, alliance mates and partners of a bond or NAP are no targets. */
     public function mayAttack(User $attacker, User $victim): bool
     {
-        if ($attacker->isSameAs($victim) || $attacker->isAllyOf($victim)) {
+        // The trade guild is no target: its central systems can't be attacked.
+        if ($attacker->isSameAs($victim) || $attacker->isAllyOf($victim) || ($victim->isSystem() && TradeGuild::NAME === $victim->getUsername())) {
             return false;
         }
 

@@ -9,7 +9,6 @@ use App\Entity\Planet;
 use App\Entity\TradePost;
 use App\Entity\User;
 use App\Repository\AllianceRepository;
-use App\Repository\PlanetRepository;
 use App\Repository\TradePostRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -29,10 +28,8 @@ final readonly class TradeService
     public function __construct(
         private EntityManagerInterface $em,
         private TradePostRepository $posts,
-        private PlanetRepository $planets,
         private AllianceRepository $alliances,
         private PlanetService $planetService,
-        private Colonizer $colonizer,
         private Navigation $navigation,
         private Inbox $inbox,
         private LockFactory $lockFactory,
@@ -46,26 +43,68 @@ final readonly class TradeService
         return LifeForm::Trader === $player->getLifeForm() ? $player->getResearchLevel(ResearchType::TradeNetwork) : 0;
     }
 
-    public function open(User $trader, string $name, int $galaxy, int $system, int $position): void
+    /**
+     * Sets up a trade post on one of the trader's colonies (not the home planet). The planet
+     * stays a normal planet: built up as usual, its resources are the post's stock, and it can
+     * be attacked and invaded – then the post is gone.
+     */
+    public function open(User $trader, string $name, Planet $planet): void
     {
         $name = $this->validName($name);
-        $this->withEventLock(function () use ($trader, $name, $galaxy, $system, $position): void {
+        $this->withEventLock(function () use ($trader, $name, $planet): void {
             if (LifeForm::Trader !== $trader->getLifeForm()) {
                 throw new GameException(t('Nur Händler können Handelsstützpunkte eröffnen.'));
             }
             if ($this->posts->countByOwner($trader) >= $this->allowedPosts($trader)) {
                 throw new GameException(t('Dein Handelsnetz reicht für {value} Stützpunkt(e). Erforsche „Handelsnetz“ weiter.', ['{value}' => $this->allowedPosts($trader)]));
             }
-            if (!$this->colonizer->isValidSlot($galaxy, $system, $position)) {
-                throw new GameException(t('Diese Koordinaten gibt es nicht.'));
+            if (!$planet->getOwner()->isSameAs($trader) || $planet->isIntegrating($this->now())) {
+                throw new GameException(t('Einen Handelsstützpunkt richtest du auf einer deiner Kolonien ein.'));
             }
-            if (null !== $this->planets->findAt($galaxy, $system, $position) || null !== $this->posts->findAt($galaxy, $system, $position)) {
-                throw new GameException(t('Ein Handelsstützpunkt braucht einen freien Platz.'));
+            if ($planet->isHomeworld()) {
+                throw new GameException(t('Auf dem Heimatplaneten geht das nicht – wähle eine Kolonie.'));
+            }
+            if (null !== $this->posts->findAt($planet->getGalaxy(), $planet->getSystem(), $planet->getPosition())) {
+                throw new GameException(t('Auf {name} gibt es schon einen Handelsstützpunkt.', ['{name}' => $planet->getName()]));
             }
 
-            $this->em->persist(new TradePost($trader, $name, $galaxy, $system, $position, $this->now()));
+            $this->em->persist(TradePost::onPlanet($planet, $name, $this->now()));
             $this->em->flush();
         });
+    }
+
+    /** Trade posts on planets their owner no longer has (invaded, given away) are gone. */
+    public function closeLost(): void
+    {
+        foreach ($this->posts->findOnLostPlanets() as $post) {
+            $planet = $post->getPlanet();
+            if (null !== $planet) {
+                $this->inbox->send($post->getOwner(), t('Handelsstützpunkt verloren'), t('{planet} [{coords}] gehört dir nicht mehr – dein Handelsstützpunkt „{name}“ dort ist aufgelöst.', ['{planet}' => $planet->getName(), '{coords}' => $planet->getCoordinates(), '{name}' => $post->getName()]));
+                $this->em->remove($post);
+            }
+        }
+        $this->em->flush();
+    }
+
+    /**
+     * Posts from before trade posts were planets stood on free slots: they are dissolved,
+     * their stock goes to the owner's home planet (the guild's central exchanges stay).
+     */
+    public function dissolveOldPosts(): void
+    {
+        foreach ($this->posts->findOldStandalone() as $post) {
+            $owner = $post->getOwner();
+            $home = $owner->getPlanets()->findFirst(static fn (int $k, Planet $p): bool => $p->isHomeworld()) ?? $owner->getPlanets()->first();
+            $stock = Resources::fromArray($post->getStockList());
+            if ($home instanceof Planet && $stock->total() > 0) {
+                $this->planetService->transaction($home, static function (Planet $home) use ($stock): void {
+                    $home->setResources($home->getResources()->add($stock));
+                });
+            }
+            $this->inbox->send($owner, t('Handelsstützpunkt umgezogen'), t('Handelsstützpunkte stehen jetzt auf einer deiner Kolonien und handeln mit deren Rohstoffen. „{name}“ [{coords}] ist deshalb aufgelöst; das Lager ({goods}) liegt jetzt auf {home}. Richte unter Handel einen neuen Stützpunkt auf einer Kolonie ein.', ['{name}' => $post->getName(), '{coords}' => $post->getCoordinates(), '{goods}' => Goods::summary(array_filter($stock->toArray(), static fn (float $v): bool => $v > 0)), '{home}' => $home instanceof Planet ? $home->getName() : '–']));
+            $this->em->remove($post);
+        }
+        $this->em->flush();
     }
 
     /**
@@ -148,11 +187,13 @@ final readonly class TradeService
                     throw new GameException(t('Im Lager fehlt Treibstoff oder Proviant: benötigt {hydrogen} Wasserstoff, {food} Nahrung, {water} Wasser. Die Flotte bleibt stehen.', ['{hydrogen}' => new Num($plan['cost']->hydrogen), '{food}' => new Num($plan['cost']->food), '{water}' => new Num($plan['cost']->water)]));
                 }
             }
-            foreach ($plan['cost']->toArray() as $good => $amount) {
-                if ($amount > 0) {
-                    $post->addStock($good, -$amount);
+            $this->asPlayer($actor, static function () use ($post, $plan): void {
+                foreach ($plan['cost']->toArray() as $good => $amount) {
+                    if ($amount > 0) {
+                        $post->addStock($good, -$amount);
+                    }
                 }
-            }
+            });
 
             $home = $plan['home'];
             $fleet->depart(FleetMission::Station, $home->getGalaxy(), $home->getSystem(), $home->getPosition(), $this->now(), $plan['seconds']);
@@ -167,13 +208,12 @@ final readonly class TradeService
      */
     public function supply(TradePost $post, Fleet $fleet): TranslatableInterface
     {
-        $delivered = [];
-        foreach ($fleet->getCargo()->toArray() as $good => $amount) {
-            if ($amount > 0) {
+        $delivered = array_filter($fleet->getCargo()->toArray(), static fn (float $amount): bool => $amount > 0);
+        $this->asPlayer($post->getOwner(), static function () use ($post, $delivered): void {
+            foreach ($delivered as $good => $amount) {
                 $post->addStock($good, $amount);
-                $delivered[$good] = $amount;
             }
-        }
+        });
         $fleet->setCargo(new Resources());
 
         return [] === $delivered ? t('nichts') : Goods::summary($delivered);
@@ -251,13 +291,46 @@ final readonly class TradeService
                 $actor->addCredits(-$deal->price);
                 $cargo = $fleet->getCargo();
                 foreach ($deal->bought as $good => $amount) {
-                    $post->addStock($good, -$amount);
                     $cargo = $cargo->add(Resources::fromArray([$good => $amount]));
                 }
                 $fleet->setCargo($cargo);
             });
-            if (!$deal->isEmpty() && $deal->price > 0) {
-                $this->asPlayer($trader, static fn () => $trader->addCredits($deal->price));
+            // The goods leave the trader's stock (his planet) under his lock, the price goes to him.
+            // Should his planet have less by now (he built something meanwhile), only that is sold.
+            if (!$deal->isEmpty()) {
+                $missing = [];
+                $this->asPlayer($trader, static function () use ($post, $trader, $deal, $own, &$missing): void {
+                    foreach ($deal->bought as $good => $amount) {
+                        $taken = min($amount, floor($post->getStock($good)));
+                        if ($taken < $amount) {
+                            $missing[$good] = $amount - $taken;
+                        }
+                        $post->addStock($good, -$taken);
+                    }
+                    $refund = $own ? 0.0 : array_sum(array_map(static fn (string $good, float $short): float => $short * $post->getPrice($good), array_keys($missing), $missing));
+                    $trader->addCredits($deal->price - $refund);
+                });
+                if ([] !== $missing) {
+                    $this->asPlayer($actor, static function () use ($fleet, $actor, $post, $missing, $own): void {
+                        $cargo = $fleet->getCargo();
+                        foreach ($missing as $good => $short) {
+                            $cargo = $cargo->subtract(Resources::fromArray([$good => $short]));
+                            $actor->addCredits($own ? 0.0 : $short * $post->getPrice($good));
+                        }
+                        $fleet->setCargo($cargo);
+                    });
+                    $bought = [];
+                    foreach ($deal->bought as $good => $amount) {
+                        if ($amount - ($missing[$good] ?? 0) > 0) {
+                            $bought[$good] = $amount - ($missing[$good] ?? 0);
+                        }
+                    }
+                    $refund = 0.0;
+                    foreach ($missing as $good => $short) {
+                        $refund += $own ? 0.0 : $short * $post->getPrice($good);
+                    }
+                    $deal = new TradeDeal($bought, $deal->price - $refund);
+                }
             }
 
             if ([] !== $sold) {
@@ -293,7 +366,8 @@ final readonly class TradeService
     private function asPlayer(User $player, callable $operation): void
     {
         $planet = $player->getPlanets()->first();
-        if (!$planet instanceof Planet) {
+        // System accounts (the trade guild) have no economy of their own to keep up to date.
+        if (!$planet instanceof Planet || $player->isSystem()) {
             $operation();
             $this->em->flush();
 

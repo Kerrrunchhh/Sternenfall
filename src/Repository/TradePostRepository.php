@@ -50,6 +50,9 @@ class TradePostRepository extends ServiceEntityRepository
     {
         $sums = [];
         foreach ($this->findBy(['active' => true]) as $post) {
+            if ($post->getOwner()->isSystem()) {
+                continue; // the trade guild's fixed prices are not market prices
+            }
             foreach (TradeDeal::goods() as $good) {
                 if ($post->getPrice($good) > 0 && $post->getStock($good) >= 1) {
                     $sums[$good][] = $post->getPrice($good);
@@ -65,5 +68,25 @@ class TradePostRepository extends ServiceEntityRepository
         }
 
         return $averages;
+    }
+
+    /** @return list<TradePost> posts on planets that changed hands (invaded, given away) */
+    public function findOnLostPlanets(): array
+    {
+        return $this->createQueryBuilder('t')
+            ->join('t.planet', 'pl')
+            ->where('pl.owner <> t.owner')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /** @return list<TradePost> players' posts from before trade posts stood on planets */
+    public function findOldStandalone(): array
+    {
+        return $this->createQueryBuilder('t')
+            ->join('t.owner', 'o')
+            ->where('t.planet IS NULL AND o.system = false')
+            ->getQuery()
+            ->getResult();
     }
 }

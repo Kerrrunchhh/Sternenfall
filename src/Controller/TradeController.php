@@ -28,12 +28,13 @@ class TradeController extends AbstractGameController
     }
 
     #[Route('/trade', name: 'app_trade', methods: ['GET'])]
-    public function index(AllianceRepository $alliances, FleetRepository $fleets): Response
+    public function index(AllianceRepository $alliances, FleetRepository $fleets, \App\Game\TradeGuild $guild): Response
     {
         $planet = $this->currentPlanet();
         $player = $this->player();
 
-        $all = $this->posts->findAllOrdered();
+        // The trade guild has a post in every galaxy: listed apart, only the one of this galaxy.
+        $all = array_values(array_filter($this->posts->findAllOrdered(), static fn (TradePost $p): bool => !$p->getOwner()->isSystem()));
         $mine = array_values(array_filter($all, static fn (TradePost $p): bool => $p->getOwner()->isSameAs($player)));
 
         // Foreign fleets waiting at the trader's posts, with the cost of sending them home.
@@ -54,6 +55,11 @@ class TradeController extends AbstractGameController
             'is_trader' => LifeForm::Trader === $player->getLifeForm(),
             'life_forms' => LifeForm::cases(),
             'alliances' => $alliances->findAllByName(),
+            'guild_post' => $guild->postIn($planet->getGalaxy()),
+            'guild_sell' => \App\Game\TradeGuild::sellPrices(),
+            'guild_buy' => \App\Game\TradeGuild::buyPrices(),
+            'guild_fusionator_price' => \App\Game\TradeGuild::fusionatorPrice(),
+            'guild_fusionator_galaxy' => \App\Game\TradeGuild::FUSIONATOR_GALAXY,
         ]);
     }
 
@@ -64,8 +70,12 @@ class TradeController extends AbstractGameController
         $this->currentPlanet();
         $form = $request->request;
         $this->attempt(
-            fn () => $this->trade->open($this->player(), $form->getString('name'), $form->getInt('galaxy'), $form->getInt('system'), $form->getInt('position')),
-            t('Handelsstützpunkt eröffnet. Lege Preise fest und beliefere ihn mit einer Flotte.'),
+            function () use ($form): void {
+                $planet = $this->player()->getPlanets()->findFirst(static fn (int $k, \App\Entity\Planet $p): bool => $p->getId() === $form->getInt('planet'))
+                    ?? throw new \App\Game\GameException(t('Wähle eine deiner Kolonien.'));
+                $this->trade->open($this->player(), $form->getString('name'), $planet);
+            },
+            t('Handelsstützpunkt eingerichtet. Lege Preise und Ankauf fest – gehandelt wird mit den Rohstoffen des Planeten.'),
         );
 
         return $this->redirectToRoute('app_trade');

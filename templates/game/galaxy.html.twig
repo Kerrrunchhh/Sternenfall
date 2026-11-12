@@ -82,6 +82,8 @@
                     {% if p %}
                         <td>
                             {% if p.homeworld %}<span title="{{ 'Heimatplanet – kann nicht invadiert werden'|trans }}">🏠</span> {% endif %}{{ p.name }}{% if p.fused %} <span class="muted small" title="{{ 'Fusion aus {fusionSize} Planeten, Plätze {position}–{lastPosition}'|trans({'{fusionSize}': p.fusionSize, '{position}': p.position, '{lastPosition}': p.lastPosition}) }}">{{ '🔗 {fusionSize} Planeten</span>'|trans({'{fusionSize}': p.fusionSize|e})|raw }}{% endif %}{% if p.integrating(now) %} <span class="muted small">{{ '(invadiert, Übergang am {integratedAt})'|trans({'{integratedAt}': p.integratedAt|date('d.m.Y')}) }}</span>{% endif %}
+                            {% set planet_post = posts[p.position] ?? null %}
+                            {% if planet_post %}<br><a class="small" href="{{ path('app_trade_post', {id: planet_post.id}) }}" title="{{ 'Preise und Handel'|trans }}">⚖ {{ planet_post.name }}</a> <span class="muted small">{{ 'Handelsstützpunkt'|trans }}</span>{% endif %}
                         </td>
                         <td class="num planet-points">{{ planet_points(p)|num }}</td>
                         <td>{{ ui.player(p.owner) }}{% if on_vacation %}
@@ -98,7 +100,11 @@
                                 {% set treaty = treaty_with(p.owner) %}
                                 {% if treaty %}<span class="muted small" title="{{ treaty.label|trans }}: {{ treaty.effect|trans }}">{{ treaty.icon }}</span>{% endif %}
                                 {% if may_attack(p.owner) %}<a href="{{ path('app_fleet', coords|merge({mission: 'attack'})) }}">{{ 'Angreifen'|trans }}</a>{% endif %}
-                                <a href="{{ path('app_fleet', coords|merge({mission: 'transport'})) }}">{{ 'Transport'|trans }}</a>
+                                {% if planet_post and planet_post.accessibleTo(player) %}
+                                    <a href="{{ path('app_fleet', coords|merge({mission: 'transport'})) }}" title="{{ 'Handelsflotte hinschicken – sie wartet dort zum Handeln'|trans }}">{{ 'Handeln'|trans }}</a>
+                                {% else %}
+                                    <a href="{{ path('app_fleet', coords|merge({mission: 'transport'})) }}">{{ 'Transport'|trans }}</a>
+                                {% endif %}
                             {% endif %}
                         </td>
                     {% elseif posts[position] is defined %}

@@ -109,7 +109,8 @@ final readonly class TransportRequests
     /** Requests whose fleet is gone (destroyed, dissolved) are open again. */
     public function reopenOrphans(): void
     {
-        foreach ($this->requests->findBy(['status' => TransportRequest::ASSIGNED, 'fleet' => null]) as $request) {
+        // Deliveries of the trade guild have no fleet on purpose.
+        foreach ($this->requests->findBy(['status' => TransportRequest::ASSIGNED, 'fleet' => null, 'guildDeliveryAt' => null]) as $request) {
             $request->reopen();
         }
     }

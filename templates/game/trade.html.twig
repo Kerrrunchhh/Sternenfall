@@ -7,6 +7,23 @@
     <h1>{{ 'Handel'|trans }}</h1>
     {{ include('game/_trade_tabs.html.twig') }}
 
+    {% if guild_post %}
+        <section class="panel guild-panel">
+            <h2>{{ '🏛 Handelsgilde – {name} {coordinates}'|trans({'{name}': guild_post.name|e, '{coordinates}': ui.coords(guild_post.coordinates)})|raw }}</h2>
+            <p class="small">{{ 'Die Handelsgilde hat in der Mitte jeder Galaxie (System {system}) eine Zentralbörse. Sie kauft und verkauft jeden Rohstoff zu festen Preisen – etwas schlechter als bei Händlern, dafür immer und in jeder Menge. Schick eine Flotte mit Frachtern mit dem Auftrag „Handeln“ hin. Die Zentralbörsen können nicht angegriffen werden – Handelsstützpunkte von Spielern schon.'|trans({'{system}': guild_post.system}) }}</p>
+            <table class="table">
+                <thead><tr><th>{{ 'Rohstoff'|trans }}</th><th class="num">{{ 'Gilde verkauft für'|trans }}</th><th class="num">{{ 'Gilde kauft für'|trans }}</th></tr></thead>
+                <tbody>
+                    {% for good in goods %}
+                        <tr><td>{{ good|good_label }}</td><td class="num">{{ guild_sell[good]|num(2) }}</td><td class="num">{{ guild_buy[good]|num(2) }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <p class="muted small">{{ 'Außerdem verkauft die Gilde Fusionatoren für {price} Credits das Stück (Fusionator-Markt, sie fliegen von Galaxie {galaxy} zu dir) und liefert Transportgesuche, die nach 2 Stunden noch kein Händler angenommen hat.'|trans({'{price}': guild_fusionator_price|num, '{galaxy}': guild_fusionator_galaxy}) }}</p>
+            <p><a class="btn btn-small" href="{{ path('app_fleet', {galaxy: guild_post.galaxy, system: guild_post.system, position: guild_post.position, mission: 'trade'}) }}">{{ 'Flotte zur Zentralbörse schicken'|trans }}</a></p>
+        </section>
+    {% endif %}
+
     <section class="panel">
         <h2>{{ 'Durchschnittspreise'|trans }}</h2>
         <p class="muted small">{{ 'Durchschnitt über alle Handelsstützpunkte, die die Ware zu einem Preis anbieten und vorrätig haben (Credits pro Stück).'|trans }}</p>
@@ -74,12 +91,18 @@
                 <form method="post" action="{{ path('app_trade_open') }}" class="fleet-form">
                     <input type="hidden" name="_token" value="{{ csrf_token('trade') }}">
                     <label>{{ 'Name'|trans }} <input type="text" name="name" maxlength="40" required></label>
-                    <div class="coords">
-                        <label>{{ 'Galaxie'|trans }} <input type="number" name="galaxy" min="1" value="{{ planet.galaxy }}" required></label>
-                        <label>{{ 'System'|trans }} <input type="number" name="system" min="1" value="{{ planet.system }}" required></label>
-                        <label>{{ 'Position'|trans }} <input type="number" name="position" min="1" required></label>
-                    </div>
-                    <p class="muted small">{{ 'Nur auf einem freien Platz. Der Platz kann dann nicht mehr kolonisiert werden.'|trans }}</p>
+                    {% set post_slots = mine|map(p => p.coordinates) %}
+                    {% set colonies = player.planets|filter(p => not p.homeworld and p.coordinates not in post_slots) %}
+                    {% if colonies is empty %}
+                        <p class="muted small">{{ 'Ein Handelsstützpunkt steht auf einer deiner Kolonien (nicht auf dem Heimatplaneten). Gründe zuerst eine Kolonie.'|trans }}</p>
+                    {% else %}
+                        <label>{{ 'Auf Kolonie'|trans }}
+                            <select name="planet">
+                                {% for p in colonies %}<option value="{{ p.id }}" {{ p.id == planet.id ? 'selected' }}>{{ p.name }} [{{ p.coordinates }}]</option>{% endfor %}
+                            </select>
+                        </label>
+                    {% endif %}
+                    <p class="muted small">{{ 'Der Stützpunkt handelt mit den Rohstoffen dieses Planeten. Der Planet bleibt ganz normal ausbaubar – und kann wie jeder Planet angegriffen und erobert werden; dann ist der Stützpunkt weg.'|trans }}</p>
                     <button class="btn btn-small" type="submit" id="trade-open">{{ 'Eröffnen'|trans }}</button>
                 </form>
             </section>

@@ -61,7 +61,8 @@ class FusionatorOffer
      * @param list<LifeForm> $lifeForms
      * @param list<Alliance> $alliances
      */
-    public function __construct(User $seller, Planet $origin, int $quantity, float $price, array $lifeForms, array $alliances, \DateTimeImmutable $createdAt)
+    /** @param Planet|TradePost $origin a planet hangar, or the trade guild's trade post */
+    public function __construct(User $seller, Planet|TradePost $origin, int $quantity, float $price, array $lifeForms, array $alliances, \DateTimeImmutable $createdAt)
     {
         $this->seller = $seller;
         $this->galaxy = $origin->getGalaxy();
@@ -110,6 +111,17 @@ class FusionatorOffer
     }
 
     /** Takes fusionators out of the offer (sold or withdrawn). */
+    public function setPrice(float $price): void
+    {
+        $this->price = round($price, 2);
+    }
+
+    /** The trade guild's offer never runs out: it is filled up again. */
+    public function restock(int $quantity): void
+    {
+        $this->quantity = max($this->quantity, $quantity);
+    }
+
     public function take(int $count): void
     {
         if ($count < 1 || $count > $this->quantity) {

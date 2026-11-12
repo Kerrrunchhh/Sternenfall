@@ -87,6 +87,21 @@ class TransportRequest
     public function getFleet(): ?Fleet { return $this->fleet; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
 
+    /** When the trade guild's delivery arrives (it has no real fleet); null for player deliveries. */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $guildDeliveryAt = null;
+
+    public function getGuildDeliveryAt(): ?\DateTimeImmutable { return $this->guildDeliveryAt; }
+
+    /** The trade guild takes the request; the goods arrive at $at. */
+    public function assignToGuild(User $guild, \DateTimeImmutable $at): void
+    {
+        $this->trader = $guild;
+        $this->fleet = null;
+        $this->guildDeliveryAt = $at;
+        $this->status = self::ASSIGNED;
+    }
+
     public function assign(User $trader, Fleet $fleet): void
     {
         $this->trader = $trader;
@@ -98,6 +113,7 @@ class TransportRequest
     {
         $this->trader = null;
         $this->fleet = null;
+        $this->guildDeliveryAt = null;
         $this->status = self::OPEN;
     }
 

@@ -75,10 +75,10 @@
                 {% set resource = true %}
                 <tr>
                     <td>{{ good|good_label }}</td>
-                    <td class="num">{{ post.stock(good)|num }}</td>
+                    <td class="num">{{ post.owner.system ? ('unbegrenzt'|trans) : post.stock(good)|num }}</td>
                     <td class="num">{{ post.price(good) > 0 ? post.price(good)|num(2) : '–' }}</td>
                     <td class="num">{{ resource and post.buyPrice(good) > 0 and post.buyLimit(good) > 0 ? post.buyPrice(good)|num(2) : '–' }}</td>
-                    <td class="num">{{ resource and post.buyPrice(good) > 0 and post.buyLimit(good) > 0 ? post.buyLimit(good)|num : '–' }}</td>
+                    <td class="num">{{ resource and post.buyPrice(good) > 0 and post.buyLimit(good) > 0 ? (post.owner.system ? ('unbegrenzt'|trans) : post.buyLimit(good)|num) : '–' }}</td>
                 </tr>
             {% endfor %}
         </table>

@@ -59,6 +59,7 @@ final readonly class FleetService
         private ?BountyService $bounties = null,
         private ?GameStats $stats = null,
         private ?AttackBans $attackBans = null,
+        private ?TradeGuild $tradeGuild = null,
     ) {
     }
 
@@ -324,6 +325,10 @@ final readonly class FleetService
     /** Alliance mates and partners of a bond or non-aggression pact are no targets. */
     private function mayAttack(User $attacker, User $victim): bool
     {
+        if ($victim->isSystem() && TradeGuild::NAME === $victim->getUsername()) {
+            return false; // the trade guild is no target
+        }
+
         return $this->diplomacy?->mayAttack($attacker, $victim) ?? (!$attacker->isSameAs($victim) && !$attacker->isAllyOf($victim));
     }
 
@@ -1127,6 +1132,11 @@ final readonly class FleetService
             // Once a day: ships and resources of the whole game for the status page history.
             $this->stats?->recordDailySnapshot();
             $this->transportRequests?->reopenOrphans();
+            // The trade guild: posts and offer in place, transport requests nobody took delivered.
+            $this->tradeGuild?->tick();
+            // Trade posts stand on planets: gone with a lost planet; old ones on free slots are dissolved.
+            $this->trade->closeLost();
+            $this->trade->dissolveOldPosts();
             $this->em->flush();
         });
     }
@@ -1266,8 +1276,9 @@ final readonly class FleetService
         $owner = $fleet->getOwner();
         $ships = $fleet->getShips();
         $post = $this->tradePosts->findAt($galaxy, $system, $position);
-        // Transport or station to a trade post: the fleet flies there and waits to trade.
-        if (null !== $post && null === $target && \in_array($mission, [FleetMission::Transport, FleetMission::TransportStation, FleetMission::Station], true)) {
+        // Transport or station to someone else's trade post (the guild's or one on a trader's
+        // planet): the fleet flies there and waits to trade – it is no delivery to that planet.
+        if (null !== $post && (null === $target || !$target->getOwner()->isSameAs($owner)) && \in_array($mission, [FleetMission::Transport, FleetMission::TransportStation, FleetMission::Station], true)) {
             $mission = FleetMission::Trade;
         }
         $order = array_filter(array_map(static fn (mixed $v): float => max(0, floor((float) $v)), array_intersect_key($order, array_flip(TradeDeal::goods()))));
@@ -1459,14 +1470,15 @@ final readonly class FleetService
             },
             FleetMission::Attack => match (true) {
                 null !== $this->attackBans?->refusal() => $this->attackBans->refusal(),
-                null === $target && null !== $post && !$this->mayAttack($player, $post->getOwner()) => t('Dort steht der Handelsstützpunkt „{name}“ von {player} – mit ihm habt ihr ein {value}, Angriffe sind ausgeschlossen. Handelsstützpunkte lassen sich ohnehin nicht angreifen.', ['{name}' => $post->getName(), '{player}' => $post->getOwner()->getUsername(), '{value}' => $this->diplomacy?->kindBetween($player, $post->getOwner())?->label() ?? 'Abkommen']),
-                null === $target && null !== $post => t('Dort steht der Handelsstützpunkt „{name}“ – Handelsstützpunkte können nicht angegriffen werden.', ['{name}' => $post->getName()]),
+                // Trade posts stand on planets and are attacked as planets; only the guild's central exchanges stand alone.
+                null === $target && null !== $post => t('Die Zentralbörsen der Handelsgilde können nicht angegriffen werden.'),
                 null === $target => 'Dort gibt es keinen Planeten.',
                 null !== self::freightersInWarfleet($ships) => self::freightersInWarfleet($ships),
                 // A fused home planet can lose its lower planets, only a single one is untouchable.
                 $target->isHomeworld() && !$target->isFused() && ($ships[ShipType::InvasionShip->value] ?? 0) > 0 && !$owned
                     => t('{name} [{coords}] ist der Heimatplanet von {player} und kann nicht erobert werden. Lass die Invasionsschiffe zu Hause oder wähle ein anderes Ziel.', ['{name}' => $target->getName(), '{coords}' => $target->getCoordinates(), '{player}' => $target->getOwner()->getUsername()]),
                 $owned => 'Deine eigenen Planeten kannst du nicht angreifen.',
+                $target->getOwner()->isSystem() && TradeGuild::NAME === $target->getOwner()->getUsername() => t('Die Zentralbörsen der Handelsgilde können nicht angegriffen werden.'),
                 $player->isAllyOf($target->getOwner()) => 'Mitglieder deiner Allianz kannst du nicht angreifen.',
                 null !== $this->vacationProtects($target) => $this->vacationProtects($target),
                 !$this->mayAttack($player, $target->getOwner()) => t('Mit der Allianz von {player} habt ihr ein {value} – Angriffe sind ausgeschlossen.', ['{player}' => $target->getOwner()->getUsername(), '{value}' => $this->diplomacy?->kindBetween($player, $target->getOwner())?->label() ?? 'Abkommen']),
@@ -1702,13 +1714,14 @@ final readonly class FleetService
                     $this->inbox->send($player, t('Angriff auf {where} abgebrochen', ['{where}' => $where]), t('{reason} {name} kehrt zurück.', ['{reason}' => $reason, '{name}' => $name]));
                     break;
                 }
+                $victim = $target->getOwner();
                 $joiners = [];
                 foreach ($this->fleetRepository->findAttackJoiners($fleet) as $joiner) {
                     if ($joiner->getTargetCoordinates() !== $fleet->getTargetCoordinates()) {
                         continue;
                     }
-                    if (!$this->mayAttack($joiner->getOwner(), $target->getOwner())) {
-                        $this->inbox->send($joiner->getOwner(), t('Verbandsangriff auf {where} abgebrochen', ['{where}' => $where]), t('{label} darf {player} nicht angreifen (Allianz, Bündnis oder Nichtangriffspakt) und kehrt zurück.', ['{label}' => $joiner->getLabel(), '{player}' => $target->getOwner()->getUsername()]));
+                    if (!$this->mayAttack($joiner->getOwner(), $victim)) {
+                        $this->inbox->send($joiner->getOwner(), t('Verbandsangriff auf {where} abgebrochen', ['{where}' => $where]), t('{label} darf {player} nicht angreifen (Allianz, Bündnis oder Nichtangriffspakt) und kehrt zurück.', ['{label}' => $joiner->getLabel(), '{player}' => $victim->getUsername()]));
                         $joiner->startReturn();
                         continue;
                     }
