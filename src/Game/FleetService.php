@@ -299,13 +299,26 @@ final readonly class FleetService
      * Planets of a player on vacation can't be attacked – except invaded planets that
      * don't fully belong to him yet. Spying on them is allowed.
      */
-    private function vacationProtects(?Planet $target): ?TranslatableInterface
+    private function vacationProtects(?Planet $target, ?\DateTimeImmutable $launchedAt = null): ?TranslatableInterface
     {
         if (null === $target || !$target->getOwner()->isOnVacation($this->now()) || $target->isIntegrating($this->now())) {
             return null;
         }
+        // An attack that was already flying when the vacation began still strikes: going on
+        // vacation is no way to dodge an attack on its way.
+        $since = $target->getOwner()->getVacationSince();
+        if (null !== $launchedAt && null !== $since && $since > $launchedAt) {
+            return null;
+        }
 
         return t('{player} ist im Urlaub bis {value} – seine Planeten sind so lange geschützt.', ['{player}' => $target->getOwner()->getUsername(), '{value}' => $this->localTime($target->getOwner()->getVacationUntil())]);
+    }
+
+    /** Whether the player's fleets may wait at this planet without the 24 hour limit (own, alliance, bond, protection contract). */
+    private function mayStayAt(User $player, Planet $planet): bool
+    {
+        return ($this->diplomacy?->mayStay($player, $planet->getOwner()) ?? ($player->isSameAs($planet->getOwner()) || $player->isAllyOf($planet->getOwner())))
+            || ($this->contracts?->protects($player, $planet) ?? false);
     }
 
     /** Alliance mates and partners of a bond or non-aggression pact are no targets. */
@@ -1515,6 +1528,15 @@ final readonly class FleetService
                 return;
 
             case FleetMission::Station:
+                // The planet changed hands while the ships were underway (e.g. invaded): they land
+                // anyway and wait there – without permission to stay they have to leave within 24
+                // hours, and a station flight only paid the way out.
+                if (!$fleet->isNamed() && null !== $target && !$this->mayStayAt($player, $target)) {
+                    $fleet->settleAtTarget();
+                    $this->inbox->send($player, t('{name} bei {player} gelandet', ['{name}' => $name, '{player}' => $target->getOwner()->getUsername()]), t('{name} [{coords}] gehört inzwischen {player}. {fleet} ist trotzdem gelandet und wartet dort – ohne Allianz oder Bündnis darf sie höchstens 24 Stunden bleiben. Für den Heimflug braucht sie Treibstoff und Proviant aus ihrer Ladung; reicht das nicht, sitzt sie fest und verliert jeden Tag 10 % ihrer Schiffe.', ['{name}' => $target->getName(), '{coords}' => $target->getCoordinates(), '{player}' => $target->getOwner()->getUsername(), '{fleet}' => $name]));
+
+                    return;
+                }
                 if ($fleet->isNamed()) {
                     $fleet->settleAtTarget();
                     // At an own planet the cargo goes into its storage.
@@ -1525,7 +1547,10 @@ final readonly class FleetService
                         $fleet->setCargo(new Resources());
                         $delivered = new Lines([t("\nDie Ladung wurde ins Lager von {planet} gebracht:", ['{planet}' => $target->getName()]), $this->formatResources($cargo)]);
                     }
-                    $this->inbox->send($player, t('{name} auf {where} stationiert', ['{name}' => $name, '{where}' => $where]), new Lines([t('{name} ist eingetroffen und wartet dort auf neue Befehle.', ['{name}' => $name]), $delivered]));
+                    $limit = null !== $target && !$this->mayStayAt($player, $target)
+                        ? t("\nAchtung: Ohne Allianz oder Bündnis mit {player} darf sie dort höchstens 24 Stunden bleiben. Für den Heimflug braucht sie Treibstoff und Proviant aus ihrer Ladung; reicht das nicht, sitzt sie fest und verliert jeden Tag 10 % ihrer Schiffe.", ['{player}' => $target->getOwner()->getUsername()])
+                        : null;
+                    $this->inbox->send($player, t('{name} auf {where} stationiert', ['{name}' => $name, '{where}' => $where]), new Lines([t('{name} ist eingetroffen und wartet dort auf neue Befehle.', ['{name}' => $name]), $delivered, $limit]));
 
                     return;
                 }
@@ -1673,7 +1698,7 @@ final readonly class FleetService
                     $this->inbox->send($player, t('Angriff auf {where} abgebrochen', ['{where}' => $where]), t('Das Ziel ist kein gegnerischer Planet mehr (eigener Planet, Allianz, Bündnis oder Nichtangriffspakt). {name} kehrt zurück.', ['{name}' => $name]));
                     break;
                 }
-                if (null !== $reason = $this->attackBans?->refusal() ?? $this->vacationProtects($target) ?? NewbieProtection::refusal(FleetMission::Attack, $player, $target)) {
+                if (null !== $reason = $this->attackBans?->refusal() ?? $this->vacationProtects($target, $fleet->getDepartAt()) ?? NewbieProtection::refusal(FleetMission::Attack, $player, $target)) {
                     $this->inbox->send($player, t('Angriff auf {where} abgebrochen', ['{where}' => $where]), t('{reason} {name} kehrt zurück.', ['{reason}' => $reason, '{name}' => $name]));
                     break;
                 }

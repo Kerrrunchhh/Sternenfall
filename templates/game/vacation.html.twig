@@ -10,7 +10,7 @@
             <p class="warning">{{ 'Die Spielleitung hat dich in den Urlaub geschickt'|trans }}{% if player.vacationReason %}: {{ player.vacationReason }}{% endif %}.</p>
         {% endif %}
         <p>{{ 'Der Urlaub endet am <strong>{vacationUntil}</strong> – in {vacationUntil2}.'|trans({'{vacationUntil}': (player.vacationUntil|date('d.m.Y H:i'))|e, '{vacationUntil2}': ui.countdown(player.vacationUntil, now)})|raw }}</p>
-        <p class="muted small">{{ 'Bis dahin ruht alles: keine Produktion, kein Bau, keine Forschung, keine Flotten. Deine Planeten können nicht angegriffen werden – außer invadierten Planeten, die dir noch nicht ganz gehören –, ausspionieren können andere sie aber schon.'|trans }}</p>
+        <p class="muted small">{{ 'Bis dahin ruht alles: keine Produktion, kein Bau, keine Forschung, keine Flotten. Deine Planeten können nicht angegriffen werden – außer invadierten Planeten, die dir noch nicht ganz gehören, und durch Angriffe, die beim Urlaubsbeginn schon unterwegs waren –, ausspionieren können andere sie aber schon.'|trans }}</p>
         <p class="small">{{ 'Möglich sind:'|trans }} <a href="{{ path('app_mail') }}">{{ 'Post'|trans }}</a>, <a href="{{ path('app_tickers') }}">{{ 'Ticker</a>, das schwarze Brett,'|trans|raw }} <a href="{{ path('app_galaxy') }}">{{ 'Galaxie'|trans }}</a>, <a href="{{ path('app_alliance') }}">{{ 'Allianz'|trans }}</a>, <a href="{{ path('app_diplomacy') }}">{{ 'Diplomatie'|trans }}</a>, <a href="{{ path('app_messages') }}">{{ 'Nachrichten</a> und'|trans|raw }} <a href="{{ path('app_notes') }}">{{ 'Notizblock'|trans }}</a>.</p>
         {% if can_end_at %}
             {% if can_end_at <= now %}

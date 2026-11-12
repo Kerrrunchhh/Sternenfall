@@ -8,7 +8,7 @@
     <section class="panel" id="urlaub">
         <h2>{{ '🌴 Urlaubsmodus'|trans }}</h2>
         <p class="muted small">
-            {{ 'Im Urlaub ruht alles: keine Produktion, kein Bau, keine Forschung, keine Flotten. Deine Planeten können nicht angegriffen werden – außer invadierten Planeten, die dir noch nicht ganz gehören –, ausspioniert werden aber schon. Schreiben, lesen und schauen geht weiter: Post, Ticker, schwarzes Brett, Galaxie, Allianz und Diplomatie. Urlaub dauert {vacation_min} bis {vacation_max} Tage; Kommazahlen sind erlaubt (2,5 Tage = 60 Stunden), so endet er genau zu deiner Wunschzeit. Vorzeitig beenden kannst du ihn frühestens nach einem Tag. Alle Flotten müssen gelandet sein.'|trans({'{vacation_min}': vacation_min|num, '{vacation_max}': vacation_max|num}) }}
+            {{ 'Im Urlaub ruht alles: keine Produktion, kein Bau, keine Forschung, keine Flotten. Deine Planeten können nicht angegriffen werden – außer invadierten Planeten, die dir noch nicht ganz gehören, und durch Angriffe, die beim Urlaubsbeginn schon unterwegs waren –, ausspioniert werden aber schon. Schreiben, lesen und schauen geht weiter: Post, Ticker, schwarzes Brett, Galaxie, Allianz und Diplomatie. Urlaub dauert {vacation_min} bis {vacation_max} Tage; Kommazahlen sind erlaubt (2,5 Tage = 60 Stunden), so endet er genau zu deiner Wunschzeit. Vorzeitig beenden kannst du ihn frühestens nach einem Tag. Alle Flotten müssen gelandet sein.'|trans({'{vacation_min}': vacation_min|num, '{vacation_max}': vacation_max|num}) }}
         </p>
         <form method="post" action="{{ path('app_account_vacation') }}" class="inline-action">
             <input type="hidden" name="_token" value="{{ csrf_token('account') }}">
