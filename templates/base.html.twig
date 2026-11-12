@@ -7,6 +7,27 @@
             {# Google AdSense (site verification and ads); extended accounts see no ads. #}
             <meta name="google-adsense-account" content="{{ adsense_client }}">
             <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={{ adsense_client|url_encode }}" crossorigin="anonymous"></script>
+            {# Google's consent message (EU privacy, set up in AdSense), loaded directly so it also works while the site is reviewed. #}
+            <script async src="https://fundingchoicesmessages.google.com/i/{{ adsense_client|replace({'ca-': ''})|url_encode }}?ers=1"></script>
+            <script>
+                (function signalGooglefcPresent() {
+                    if (window.frames.googlefcPresent) { return; }
+                    if (!document.body) { setTimeout(signalGooglefcPresent, 0); return; }
+                    var iframe = document.createElement('iframe');
+                    iframe.style.cssText = 'width:0;height:0;border:none;z-index:-1000;left:-1000px;top:-1000px;display:none';
+                    iframe.name = 'googlefcPresent';
+                    document.body.appendChild(iframe);
+                })();
+                // "Datenschutzeinstellungen": reopen the consent message; if Google's script is not there (still loading, ad blocker), show the privacy notice instead.
+                window.openPrivacySettings = function (link) {
+                    var shown = false;
+                    window.googlefc = window.googlefc || {};
+                    googlefc.callbackQueue = googlefc.callbackQueue || [];
+                    googlefc.callbackQueue.push(function () { shown = true; googlefc.showRevocationMessage(); });
+                    setTimeout(function () { if (!shown) { window.location.href = link.href; } }, 1500);
+                    return false;
+                };
+            </script>
         {% endif %}
         <title>{% block title %}{{ game_name }}{% endblock %}</title>
         {# For search engines and link previews. Only the public pages of SeoController::PAGES are indexed. #}

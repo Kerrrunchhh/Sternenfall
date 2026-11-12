@@ -807,3 +807,5 @@ tr.suspicious-strong td { background: rgba(255, 138, 128, .08); }
 .about-faq dt { font-weight: 600; margin-top: .8rem; }
 .about-faq dd { margin: .2rem 0 0; color: var(--muted); }
 .about-cta { margin: 2rem 0 1rem; display: flex; flex-wrap: wrap; gap: .6rem; justify-content: center; }
+.slot-info { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--ok); cursor: help; }
+.slot-info.slot-full { color: var(--muted); }

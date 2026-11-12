@@ -2412,3 +2412,8 @@
 "Jetzt kostenlos spielen": "Play for free now"
 "{label} muss heim": "{label} has to go home"
 "{label} darf nicht mehr auf {name} [{coords}] von {player} bleiben – ihr seid nicht mehr in einer Allianz und habt kein Bündnis. Sie fliegt in 24 Stunden von selbst heim, wenn du sie nicht vorher wegschickst.": "{label} may no longer stay on {name} [{coords}] of {player} – you are no longer in one alliance and have no pact. It flies home by itself in 24 hours unless you send it away before."
+"Planetenplätze: {used} von {total} belegt (verschweißte zählen einzeln){underway}. Mehr Plätze gibt die Kolonisationstechnik.": "Planet slots: {used} of {total} taken (welded ones count one by one){underway}. Colonization technology gives more."
+"{count} Kolonieschiff(e) unterwegs": "{count} colony ship(s) on the way"
+"{free} frei": "{free} free"
+"🪐 Planetenplätze: <strong>{used} von {total}</strong> belegt{underway} – <strong>{free} frei</strong>. Verschweißte Planeten zählen einzeln; mehr Plätze gibt die <a href=\"{research}\">Kolonisationstechnik</a>.": "🪐 Planet slots: <strong>{used} of {total}</strong> taken{underway} – <strong>{free} free</strong>. Welded planets count one by one; <a href=\"{research}\">colonization technology</a> gives more."
+"Nach Anzahl Planeten sortieren (verschweißte zählen einzeln)": "Sort by number of planets (welded ones count one by one)"

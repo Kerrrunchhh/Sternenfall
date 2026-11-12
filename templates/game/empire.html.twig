@@ -13,6 +13,9 @@
 {% block content %}
     <h1>{{ 'Alle Planeten'|trans }}</h1>
     <p class="muted small">{{ 'Ein Klick auf den Namen wählt den Planeten aus. Die Summen stehen jeweils in der letzten Zeile.'|trans }}</p>
+    {% if planet_slots|default(null) %}
+        <p class="panel empire-slots">{{ '🪐 Planetenplätze: <strong>{used} von {total}</strong> belegt{underway} – <strong>{free} frei</strong>. Verschweißte Planeten zählen einzeln; mehr Plätze gibt die <a href="{research}">Kolonisationstechnik</a>.'|trans({'{used}': planet_slots.used, '{total}': planet_slots.total, '{free}': planet_slots.free, '{underway}': planet_slots.underway > 0 ? ', ' ~ ('{count} Kolonieschiff(e) unterwegs'|trans({'{count}': planet_slots.underway})) : '', '{research}': path('app_research')|e})|raw }}</p>
+    {% endif %}
 
     {% if player.researching %}
         <p class="panel empire-research">{{ '🔬 Forschung: <strong>{research} → Stufe {level}</strong>, fertig in {countdown}'|trans({'{research}': player.researchType.label|trans|e, '{level}': player.researchTargetLevel, '{countdown}': ui.countdown(player.researchFinishesAt, now)})|raw }}</p>

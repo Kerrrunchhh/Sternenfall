@@ -65,6 +65,20 @@ final class HighscoresTest extends TestCase
         self::assertEqualsWithDelta($this->users[0]->getCredits() + $this->users[2]->getCredits(), $alliances[0]['credits'], 0.001);
     }
 
+    public function testPlayersAndAlliancesSortByPlanetsWeldedOnesCountSingly(): void
+    {
+        // Carla gets a second planet, Dora a fusion of three.
+        new \App\Entity\Planet($this->users[2], 'Zweiter', 5, 5, 5, $this->now);
+        $fusion = new \App\Entity\Planet($this->users[3], 'Fusion', 6, 6, 1, $this->now);
+        (new \ReflectionProperty(\App\Entity\Planet::class, 'fusionSize'))->setValue($fusion, 3);
+        $scores = $this->highscores();
+
+        $rows = $scores->players(Highscores::BY_PLANETS);
+        self::assertSame(['Dora', 'Carla', 'Bert', 'Anna'], $this->names($rows), 'ties fall back to points');
+        self::assertSame([4, 2, 1, 1], array_column($rows, 'planets'));
+        self::assertSame(3, $scores->alliances(Highscores::BY_PLANETS)[0]['planets'], 'Orden: Anna 1 + Carla 2');
+    }
+
     public function testAlliancesAddUpTheirMembers(): void
     {
         $rows = $this->highscores()->alliances(Highscores::BY_EXPERIENCE);

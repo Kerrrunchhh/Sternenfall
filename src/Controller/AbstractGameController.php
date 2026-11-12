@@ -60,11 +60,29 @@ abstract class AbstractGameController extends AbstractController
 
     private \App\Game\AttackBans $attackBans;
 
+    private \App\Repository\FleetRepository $fleetRepository;
+
     #[Required]
-    public function setNewsRepository(NewsRepository $newsRepository, \App\Game\AttackBans $attackBans): void
+    public function setNewsRepository(NewsRepository $newsRepository, \App\Game\AttackBans $attackBans, \App\Repository\FleetRepository $fleetRepository): void
     {
         $this->newsRepository = $newsRepository;
         $this->attackBans = $attackBans;
+        $this->fleetRepository = $fleetRepository;
+    }
+
+    /**
+     * Planet slots: allowed by the colonization research, taken by the planets (welded ones count
+     * one by one, freshly invaded ones more) and by colony ships on their way.
+     *
+     * @return array{total: int, used: int, underway: int, free: int}
+     */
+    protected function planetSlots(User $player): array
+    {
+        $total = $this->economy->colonySlots($player);
+        $used = Economy::ownedSlots($player, \DateTimeImmutable::createFromInterface($this->clock->now()));
+        $underway = $this->fleetRepository->countColonyShipsUnderway($player);
+
+        return ['total' => $total, 'used' => $used, 'underway' => $underway, 'free' => max(0, $total - $used - $underway)];
     }
 
     #[Required]
@@ -222,6 +240,7 @@ abstract class AbstractGameController extends AbstractController
             'unread_news' => $this->newsRepository->findUnreadFor($planet->getOwner()),
             // A general attack ban by the admins is shown on every page.
             'attack_ban' => $this->attackBans->current(),
+            'planet_slots' => $this->planetSlots($planet->getOwner()),
             'now' => $this->clock->now(),
         ];
     }

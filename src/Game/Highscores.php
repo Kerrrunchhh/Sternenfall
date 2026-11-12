@@ -7,7 +7,7 @@ use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Rankings of players and alliances by points, combat experience or credits (traders like
+ * Rankings of players and alliances by points, combat experience, credits (traders like
  * to compare those), optionally only one life form. An alliance counts the sums of its members.
  */
 final readonly class Highscores
@@ -15,28 +15,29 @@ final readonly class Highscores
     public const string BY_POINTS = 'points';
     public const string BY_EXPERIENCE = 'experience';
     public const string BY_CREDITS = 'credits';
+    public const string BY_PLANETS = 'planets';
 
     /** The sort keys, in the order they break ties. */
-    public const array SORTS = [self::BY_POINTS, self::BY_EXPERIENCE, self::BY_CREDITS];
+    public const array SORTS = [self::BY_POINTS, self::BY_EXPERIENCE, self::BY_CREDITS, self::BY_PLANETS];
 
     public function __construct(private EntityManagerInterface $em)
     {
     }
 
-    /** @return list<array{rank: int, user: User, points: int, experience: float, credits: float}> */
+    /** @return list<array{rank: int, user: User, points: int, experience: float, credits: float, planets: int}> */
     public function players(string $sort, ?LifeForm $lifeForm = null): array
     {
         $rows = [];
         foreach ($this->allPlayers() as $user) {
             if (null === $lifeForm || $user->getLifeForm() === $lifeForm) {
-                $rows[] = ['user' => $user, 'name' => $user->getUsername(), 'points' => Scoring::points($user), 'experience' => $user->getCombatExperience(), 'credits' => $user->getCredits()];
+                $rows[] = ['user' => $user, 'name' => $user->getUsername(), 'points' => Scoring::points($user), 'experience' => $user->getCombatExperience(), 'credits' => $user->getCredits(), 'planets' => self::planets($user)];
             }
         }
 
         return $this->rank($rows, $sort);
     }
 
-    /** @return list<array{rank: int, alliance: Alliance, points: int, experience: float, credits: float, members: int}> */
+    /** @return list<array{rank: int, alliance: Alliance, points: int, experience: float, credits: float, planets: int, members: int}> */
     public function alliances(string $sort, ?LifeForm $lifeForm = null): array
     {
         $rows = [];
@@ -46,10 +47,11 @@ final readonly class Highscores
                 continue;
             }
             $id = (int) $alliance->getId();
-            $rows[$id] ??= ['alliance' => $alliance, 'name' => $alliance->getName(), 'points' => 0, 'experience' => 0.0, 'credits' => 0.0, 'members' => 0];
+            $rows[$id] ??= ['alliance' => $alliance, 'name' => $alliance->getName(), 'points' => 0, 'experience' => 0.0, 'credits' => 0.0, 'planets' => 0, 'members' => 0];
             $rows[$id]['points'] += Scoring::points($user);
             $rows[$id]['experience'] += $user->getCombatExperience();
             $rows[$id]['credits'] += $user->getCredits();
+            $rows[$id]['planets'] += self::planets($user);
             ++$rows[$id]['members'];
         }
 
@@ -73,7 +75,7 @@ final readonly class Highscores
      * Sorts descending by the chosen value (then by the others, then by name) and numbers
      * the rows; equal values share a rank.
      *
-     * @template T of array{name: string, points: int, experience: float, credits: float}
+     * @template T of array{name: string, points: int, experience: float, credits: float, planets: int}
      *
      * @param list<T> $rows
      *
@@ -98,5 +100,11 @@ final readonly class Highscores
         }
 
         return $ranked;
+    }
+
+    /** Planets of a player; welded ones count one by one (a fusion of 3 is 3 planets). */
+    private static function planets(User $user): int
+    {
+        return array_sum(array_map(static fn (\App\Entity\Planet $p): int => $p->getFusionSize(), $user->getPlanets()->toArray()));
     }
 }
