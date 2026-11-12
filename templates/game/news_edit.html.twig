@@ -6,7 +6,7 @@
     <h1>{{ 'Neuigkeit bearbeiten'|trans }}</h1>
     <section class="panel">
         {{ form_start(form, {attr: {class: 'mail-form'}}) }}
-            {{ form_widget(form) }}
+            {{ include('game/_news_form.html.twig') }}
             <button class="btn" type="submit" id="news-save">{{ 'Speichern'|trans }}</button>
             <a class="btn btn-secondary" href="{{ path('app_news') }}">{{ 'Abbrechen'|trans }}</a>
         {{ form_end(form) }}

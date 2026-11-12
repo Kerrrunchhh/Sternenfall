@@ -10,7 +10,7 @@
     {% if guild_post %}
         <section class="panel guild-panel">
             <h2>{{ '🏛 Handelsgilde – {name} {coordinates}'|trans({'{name}': guild_post.name|e, '{coordinates}': ui.coords(guild_post.coordinates)})|raw }}</h2>
-            <p class="small">{{ 'Die Handelsgilde hat in der Mitte jeder Galaxie (System {system}) eine Zentralbörse. Sie kauft und verkauft jeden Rohstoff zu festen Preisen – etwas schlechter als bei Händlern, dafür immer und in jeder Menge. Schick eine Flotte mit Frachtern mit dem Auftrag „Handeln“ hin. Die Zentralbörsen können nicht angegriffen werden – Handelsstützpunkte von Spielern schon.'|trans({'{system}': guild_post.system}) }}</p>
+            <p class="small">{{ 'Die Handelsgilde hat in der Mitte jeder Galaxie (System {system}) eine Zentralbörse. Sie kauft und verkauft jeden Rohstoff zu festen Preisen – etwas schlechter als bei Händlern, dafür immer und in jeder Menge. Schick eine benannte Flotte aus Frachtern mit dem Auftrag „Handeln“ hin (leer zum Einkaufen oder mit Rohstoffen zum Verkaufen); dort wartet sie, und du handelst auf der Seite der Börse. Die Zentralbörsen können nicht angegriffen werden – Handelsstützpunkte von Spielern schon.'|trans({'{system}': guild_post.system}) }}</p>
             <table class="table">
                 <thead><tr><th>{{ 'Rohstoff'|trans }}</th><th class="num">{{ 'Gilde verkauft für'|trans }}</th><th class="num">{{ 'Gilde kauft für'|trans }}</th></tr></thead>
                 <tbody>

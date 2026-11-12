@@ -16,12 +16,12 @@ class NewsType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('title', TextType::class, ['label' => 'Titel', 'attr' => ['maxlength' => 120]])
-            ->add('body', TextareaType::class, ['label' => 'Text', 'attr' => ['rows' => 8]])
-            ->add('welcome', CheckboxType::class, [
-                'label' => 'Willkommensnachricht (sieht jeder neue Spieler)',
-                'required' => false,
-            ])
+            ->add('title', TextType::class, ['label' => 'Titel (Deutsch)', 'attr' => ['maxlength' => 120]])
+            ->add('body', TextareaType::class, ['label' => 'Text (Deutsch)', 'attr' => ['rows' => 8]])
+            ->add('titleEn', TextType::class, ['label' => 'Titel (Englisch)', 'attr' => ['maxlength' => 120, 'lang' => 'en']])
+            ->add('bodyEn', TextareaType::class, ['label' => 'Text (Englisch)', 'attr' => ['rows' => 8, 'lang' => 'en']])
+            // Rendered by hand next to its explanation (templates/game/_news_form.html.twig).
+            ->add('welcome', CheckboxType::class, ['label' => false, 'required' => false])
         ;
     }
 

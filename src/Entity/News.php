@@ -30,6 +30,16 @@ class News
     #[Assert\Length(max: 20000)]
     private string $body = '';
 
+    #[ORM\Column(length: 120, nullable: true)]
+    #[Assert\NotBlank(message: 'Gib auch einen englischen Titel ein.')]
+    #[Assert\Length(max: 120)]
+    private ?string $titleEn = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Assert\NotBlank(message: 'Schreib die Neuigkeit auch auf Englisch.')]
+    #[Assert\Length(max: 20000)]
+    private ?string $bodyEn = null;
+
     /** Shown to every new player as his welcome message. */
     #[ORM\Column]
     private bool $welcome = false;
@@ -50,6 +60,22 @@ class News
     public function setTitle(?string $title): void { $this->title = trim((string) $title); }
     public function getBody(): string { return $this->body; }
     public function setBody(?string $body): void { $this->body = trim((string) $body); }
+    public function getTitleEn(): ?string { return $this->titleEn; }
+    public function setTitleEn(?string $title): void { $this->titleEn = '' === trim((string) $title) ? null : trim((string) $title); }
+    public function getBodyEn(): ?string { return $this->bodyEn; }
+    public function setBodyEn(?string $body): void { $this->bodyEn = '' === trim((string) $body) ? null : trim((string) $body); }
+
+    /** Title in the reader's language (German if there is no English one yet). */
+    public function titleIn(string $locale): string
+    {
+        return 'en' === $locale && null !== $this->titleEn ? $this->titleEn : $this->title;
+    }
+
+    public function bodyIn(string $locale): string
+    {
+        return 'en' === $locale && null !== $this->bodyEn ? $this->bodyEn : $this->body;
+    }
+
     public function isWelcome(): bool { return $this->welcome; }
     public function setWelcome(bool $welcome): void { $this->welcome = $welcome; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }

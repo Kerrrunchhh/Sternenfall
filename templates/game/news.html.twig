@@ -17,7 +17,7 @@
         <details class="panel news-compose" {{ form.vars.submitted ? 'open' }}>
             <summary>{{ '✍ Neuigkeit verfassen'|trans }}</summary>
             {{ form_start(form, {attr: {class: 'mail-form'}}) }}
-                {{ form_widget(form) }}
+                {{ include('game/_news_form.html.twig') }}
                 <button class="btn" type="submit" id="news-create">{{ 'Veröffentlichen'|trans }}</button>
             {{ form_end(form) }}
         </details>
@@ -31,7 +31,7 @@
                 <a href="{{ path('app_news_edit', {id: n.id}) }}">{{ 'Bearbeiten'|trans }}</a>
                 <form method="post" action="{{ path('app_news_delete', {id: n.id}) }}" class="inline">
                     <input type="hidden" name="_token" value="{{ csrf_token('news') }}">
-                    <button class="link-button" type="submit" data-confirm="{{ 'Neuigkeit „{title}“ löschen?'|trans({'{title}': n.title}) }}" data-confirm-label="{{ 'Löschen'|trans }}">{{ 'Löschen'|trans }}</button>
+                    <button class="link-button" type="submit" data-confirm="{{ 'Neuigkeit „{title}“ löschen?'|trans({'{title}': n.titleIn(app.request.locale)}) }}" data-confirm-label="{{ 'Löschen'|trans }}">{{ 'Löschen'|trans }}</button>
                 </form>
             </div>
         {% endif %}

@@ -813,3 +813,5 @@ tr.suspicious-strong td { background: rgba(255, 138, 128, .08); }
 .research-leaders td { white-space: nowrap; }
 .research-leaders thead th { text-align: left; }
 .guild-panel { border-color: var(--accent-2); }
+.news-welcome { display: inline-flex; align-items: center; gap: .4rem; margin: .75rem 0 0; color: var(--text); }
+.mail-form .news-welcome { flex-direction: row; align-self: flex-start; justify-content: flex-start; width: auto; }

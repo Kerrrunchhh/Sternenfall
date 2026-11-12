@@ -1,0 +1,8 @@
+{# The fields of a news item for admins. Needs: form (NewsType) #}
+{{ form_row(form.title) }}
+{{ form_row(form.body) }}
+{{ form_row(form.titleEn) }}
+{{ form_row(form.bodyEn) }}
+<label class="inline-check news-welcome">{{ form_widget(form.welcome) }} {{ 'Willkommensnachricht'|trans }}</label>
+<p class="muted small">{{ 'Alle Spieler sehen sie als ungelesen – die schon dabei sind und jeder, der neu dazukommt. Normale Neuigkeiten sehen nur Spieler als ungelesen, die schon vor der Veröffentlichung dabei waren.'|trans }}</p>
+{{ form_rest(form) }}

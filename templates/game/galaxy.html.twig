@@ -101,7 +101,7 @@
                                 {% if treaty %}<span class="muted small" title="{{ treaty.label|trans }}: {{ treaty.effect|trans }}">{{ treaty.icon }}</span>{% endif %}
                                 {% if may_attack(p.owner) %}<a href="{{ path('app_fleet', coords|merge({mission: 'attack'})) }}">{{ 'Angreifen'|trans }}</a>{% endif %}
                                 {% if planet_post and planet_post.accessibleTo(player) %}
-                                    <a href="{{ path('app_fleet', coords|merge({mission: 'transport'})) }}" title="{{ 'Handelsflotte hinschicken – sie wartet dort zum Handeln'|trans }}">{{ 'Handeln'|trans }}</a>
+                                    <a href="{{ path('app_fleet', coords|merge({mission: 'trade'})) }}" title="{{ 'Handelsflotte hinschicken – sie wartet dort zum Handeln'|trans }}">{{ 'Handeln'|trans }}</a>
                                 {% else %}
                                     <a href="{{ path('app_fleet', coords|merge({mission: 'transport'})) }}">{{ 'Transport'|trans }}</a>
                                 {% endif %}
@@ -114,7 +114,7 @@
                         <td>{{ ui.player(post.owner) }}</td>
                         <td class="num actions">
                             {% if post.owner.id == player.id and post.active %}<a href="{{ path('app_fleet', coords|merge({mission: 'supply'})) }}">{{ 'Beliefern'|trans }}</a>{% endif %}
-                            {% if post.accessibleTo(player) %}<a href="{{ path('app_fleet', coords|merge({mission: 'transport'})) }}" title="{{ 'Handelsflotte hinschicken (Transport oder Stationieren) – sie wartet dort zum Handeln'|trans }}">{{ 'Handeln'|trans }}</a>{% else %}<span class="muted small">{{ 'gesperrt'|trans }}</span>{% endif %}
+                            {% if post.accessibleTo(player) %}<a href="{{ path('app_fleet', coords|merge({mission: 'trade'})) }}" title="{{ 'Handelsflotte hinschicken (Transport oder Stationieren) – sie wartet dort zum Handeln'|trans }}">{{ 'Handeln'|trans }}</a>{% else %}<span class="muted small">{{ 'gesperrt'|trans }}</span>{% endif %}
                             <a href="{{ path('app_trade_post', {id: post.id}) }}">{{ 'Preise'|trans }}</a>
                         </td>
                     {% else %}

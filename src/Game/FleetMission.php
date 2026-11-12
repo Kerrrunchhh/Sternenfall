@@ -30,7 +30,7 @@ enum FleetMission: string
     /** @return list<self> missions a player can choose when sending ships */
     public static function selectable(): array
     {
-        return array_values(array_filter(self::cases(), static fn (self $m): bool => !\in_array($m, [self::Gather, self::Intercept, self::Raid, self::Hover, self::Spy, self::Trade], true)));
+        return array_values(array_filter(self::cases(), static fn (self $m): bool => !\in_array($m, [self::Gather, self::Intercept, self::Raid, self::Hover, self::Spy], true)));
     }
 
     /**
@@ -59,7 +59,7 @@ enum FleetMission: string
             self::Fuse => 'Fusionieren',
             self::Supply => 'Beliefern',
             self::Pickup => 'Rohstoffe abholen',
-            self::Trade => 'Zum Handelsstützpunkt',
+            self::Trade => 'Handeln',
             self::Attack => 'Angreifen',
             self::Salvage => 'Bergen',
             self::Intercept => 'Abfangen',
@@ -110,7 +110,7 @@ enum FleetMission: string
             self::Intercept => 'Fängt eine sichtbare angreifende Flotte kurz vor ihrem Ziel ab.',
             self::Hover => 'Die Flotte schwebt unsichtbar über ihrem Standort und landet danach wieder dort.',
             self::Raid => 'Überfällt eine sichtbare Flotte, die Rohstoffe transportiert. Ohne Bomber bleiben Transportschiffe und Ladung verschont.',
-            self::Trade => 'Fliegt zu einem Handelsstützpunkt und wartet dort. Kaufen und verkaufen kannst du dann auf der Seite des Stützpunkts (im Universum anklicken).',
+            self::Trade => 'Fliegt zu einem Handelsstützpunkt oder einer Zentralbörse der Gilde und wartet dort (nur Frachter, benannte Flotte). Kaufen und verkaufen kannst du dann auf der Seite des Stützpunkts; mitgebrachte Rohstoffe verkaufst du dort.',
         };
     }
 }

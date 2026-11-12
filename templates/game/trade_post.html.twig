@@ -89,7 +89,7 @@
         <section class="panel">
             <h2>{{ 'Handeln'|trans }}</h2>
             {% if waiting is empty %}
-                <p class="muted">{{ 'Keine deiner Flotten wartet hier. Schicke Handelsschiffe mit „Transport“ (mit Ware zum Verkaufen) oder „Stationieren“ (leer) hierher – sie warten dann am Stützpunkt.'|trans }}</p>
+                <p class="muted">{{ 'Keine deiner Flotten wartet hier. Schicke eine benannte Flotte aus Frachtern mit dem Auftrag „Handeln“ hierher (leer zum Einkaufen oder mit Rohstoffen zum Verkaufen) – sie wartet dann am Stützpunkt.'|trans }}</p>
                 <a class="btn btn-small" href="{{ path('app_fleet', {galaxy: post.galaxy, system: post.system, position: post.position, mission: 'transport'}) }}">{{ 'Flotte herschicken'|trans }}</a>
             {% else %}
                 <form method="post" action="{{ path('app_trade_post_trade', {id: post.id}) }}" class="fleet-form" data-trade-form data-credits="{{ player.credits }}" data-own="{{ own ? 1 : 0 }}">
