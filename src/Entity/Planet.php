@@ -566,6 +566,11 @@ class Planet
     /** Picture of the planet (under public/, for asset()): the fusion picture for fusions. */
     public function getPicture(): string
     {
+        // The trade guild's central systems all show its emblem.
+        if ($this->owner->isSystem() && \App\Game\TradeGuild::NAME === $this->owner->getUsername()) {
+            return 'pictures/guild/emblem.webp';
+        }
+
         return $this->isFused() ? 'pictures/planets/fusion.webp' : $this->getType()->picture();
     }
 }

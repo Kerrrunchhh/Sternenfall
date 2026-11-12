@@ -97,6 +97,23 @@ final class MarketplaceTest extends TestCase
         $this->transportRequests(taken: 0)->create($beginner, $home, new Resources(iron: 100));
     }
 
+    public function testAtMostThreeRequestsAtTheSameTime(): void
+    {
+        $beginner = new User('neu', $this->now);
+        $home = new Planet($beginner, 'Heim', 1, 1, 1, $this->now);
+        $connection = $this->createStub(Connection::class);
+        $connection->method('executeStatement')->willReturn(1);
+        $em = $this->createStub(EntityManagerInterface::class);
+        $em->method('getConnection')->willReturn($connection);
+        $requests = $this->createStub(TransportRequestRepository::class);
+        $requests->method('countActive')->willReturn(TransportRequests::MAX_ACTIVE);
+        $service = new TransportRequests($em, $requests, $this->inbox(), new MockClock($this->now));
+
+        $this->expectException(GameException::class);
+        $this->expectExceptionMessage('Transportgesuche laufen');
+        $service->create($beginner, $home, new Resources(iron: 100));
+    }
+
     public function testCancelOnlyWhileOpen(): void
     {
         $beginner = new User('neu', $this->now);

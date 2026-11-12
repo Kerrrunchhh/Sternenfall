@@ -5,7 +5,11 @@
 
 {% block content %}
     <section class="panel profile">
-        {{ ui.picture(profile.avatar, 'avatars', profile.username) }}
+        {% if profile.system and profile.username == constant('App\\Game\\TradeGuild::NAME') %}
+            <img class="picture picture-large" src="{{ asset('pictures/guild/emblem.webp') }}" alt="{{ profile.username }}" width="128" height="128">
+        {% else %}
+            {{ ui.picture(profile.avatar, 'avatars', profile.username) }}
+        {% endif %}
         <div class="profile-info">
             <h1>{{ profile.lifeForm.icon }} {{ profile.username }}</h1>
             <p class="muted">
@@ -24,7 +28,12 @@
                     ? '🛡 Du stehst unter Noobschutz: Niemand darf dich angreifen, bei dir stationieren oder dir Rohstoffe schicken – bis du einen zweiten Planeten oder ein Flottenkontrollzentrum hast.'|trans
                     : '🛡 Noobschutz: {player} darf weder angegriffen werden noch Schiffe oder Rohstoffe von anderen bekommen, solange er nur einen Planeten und kein Flottenkontrollzentrum hat.'|trans({'{player}': profile.username}) }}</p>
             {% endif %}
-            {% if profile.profileText %}
+            {% if profile.system %}
+                {# The game's own accounts describe themselves. #}
+                <div class="message-body">{{ profile.username == constant('App\\Game\\TradeGuild::NAME')
+                    ? 'Die Handelsgilde ist der Händler des Spiels. In der Mitte jeder Galaxie gehört ihr das ganze System 250 mit einer Zentralbörse. Dort kauft und verkauft sie jeden Rohstoff zu festen Preisen – immer und in jeder Menge. Außerdem verkauft sie Fusionatoren und liefert Transportgesuche, die nach zwei Stunden noch kein Händler angenommen hat. Ihre Zentralbörsen können nicht angegriffen werden. Preise und die Börse deiner Galaxie findest du unter „Handel“.'|trans
+                    : 'Hier landen die Planeten von Spielern, die ihr Konto gelöscht haben. Sie stehen leer und herrenlos im Universum – mit allem, was noch auf ihnen liegt.'|trans }}</div>
+            {% elseif profile.profileText %}
                 <div class="message-body">{{ profile.profileText }}</div>
             {% else %}
                 <p class="muted">{{ own ? ('Du hast noch nichts über dich geschrieben.'|trans) : profile.username ~ (' ' ~ 'hat noch nichts über sich geschrieben.'|trans) }}</p>
@@ -35,7 +44,10 @@
                     <a class="btn btn-secondary" href="{{ path('app_extended') }}" id="profile-extended">{{ player.isExtended(now) ? '✨ Erweitert' : '✨ Erweitern' }}</a>
                 </div>
             {% endif %}
-            {% if not own %}
+            {# The trade guild and the other system accounts are no players to write to, report or put a bounty on. #}
+            {% if profile.system %}
+                <p class="muted small">{{ 'Dieses Konto gehört zum Spiel und wird nicht von einem Spieler geführt.'|trans }}</p>
+            {% elseif not own %}
                 <div class="profile-actions">
                     <a class="btn" href="{{ path('app_mail_compose', {to: profile.username}) }}" id="profile-write">{{ '✉ Nachricht schreiben'|trans }}</a>
                     <a class="btn btn-secondary" href="{{ path('app_contracts', {bounty: profile.username}) }}#kopfgeld" id="profile-bounty">{{ '💀 Kopfgeld aussetzen'|trans }}</a>

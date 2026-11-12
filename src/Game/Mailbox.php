@@ -43,6 +43,9 @@ final readonly class Mailbox
         if ($recipient->isSameAs($sender)) {
             throw new GameException(t('Du kannst dir nicht selbst schreiben.'));
         }
+        if ($recipient->isSystem()) {
+            throw new GameException(t('{player} ist kein Spieler – Post kommt dort nicht an.', ['{player}' => $recipient->getUsername()]));
+        }
         $subject = trim($subject);
         $body = trim($body);
         if ('' === $body) {

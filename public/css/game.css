@@ -815,3 +815,6 @@ tr.suspicious-strong td { background: rgba(255, 138, 128, .08); }
 .guild-panel { border-color: var(--accent-2); }
 .news-welcome { display: inline-flex; align-items: center; gap: .4rem; margin: .75rem 0 0; color: var(--text); }
 .mail-form .news-welcome { flex-direction: row; align-self: flex-start; justify-content: flex-start; width: auto; }
+.guild-banner { display: block; width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--border); margin: .5rem 0 1rem; }
+.guild-panel th { text-align: left; }
+.guild-panel th.num { text-align: right; }

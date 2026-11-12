@@ -5,6 +5,7 @@
 
 {% block content %}
     <h1>⚖ {{ post.name }} <small>{{ ui.coords(post.coordinates) }}</small></h1>
+    {% if post.owner.system %}<img class="guild-banner" src="{{ asset('pictures/guild/exchange' ~ (app.request.locale == 'en' ? '-en') ~ '.webp') }}" alt="{{ 'Zentralbörse der Handelsgilde'|trans }}" width="960" height="524">{% endif %}
     <p class="muted">
         {{ 'Handelsstützpunkt von {owner} ·'|trans({'{owner}': ui.player(post.owner)})|raw }}
         {% if not post.active %}{{ 'aufgegeben – nur der Besitzer kann die Ware noch abholen'|trans }}
@@ -74,7 +75,7 @@
             {% for good in goods %}
                 {% set resource = true %}
                 <tr>
-                    <td>{{ good|good_label }}</td>
+                    <td>{{ good|good_label|trans }}</td>
                     <td class="num">{{ post.owner.system ? ('unbegrenzt'|trans) : post.stock(good)|num }}</td>
                     <td class="num">{{ post.price(good) > 0 ? post.price(good)|num(2) : '–' }}</td>
                     <td class="num">{{ resource and post.buyPrice(good) > 0 and post.buyLimit(good) > 0 ? post.buyPrice(good)|num(2) : '–' }}</td>
@@ -110,11 +111,11 @@
                             {% set can_sell = resource and (own or (post.buyPrice(good) > 0 and post.buyLimit(good) > 0)) %}
                             {% if can_buy or can_sell %}
                                 <tr>
-                                    <td>{{ good|good_label }}</td>
-                                    <td class="num">{% if can_buy %}<input type="number" name="buy[{{ good }}]" min="0" max="{{ post.stock(good)|round(0, 'floor') }}" value="0" aria-label="{{ '{good} kaufen'|trans({'{good}': good|good_label}) }}" class="short"
+                                    <td>{{ good|good_label|trans }}</td>
+                                    <td class="num">{% if can_buy %}<input type="number" name="buy[{{ good }}]" min="0" max="{{ post.stock(good)|round(0, 'floor') }}" value="0" aria-label="{{ '{good} kaufen'|trans({'{good}': good|good_label|trans}) }}" class="short"
                                             data-buy-good="{{ good }}" data-stock="{{ post.stock(good)|round(0, 'floor') }}" data-price="{{ own ? 0 : post.price(good) }}" data-cargo="{{ resource ? 1 : 0 }}">
                                         <button type="button" class="btn btn-small btn-secondary" data-buy-max title="{{ 'So viel, wie Frachtraum, Lager und Credits erlauben'|trans }}">{{ 'max'|trans }}</button>{% else %}–{% endif %}</td>
-                                    <td class="num">{% if can_sell %}<input type="number" name="sell[{{ good }}]" min="0" value="0" data-sell-good="{{ good }}" aria-label="{{ '{good} verkaufen'|trans({'{good}': good|good_label}) }}" class="short">{% else %}–{% endif %}</td>
+                                    <td class="num">{% if can_sell %}<input type="number" name="sell[{{ good }}]" min="0" value="0" data-sell-good="{{ good }}" aria-label="{{ '{good} verkaufen'|trans({'{good}': good|good_label|trans}) }}" class="short">{% else %}–{% endif %}</td>
                                 </tr>
                             {% endif %}
                         {% endfor %}
@@ -148,10 +149,10 @@
                     {% for good in goods %}
                         {% set resource = true %}
                         <tr>
-                            <td>{{ good|good_label }}</td>
-                            <td class="num"><input type="number" name="prices[{{ good }}]" min="0" step="0.01" value="{{ post.price(good) }}" class="short" aria-label="{{ 'Verkaufspreis {good}'|trans({'{good}': good|good_label}) }}"></td>
-                            <td class="num">{% if resource %}<input type="number" name="buy_prices[{{ good }}]" min="0" step="0.01" value="{{ post.buyPrice(good) }}" class="short" aria-label="{{ 'Ankaufspreis {good}'|trans({'{good}': good|good_label}) }}">{% else %}–{% endif %}</td>
-                            <td class="num">{% if resource %}<input type="number" name="buy_limits[{{ good }}]" min="0" step="1" value="{{ post.buyLimit(good)|round(0, 'floor') }}" class="short" aria-label="{{ 'Ankaufsmenge {good}'|trans({'{good}': good|good_label}) }}">{% else %}–{% endif %}</td>
+                            <td>{{ good|good_label|trans }}</td>
+                            <td class="num"><input type="number" name="prices[{{ good }}]" min="0" step="0.01" value="{{ post.price(good) }}" class="short" aria-label="{{ 'Verkaufspreis {good}'|trans({'{good}': good|good_label|trans}) }}"></td>
+                            <td class="num">{% if resource %}<input type="number" name="buy_prices[{{ good }}]" min="0" step="0.01" value="{{ post.buyPrice(good) }}" class="short" aria-label="{{ 'Ankaufspreis {good}'|trans({'{good}': good|good_label|trans}) }}">{% else %}–{% endif %}</td>
+                            <td class="num">{% if resource %}<input type="number" name="buy_limits[{{ good }}]" min="0" step="1" value="{{ post.buyLimit(good)|round(0, 'floor') }}" class="short" aria-label="{{ 'Ankaufsmenge {good}'|trans({'{good}': good|good_label|trans}) }}">{% else %}–{% endif %}</td>
                         </tr>
                     {% endfor %}
                 </table>

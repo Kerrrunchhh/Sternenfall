@@ -75,7 +75,10 @@
     </section>
 
     <section class="panel">
-        <h2>{{ 'Neues Gesuch'|trans }}</h2>
+        <h2>{{ 'Neues Gesuch'|trans }} <small class="muted">{{ '{active} von {max} laufen'|trans({'{active}': active_requests, '{max}': max_active}) }}</small></h2>
+        {% if active_requests >= max_active %}
+            <p class="muted">{{ 'Du hast schon {max} Transportgesuche laufen. Ein neues geht erst, wenn eines geliefert oder zurückgezogen ist.'|trans({'{max}': max_active}) }}</p>
+        {% else %}
         <form method="post" action="{{ path('app_transport_request_create') }}" class="mail-form" data-transport-offer data-resources-per-credit="{{ resources_per_credit }}">
             <input type="hidden" name="_token" value="{{ csrf_token('transport_requests') }}">
             <label>{{ 'Lieferung an'|trans }}
@@ -91,5 +94,6 @@
             <p class="muted small">{{ 'Summe: <span data-goods-total>0</span> von {max_load} · Preis: <strong><span data-offer-hint>0</span> Credits</strong>'|trans({'{max_load}': max_load|num|e})|raw }}</p>
             <button class="btn" type="submit" id="transport-request-create">{{ 'Gesuch einstellen'|trans }}</button>
         </form>
+        {% endif %}
     </section>
 {% endblock %}

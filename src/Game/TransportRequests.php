@@ -44,10 +44,16 @@ final readonly class TransportRequests
         return (int) ceil($amount / self::RESOURCES_PER_CREDIT);
     }
 
+    /** Requests a player may have running at the same time (open or on their way). */
+    public const int MAX_ACTIVE = 3;
+
     public function create(User $requester, Planet $planet, Resources $goods): TransportRequest
     {
         if (!$planet->getOwner()->isSameAs($requester)) {
             throw new GameException(t('Transportgesuche gibt es nur für deine eigenen Planeten.'));
+        }
+        if ($this->requests->countActive($requester) >= self::MAX_ACTIVE) {
+            throw new GameException(t('Du hast schon {max} Transportgesuche laufen. Ein neues geht erst, wenn eines geliefert oder zurückgezogen ist.', ['{max}' => self::MAX_ACTIVE]));
         }
         foreach (ResourceType::cases() as $type) {
             if ($goods->get($type) < 0) {

@@ -9,13 +9,14 @@
 
     {% if guild_post %}
         <section class="panel guild-panel">
+            <img class="guild-banner" src="{{ asset('pictures/guild/exchange' ~ (app.request.locale == 'en' ? '-en') ~ '.webp') }}" alt="{{ 'Zentralbörse der Handelsgilde'|trans }}" width="960" height="524" loading="lazy">
             <h2>{{ '🏛 Handelsgilde – {name} {coordinates}'|trans({'{name}': guild_post.name|e, '{coordinates}': ui.coords(guild_post.coordinates)})|raw }}</h2>
             <p class="small">{{ 'Die Handelsgilde hat in der Mitte jeder Galaxie (System {system}) eine Zentralbörse. Sie kauft und verkauft jeden Rohstoff zu festen Preisen – etwas schlechter als bei Händlern, dafür immer und in jeder Menge. Schick eine benannte Flotte aus Frachtern mit dem Auftrag „Handeln“ hin (leer zum Einkaufen oder mit Rohstoffen zum Verkaufen); dort wartet sie, und du handelst auf der Seite der Börse. Die Zentralbörsen können nicht angegriffen werden – Handelsstützpunkte von Spielern schon.'|trans({'{system}': guild_post.system}) }}</p>
             <table class="table">
                 <thead><tr><th>{{ 'Rohstoff'|trans }}</th><th class="num">{{ 'Gilde verkauft für'|trans }}</th><th class="num">{{ 'Gilde kauft für'|trans }}</th></tr></thead>
                 <tbody>
                     {% for good in goods %}
-                        <tr><td>{{ good|good_label }}</td><td class="num">{{ guild_sell[good]|num(2) }}</td><td class="num">{{ guild_buy[good]|num(2) }}</td></tr>
+                        <tr><td>{{ good|good_label|trans }}</td><td class="num">{{ guild_sell[good]|num(2) }}</td><td class="num">{{ guild_buy[good]|num(2) }}</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -31,7 +32,7 @@
             <tr class="table-head"><td>{{ 'Ware'|trans }}</td><td class="num">{{ 'Ø Preis'|trans }}</td><td class="num">{{ 'Angebote'|trans }}</td></tr>
             {% for good in goods %}
                 <tr>
-                    <td>{{ good|good_label }}</td>
+                    <td>{{ good|good_label|trans }}</td>
                     {% if averages[good] is defined %}
                         <td class="num">{{ averages[good].average|num(2) }}</td>
                         <td class="num">{{ averages[good].posts }}</td>

@@ -42,6 +42,8 @@ class TransportRequestController extends AbstractGameController
             'open' => array_values(array_filter($this->requests->findOpen(), static fn (TransportRequest $r): bool => !$r->getRequester()->isSameAs($player))),
             'mine' => $this->requests->findOf($player),
             'max_load' => TransportRequests::maxLoad(),
+            'active_requests' => $this->requests->countActive($player),
+            'max_active' => TransportRequests::MAX_ACTIVE,
             'resources_per_credit' => TransportRequests::RESOURCES_PER_CREDIT,
             'resource_types' => ResourceType::cases(),
             'is_trader' => $trader,
