@@ -64,9 +64,9 @@
             <a href="{{ path('app_defense') }}" class="{{ route == 'app_defense' ? 'active' }}">{{ 'Planetenverteidigung'|trans }}</a>
             <a href="{{ path('app_empire') }}" class="{{ route == 'app_empire' ? 'active' }}" title="{{ 'Alle Planeten mit Rohstoffen, Gebäuden und Bauschleifen'|trans }}">{{ 'Alle Planeten'|trans }}</a>
 
-            {% set slots = planet_slots|default(null) %}
+            {% set slot_info = planet_slots|default(null) %}
             <h2 class="sidebar-title">{{ 'Planeten <small>{planets}</small>'|trans({'{planets}': player.planets|length|e})|raw }}
-                {%- if slots %} <small class="slot-info {{ slots.free == 0 ? 'slot-full' }}" title="{{ 'Planetenplätze: {used} von {total} belegt (verschweißte zählen einzeln){underway}. Mehr Plätze gibt die Kolonisationstechnik.'|trans({'{used}': slots.used, '{total}': slots.total, '{underway}': slots.underway > 0 ? ', ' ~ ('{count} Kolonieschiff(e) unterwegs'|trans({'{count}': slots.underway})) : ''}) }}">· {{ '{free} frei'|trans({'{free}': slots.free}) }}</small>{% endif -%}
+                {%- if slot_info %} <small class="slot-info {{ slot_info.free == 0 ? 'slot-full' }}" title="{{ 'Planetenplätze: {used} von {total} belegt (verschweißte zählen einzeln){underway}. Mehr Plätze gibt die Kolonisationstechnik.'|trans({'{used}': slot_info.used, '{total}': slot_info.total, '{underway}': slot_info.underway > 0 ? ', ' ~ ('{count} Kolonieschiff(e) unterwegs'|trans({'{count}': slot_info.underway})) : ''}) }}">· {{ '{free} frei'|trans({'{free}': slot_info.free}) }}</small>{% endif -%}
             </h2>
             <div class="planet-list">
                 {% for p in player.planets %}
