@@ -25,19 +25,10 @@ class GuideController extends AbstractGameController
         $planet = $this->currentPlanet();
 
         $buildings = array_map(fn (BuildingType $t): array => $this->node($t->label(), $t->requirements(), $planet, 'app_buildings', [], 'building', $planet->getBuildingLevel($t)), BuildingType::cases());
-        $research = [];
-        foreach (ResearchType::cases() as $type) {
-            if ($this->isEarly($type->requirements())) {
-                $research[] = $this->node($type->label(), $type->requirements(), $planet, 'app_research', [], 'research', $planet->getOwner()->getResearchLevel($type));
-            }
-        }
-        $ships = [];
-        foreach (ShipType::cases() as $type) {
-            if ($this->isEarly($type->spec()->requirements)) {
-                $ships[] = $this->node($type->label(), $type->spec()->requirements, $planet, 'app_ship_info', ['type' => $type->value], $type->isStationary() ? 'defense' : 'ship');
-            }
-        }
-        $order = static fn (array $a, array $b): int => [\count($a['requirements']), $a['weight']] <=> [\count($b['requirements']), $b['weight']];
+        $research = array_map(fn (ResearchType $t): array => $this->node($t->label(), $t->requirements(), $planet, 'app_research', [], 'research', $planet->getOwner()->getResearchLevel($t)), ResearchType::cases());
+        $ships = array_map(fn (ShipType $t): array => $this->node($t->label(), $t->spec()->requirements, $planet, 'app_ship_info', ['type' => $t->value], $t->isStationary() ? 'defense' : 'ship'), ShipType::cases());
+        // Early ones first (by effort), the rest under "later".
+        $order = static fn (array $a, array $b): int => [!$a['early'], $a['weight'], \count($a['requirements'])] <=> [!$b['early'], $b['weight'], \count($b['requirements'])];
         usort($research, $order);
         usort($ships, $order);
 
@@ -71,7 +62,7 @@ class GuideController extends AbstractGameController
      * @param list<Requirement>    $requirements
      * @param array<string, mixed> $routeParams
      *
-     * @return array{label: string, kind: string, route: string, params: array<string, mixed>, requirements: list<array{label: \Symfony\Contracts\Translation\TranslatableInterface, met: bool}>, ready: bool, weight: int, level: ?int}
+     * @return array{label: string, kind: string, route: string, params: array<string, mixed>, requirements: list<array{label: \Symfony\Contracts\Translation\TranslatableInterface, met: bool}>, ready: bool, weight: int, level: ?int, early: bool}
      */
     private function node(string $label, array $requirements, Planet $planet, string $route, array $routeParams, string $kind, ?int $level = null): array
     {
@@ -90,6 +81,7 @@ class GuideController extends AbstractGameController
             'ready' => [] === array_filter($list, static fn (array $r): bool => !$r['met']),
             'weight' => array_sum(array_map(static fn (Requirement $r): int => $r->level, $requirements)),
             'level' => $level,
+            'early' => $this->isEarly($requirements),
         ];
     }
 }

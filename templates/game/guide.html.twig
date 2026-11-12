@@ -62,25 +62,37 @@
     </section>
 
     <section class="panel guide">
-        <h2>{{ '🌳 Technikbaum für den Anfang'|trans }}</h2>
-        <p class="muted small">{{ 'Was du wofür brauchst. Grün ist bei dir schon erfüllt, rot fehlt noch (Gebäude auf dem gewählten Planeten, Forschung für alle Planeten).'|trans }}</p>
+        <h2>{{ '🌳 Technikbaum'|trans }}</h2>
+        <p class="muted small">{{ 'Was du wofür brauchst – oben, was du am Anfang erreichst, darunter unter „Später“ alles Weitere. Grün ist bei dir schon erfüllt, rot fehlt noch (Gebäude auf dem gewählten Planeten, Forschung für alle Planeten).'|trans }}</p>
         {% for group in tree %}
             <h3>{{ group.title|trans }}</h3>
-            <ul class="tech-tree">
-                {% for node in group.nodes %}
-                    <li class="tech-node {{ node.ready ? 'tech-ready' : 'tech-locked' }}">
-                        <a class="tech-name" href="{{ path(node.route, node.params) }}">{{ node.label|trans }}</a>
-                        {% if node.level is not null and node.level > 0 %}<span class="muted small">{{ 'Stufe {level}'|trans({'{level}': node.level}) }}</span>{% endif %}
-                        <div class="tech-reqs">
-                            {% for r in node.requirements %}
-                                <span class="tech-req {{ r.met ? 'met' : 'missing' }}">{{ r.met ? '✓' : '✗' }} {{ r.label|trans }}</span>
-                            {% else %}
-                                <span class="tech-req met">{{ '✓ sofort verfügbar'|trans }}</span>
-                            {% endfor %}
-                        </div>
-                    </li>
-                {% endfor %}
-            </ul>
+            {% set early = group.nodes|filter(n => n.early) %}
+            {% set later = group.nodes|filter(n => not n.early) %}
+            {{ _self.nodes(early) }}
+            {% if later is not empty %}
+                <details class="tech-later">
+                    <summary>{{ 'Später ({count})'|trans({'{count}': later|length}) }}</summary>
+                    {{ _self.nodes(later) }}
+                </details>
+            {% endif %}
         {% endfor %}
     </section>
 {% endblock %}
+
+{% macro nodes(nodes) %}
+    <ul class="tech-tree">
+        {% for node in nodes %}
+            <li class="tech-node {{ node.ready ? 'tech-ready' : 'tech-locked' }}">
+                <a class="tech-name" href="{{ path(node.route, node.params) }}">{{ node.label|trans }}</a>
+                {% if node.level is not null and node.level > 0 %}<span class="muted small">{{ 'Stufe {level}'|trans({'{level}': node.level}) }}</span>{% endif %}
+                <div class="tech-reqs">
+                    {% for r in node.requirements %}
+                        <span class="tech-req {{ r.met ? 'met' : 'missing' }}">{{ r.met ? '✓' : '✗' }} {{ r.label|trans }}</span>
+                    {% else %}
+                        <span class="tech-req met">{{ '✓ sofort verfügbar'|trans }}</span>
+                    {% endfor %}
+                </div>
+            </li>
+        {% endfor %}
+    </ul>
+{% endmacro %}

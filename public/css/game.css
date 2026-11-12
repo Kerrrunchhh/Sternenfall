@@ -787,3 +787,5 @@ tr.suspicious-strong td { background: rgba(255, 138, 128, .08); }
 .refund-player legend { font-weight: 600; padding: 0 .3rem; }
 .refund-ships { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: .4rem .75rem; margin: .4rem 0; }
 .refund-ships input { width: 100%; }
+.tech-later { margin: -.25rem 0 1rem; }
+.tech-later summary { cursor: pointer; color: var(--accent); margin-bottom: .5rem; }
