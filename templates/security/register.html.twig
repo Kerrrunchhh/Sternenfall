@@ -29,7 +29,7 @@
             {{ form_errors(form.agreeTerms) }}
             <label>
                 {{ form_widget(form.agreeTerms) }}
-                {{ 'Ich akzeptiere die <a href="{terms}" target="_blank" rel="noopener">Nutzungsbedingungen (AGB)</a> und habe die <a href="{privacy}" target="_blank" rel="noopener">Datenschutzerklärung</a> gelesen.'|trans({'{terms}': path('app_terms')|e, '{privacy}': path('app_privacy')|e})|raw }}
+                <span>{{ 'Ich akzeptiere die <a href="{terms}" target="_blank" rel="noopener">Nutzungsbedingungen (AGB)</a> und habe die <a href="{privacy}" target="_blank" rel="noopener">Datenschutzerklärung</a> gelesen.'|trans({'{terms}': path('app_terms')|e, '{privacy}': path('app_privacy')|e})|raw }}</span>
             </label>
         </div>
         {{ form_rest(form) }}

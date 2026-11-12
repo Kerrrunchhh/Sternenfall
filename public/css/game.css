@@ -661,6 +661,7 @@ label.checkbox { display: flex; gap: .4rem; align-items: center; color: var(--te
 .news-compose summary { cursor: pointer; color: var(--accent); }
 .terms-consent { margin: 1rem 0 .5rem; }
 .terms-consent label { display: flex; gap: .5rem; align-items: flex-start; font-size: .9rem; line-height: 1.4; }
+.terms-consent label span { min-width: 0; overflow-wrap: anywhere; }
 .terms-consent input[type=checkbox] { margin-top: .2rem; flex: none; }
 .newbie-tag { font-size: .75rem; color: var(--accent-2); white-space: nowrap; }
 /* Protected owners in the galaxy: vacation green, newbie protection amber. */
