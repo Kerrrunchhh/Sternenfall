@@ -64,7 +64,7 @@
                     {% for f in incoming %}
                         <tr>
                             <td>{{ ui.player(f.owner) }}</td>
-                            <td>{{ f.mission.label|trans }}</td>
+                            <td>{{ f.mission.flightLabel|trans }}</td>
                             <td>→ {{ ui.coords(f.targetCoordinates) }}</td>
                             <td class="num">{{ ui.countdown(f.arriveAt, now) }}<br><span class="small muted">{{ ui.at(f.arriveAt, now) }}</span></td>
                         </tr>
@@ -207,7 +207,7 @@
                                 {% elseif f.mission.value == 'hover' %}
                                     {{ 'schwebt über {coordinates} · landet in {nextEventAt} ({nextEventAt2})'|trans({'{coordinates}': ui.coords(f.coordinates), '{nextEventAt}': ui.countdown(f.nextEventAt, now), '{nextEventAt2}': ui.at(f.nextEventAt, now)})|raw }}
                                 {% else %}
-                                    {{ f.mission.label|trans }} {{ f.returning ? ('← zurück nach'|trans) : '→' }} {{ ui.coords(f.returning ? f.coordinates : f.targetCoordinates) }}
+                                    {{ f.mission.flightLabel|trans }} {{ f.returning ? ('← zurück nach'|trans) : '→' }} {{ ui.coords(f.returning ? f.coordinates : f.targetCoordinates) }}
                                     · {{ ui.countdown(f.nextEventAt, now) }} ({{ ui.at(f.nextEventAt, now) }})
                                 {% endif %}
                                 {% if f.moving and not f.returning and recall_until(f) %}

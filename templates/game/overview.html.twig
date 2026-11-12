@@ -90,7 +90,7 @@
                     {% set ships = intel ? intel.shipList|map(s => s.count|num ~ ' × ' ~ s.type.label|trans)|join(', ') : '' %}
                     <tr class="{{ f.mission.value == 'attack' ? 'hostile' }}">
                         <td class="movement-what">
-                            {% if f.mission.value == 'attack' %}<strong>{{ '⚠ Angriff'|trans }}</strong>{% else %}{{ f.mission.label|trans }}{% endif %}
+                            {% if f.mission.value == 'attack' %}<strong>{{ '⚠ Angriff'|trans }}</strong>{% else %}{{ f.mission.flightLabel|trans }}{% endif %}
                             {{ 'von {owner} → {targetCoordinates}'|trans({'{owner}': ui.player(f.owner), '{targetCoordinates}': ui.coords(f.targetCoordinates)})|raw }}
                             {% if intel %}<span class="small muted" title="{{ 'erspäht {scoutedAt}: {ships}'|trans({'{scoutedAt}': intel.scoutedAt|date('H:i'), '{ships}': ships}) }}">· {{ ships }}</span>
                             {% else %}<a class="small" href="{{ path('app_radar') }}" title="{{ 'Zusammensetzung unbekannt – auf dem Radar ausspionieren'|trans }}">{{ '· 🔭 ausspionieren'|trans }}</a>{% endif %}
@@ -105,7 +105,7 @@
                     <tr>
                         <td class="movement-what">
                             {{ f.named ? f.name : (only == 'scout' ? ('Sonde'|trans) : (only == 'colony_ship' ? ('Kolonieschiff'|trans) : ('Flotte'|trans))) }}:
-                            {{ f.mission.label|trans }}{% if f.mission.value != 'hover' %} {{ f.returning ? ('← zurück nach'|trans) : '→' }} {{ ui.coords(f.returning ? f.coordinates : f.targetCoordinates) }}{% endif %}
+                            {{ f.mission.flightLabel|trans }}{% if f.mission.value != 'hover' %} {{ f.returning ? ('← zurück nach'|trans) : '→' }} {{ ui.coords(f.returning ? f.coordinates : f.targetCoordinates) }}{% endif %}
                         </td>
                         <td class="num movement-time" title="{{ f.returning ? 'Rückkehr'|trans : (f.mission.value == 'hover' ? 'landet'|trans : 'Ankunft'|trans) }}">{{ ui.countdown(f.nextEventAt, now) }}</td>
                         <td class="num small muted movement-time">{{ ui.at(f.nextEventAt, now) }}</td>

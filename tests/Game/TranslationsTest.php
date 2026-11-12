@@ -17,7 +17,7 @@ final class TranslationsTest extends TestCase
     private const string CATALOG = __DIR__.'/../../translations/messages+intl-icu.en.yaml';
 
     /** Texts that are spelled the same in English. */
-    private const array SAME_IN_ENGLISH = ['Bunker', 'Transport', 'Radar', 'Bastion', 'Fusionator', 'Inferno', 'Leviathan', 'Monarch'];
+    private const array SAME_IN_ENGLISH = ['Bunker', 'Transport', 'Radar', 'Bastion', 'Fusionator', 'Inferno', 'Leviathan', 'Monarch', 'Fusion'];
 
     /** @return array<string, string> */
     private static function catalog(): array
@@ -34,7 +34,7 @@ final class TranslationsTest extends TestCase
                 continue;
             }
             foreach ($class::cases() as $case) {
-                foreach (['label', 'effect', 'description', 'pluralLabel', 'category'] as $method) {
+                foreach (['label', 'effect', 'description', 'pluralLabel', 'category', 'flightLabel'] as $method) {
                     if (method_exists($case, $method) && \is_string($text = $case->$method()) && '' !== $text) {
                         yield $class.'::'.$case->name.'->'.$method => [$text];
                     }

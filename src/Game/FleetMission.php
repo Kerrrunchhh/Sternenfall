@@ -69,6 +69,29 @@ enum FleetMission: string
         };
     }
 
+    /** The mission as a noun, for a fleet underway ("Angriff von … nach …"); label() is the order. */
+    public function flightLabel(): string
+    {
+        return match ($this) {
+            self::Transport => 'Transport',
+            self::TransportStation => 'Transport mit Stationierung',
+            self::Station => 'Stationierung',
+            self::Jump => 'Sprung',
+            self::Colonize => 'Kolonisierung',
+            self::Spy => 'Spionage',
+            self::Fuse => 'Fusion',
+            self::Supply => 'Belieferung',
+            self::Pickup => 'Abholung',
+            self::Trade => 'Handelsflug',
+            self::Attack => 'Angriff',
+            self::Salvage => 'Bergung',
+            self::Intercept => 'Abfangmanöver',
+            self::Raid => 'Überfall',
+            self::Hover => 'Schwebeflug',
+            self::Gather => 'Sammelflug',
+        };
+    }
+
     public function description(): string
     {
         return match ($this) {

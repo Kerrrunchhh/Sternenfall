@@ -58,6 +58,34 @@ final readonly class Highscores
         return $this->rank(array_values($rows), $sort);
     }
 
+    /**
+     * The best players of every research (level above 0), grouped by research category;
+     * equal levels are ordered by points, then by name.
+     *
+     * @return array<string, list<array{research: ResearchType, leaders: list<array{user: User, level: int}>}>> category => researches
+     */
+    public function researchLeaders(?LifeForm $lifeForm = null, int $top = 3): array
+    {
+        $players = array_values(array_filter($this->allPlayers(), static fn (User $u): bool => null === $lifeForm || $u->getLifeForm() === $lifeForm));
+        $points = [];
+        foreach ($players as $user) {
+            $points[spl_object_id($user)] = Scoring::points($user);
+        }
+
+        $groups = [];
+        foreach (ResearchType::cases() as $research) {
+            $ranked = array_values(array_filter($players, static fn (User $u): bool => $u->getResearchLevel($research) > 0));
+            usort($ranked, static fn (User $a, User $b): int => [$b->getResearchLevel($research), $points[spl_object_id($b)], mb_strtolower($a->getUsername())]
+                <=> [$a->getResearchLevel($research), $points[spl_object_id($a)], mb_strtolower($b->getUsername())]);
+            $groups[$research->category()][] = [
+                'research' => $research,
+                'leaders' => array_map(static fn (User $u): array => ['user' => $u, 'level' => $u->getResearchLevel($research)], \array_slice($ranked, 0, $top)),
+            ];
+        }
+
+        return $groups;
+    }
+
     /** @return list<User> all players with their planets in one query */
     private function allPlayers(): array
     {

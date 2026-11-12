@@ -19,11 +19,13 @@ class HighscoreController extends AbstractGameController
         $planet = $this->currentPlanet();
         $player = $this->player();
         $query = $request->query;
-        $view = 'alliances' === $query->getString('view') ? 'alliances' : 'players';
+        $view = \in_array($query->getString('view'), ['alliances', 'research'], true) ? $query->getString('view') : 'players';
         $sort = \in_array($query->getString('sort'), Highscores::SORTS, true) ? $query->getString('sort') : Highscores::BY_POINTS;
         $lifeForm = LifeForm::tryFrom($query->getString('lifeform'));
 
         $rows = 'alliances' === $view ? $highscores->alliances($sort, $lifeForm) : $highscores->players($sort, $lifeForm);
+        // Research tab: the best three of every research.
+        $research = 'research' === $view ? $highscores->researchLeaders($lifeForm) : [];
         // The own row (or own alliance) is always shown, even below the top 100.
         $isOwn = static fn (array $row): bool => 'alliances' === $view
             ? null !== $player->getAlliance() && $row['alliance']->getId() === $player->getAlliance()->getId()
@@ -40,6 +42,7 @@ class HighscoreController extends AbstractGameController
             'own_outside' => null !== $own && $own['rank'] > self::TOP,
             'top' => self::TOP,
             'top_today' => $stats->topExperienceToday(),
+            'research_leaders' => $research,
         ]);
     }
 }

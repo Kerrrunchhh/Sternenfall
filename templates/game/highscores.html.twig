@@ -11,6 +11,7 @@
     <nav class="tabs" aria-label="{{ 'Rangliste'|trans }}">
         <a href="{{ path('app_highscores', params|merge({view: 'players'})) }}" class="{{ view == 'players' ? 'active' }}" {{ view == 'players' ? 'aria-current="page"' }}>{{ 'Spieler'|trans }}</a>
         <a href="{{ path('app_highscores', params|merge({view: 'alliances'})) }}" class="{{ view == 'alliances' ? 'active' }}" {{ view == 'alliances' ? 'aria-current="page"' }}>{{ 'Allianzen'|trans }}</a>
+        <a href="{{ path('app_highscores', params|merge({view: 'research'})) }}" class="{{ view == 'research' ? 'active' }}" {{ view == 'research' ? 'aria-current="page"' }}>{{ 'Forschung'|trans }}</a>
     </nav>
 
     <div class="highscore-filters">
@@ -19,9 +20,35 @@
         {% for lf in enum_cases('App\\Game\\LifeForm') %}
             <a class="filter-chip {{ life_form == lf ? 'active' }}" href="{{ path('app_highscores', params|merge({lifeform: lf.value})) }}">{{ lf.icon }} {{ lf.label|trans }}</a>
         {% endfor %}
+        {% if view != 'research' %}
         <span class="muted small">{{ total|num }} {{ view == 'players' ? ('Spieler'|trans) : (total == 1 ? ('Allianz'|trans) : ('Allianzen'|trans)) }}</span>
+        {% endif %}
     </div>
 
+    {% if view == 'research' %}
+        <section class="panel">
+            <p class="muted small">{{ 'Die drei Spieler mit der höchsten Stufe in jeder Forschung. Bei gleicher Stufe entscheiden die Punkte.'|trans }}</p>
+            {% for category, entries in research_leaders %}
+                <h2>{{ category|trans }}</h2>
+                <div class="table-scroll">
+                    <table class="table research-leaders">
+                        <thead><tr><th>{{ 'Forschung'|trans }}</th><th>{{ '🥇 1.'|trans }}</th><th>{{ '🥈 2.'|trans }}</th><th>{{ '🥉 3.'|trans }}</th></tr></thead>
+                        <tbody>
+                            {% for e in entries %}
+                                <tr>
+                                    <th scope="row">{{ e.research.label|trans }}</th>
+                                    {% for i in 0..2 %}
+                                        {% set l = e.leaders[i] ?? null %}
+                                        <td class="{{ l and l.user.id == player.id ? 'highscore-own' }}">{% if l %}{{ ui.player(l.user, false) }} <span class="muted small">{{ 'Stufe {level}'|trans({'{level}': l.level}) }}</span>{% else %}<span class="muted">–</span>{% endif %}</td>
+                                    {% endfor %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endfor %}
+        </section>
+    {% else %}
     <section class="panel">
         {% if rows is empty %}
             <p class="muted">{{ '{Allianzen} mit dieser Lebensform.'|trans({'{Allianzen}': view == 'players' ? ('Keine Spieler'|trans) : ('Keine Allianzen'|trans)}) }}</p>
@@ -49,6 +76,7 @@
         {% endif %}
         {% if view == 'alliances' %}<p class="muted small">{{ 'Allianzen zählen die Summe ihrer Mitglieder. Der Lebensform-Filter richtet sich nach der Art der Allianz.'|trans }}</p>{% endif %}
     </section>
+    {% endif %}
     <section class="panel">{{ include('_top_experience.html.twig', {top: top_today}) }}</section>
 {% endblock %}
 

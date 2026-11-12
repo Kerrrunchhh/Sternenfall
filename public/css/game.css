@@ -809,3 +809,6 @@ tr.suspicious-strong td { background: rgba(255, 138, 128, .08); }
 .about-cta { margin: 2rem 0 1rem; display: flex; flex-wrap: wrap; gap: .6rem; justify-content: center; }
 .slot-info { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--ok); cursor: help; }
 .slot-info.slot-full { color: var(--muted); }
+.research-leaders th[scope=row] { text-align: left; font-weight: 400; white-space: nowrap; }
+.research-leaders td { white-space: nowrap; }
+.research-leaders thead th { text-align: left; }

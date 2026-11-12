@@ -79,6 +79,20 @@ final class HighscoresTest extends TestCase
         self::assertSame(3, $scores->alliances(Highscores::BY_PLANETS)[0]['planets'], 'Orden: Anna 1 + Carla 2');
     }
 
+    public function testResearchLeadersAreTheBestThreeOfEveryResearch(): void
+    {
+        foreach ([3, 7, 7, 1] as $i => $level) {
+            $this->users[$i]->setResearchLevel(\App\Game\ResearchType::Espionage, $level);
+        }
+        $groups = $this->highscores()->researchLeaders();
+        $espionage = array_values(array_filter($groups['Zusatztechnologien'], static fn (array $e): bool => \App\Game\ResearchType::Espionage === $e['research']))[0];
+
+        // Bert and Carla both have 7: Bert has more points.
+        self::assertSame(['Bert', 'Carla', 'Anna'], array_map(static fn (array $l): string => $l['user']->getUsername(), $espionage['leaders']));
+        self::assertSame([7, 7, 3], array_column($espionage['leaders'], 'level'));
+        self::assertSame(['Carla', 'Anna'], array_map(static fn (array $l): string => $l['user']->getUsername(), array_values(array_filter($this->highscores()->researchLeaders(LifeForm::Guardian)['Zusatztechnologien'], static fn (array $e): bool => \App\Game\ResearchType::Espionage === $e['research']))[0]['leaders']), 'life form filter');
+    }
+
     public function testAlliancesAddUpTheirMembers(): void
     {
         $rows = $this->highscores()->alliances(Highscores::BY_EXPERIENCE);
