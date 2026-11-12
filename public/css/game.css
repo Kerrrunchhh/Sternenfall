@@ -792,3 +792,17 @@ tr.suspicious-strong td { background: rgba(255, 138, 128, .08); }
 .btn.just-unlocked { animation: unlock-pulse 1.2s ease-out 2; }
 @keyframes unlock-pulse { 0% { box-shadow: 0 0 0 0 #66bb6aaa; } 100% { box-shadow: 0 0 0 10px #66bb6a00; } }
 @media (prefers-reduced-motion: reduce) { .btn.just-unlocked { animation: none; } }
+
+/* Start page: what the game is about. */
+.landing-about { width: min(920px, calc(100vw - 32px)); position: relative; left: 50%; transform: translateX(-50%); margin: 2rem 0 0; text-align: left; line-height: 1.55; }
+.landing-about h2 { color: var(--accent); margin: 2rem 0 .6rem; }
+.about-features { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; margin-top: 1rem; }
+.about-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.about-card img { display: block; width: 100%; height: auto; aspect-ratio: 345 / 251; object-fit: cover; }
+.about-card h3 { margin: .75rem 1rem .25rem; font-size: 1.05rem; }
+.about-card p { margin: 0 1rem 1rem; font-size: .92rem; color: var(--text); }
+.about-lifeforms, .about-steps { padding-left: 1.3rem; }
+.about-lifeforms li, .about-steps li { margin-bottom: .45rem; }
+.about-faq dt { font-weight: 600; margin-top: .8rem; }
+.about-faq dd { margin: .2rem 0 0; color: var(--muted); }
+.about-cta { margin: 2rem 0 1rem; display: flex; flex-wrap: wrap; gap: .6rem; justify-content: center; }

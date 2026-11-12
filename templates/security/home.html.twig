@@ -31,3 +31,57 @@
     <div class="landing-top">{{ include('_top_experience.html.twig') }}</div>
     <p class="muted small landing-links"><a href="{{ path('app_status') }}">{{ 'Status des Universums'|trans }}</a></p>
 {% endblock %}
+
+{% block about %}
+    {# What the game is about: for visitors, search engines and the ad network's site review. #}
+    <section class="landing-about">
+        <h2>{{ 'Worum geht es?'|trans }}</h2>
+        <p>{{ '{game_name} ist ein kostenloses Weltraum-Strategiespiel, das du direkt im Browser spielst – ohne Download, am Computer wie am Handy. Du übernimmst eine junge Kolonie auf einem fernen Planeten und baust sie Schritt für Schritt zu einem Sternenimperium aus. Alle Spieler teilen sich ein gemeinsames Universum, und das Spiel läuft weiter, auch wenn du offline bist: Deine Minen fördern, deine Forscher forschen und deine Flotten fliegen.'|trans({'{game_name}': game_name}) }}</p>
+
+        <div class="about-features">
+            {% for f in [
+                {img: 'pictures/planets/blue.webp', title: 'Planeten und Kolonien', text: 'Besiedle neue Welten – blaue, rote, Wasser-, Stein- und Wüstenplaneten mit eigenen Stärken und Schwächen. Benachbarte Planeten verschweißt du zu mächtigen Fusionen.'},
+                {img: 'pictures/buildings/iron_mine.webp', title: 'Wirtschaft', text: 'Fördere Eisen und Titan, versorge deine Bevölkerung mit Nahrung und Wasser und gewinne Wasserstoff als Treibstoff. Deine Einwohner bringen Credits.'},
+                {img: 'pictures/research/warp_drive.webp', title: 'Forschung', text: 'Erforsche Antriebe vom Feststoff- bis zum Warpantrieb, Laser, Plasmawaffen und Schilde, Spionage, Kolonisation und Fusionstechnik.'},
+                {img: 'pictures/ships/korsar.webp', title: 'Flotten und Kämpfe', text: 'Zwanzig Schiffstypen vom wendigen Jäger bis zum Leviathan, dazu Verteidigungsanlagen. Greife an, fange feindliche Flotten ab und teile deine Kampfberichte.'},
+                {img: 'pictures/ships/large_freighter.webp', title: 'Handel und Aufträge', text: 'Handle über Handelsstützpunkte, beliefere Transportgesuche, nimm Schutz- und Invasionsaufträge an oder setze ein Kopfgeld auf deine Feinde aus.'},
+                {img: 'pictures/buildings/fleet_control.webp', title: 'Allianzen und Diplomatie', text: 'Schließ dich mit anderen zusammen: Allianzen mit schwarzem Brett und Kasse, Bündnisse, Nichtangriffspakte und Kriege, Ticker und Post für Absprachen.'},
+            ] %}
+                <article class="about-card">
+                    <img src="{{ asset(f.img) }}" alt="" width="345" height="251" loading="lazy">
+                    <h3>{{ f.title|trans }}</h3>
+                    <p>{{ f.text|trans }}</p>
+                </article>
+            {% endfor %}
+        </div>
+
+        <h2>{{ 'Wähle deine Lebensform'|trans }}</h2>
+        <p>{{ 'Schon bei der Anmeldung entscheidest du, wie du spielen willst – jede Lebensform hat eigene Stärken:'|trans }}</p>
+        <ul class="about-lifeforms">
+            {% for lf in enum_cases('App\\Game\\LifeForm') %}
+                <li><strong>{{ lf.icon }} {{ lf.label|trans }}</strong> – {{ lf.traits|map(t => t|trans)|join(' · ') }}</li>
+            {% endfor %}
+        </ul>
+
+        <h2>{{ 'So startest du'|trans }}</h2>
+        <ol class="about-steps">
+            <li>{{ 'Registriere dich kostenlos mit Spielername und E-Mail-Adresse und wähle deine Lebensform.'|trans }}</li>
+            <li>{{ 'Nutze den Startbonus: An deinem ersten Tag baut und forscht alles doppelt so schnell. Der Noobschutz bewahrt dich am Anfang vor Angriffen.'|trans }}</li>
+            <li>{{ 'Folge der Spielhilfe: Rohstoffe ausbauen, forschen, die ersten Schiffe bauen und eine Allianz suchen.'|trans }}</li>
+        </ol>
+
+        <h2>{{ 'Häufige Fragen'|trans }}</h2>
+        <dl class="about-faq">
+            <dt>{{ 'Kostet das Spiel etwas?'|trans }}</dt>
+            <dd>{{ 'Nein. {game_name} ist kostenlos. Wer möchte, kann einen erweiterten Account ohne Werbung und mit mehr Komfortfunktionen abonnieren – spielerische Vorteile gegenüber anderen bringt er nicht.'|trans({'{game_name}': game_name}) }}</dd>
+            <dt>{{ 'Muss ich etwas installieren?'|trans }}</dt>
+            <dd>{{ 'Nein, du spielst im Browser – auf dem Computer, dem Tablet oder dem Handy.'|trans }}</dd>
+            <dt>{{ 'Wie viel Zeit brauche ich?'|trans }}</dt>
+            <dd>{{ 'So viel du willst. Das Spiel läuft in Echtzeit weiter, auch wenn du nicht eingeloggt bist. Schon ein paar Minuten am Tag reichen, um Bauaufträge zu verteilen und Flotten zu schicken. Für längere Pausen gibt es einen Urlaubsmodus.'|trans }}</dd>
+            <dt>{{ 'In welchen Sprachen gibt es das Spiel?'|trans }}</dt>
+            <dd>{{ 'Auf Deutsch und Englisch.'|trans }}</dd>
+        </dl>
+
+        <p class="about-cta"><a class="btn" href="{{ path('app_register') }}">{{ 'Jetzt kostenlos spielen'|trans }}</a> <a class="btn btn-secondary" href="{{ path('app_status') }}">{{ 'Status des Universums'|trans }}</a></p>
+    </section>
+{% endblock %}
