@@ -9,6 +9,34 @@
             <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={{ adsense_client|url_encode }}" crossorigin="anonymous"></script>
         {% endif %}
         <title>{% block title %}{{ game_name }}{% endblock %}</title>
+        {# For search engines and link previews. Only the public pages of SeoController::PAGES are indexed. #}
+        {% set seo_route = app.request.attributes.get('_route') %}
+        {% set seo_public = seo_route in constant('App\\Controller\\SeoController::PAGES')|keys %}
+        {% set seo_description = block('meta_description') is defined and block('meta_description')|trim ? block('meta_description')|trim : 'Kostenloses Weltraum-Strategiespiel im Browser: Gründe Kolonien, fördere Rohstoffe, erforsche Technologien, baue Flotten und kämpfe mit deiner Allianz um das Universum.'|trans %}
+        <meta name="description" content="{{ seo_description }}">
+        {% if seo_public %}
+            {% set seo_locale_params = app.request.locale == 'de' ? {} : {lang: app.request.locale} %}
+            <meta name="robots" content="index, follow">
+            <link rel="canonical" href="{{ url(seo_route, seo_locale_params) }}">
+            {% for code, name in locale_names() %}
+                <link rel="alternate" hreflang="{{ code }}" href="{{ url(seo_route, code == 'de' ? {} : {lang: code}) }}">
+            {% endfor %}
+            <link rel="alternate" hreflang="x-default" href="{{ url(seo_route) }}">
+            <meta property="og:type" content="website">
+            <meta property="og:site_name" content="{{ game_name }}">
+            <meta property="og:title" content="{{ block('title')|trim }}">
+            <meta property="og:description" content="{{ seo_description }}">
+            <meta property="og:url" content="{{ url(seo_route, seo_locale_params) }}">
+            <meta property="og:image" content="{{ absolute_url(asset('pictures/brand/share.jpg')) }}">
+            <meta property="og:image:width" content="1200">
+            <meta property="og:image:height" content="630">
+            <meta property="og:locale" content="{{ app.request.locale == 'de' ? 'de_DE' : 'en_GB' }}">
+            <meta name="twitter:card" content="summary_large_image">
+        {% else %}
+            {# The game itself, combat reports, login flows: not for search results. #}
+            <meta name="robots" content="noindex, nofollow">
+        {% endif %}
+        {% block structured_data %}{% endblock %}
         <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2230%22 fill=%22%234fc3f7%22/><ellipse cx=%2250%22 cy=%2250%22 rx=%2248%22 ry=%2212%22 fill=%22none%22 stroke=%22%23ffb74d%22 stroke-width=%225%22/></svg>">
         <link rel="stylesheet" href="{{ asset('css/game.css') }}">
         {% block javascripts %}{% endblock %}

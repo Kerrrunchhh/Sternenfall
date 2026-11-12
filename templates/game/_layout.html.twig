@@ -9,7 +9,7 @@
     <div class="res res-{{ key }}">
         <span class="res-label">{{ label }}</span>
         <span class="res-amount{{ amount > protected ? ' res-exposed' }}" title="{{ 'Geschützt: {protected}'|trans({'{protected}': protected|num}) }}"
-              data-amount="{{ amount }}" data-rate="{{ rate }}" data-protected="{{ protected }}">{{ amount|num }}</span>
+              data-resource="{{ key }}" data-amount="{{ amount }}" data-rate="{{ rate }}" data-protected="{{ protected }}">{{ amount|num }}</span>
         <span class="res-rate{{ rate < 0 ? ' res-negative' }}">{{ rate >= 0 ? '+' }}{{ rate|num }}/h</span>
     </div>
 {% endmacro %}
@@ -23,7 +23,7 @@
             {% endfor %}
             <div class="res res-credits">
                 <span class="res-label">{{ 'Credits'|trans }}</span>
-                <span class="res-amount" data-amount="{{ player.credits }}" data-rate="{{ credits_per_hour }}" data-protected="Infinity">{{ player.credits|num }}</span>
+                <span class="res-amount" data-resource="credits" data-amount="{{ player.credits }}" data-rate="{{ credits_per_hour }}" data-protected="Infinity">{{ player.credits|num }}</span>
                 <span class="res-rate">+{{ credits_per_hour|num }}/h</span>
             </div>
             <div class="res res-population">

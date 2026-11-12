@@ -60,7 +60,7 @@
                         {% else %}
                             <form method="post" action="{{ path('app_research_start', {type: r.type.value}) }}">
                                 <input type="hidden" name="_token" value="{{ csrf_token('research') }}">
-                                <button class="btn btn-small" type="submit" id="research-{{ r.type.value }}" {{ r.affordable ? '' : 'disabled' }}>
+                                <button class="btn btn-small" type="submit" id="research-{{ r.type.value }}" {{ r.affordable ? '' : 'disabled data-unlock-when-affordable' }}>
                                     {{ r.level == 0 ? 'Erforschen'|trans : 'Stufe {level}'|trans({'{level}': r.level + 1}) }}
                                 </button>
                             </form>

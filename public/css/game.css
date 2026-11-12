@@ -789,3 +789,6 @@ tr.suspicious-strong td { background: rgba(255, 138, 128, .08); }
 .refund-ships input { width: 100%; }
 .tech-later { margin: -.25rem 0 1rem; }
 .tech-later summary { cursor: pointer; color: var(--accent); margin-bottom: .5rem; }
+.btn.just-unlocked { animation: unlock-pulse 1.2s ease-out 2; }
+@keyframes unlock-pulse { 0% { box-shadow: 0 0 0 0 #66bb6aaa; } 100% { box-shadow: 0 0 0 10px #66bb6a00; } }
+@media (prefers-reduced-motion: reduce) { .btn.just-unlocked { animation: none; } }

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+{% for route, frequency in pages %}
+{% for locale in locales %}
+    <url>
+        <loc>{{ url(route, locale == default_locale ? {} : {lang: locale}) }}</loc>
+{% for other in locales %}
+        <xhtml:link rel="alternate" hreflang="{{ other }}" href="{{ url(route, other == default_locale ? {} : {lang: other}) }}"/>
+{% endfor %}
+        <xhtml:link rel="alternate" hreflang="x-default" href="{{ url(route) }}"/>
+        <changefreq>{{ frequency }}</changefreq>
+        <priority>{{ route == 'app_home' ? '1.0' : (route in ['app_register', 'app_status'] ? '0.8' : '0.3') }}</priority>
+    </url>
+{% endfor %}
+{% endfor %}
+</urlset>

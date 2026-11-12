@@ -2,7 +2,7 @@
 {% macro cost(cost, planet, multiplier = 1) %}
     {% for type in enum_cases('App\\Game\\ResourceType') %}
         {% set amount = cost.get(type) * multiplier %}
-        {% if amount > 0 %}<span class="{{ amount > planet.resources.get(type) ? 'lacking' }}">{{ type.label|trans }} {{ amount|num }}</span>{% endif %}
+        {% if amount > 0 %}<span class="{{ amount > planet.resources.get(type) ? 'lacking' }}" data-need="{{ type.value }}" data-need-amount="{{ amount }}">{{ type.label|trans }} {{ amount|num }}</span>{% endif %}
     {% endfor %}
 {% endmacro %}
 

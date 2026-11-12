@@ -60,15 +60,45 @@ const serverClock = (() => {
         remaining: parseInt(el.dataset.finishes, 10) - parseInt(el.dataset.now, 10),
     }));
 
+    // Costs shown on the page (buildings, research, …) and the buttons waiting for them:
+    // as soon as the counters reach a cost it loses its red mark, and a button whose
+    // card is fully affordable unlocks (the server checks again on submit).
+    const needs = [...document.querySelectorAll('[data-need]')].map((el) => ({
+        el,
+        resource: el.dataset.need,
+        amount: parseFloat(el.dataset.needAmount),
+    }));
+    const waiting = [...document.querySelectorAll('[data-unlock-when-affordable]')].map((button) => ({
+        button,
+        needs: needs.filter((n) => button.closest('article, .panel')?.contains(n.el)),
+    }));
+
     let reloading = false;
     const tick = () => {
         const elapsed = (Date.now() - started) / 1000;
 
+        const current = {};
         for (const r of resources) {
             const value = Math.max(0, r.amount + r.rate * elapsed / 3600);
             r.el.textContent = fmt.format(Math.floor(value));
             r.el.classList.toggle('res-exposed', value > r.protectedAmount);
+            if (r.el.dataset.resource) {
+                current[r.el.dataset.resource] = value;
+            }
         }
+
+        const covered = (n) => !(n.resource in current) || current[n.resource] + 1e-6 >= n.amount;
+        for (const n of needs) {
+            n.el.classList.toggle('lacking', !covered(n));
+        }
+        for (const w of waiting) {
+            if (w.button.disabled && w.needs.length > 0 && w.needs.every(covered)) {
+                w.button.disabled = false;
+                w.button.classList.add('just-unlocked');
+            }
+        }
+        // Other parts of the page (e.g. the shipyard maximum) follow the counters too.
+        document.dispatchEvent(new CustomEvent('resources:tick', { detail: current }));
 
         for (const c of countdowns) {
             const left = c.remaining - elapsed;
@@ -698,6 +728,30 @@ const serverClock = (() => {
             maxLabel.textContent = `max. ${fmt.format(max)}`;
         };
         select.addEventListener('change', update);
+        // The affordable maximum of every rate grows with the resource counters.
+        document.addEventListener('resources:tick', (event) => {
+            const current = event.detail;
+            let changed = false;
+            box.querySelectorAll('[data-rate-percent]').forEach((row) => {
+                let max = parseInt(row.dataset.rateCap, 10);
+                row.querySelectorAll('[data-need]').forEach((need) => {
+                    if (need.dataset.need in current) {
+                        max = Math.min(max, Math.floor((current[need.dataset.need] + 1e-6) / parseFloat(need.dataset.needAmount)));
+                    }
+                });
+                max = Math.max(0, max);
+                if (String(max) !== row.dataset.rateMax) {
+                    if (parseInt(row.dataset.rateMax, 10) < 1 && max >= 1 && row.dataset.ratePercent === select.value) {
+                        button.classList.add('just-unlocked');
+                    }
+                    row.dataset.rateMax = String(max);
+                    changed = true;
+                }
+            });
+            if (changed) {
+                update();
+            }
+        });
         // Clicking a cost row picks that rate.
         box.querySelectorAll('[data-rate-percent]').forEach((row) => row.addEventListener('click', () => {
             select.value = row.dataset.ratePercent;

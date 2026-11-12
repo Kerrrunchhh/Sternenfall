@@ -96,10 +96,10 @@
 {# One cost line of a build rate (100–200 %). #}
 {% macro rate_row(percent, r, s, planet, player, active) %}
     {% import 'game/_macros.html.twig' as ui %}
-    <div class="cost rate-row {{ active ? 'rate-active' }}" data-rate-percent="{{ percent }}" data-rate-max="{{ r.max }}">
+    <div class="cost rate-row {{ active ? 'rate-active' }}" data-rate-percent="{{ percent }}" data-rate-max="{{ r.max }}" data-rate-cap="{{ r.cap }}">
         <span class="rate-label" title="{{ 'Kosten pro Stück beim Bau mit {percent} %'|trans({'{percent}': percent}) }}">{{ percent }} %</span>
         {{ ui.cost(r.cost, planet) }}
-        <span class="{{ r.credits > player.credits ? 'lacking' }}">{{ 'Credits {credits}'|trans({'{credits}': r.credits|num}) }}</span>
+        <span class="{{ r.credits > player.credits ? 'lacking' }}" {% if r.credits > 0 %}data-need="credits" data-need-amount="{{ r.credits }}"{% endif %}>{{ 'Credits {credits}'|trans({'{credits}': r.credits|num}) }}</span>
         {% if s.spec.crew > 0 %}<span class="{{ s.spec.crew > planet.population ? 'lacking' }}">{{ 'Besatzung {crew}'|trans({'{crew}': s.spec.crew|num}) }}</span>{% endif %}
         <span class="duration">{{ 'Dauer {seconds}'|trans({'{seconds}': r.seconds|format_duration}) }}</span>
     </div>

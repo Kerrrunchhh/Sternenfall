@@ -1,5 +1,25 @@
 {% extends 'security/_layout.html.twig' %}
 
+{% block title %}{{ '{game_name} – kostenloses Weltraum-Strategiespiel im Browser'|trans({'{game_name}': game_name}) }}{% endblock %}
+
+{% block structured_data %}
+    {# Tells search engines this is a free browser game. #}
+    <script type="application/ld+json">{{ {
+        '@context': 'https://schema.org',
+        '@type': 'VideoGame',
+        'name': game_name,
+        'url': url('app_home'),
+        'image': absolute_url(asset('pictures/brand/share.jpg')),
+        'description': 'Kostenloses Weltraum-Strategiespiel im Browser: Gründe Kolonien, fördere Rohstoffe, erforsche Technologien, baue Flotten und kämpfe mit deiner Allianz um das Universum.'|trans,
+        'genre': ['Strategie'|trans, 'Weltraum'|trans, 'Browserspiel'|trans],
+        'gamePlatform': 'Web browser',
+        'applicationCategory': 'Game',
+        'playMode': 'MultiPlayer',
+        'inLanguage': locale_names()|keys,
+        'offers': {'@type': 'Offer', 'price': '0', 'priceCurrency': 'EUR'},
+    }|json_encode(constant('JSON_UNESCAPED_UNICODE') b-or constant('JSON_UNESCAPED_SLASHES'))|raw }}</script>
+{% endblock %}
+
 {% block content %}
     {% if deleted_at %}<p class="flash flash-success">{{ 'Dein Konto wird am {deleted_at} gelöscht. Meldest du dich vorher wieder an, bleibt es erhalten.'|trans({'{deleted_at}': deleted_at|date('d.m.Y H:i')}) }}</p>{% endif %}
     <p>{{ 'Übernimm das Kommando über eine junge Kolonie: Fördere Rohstoffe, errichte Gebäude, erforsche neue Technologien und schicke deine Flotten in die Weiten des Universums.'|trans }}</p>

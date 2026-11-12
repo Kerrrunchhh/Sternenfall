@@ -43,6 +43,7 @@ security:
         - { path: ^/email/, roles: PUBLIC_ACCESS }
         - { path: ^/paypal/webhook$, roles: PUBLIC_ACCESS }
         - { path: ^/ads\.txt$, roles: PUBLIC_ACCESS }
+        - { path: ^/(robots\.txt|sitemap\.xml)$, roles: PUBLIC_ACCESS }
         - { path: ^/, roles: ROLE_USER }
 
 when@test:

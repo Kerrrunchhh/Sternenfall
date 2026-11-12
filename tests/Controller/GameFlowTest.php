@@ -62,6 +62,27 @@ class GameFlowTest extends WebTestCase
         self::assertSelectorTextContains('.field-error', 'bereits vergeben');
     }
 
+    public function testSearchEnginesGetRobotsSitemapAndMetaTags(): void
+    {
+        $this->client->request('GET', '/robots.txt');
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('Disallow: /', (string) $this->client->getResponse()->getContent());
+        self::assertStringContainsString('Sitemap: http://localhost/sitemap.xml', (string) $this->client->getResponse()->getContent());
+
+        $this->client->request('GET', '/sitemap.xml');
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('<loc>http://localhost/status</loc>', (string) $this->client->getResponse()->getContent());
+
+        $this->client->request('GET', '/');
+        self::assertSelectorExists('meta[name="description"]');
+        self::assertSelectorExists('link[rel="canonical"]');
+        self::assertSelectorExists('meta[property="og:image"]');
+        self::assertSelectorExists('script[type="application/ld+json"]');
+
+        $this->client->request('GET', '/login');
+        self::assertSelectorExists('meta[name="robots"][content="noindex, nofollow"]');
+    }
+
     public function testGameRequiresLogin(): void
     {
         $this->client->request('GET', '/buildings');

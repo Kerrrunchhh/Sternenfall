@@ -58,7 +58,9 @@ class ShipyardController extends AbstractGameController
                 $credits = $this->economy->shipOrderCredits($type, $player, $percent);
 
                 // Maximum affordable quantity, limited by every resource, credits and the available crew.
-                $max = $spec->crew > 0 ? (int) floor($planet->getPopulation() / $spec->crew) : PlanetService::maxOrderQuantity($type);
+                // The cap (crew and order size) does not grow on the page; resources and credits do (game.js).
+                $cap = min($spec->crew > 0 ? (int) floor($planet->getPopulation() / $spec->crew) : PlanetService::maxOrderQuantity($type), PlanetService::maxOrderQuantity($type));
+                $max = $cap;
                 foreach (ResourceType::cases() as $resource) {
                     if ($cost->get($resource) > 0) {
                         $max = min($max, (int) floor($stock->get($resource) / $cost->get($resource)));
@@ -72,6 +74,7 @@ class ShipyardController extends AbstractGameController
                     'credits' => $credits,
                     'seconds' => $this->economy->shipOrderSeconds($type, $planet, $percent, \DateTimeImmutable::createFromInterface($this->clock->now())),
                     'max' => min($max, PlanetService::maxOrderQuantity($type)),
+                    'cap' => $cap,
                 ];
             }
 
