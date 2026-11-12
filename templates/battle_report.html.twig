@@ -8,6 +8,10 @@
     <main class="public-report">
         <a href="{{ path(app.user ? 'app_overview' : 'app_home') }}" class="public-report-logo"><img src="{{ asset('pictures/brand/logo.webp') }}" alt="{{ game_name }}" width="223" height="131"></a>
         {% if report %}
+            {{ include('_flashes.html.twig') }}
+            {% if report.annulled %}
+                <p class="panel attack-ban-banner">{{ '⚖ Dieser Kampfbericht wurde am {annulledAt} von der Spielleitung annulliert: {reason}'|trans({'{annulledAt}': report.annulledAt|date('d.m.Y H:i'), '{reason}': report.annulReason}) }}</p>
+            {% endif %}
             <article class="panel battle-report">
                 <h1>{{ report.subjectIn(app.request.locale) }}</h1>
                 <p class="muted small">
@@ -16,6 +20,53 @@
                 </p>
                 <pre class="message-body">{{ report.bodyIn(app.request.locale) }}</pre>
             </article>
+            {% if refund_players is not null %}
+                {% set losses = report.losses %}
+                <article class="panel admin-refund">
+                    <h2>{{ '🛡 Annullieren und Schiffe erstatten'|trans }}</h2>
+                    <p class="muted small">{{ 'Nur für Admins. Die Zahlen sind mit den Verlusten aus diesem Kampf vorbelegt und frei änderbar; 0 erstattet nichts. Die Schiffe kommen in den Hangar des gewählten Planeten, die Beteiligten bekommen eine Nachricht. Verteidigungstürme am besten auf den Planeten, auf dem sie standen.'|trans }}</p>
+                    {% if report.refunds is not empty %}
+                        <p class="small"><strong>{{ 'Bereits erstattet:'|trans }}</strong>
+                            {% for r in report.refunds %}{{ r.name }} → {{ r.planetName }}: {% for type, count in r.ships %}{{ count }} × {% for st in ship_types|filter(st => st.value == type) %}{{ st.label|trans }}{% endfor %}{{ not loop.last ? ', ' }}{% endfor %}{{ not loop.last ? ' · ' }}{% endfor %}
+                        </p>
+                    {% endif %}
+                    {% if refund_players is empty %}
+                        <p class="muted small">{{ 'Für diesen älteren Bericht sind keine Verluste gespeichert – er kann nur annulliert werden. Schiffe lassen sich bei neueren Berichten erstatten.'|trans }}</p>
+                    {% endif %}
+                    <form method="post" action="{{ path('app_admin_report_annul', {hash: report.hash}) }}" class="mail-form">
+                        <input type="hidden" name="_token" value="{{ csrf_token('admin') }}">
+                        <label>{{ 'Grund (sehen die Beteiligten)'|trans }} <input type="text" name="reason" maxlength="500" required value="{{ report.annulReason }}"></label>
+                        {% for user in refund_players %}
+                            {% set lost = losses[user.id].ships|default({}) %}
+                            <fieldset class="refund-player">
+                                <legend>{{ user.username }}</legend>
+                                <label>{{ 'Erstatten auf'|trans }}
+                                    <select name="planet[{{ user.id }}]">
+                                        {% for p in user.planets %}<option value="{{ p.id }}" {{ p.homeworld ? 'selected' }}>{{ p.name }} [{{ p.coordinates }}]</option>{% endfor %}
+                                    </select>
+                                </label>
+                                <div class="refund-ships">
+                                    {% for type in ship_types|filter(t => lost[t.value] is defined) %}
+                                        <label>{{ type.label|trans }} <span class="muted small">({{ 'verloren: {count}'|trans({'{count}': lost[type.value]|num}) }})</span>
+                                            <input type="number" name="ships[{{ user.id }}][{{ type.value }}]" min="0" value="{{ lost[type.value] }}"></label>
+                                    {% else %}
+                                        <p class="muted small">{{ 'Keine Verluste.'|trans }}</p>
+                                    {% endfor %}
+                                </div>
+                                <details>
+                                    <summary class="small">{{ 'Weitere Schiffstypen'|trans }}</summary>
+                                    <div class="refund-ships">
+                                        {% for type in ship_types|filter(t => lost[t.value] is not defined) %}
+                                            <label>{{ type.label|trans }} <input type="number" name="ships[{{ user.id }}][{{ type.value }}]" min="0" value="0"></label>
+                                        {% endfor %}
+                                    </div>
+                                </details>
+                            </fieldset>
+                        {% endfor %}
+                        <button class="btn btn-danger" type="submit" id="report-annul" data-confirm="{{ 'Kampfbericht annullieren und die eingetragenen Schiffe erstatten?'|trans }}" data-confirm-label="{{ 'Annullieren'|trans }}">{{ report.annulled ? 'Weitere Schiffe erstatten'|trans : 'Annullieren und erstatten'|trans }}</button>
+                    </form>
+                </article>
+            {% endif %}
         {% else %}
             <article class="panel">
                 <h1>{{ 'Kampfbericht nicht gefunden'|trans }}</h1>

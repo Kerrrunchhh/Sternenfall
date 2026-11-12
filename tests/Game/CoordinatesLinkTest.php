@@ -34,4 +34,19 @@ class CoordinatesLinkTest extends TestCase
         self::assertStringContainsString('class="coords"', $html, 'coordinates are still linked');
         self::assertStringNotContainsString('report-link" href="/kampfbericht/zz', $filter->link('/kampfbericht/zz'), 'only real hashes');
     }
+
+    public function testWebAddressesBecomeLinksWithoutTrailingPunctuation(): void
+    {
+        $urls = $this->createStub(UrlGeneratorInterface::class);
+        $urls->method('generate')->willReturnCallback(static fn (string $route, array $p): string => 'app_battle_report' === $route ? '/kampfbericht/'.$p['hash'] : '/galaxy');
+        $filter = new CoordinatesExtension($urls, new \Symfony\Component\Translation\IdentityTranslator());
+
+        $html = $filter->link("Die AGB: http://earthlost.test/agb.\nMehr unter https://example.org/a?x=1&y=2 (siehe oben) und \"https://example.org/q\"");
+
+        self::assertStringContainsString('<a href="http://earthlost.test/agb" target="_blank" rel="noopener nofollow ugc">http://earthlost.test/agb</a>.', $html, 'the full stop is not part of the link');
+        self::assertStringContainsString('href="https://example.org/a?x=1&amp;y=2"', $html, 'query strings stay escaped');
+        self::assertStringContainsString('href="https://example.org/q"', $html, 'quotes around it are not part of it');
+        self::assertStringNotContainsString('href="javascript', $filter->link('javascript:alert(1)'), 'only http and https');
+        self::assertSame(1, substr_count($filter->link('https://x.example/kampfbericht/382fbad51317459736883b82'), '<a '), 'a report link is linked once, as a report');
+    }
 }

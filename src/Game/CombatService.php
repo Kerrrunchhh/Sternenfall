@@ -44,6 +44,7 @@ final readonly class CombatService
         private ?GameMailer $gameMailer = null,
         private ?\App\Repository\PlanetRepository $planetRepository = null,
         private ?ContractService $contracts = null,
+        private ?BountyService $bounties = null,
     ) {
     }
 
@@ -126,7 +127,7 @@ final readonly class CombatService
 
             $subject = t('Kampfbericht {name} [{coords}]', ['{name}' => $target->getName(), '{coords}' => $target->getCoordinates()]);
             $body = static fn (?User $viewer): TranslatableInterface => new Lines([$headline, '', $result->report($viewer), '', ...array_filter($outcome), ...$experience]);
-            $this->notify([...array_map(static fn (Fleet $f): User => $f->getOwner(), $attackers), $defender, ...array_map(static fn (Fleet $f): User => $f->getOwner(), $guards), ...$result->participants()], $subject, $body);
+            $this->notify([...array_map(static fn (Fleet $f): User => $f->getOwner(), $attackers), $defender, ...array_map(static fn (Fleet $f): User => $f->getOwner(), $guards), ...$result->participants()], $subject, $body, $result);
         });
     }
 
@@ -225,7 +226,7 @@ final readonly class CombatService
             ? ($raid ? t('Überfall erfolgreich.') : t('Abfangkampf erfolgreich.'))
             : ($raid ? t('Überfall ohne Entscheidung.') : t('Abfangkampf ohne Entscheidung.'));
         $body = static fn (?User $viewer): TranslatableInterface => new Lines([$headline, '', $result->report($viewer), '', ...array_filter($outcome), ...$experience]);
-        $this->notify([$hunter->getOwner(), ...array_map(static fn (Fleet $f): User => $f->getOwner(), $preys), ...$result->participants()], $subject, $body);
+        $this->notify([$hunter->getOwner(), ...array_map(static fn (Fleet $f): User => $f->getOwner(), $preys), ...$result->participants()], $subject, $body, $result);
     }
 
     /**
@@ -459,7 +460,10 @@ final readonly class CombatService
             }
         }
 
-        return [] === $lines ? [] : ['', t('Kampferfahrung (zerstörte Schildpunkte des Gegners):'), ...$lines];
+        $lines = [] === $lines ? [] : ['', t('Kampferfahrung (zerstörte Schildpunkte des Gegners):'), ...$lines];
+
+        // Bounties: destroyed spaceships of a target count for the hunters on the other side.
+        return [...$lines, ...($this->bounties?->record($result) ?? [])];
     }
 
     /**
@@ -468,12 +472,12 @@ final readonly class CombatService
      * @param list<User>                $recipients
      * @param \Closure(?User): TranslatableInterface $body the report as seen by a recipient (null: neutral)
      */
-    private function notify(array $recipients, TranslatableInterface $subject, \Closure $body): void
+    private function notify(array $recipients, TranslatableInterface $subject, \Closure $body, ?BattleResult $result = null): void
     {
         // One neutral, shareable copy of the report, linked at the end of every copy.
         $share = null;
         if (null !== $this->reports) {
-            $link = $this->reports->publish($subject, $body(null));
+            $link = $this->reports->publish($subject, $body(null), $result?->losses() ?? []);
             $share = t("\nKampfbericht teilen ({value} Tage gültig, ohne Anmeldung lesbar): {link}", ['{value}' => BattleReport::DAYS_AVAILABLE, '{link}' => $link]);
         }
         // Every attacker and defender gets the report from his own point of view.

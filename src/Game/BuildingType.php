@@ -19,6 +19,7 @@ enum BuildingType: string
     case ResearchLab = 'research_lab';
     case Shipyard = 'shipyard';
     case ShieldGenerator = 'shield_generator';
+    case FleetControl = 'fleet_control';
 
     public function label(): string
     {
@@ -35,6 +36,7 @@ enum BuildingType: string
             self::ResearchLab => 'Forschungslabor',
             self::Shipyard => 'Raumwerft',
             self::ShieldGenerator => 'Schildgenerator',
+            self::FleetControl => 'Flottenkontrollzentrum',
         };
     }
 
@@ -53,6 +55,7 @@ enum BuildingType: string
             self::ResearchLab => 'Erforscht neue Technologien. Jede Stufe verkürzt die Forschungszeit und schaltet weitere Technologien frei.',
             self::Shipyard => 'Baut Raumschiffe. Jede Stufe verkürzt die Bauzeit und schaltet größere Schiffsklassen frei.',
             self::ShieldGenerator => 'Spannt einen Schutzschild um den Planeten (20.000 je Stufe, bei Fusionen werden die Stufen addiert). Ist die Angriffskraft der Angreifer, die den Kampf überstehen, größer als der Schild, wird der unterste Planet einer Fusion abgesprengt.',
+            self::FleetControl => 'Steuert deine Flotten: Nur von einem Planeten mit Flottenkontrollzentrum aus kannst du Flotten bilden, schicken und befehligen. Jede Stufe auf irgendeinem deiner Planeten erlaubt eine Flotte mehr.',
         };
     }
 
@@ -72,6 +75,7 @@ enum BuildingType: string
             self::ResearchLab => new Resources(iron: 200, titanium: 400, hydrogen: 200),
             self::Shipyard => new Resources(iron: 400, titanium: 200, hydrogen: 100),
             self::ShieldGenerator => new Resources(iron: 800, titanium: 600, hydrogen: 300),
+            self::FleetControl => new Resources(iron: 300, titanium: 200, hydrogen: 100),
         };
     }
 
@@ -83,6 +87,7 @@ enum BuildingType: string
             self::IronMine, self::TitaniumMine, self::WaterPump, self::Farm, self::Storage, self::BioCell, self::Bunker => 1,
             self::Electrolysis => 2,
             self::Shipyard, self::ResearchLab, self::ShieldGenerator => 3,
+            self::FleetControl => 2,
             self::CommandCenter => 4,
         };
     }
@@ -95,6 +100,7 @@ enum BuildingType: string
             self::TitaniumMine => 1.6,
             self::Storage => 1.8,
             self::BioCell, self::Bunker, self::ShieldGenerator => 1.7,
+            self::FleetControl => 1.6,
             self::CommandCenter, self::ResearchLab, self::Shipyard => 2.0,
         };
     }
@@ -131,6 +137,7 @@ enum BuildingType: string
         return match ($this) {
             self::Electrolysis, self::ResearchLab, self::Bunker => [new Requirement(self::CommandCenter, 2)],
             self::Shipyard, self::ShieldGenerator => [new Requirement(self::CommandCenter, 3)],
+            self::FleetControl => [new Requirement(self::Shipyard, 1)],
             default => [],
         };
     }

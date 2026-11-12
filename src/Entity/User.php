@@ -40,6 +40,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $emailVerifiedAt = null;
 
+    /** When the player accepted the terms of use (AGB) at sign-up; null for players from before. */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $termsAcceptedAt = null;
+
     /** @var list<string> e-mail notifications the player wants (see App\Game\GameMailer::TOPICS) */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $mailTopics = null;
@@ -403,6 +407,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function verifyEmail(\DateTimeImmutable $at): void
     {
         $this->emailVerifiedAt = $at;
+    }
+
+    public function getTermsAcceptedAt(): ?\DateTimeImmutable
+    {
+        return $this->termsAcceptedAt;
+    }
+
+    public function acceptTerms(\DateTimeImmutable $at): void
+    {
+        $this->termsAcceptedAt = $at;
     }
 
     /** @return list<string> */

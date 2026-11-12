@@ -399,6 +399,17 @@ final readonly class Economy
     public const int SLOTS_PER_COLONIZATION_LEVEL = 10;
 
     /** Planet slots a player may hold: only the home planet without research, then 10 per level (welded slots count one by one). */
+    /** How many fleets a player can command: one per level of fleet control center on all his planets. */
+    public static function fleetCapacity(User $player): int
+    {
+        $levels = 0;
+        foreach ($player->getPlanets() as $planet) {
+            $levels += $planet->getBuildingLevel(BuildingType::FleetControl);
+        }
+
+        return $levels;
+    }
+
     public function colonySlots(User $player): int
     {
         return max(1, self::SLOTS_PER_COLONIZATION_LEVEL * $player->getResearchLevel(ResearchType::Colonization));

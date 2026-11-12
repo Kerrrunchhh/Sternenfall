@@ -40,6 +40,28 @@ class BattleReport
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $translations = null;
 
+    /**
+     * What every participant lost (for refunds by an admin): user id => name and ships.
+     *
+     * @var array<int, array{name: string, ships: array<string, int>}>|null
+     */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $losses = null;
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $annulledAt = null;
+
+    #[ORM\Column(length: 500, nullable: true)]
+    private ?string $annulReason = null;
+
+    /**
+     * Ships an admin gave back: list of user id, planet id, ships and time.
+     *
+     * @var list<array{user: int, name: string, planet: int, planetName: string, ships: array<string, int>, at: string}>|null
+     */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $refunds = null;
+
     /** @param array<string, array{subject: string, body: string}> $translations */
     public function __construct(string $hash, string $subject, string $body, \DateTimeImmutable $createdAt, array $translations = [])
     {
@@ -94,5 +116,50 @@ class BattleReport
     public function isExpired(\DateTimeImmutable $now): bool
     {
         return $now >= $this->getExpiresAt();
+    }
+
+    /** @param array<int, array{name: string, ships: array<string, int>}> $losses */
+    public function setLosses(array $losses): void
+    {
+        $this->losses = $losses ?: null;
+    }
+
+    /** @return array<int, array{name: string, ships: array<string, int>}> */
+    public function getLosses(): array
+    {
+        return $this->losses ?? [];
+    }
+
+    public function isAnnulled(): bool
+    {
+        return null !== $this->annulledAt;
+    }
+
+    public function getAnnulledAt(): ?\DateTimeImmutable
+    {
+        return $this->annulledAt;
+    }
+
+    public function getAnnulReason(): ?string
+    {
+        return $this->annulReason;
+    }
+
+    public function annul(string $reason, \DateTimeImmutable $at): void
+    {
+        $this->annulledAt ??= $at;
+        $this->annulReason = mb_substr(trim($reason), 0, 500) ?: $this->annulReason;
+    }
+
+    /** @param array<string, int> $ships */
+    public function addRefund(int $userId, string $name, int $planetId, string $planetName, array $ships, \DateTimeImmutable $at): void
+    {
+        $this->refunds[] = ['user' => $userId, 'name' => $name, 'planet' => $planetId, 'planetName' => $planetName, 'ships' => $ships, 'at' => $at->format(\DATE_ATOM)];
+    }
+
+    /** @return list<array{user: int, name: string, planet: int, planetName: string, ships: array<string, int>, at: string}> */
+    public function getRefunds(): array
+    {
+        return $this->refunds ?? [];
     }
 }

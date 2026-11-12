@@ -18,6 +18,13 @@ final class GameExtension
     }
 
     /** Points of a player: how far his planets are built up. */
+    /** Newbie protection: one planet and no fleet control center (see NewbieProtection). */
+    #[AsTwigFunction('newbie_protected')]
+    public static function newbieProtected(User $player): bool
+    {
+        return \App\Game\NewbieProtection::isProtected($player);
+    }
+
     #[AsTwigFunction('player_points')]
     public static function playerPoints(User $player): int
     {

@@ -4,6 +4,7 @@
 
 {% block content %}
     <h1>{{ 'Hilfe & Meldungen'|trans }}</h1>
+    {{ include('game/_help_tabs.html.twig') }}
     <p class="muted small">{{ 'Melde einen Spieler (z. B. wenn du beleidigt wurdest), mach einen Vorschlag oder melde einen Fehler. Die Admins sehen alles, stellen bei Bedarf Rückfragen und sagen dir, was daraus wird.'|trans }}</p>
 
     <section class="panel">

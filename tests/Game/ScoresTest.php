@@ -6,6 +6,7 @@ use App\Entity\Planet;
 use App\Entity\User;
 use App\Game\Battle;
 use App\Game\BattleGroup;
+use App\Game\BattleResult;
 use App\Game\BuildingType;
 use App\Game\Fusion;
 use App\Game\ResearchType;
@@ -73,10 +74,25 @@ final class ScoresTest extends TestCase
         foreach ($result->experience() as $entry) {
             $shares[$entry['user']->getUsername()] = $entry['experience'];
         }
-        // 10 turrets × 20 shield destroyed.
-        self::assertEqualsWithDelta(200, $shares['gross'] + $shares['klein'], 0.001);
+        // 10 turrets × 20 shield destroyed – turrets give half the experience of spaceships.
+        self::assertEqualsWithDelta(100, $shares['gross'] + $shares['klein'], 0.001);
         self::assertEqualsWithDelta(3, $shares['gross'] / $shares['klein'], 0.001);
         self::assertArrayNotHasKey('opfer', $shares, 'the turrets fell before they could fire: nothing destroyed, no experience');
+    }
+
+    public function testTurretsGiveHalfTheExperienceOfSpaceships(): void
+    {
+        $attacker = new User('angreifer');
+        $defender = new User('verteidiger');
+        $battle = new Battle();
+        $battle->add(BattleGroup::ATTACKER, $attacker, ['lanze' => 200], 'a');
+        // Same shield on both sides of the comparison: 10 turrets (20 each) and 8 Falken (25 each) = 200 each.
+        $battle->add(BattleGroup::DEFENDER, $defender, ['laser_turret' => 10, 'falke' => 8], 'hangar');
+        $result = $battle->fight();
+
+        $experience = array_sum(array_column(array_filter($result->experience(), static fn (array $e): bool => $e['user'] === $attacker), 'experience'));
+        self::assertEqualsWithDelta(200 + 200 * BattleResult::TURRET_EXPERIENCE_FACTOR, $experience, 0.001, 'Falken in full, turrets half');
+        self::assertSame(0.5, BattleResult::TURRET_EXPERIENCE_FACTOR);
     }
 
     public function testShieldResearchOfTheEnemyCounts(): void

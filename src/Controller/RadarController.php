@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Controller\Attribute\RequiresFleetControl;
 use App\Entity\Fleet;
 use App\Game\Espionage;
 use App\Game\FleetMission;
@@ -76,6 +77,7 @@ class RadarController extends AbstractGameController
         return $this->backTo($request, 'app_radar');
     }
 
+    #[RequiresFleetControl(redirectTo: 'app_radar')]
     #[Route('/radar/{id}/{mission}', name: 'app_radar_hunt', requirements: ['id' => Requirement::DIGITS, 'mission' => 'intercept|raid'], methods: ['POST'])]
     #[IsCsrfTokenValid('radar', tokenKey: '_token')]
     public function hunt(Fleet $prey, string $mission, Request $request, FleetRepository $fleets): Response

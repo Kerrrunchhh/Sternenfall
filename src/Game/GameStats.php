@@ -5,10 +5,12 @@ namespace App\Game;
 use App\Entity\DeletedAccount;
 use App\Entity\ExperienceGain;
 use App\Entity\Fleet;
+use App\Entity\GameSnapshot;
 use App\Entity\Planet;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
+use Symfony\Contracts\Cache\CacheInterface;
 
 /** Figures for the status page and the start page. */
 final readonly class GameStats
@@ -16,7 +18,105 @@ final readonly class GameStats
     public function __construct(
         private EntityManagerInterface $em,
         private ClockInterface $clock,
+        private ?CacheInterface $cache = null,
     ) {
+    }
+
+    /**
+     * Ships of every type in the game – hangars and fleets, defense turrets included.
+     *
+     * @return array<string, int> ship type => count, in the order of ShipType
+     */
+    public function shipTotals(): array
+    {
+        $totals = array_fill_keys(array_map(static fn (ShipType $t): string => $t->value, ShipType::cases()), 0);
+        $connection = $this->em->getConnection();
+        foreach (['planet', 'fleet'] as $table) {
+            foreach ($connection->fetchFirstColumn('SELECT ships FROM '.$table) as $json) {
+                foreach (json_decode((string) $json, true) ?: [] as $type => $count) {
+                    if (isset($totals[$type])) {
+                        $totals[$type] += (int) $count;
+                    }
+                }
+            }
+        }
+
+        return $totals;
+    }
+
+    /**
+     * Resources lying on all planets (as of each planet's last update; fleet cargo not counted).
+     *
+     * @return array<string, float> resource type => amount, in the order of ResourceType
+     */
+    public function resourceTotals(): array
+    {
+        $columns = array_map(static fn (ResourceType $t): string => 'COALESCE(SUM('.$t->value.'), 0) AS '.$t->value, ResourceType::cases());
+        $row = $this->em->getConnection()->fetchAssociative('SELECT '.implode(', ', $columns).' FROM planet') ?: [];
+
+        return array_map('floatval', array_merge(array_fill_keys(array_map(static fn (ResourceType $t): string => $t->value, ResourceType::cases()), 0.0), $row));
+    }
+
+    /** Takes today's snapshot unless it exists; cheap to call often (remembered in the cache). */
+    public function recordDailySnapshot(): void
+    {
+        $day = $this->now()->setTimezone(new \DateTimeZone('UTC'))->setTime(0, 0);
+        $record = function () use ($day): bool {
+            if (null === $this->em->getRepository(GameSnapshot::class)->findOneBy(['day' => $day])) {
+                $this->em->persist(new GameSnapshot($day, $this->shipTotals(), $this->resourceTotals()));
+                $this->em->flush();
+            }
+
+            return true;
+        };
+        null === $this->cache ? $record() : $this->cache->get('game_snapshot_'.$day->format('Ymd'), static fn () => $record());
+    }
+
+    /** @return list<GameSnapshot> all daily snapshots, oldest first */
+    public function snapshots(): array
+    {
+        return $this->em->getRepository(GameSnapshot::class)->findBy([], ['day' => 'ASC']);
+    }
+
+    /**
+     * Everything the status page shows about ships and resources: current totals, the
+     * change against a week ago and the daily history for the charts.
+     *
+     * @return array{ships: list<array{type: ShipType, count: int, week: ?int}>, resources: list<array{type: ResourceType, amount: float, week: ?float}>, history: array{days: list<string>, resources: array<string, list<float>>, ships: array{ships: list<int>, turrets: list<int>}}, since: ?\DateTimeImmutable}
+     */
+    public function economy(): array
+    {
+        $ships = $this->shipTotals();
+        $resources = $this->resourceTotals();
+        $snapshots = $this->snapshots();
+        $weekAgo = $this->now()->modify('-7 days');
+        $week = null;
+        foreach ($snapshots as $snapshot) {
+            if ($snapshot->getDay() <= $weekAgo) {
+                $week = $snapshot; // the latest one at least a week old
+            }
+        }
+
+        $history = ['days' => [], 'resources' => array_fill_keys(array_keys($resources), []), 'ships' => ['ships' => [], 'turrets' => []]];
+        foreach ($snapshots as $snapshot) {
+            $history['days'][] = $snapshot->getDay()->format('Y-m-d');
+            foreach (array_keys($resources) as $type) {
+                $history['resources'][$type][] = round((float) ($snapshot->getResources()[$type] ?? 0));
+            }
+            [$moving, $standing] = [0, 0];
+            foreach ($snapshot->getShips() as $type => $count) {
+                ShipType::tryFrom($type)?->isStationary() ? $standing += $count : $moving += $count;
+            }
+            $history['ships']['ships'][] = $moving;
+            $history['ships']['turrets'][] = $standing;
+        }
+
+        return [
+            'ships' => array_map(static fn (ShipType $t): array => ['type' => $t, 'count' => $ships[$t->value], 'week' => null === $week ? null : (int) ($week->getShips()[$t->value] ?? 0)], ShipType::cases()),
+            'resources' => array_map(static fn (ResourceType $t): array => ['type' => $t, 'amount' => $resources[$t->value], 'week' => null === $week ? null : (float) ($week->getResources()[$t->value] ?? 0)], ResourceType::cases()),
+            'history' => $history,
+            'since' => [] === $snapshots ? null : $snapshots[0]->getDay(),
+        ];
     }
 
     /**

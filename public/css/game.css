@@ -652,6 +652,27 @@ label.checkbox { display: flex; gap: .4rem; align-items: center; color: var(--te
 .topic-list { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .3rem; }
 
 .vacation-tag { font-size: .75rem; color: var(--ok); white-space: nowrap; }
+.news-item.news-unread { border-color: var(--accent); box-shadow: 0 0 0 1px #4fc3f733; }
+.news-head { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; flex-wrap: wrap; }
+.news-head h2 { margin: 0; }
+.news-body { margin: .6rem 0; line-height: 1.5; overflow-wrap: anywhere; }
+.news-actions { margin: 0; }
+.news-admin { display: flex; gap: .75rem; margin: -.5rem 0 1rem .25rem; }
+.news-compose summary { cursor: pointer; color: var(--accent); }
+.terms-consent { margin: 1rem 0 .5rem; }
+.terms-consent label { display: flex; gap: .5rem; align-items: flex-start; font-size: .9rem; line-height: 1.4; }
+.terms-consent input[type=checkbox] { margin-top: .2rem; flex: none; }
+.newbie-tag { font-size: .75rem; color: var(--accent-2); white-space: nowrap; }
+/* Protected owners in the galaxy: vacation green, newbie protection amber. */
+.galaxy-table tr.vacation td, .galaxy-table tr.vacation:nth-child(even) td { background: rgba(102, 187, 106, .14); }
+.galaxy-table tr.vacation td:first-child { box-shadow: inset 3px 0 0 var(--ok); }
+.galaxy-table tr.newbie td, .galaxy-table tr.newbie:nth-child(even) td { background: rgba(255, 183, 77, .13); }
+.galaxy-table tr.newbie td:first-child { box-shadow: inset 3px 0 0 var(--accent-2); }
+.galaxy-legend { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .6rem; margin-top: .5rem; }
+.legend-swatch { display: inline-block; width: .8rem; height: .8rem; border-radius: 3px; vertical-align: middle; }
+.legend-vacation { background: rgba(102, 187, 106, .45); }
+.legend-newbie { background: rgba(255, 183, 77, .45); }
+.legend-trade { background: rgba(38, 166, 154, .45); }
 /* Alliance members: name, status and scores on one line */
 .member-table .member-name + .muted.small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .member-table td:first-child { max-width: 0; width: 100%; }
@@ -660,7 +681,10 @@ label.checkbox { display: flex; gap: .4rem; align-items: center; color: var(--te
 .queue-planet > summary { cursor: pointer; list-style: revert; }
 .inline-check { display: inline-flex; align-items: center; gap: .35rem; margin: 0 0 0 .75rem; font-weight: normal; color: var(--muted); }
 .vacation-banner { border-color: var(--ok); background: rgba(102, 187, 106, .1); }
+.attack-ban-banner { border-color: var(--bad); background: #ef53501f; }
 .starter-banner { border-color: var(--accent-2); background: #ffb74d1a; }
+.newbie-protected { color: var(--ok); margin: .25rem 0; }
+.fleet-control-missing { border-color: var(--bad); background: #ef53501a; }
 .place-chips { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .5rem; }
 .place-chips .filter-chip { cursor: pointer; color: var(--text); font: inherit; font-size: .85rem; }
 .payout-form { flex-wrap: wrap; gap: .4rem; margin-top: .5rem; }
@@ -705,3 +729,61 @@ tr.suspicious-strong td { background: rgba(255, 138, 128, .08); }
 .lifeform-option { display: flex; gap: .55rem; align-items: flex-start; padding: .4rem 0; font-weight: normal; cursor: pointer; }
 .lifeform-option input { width: auto; margin-top: .25rem; }
 .lifeform-option-body { display: flex; flex-direction: column; gap: .1rem; }
+
+/* Status page: daily history of ships and resources (validated dark categorical palette, fixed order). */
+.trend-chart {
+    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500; --series-5: #d55181;
+    margin: 1rem 0 1.5rem;
+}
+.trend-chart figcaption { font-weight: 600; margin-bottom: .35rem; }
+.trend-legend { list-style: none; display: flex; flex-wrap: wrap; gap: .25rem 1rem; margin: 0 0 .5rem; padding: 0; font-size: .85rem; color: var(--text); }
+.trend-legend li { display: inline-flex; align-items: center; gap: .4rem; }
+.trend-swatch { display: inline-block; width: 1rem; height: 2px; background: var(--series); border-radius: 1px; vertical-align: middle; }
+.trend-plot { position: relative; width: 100%; }
+.trend-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.trend-grid { stroke: var(--border); stroke-width: 1; opacity: .6; }
+.trend-axis { fill: var(--muted); font-size: 11px; }
+.trend-line { fill: none; stroke: var(--series); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.trend-cross { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
+.trend-dot { fill: var(--series); stroke: var(--bg-2); stroke-width: 2; }
+.trend-hit { fill: transparent; cursor: crosshair; touch-action: pan-y; }
+.trend-tip { position: absolute; top: 8px; z-index: 2; pointer-events: none; background: var(--bg-2); border: 1px solid var(--border); border-radius: 6px; padding: .4rem .6rem; font-size: .8rem; color: var(--text); white-space: nowrap; box-shadow: 0 4px 12px #0008; }
+.trend-tip strong { display: block; margin-bottom: .2rem; }
+.trend-tip div { display: flex; align-items: center; gap: .4rem; }
+.trend-table summary { cursor: pointer; color: var(--muted); }
+.status-table td.num, .status-table th.num { white-space: nowrap; }
+.trend-up { color: var(--ok); }
+.trend-down { color: var(--bad); }
+.table-scroll { overflow-x: auto; }
+.status-table th { text-align: left; }
+.status-table th.num { text-align: right; }
+.table-scroll + h2 { margin-top: 1.5rem; }
+/* Empire overview: all planets in one table each, sums at the bottom. */
+.empire-table th, .empire-table td { white-space: nowrap; }
+.empire-table thead th { text-align: left; }
+.empire-table thead th.num { text-align: right; }
+.empire-table th[scope=row] { text-align: left; font-weight: 400; position: sticky; left: 0; background: #111a30; z-index: 1; }
+.empire-table tfoot th, .empire-table tfoot td { font-weight: 700; border-top: 2px solid var(--border); }
+.empire-table tr.empire-current th[scope=row] a { color: var(--accent-2); }
+.empire-vertical { vertical-align: bottom; height: 9.5rem; padding-bottom: .4rem; }
+.empire-vertical span { writing-mode: vertical-rl; transform: rotate(180deg); display: inline-block; font-weight: 400; font-size: .8rem; }
+.empire-buildings td.num { min-width: 2.2rem; text-align: center; }
+.empire-queues td { vertical-align: top; min-width: 10rem; }
+/* Game guide: quick start and early tech tree. */
+.guide-steps { padding-left: 1.4rem; line-height: 1.55; }
+.guide-steps li { margin-bottom: .7rem; }
+.guide-steps strong { color: var(--accent); }
+.tech-tree { list-style: none; padding: 0; margin: 0 0 1rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .5rem; }
+.tech-node { border: 1px solid var(--border); border-left-width: 3px; border-radius: 6px; padding: .5rem .65rem; background: #0d142680; }
+.tech-node.tech-ready { border-left-color: var(--ok); }
+.tech-node.tech-locked { border-left-color: var(--bad); }
+.tech-name { font-weight: 600; margin-right: .35rem; }
+.tech-reqs { display: flex; flex-wrap: wrap; gap: .25rem .6rem; margin-top: .3rem; font-size: .8rem; }
+.tech-req.met { color: var(--ok); }
+.tech-req.missing { color: var(--bad); }
+
+/* Admin: annul a combat report and give ships back. */
+.refund-player { border: 1px solid var(--border); border-radius: 6px; padding: .5rem .75rem; margin: .5rem 0; }
+.refund-player legend { font-weight: 600; padding: 0 .3rem; }
+.refund-ships { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: .4rem .75rem; margin: .4rem 0; }
+.refund-ships input { width: 100%; }

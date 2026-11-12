@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Controller\Attribute\RequiresFleetControl;
 use App\Entity\Fleet;
 use App\Game\FleetMission;
 use App\Game\FleetService;
@@ -97,6 +98,9 @@ class FleetController extends AbstractGameController
             'bookmarks' => $bookmarks->findByOwner($player),
             'squadrons' => $squadrons->findByOwner($player),
             'game_speed' => $this->economy->speed(),
+            'fleet_control' => $planet->getBuildingLevel(\App\Game\BuildingType::FleetControl) > 0,
+            'fleet_capacity' => \App\Game\Economy::fleetCapacity($player),
+            'named_fleets' => $fleets->countNamed($player),
             'hangar' => $hangar,
             // Own fleets waiting at the current planet can take ships from its hangar.
             'here_fleets' => array_values(array_map(
@@ -122,6 +126,7 @@ class FleetController extends AbstractGameController
         ]);
     }
 
+    #[RequiresFleetControl]
     #[Route('/fleets/create', name: 'app_fleets_create', methods: ['POST'])]
     #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
     public function create(Request $request): Response
@@ -134,6 +139,7 @@ class FleetController extends AbstractGameController
     }
 
     /** Hangar section: chosen ships of the current planet join a fleet waiting there. */
+    #[RequiresFleetControl]
     #[Route('/fleets/add-from-hangar', name: 'app_fleets_add_from_hangar', methods: ['POST'])]
     #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
     public function addFromHangar(Request $request, FleetRepository $fleets): Response
@@ -156,6 +162,7 @@ class FleetController extends AbstractGameController
         return $this->redirectToRoute('app_fleet');
     }
 
+    #[RequiresFleetControl]
     #[Route('/fleets/{id}/rename', name: 'app_fleets_rename', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
     public function rename(Fleet $fleet, Request $request): Response
@@ -166,6 +173,7 @@ class FleetController extends AbstractGameController
         return $this->redirectToRoute('app_fleet');
     }
 
+    #[RequiresFleetControl]
     #[Route('/fleets/{id}/send', name: 'app_fleets_send', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
     public function sendFleet(Fleet $fleet, Request $request): Response
@@ -184,6 +192,7 @@ class FleetController extends AbstractGameController
         return $this->redirectToRoute('app_fleet');
     }
 
+    #[RequiresFleetControl]
     #[Route('/fleets/{id}/gather', name: 'app_fleets_gather', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
     public function gather(Fleet $fleet, Request $request): Response
@@ -204,6 +213,7 @@ class FleetController extends AbstractGameController
         return $this->redirectToRoute('app_fleet');
     }
 
+    #[RequiresFleetControl]
     #[Route('/fleets/{id}/transfer', name: 'app_fleets_transfer', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
     public function transfer(Fleet $fleet, Request $request): Response
@@ -218,6 +228,7 @@ class FleetController extends AbstractGameController
         return $this->redirectToRoute('app_fleet');
     }
 
+    #[RequiresFleetControl]
     #[Route('/fleets/{id}/split', name: 'app_fleets_split', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
     public function split(Fleet $fleet, Request $request): Response
@@ -229,6 +240,7 @@ class FleetController extends AbstractGameController
         return $this->redirectToRoute('app_fleet');
     }
 
+    #[RequiresFleetControl]
     #[Route('/fleets/{id}/release-alliance', name: 'app_fleets_release_alliance', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
     public function releaseToAlliance(Fleet $fleet, Request $request): Response
@@ -243,6 +255,7 @@ class FleetController extends AbstractGameController
         return $this->redirectToRoute('app_fleet');
     }
 
+    #[RequiresFleetControl]
     #[Route('/fleets/{id}/release', name: 'app_fleets_release', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
     public function releaseTo(Fleet $fleet, Request $request, UserRepository $users): Response
@@ -258,6 +271,7 @@ class FleetController extends AbstractGameController
         return $this->redirectToRoute('app_fleet');
     }
 
+    #[RequiresFleetControl]
     #[Route('/fleets/{id}/revoke/{member}', name: 'app_fleets_revoke', requirements: ['id' => Requirement::DIGITS, 'member' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
     public function revoke(Fleet $fleet, int $member, UserRepository $users): Response
@@ -271,6 +285,7 @@ class FleetController extends AbstractGameController
         return $this->redirectToRoute('app_fleet');
     }
 
+    #[RequiresFleetControl]
     #[Route('/fleets/{id}/hover', name: 'app_fleets_hover', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
     public function hover(Fleet $fleet, Request $request): Response
@@ -285,6 +300,7 @@ class FleetController extends AbstractGameController
         return $this->redirectToRoute('app_fleet');
     }
 
+    #[RequiresFleetControl]
     #[Route('/fleets/{id}/unload', name: 'app_fleets_unload', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
     public function unload(Fleet $fleet): Response
@@ -295,6 +311,7 @@ class FleetController extends AbstractGameController
         return $this->redirectToRoute('app_fleet');
     }
 
+    #[RequiresFleetControl]
     #[Route('/fleets/{id}/dissolve', name: 'app_fleets_dissolve', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
     public function dissolve(Fleet $fleet): Response
@@ -305,6 +322,7 @@ class FleetController extends AbstractGameController
         return $this->redirectToRoute('app_fleet');
     }
 
+    #[RequiresFleetControl]
     #[Route('/fleet/{id}/recall', name: 'app_fleet_recall', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
     public function recall(Fleet $fleet, Request $request): Response
@@ -336,6 +354,7 @@ class FleetController extends AbstractGameController
     ];
 
     /** Runs one action for every selected fleet; each result becomes a flash message. */
+    #[RequiresFleetControl]
     #[Route('/fleets/bulk', name: 'app_fleets_bulk', methods: ['POST'])]
     #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
     public function bulk(Request $request, FleetRepository $fleets, UserRepository $users, SquadronRepository $squadrons, SquadronService $squadronService): Response
@@ -362,7 +381,7 @@ class FleetController extends AbstractGameController
             }
             $action = null === $mission ? '' : 'send';
         }
-        if ('send' !== $action && !isset(self::BULK_ACTIONS[$action])) {
+        if (('send' === $action && null === $mission) || ('send' !== $action && !isset(self::BULK_ACTIONS[$action]))) {
             $this->addFlash('error', t('Wähle eine Aktion aus.'));
 
             return $this->redirectToRoute('app_fleet');

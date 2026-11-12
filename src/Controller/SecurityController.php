@@ -106,6 +106,7 @@ class SecurityController extends AbstractController
             $user->setLocale($request->getLocale());
             // Chosen life form from the very start (the 30-day change cooldown counts from the sign-up).
             $user->changeLifeForm($form->get('lifeForm')->getData(), $user->getCreatedAt());
+            $user->acceptTerms($user->getCreatedAt());
             $em->persist($user);
             $colonizer->createHomePlanet($user);
             $em->flush();

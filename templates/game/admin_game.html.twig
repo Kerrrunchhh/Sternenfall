@@ -1,0 +1,55 @@
+{% extends 'game/_layout.html.twig' %}
+
+{% block title %}{{ 'Spielsteuerung – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
+
+{% block content %}
+    <h1>{{ '🛡 Spielsteuerung'|trans }}</h1>
+
+    <section class="panel">
+        <h2>{{ '⛔ Angriffssperre'|trans }}</h2>
+        <p class="muted small">{{ 'Zum Beispiel, wenn der Server schlecht erreichbar ist: Solange die Sperre gilt, kann niemand angreifen, abfangen oder überfallen, und Angriffe, die schon fliegen, kehren bei Ankunft um. Spionage, Transporte und alles andere laufen weiter. Alle Spieler sehen den Grund in einem Banner.'|trans }}</p>
+        {% if current_ban %}
+            <p class="attack-ban-banner panel">{{ current_ban.endsAt
+                ? 'Aktiv seit {startedAt} bis {endsAt}: {reason}'|trans({'{startedAt}': current_ban.startedAt|date('d.m.Y H:i'), '{endsAt}': current_ban.endsAt|date('d.m.Y H:i'), '{reason}': current_ban.reason})
+                : 'Aktiv seit {startedAt}, bis sie aufgehoben wird: {reason}'|trans({'{startedAt}': current_ban.startedAt|date('d.m.Y H:i'), '{reason}': current_ban.reason}) }}</p>
+            <form method="post" action="{{ path('app_admin_attack_ban_lift') }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('admin') }}">
+                <button class="btn" type="submit" id="attack-ban-lift">{{ 'Angriffssperre aufheben'|trans }}</button>
+            </form>
+        {% endif %}
+        <form method="post" action="{{ path('app_admin_attack_ban') }}" class="mail-form">
+            <input type="hidden" name="_token" value="{{ csrf_token('admin') }}">
+            <label>{{ 'Grund (sehen alle Spieler)'|trans }} <input type="text" name="reason" maxlength="500" required placeholder="{{ 'z. B. Der Server ist gerade schlecht erreichbar.'|trans }}"></label>
+            <label>{{ 'Dauer in Stunden (leer = bis zum Aufheben)'|trans }} <input type="number" name="hours" min="1" max="{{ max_hours }}"></label>
+            <button class="btn btn-danger" type="submit" id="attack-ban-impose">{{ current_ban ? 'Neue Sperre verhängen (ersetzt die laufende)'|trans : 'Angriffssperre verhängen'|trans }}</button>
+        </form>
+        {% if bans is not empty %}
+            <h3>{{ 'Letzte Sperren'|trans }}</h3>
+            <ul class="small">
+                {% for b in bans %}
+                    <li>{{ b.startedAt|date('d.m.Y H:i') }} – {{ b.liftedAt ? ('aufgehoben {at}'|trans({'{at}': b.liftedAt|date('d.m.Y H:i')})) : (b.endsAt ? ('bis {at}'|trans({'{at}': b.endsAt|date('d.m.Y H:i')})) : ('offen'|trans)) }}: {{ b.reason }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </section>
+
+    <section class="panel">
+        <h2>{{ '⚖ Kampfberichte'|trans }}</h2>
+        <p class="muted small">{{ 'Die letzten Kämpfe. Im Bericht kannst du ihn annullieren und den Beteiligten Schiffe erstatten. Spieler schicken dir den Link auch über „Meldungen“.'|trans }}</p>
+        {% if reports is empty %}
+            <p class="muted">{{ 'Keine Kampfberichte.'|trans }}</p>
+        {% else %}
+            <table class="table">
+                <tbody>
+                    {% for r in reports %}
+                        <tr>
+                            <td class="small">{{ r.createdAt|date('d.m.Y H:i') }}</td>
+                            <td><a href="{{ path('app_battle_report', {hash: r.hash}) }}">{{ r.subjectIn(app.request.locale) }}</a></td>
+                            <td class="small">{% if r.annulled %}<span class="badge">{{ 'annulliert'|trans }}</span>{% endif %}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </section>
+{% endblock %}

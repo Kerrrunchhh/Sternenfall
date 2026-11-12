@@ -25,6 +25,13 @@
                 {% do child.setRendered %}
             {% endfor %}
         </fieldset>
+        <div class="terms-consent">
+            {{ form_errors(form.agreeTerms) }}
+            <label>
+                {{ form_widget(form.agreeTerms) }}
+                {{ 'Ich akzeptiere die <a href="{terms}" target="_blank" rel="noopener">Nutzungsbedingungen (AGB)</a> und habe die <a href="{privacy}" target="_blank" rel="noopener">Datenschutzerklärung</a> gelesen.'|trans({'{terms}': path('app_terms')|e, '{privacy}': path('app_privacy')|e})|raw }}
+            </label>
+        </div>
         {{ form_rest(form) }}
         <p class="muted small">{{ '🚀 Startbonus: An deinem ersten Tag baut und forscht alles doppelt so schnell, und deine Planeten liefern doppelt so viele Rohstoffe, Credits und Einwohner.'|trans }}</p>
         <button class="btn" type="submit">{{ 'Kolonie gründen'|trans }}</button>

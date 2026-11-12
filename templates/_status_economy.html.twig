@@ -1,0 +1,70 @@
+{# Ships and resources of the whole game, with their history. Needs: economy (GameStats::economy()) #}
+{% macro change(now, before) %}
+    {%- if before is null -%}<span class="muted">–</span>
+    {%- else -%}
+        {%- set diff = now - before -%}
+        <span class="{{ diff > 0 ? 'trend-up' : (diff < 0 ? 'trend-down') }}">{{ diff > 0 ? '+' }}{{ diff|round|num }}</span>
+    {%- endif -%}
+{% endmacro %}
+
+<h2>{{ 'Schiffe im Spiel'|trans }}</h2>
+<p class="muted small">{{ 'In allen Hangars und Flotten zusammen. „7 Tage“ ist die Veränderung seit vor einer Woche.'|trans }}</p>
+<div class="table-scroll">
+    <table class="table status-table">
+        <thead><tr><th>{{ 'Typ'|trans }}</th><th class="num">{{ 'Anzahl'|trans }}</th><th class="num">{{ '7 Tage'|trans }}</th></tr></thead>
+        {% for group in [{title: 'Raumschiffe', stationary: false}, {title: 'Verteidigung', stationary: true}] %}
+            <tbody>
+                <tr class="table-head"><td colspan="3">{{ group.title|trans }}</td></tr>
+                {% for row in economy.ships|filter(r => r.type.stationary == group.stationary) %}
+                    <tr><td>{{ row.type.label|trans }}</td><td class="num">{{ row.count|num }}</td><td class="num">{{ _self.change(row.count, row.week) }}</td></tr>
+                {% endfor %}
+            </tbody>
+        {% endfor %}
+    </table>
+</div>
+
+<h2>{{ 'Rohstoffe auf allen Planeten'|trans }}</h2>
+<p class="muted small">{{ 'Was in den Lagern aller Planeten liegt (Stand der letzten Aktualisierung jedes Planeten, ohne Ladung in Flotten).'|trans }}</p>
+<div class="table-scroll">
+    <table class="table status-table">
+        <thead><tr><th>{{ 'Rohstoff'|trans }}</th><th class="num">{{ 'Menge'|trans }}</th><th class="num">{{ '7 Tage'|trans }}</th></tr></thead>
+        <tbody>
+            {% for row in economy.resources %}
+                <tr><td>{{ row.type.label|trans }}</td><td class="num">{{ row.amount|round(0, 'floor')|num }}</td><td class="num">{{ _self.change(row.amount, row.week) }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<h2>{{ 'Entwicklung'|trans }}</h2>
+{% set h = economy.history %}
+{% if h.days|length < 2 %}
+    <p class="muted">{{ 'Die Werte werden einmal am Tag festgehalten, seit {since}. Ab dem zweiten Tag erscheint hier der Verlauf.'|trans({'{since}': economy.since ? economy.since|date('d.m.Y') : 'now'|date('d.m.Y')}) }}</p>
+{% else %}
+    {% set resource_series = economy.resources|map((r, i) => {name: r.type.label|trans, values: h.resources[r.type.value]}) %}
+    {% set ship_series = [{name: 'Raumschiffe'|trans, values: h.ships.ships}, {name: 'Verteidigungstürme'|trans, values: h.ships.turrets}] %}
+    {% for chart in [{id: 'trend-resources', title: 'Rohstoffe auf allen Planeten'|trans, series: resource_series}, {id: 'trend-ships', title: 'Schiffe im Spiel'|trans, series: ship_series}] %}
+        <figure class="trend-chart" id="{{ chart.id }}" data-chart="{{ {days: h.days, series: chart.series}|json_encode }}">
+            <figcaption>{{ chart.title }}</figcaption>
+            <ul class="trend-legend">
+                {% for s in chart.series %}<li><span class="trend-swatch" style="--series: var(--series-{{ loop.index }})"></span>{{ s.name }}</li>{% endfor %}
+            </ul>
+            <div class="trend-plot" role="img" aria-label="{{ 'Verlauf: {title}'|trans({'{title}': chart.title}) }}"></div>
+            <details class="trend-table">
+                <summary class="small">{{ 'Als Tabelle'|trans }}</summary>
+                <div class="table-scroll">
+                    <table class="table">
+                        <thead><tr><th>{{ 'Tag'|trans }}</th>{% for s in chart.series %}<th class="num">{{ s.name }}</th>{% endfor %}</tr></thead>
+                        <tbody>
+                            {% for day in h.days|reverse(true) %}
+                                {% set i = loop.revindex0 %}
+                                <tr><td>{{ day|date('d.m.Y') }}</td>{% for s in chart.series %}<td class="num">{{ s.values[i]|num }}</td>{% endfor %}</tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </details>
+        </figure>
+    {% endfor %}
+    <script src="{{ asset('js/status-chart.js') }}" defer></script>
+{% endif %}

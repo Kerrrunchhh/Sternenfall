@@ -62,6 +62,7 @@
             <a href="{{ path('app_research') }}" class="{{ route == 'app_research' ? 'active' }}">{{ 'Forschung'|trans }}</a>
             <a href="{{ path('app_shipyard') }}" class="{{ route == 'app_shipyard' ? 'active' }}">{{ 'Werft'|trans }}</a>
             <a href="{{ path('app_defense') }}" class="{{ route == 'app_defense' ? 'active' }}">{{ 'Planetenverteidigung'|trans }}</a>
+            <a href="{{ path('app_empire') }}" class="{{ route == 'app_empire' ? 'active' }}" title="{{ 'Alle Planeten mit Rohstoffen, Gebäuden und Bauschleifen'|trans }}">{{ 'Alle Planeten'|trans }}</a>
 
             <h2 class="sidebar-title">{{ 'Planeten <small>{planets}</small>'|trans({'{planets}': player.planets|length|e})|raw }}</h2>
             <div class="planet-list">
@@ -98,6 +99,11 @@
         </nav>
         <main class="content">
             {% if player.onVacation(now) %}<p class="panel vacation-banner">{{ '🌴 Du bist im Urlaub bis {vacationUntil} –'|trans({'{vacationUntil}': player.vacationUntil|date('d.m.Y H:i')}) }} <a href="{{ path('app_vacation') }}">{{ 'Details'|trans }}</a></p>{% endif %}
+            {% if attack_ban|default(null) %}
+                <p class="panel attack-ban-banner" role="status">{{ attack_ban.endsAt
+                    ? '⛔ <strong>Angriffssperre</strong> bis {endsAt}: {reason} Angriffe, Abfangen und Überfälle sind so lange nicht möglich; fliegende Angriffe kehren um.'|trans({'{endsAt}': attack_ban.endsAt|date('d.m.Y H:i')|e, '{reason}': attack_ban.reason|e})|raw
+                    : '⛔ <strong>Angriffssperre</strong>: {reason} Angriffe, Abfangen und Überfälle sind bis auf Weiteres nicht möglich; fliegende Angriffe kehren um.'|trans({'{reason}': attack_ban.reason|e})|raw }}</p>
+            {% endif %}
             {% if starter_bonus_until|default(null) %}
                 {% import 'game/_macros.html.twig' as bonus_ui %}
                 <p class="panel starter-banner">{{ '🚀 <strong>Startbonus:</strong> An deinem ersten Tag baut und forscht alles doppelt so schnell, und deine Planeten liefern doppelt so viele Rohstoffe, Credits und Einwohner. Noch {countdown}.'|trans({'{countdown}': bonus_ui.countdown(starter_bonus_until, now)})|raw }}</p>
@@ -114,6 +120,9 @@
             <a href="{{ path('app_radar') }}" class="{{ route == 'app_radar' ? 'active' }}">{{ 'Radar'|trans }}</a>
             <a href="{{ path('app_bookmarks') }}" class="{{ route == 'app_bookmarks' ? 'active' }}">{{ 'Koordinaten'|trans }}</a>
             <a href="{{ path('app_trade') }}" class="{{ route in ['app_trade', 'app_trade_fusionators', 'app_trade_post'] ? 'active' }}">{{ 'Handel'|trans }}</a>
+            <a href="{{ path('app_news') }}" class="{{ route starts with 'app_news' ? 'active' }}">
+                {{ 'Neuigkeiten'|trans }}{% if unread_news|default([]) is not empty %} <span class="badge">{{ unread_news|length }}</span>{% endif %}
+            </a>
             <a href="{{ path('app_messages') }}" class="{{ route == 'app_messages' ? 'active' }}">
                 {{ 'Nachrichten'|trans }} <span class="badge" data-unread-badge {{ unread_messages > 0 ? '' : 'hidden' }}>{{ unread_messages }}</span>
             </a>
@@ -124,11 +133,12 @@
                 {{ 'Ticker'|trans }}{% if ticker_invitations > 0 %} <span class="badge">{{ ticker_invitations }}</span>{% endif %}
             </a>
             <a href="{{ path('app_game_status') }}" class="{{ route == 'app_game_status' ? 'active' }}">{{ 'Status'|trans }}</a>
-            <a href="{{ path('app_support') }}" class="{{ route starts with 'app_support' ? 'active' }}">{{ 'Hilfe & Meldungen'|trans }}</a>
+            <a href="{{ path('app_guide') }}" class="{{ route == 'app_guide' or route starts with 'app_support' ? 'active' }}">{{ 'Hilfe & Meldungen'|trans }}</a>
             {% if forum_url %}<a href="{{ forum_url }}" target="_blank" rel="noopener">{{ 'Forum ↗'|trans }}</a>{% endif %}
             {% if is_granted('ROLE_MODERATOR') %}<a href="{{ path('app_admin_tickets') }}" class="{{ route starts with 'app_admin_ticket' ? 'active' }}">{{ '🛡 Meldungen'|trans }}{% if open_tickets > 0 %} <span class="badge">{{ open_tickets }}</span>{% endif %}</a>{% endif %}
             {% if is_granted('ROLE_MODERATOR') %}<a href="{{ path('app_admin_multis') }}" class="{{ route == 'app_admin_multis' ? 'active' }}">{{ '🛡 Multis'|trans }}</a>{% endif %}
             {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('app_admin_users') }}" class="{{ route starts with 'app_admin_user' ? 'active' }}">{{ '🛡 Benutzer'|trans }}</a>{% endif %}
+            {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('app_admin_game') }}" class="{{ route == 'app_admin_game' ? 'active' }}">{{ '🛡 Spielsteuerung'|trans }}{% if attack_ban|default(null) %} <span class="badge">⛔</span>{% endif %}</a>{% endif %}
             <a href="{{ path('app_notes') }}" class="{{ route == 'app_notes' ? 'active' }}">{{ 'Notizblock'|trans }}</a>
             <a href="{{ path('app_player_search') }}" class="{{ route == 'app_player_search' ? 'active' }}">{{ 'Spieler suchen'|trans }}</a>
             <a href="{{ path('app_highscores') }}" class="{{ route == 'app_highscores' ? 'active' }}">{{ 'Highscores'|trans }}</a>

@@ -76,10 +76,13 @@ final readonly class BattleResult
         return $value;
     }
 
+    /** Destroyed defense turrets give only this share of the experience spaceships give. */
+    public const float TURRET_EXPERIENCE_FACTOR = 0.5;
+
     /**
      * Combat experience: the shield points (research included) destroyed on one side go to
      * the players of the other side, shared by the build time of the units each brought.
-     * Transports spared in a raid did not fight and get nothing.
+     * Destroyed turrets count half. Transports spared in a raid did not fight and get nothing.
      *
      * @return list<array{user: User, experience: float}>
      */
@@ -87,7 +90,7 @@ final readonly class BattleResult
     {
         $shares = [];
         foreach ([BattleGroup::ATTACKER => BattleGroup::DEFENDER, BattleGroup::DEFENDER => BattleGroup::ATTACKER] as $side => $enemy) {
-            $pool = array_sum(array_map(static fn (BattleGroup $g): float => $g->destroyedShield(), $this->side($enemy)));
+            $pool = array_sum(array_map(static fn (BattleGroup $g): float => $g->destroyedShield() * ($g->type->isStationary() ? self::TURRET_EXPERIENCE_FACTOR : 1.0), $this->side($enemy)));
             $weights = [];
             foreach ($this->side($side) as $group) {
                 if ($this->transportsSpared && BattleGroup::DEFENDER === $side && $group->type->isTransport()) {
@@ -106,6 +109,65 @@ final readonly class BattleResult
         }
 
         return $shares;
+    }
+
+    /**
+     * Bounty hunting: shield points of the target's destroyed spaceships (no defenses), shared
+     * among the players of the other side by the build time of the units each brought – like
+     * combat experience.
+     *
+     * @return list<array{user: User, shield: float}>
+     */
+    public function shipShieldDestroyedOf(User $target): array
+    {
+        $shares = [];
+        foreach ([BattleGroup::ATTACKER => BattleGroup::DEFENDER, BattleGroup::DEFENDER => BattleGroup::ATTACKER] as $side => $enemy) {
+            $pool = 0.0;
+            foreach ($this->side($side) as $group) {
+                if ($group->owner->isSameAs($target) && !$group->type->isStationary()) {
+                    $pool += $group->destroyedShield();
+                }
+            }
+            if ($pool <= 0) {
+                continue;
+            }
+            $weights = [];
+            foreach ($this->side($enemy) as $group) {
+                if ($this->transportsSpared && BattleGroup::DEFENDER === $enemy && $group->type->isTransport()) {
+                    continue;
+                }
+                $key = $group->owner->getId() ?? spl_object_id($group->owner);
+                $weights[$key] = ['user' => $group->owner, 'weight' => ($weights[$key]['weight'] ?? 0.0) + $group->buildWeight()];
+            }
+            $total = array_sum(array_column($weights, 'weight'));
+            foreach ($total > 0 ? $weights : [] as $entry) {
+                $shares[] = ['user' => $entry['user'], 'shield' => $pool * $entry['weight'] / $total];
+            }
+        }
+
+        return $shares;
+    }
+
+    /**
+     * What each participant lost, ships and turrets (stored with the shared report for refunds).
+     *
+     * @return array<int, array{name: string, ships: array<string, int>}> user id => losses
+     */
+    public function losses(): array
+    {
+        $losses = [];
+        foreach ($this->groups as $group) {
+            $id = $group->owner->getId();
+            if (null === $id) {
+                continue;
+            }
+            $losses[$id] ??= ['name' => $group->owner->getUsername(), 'ships' => []];
+            if ($group->lost() > 0) {
+                $losses[$id]['ships'][$group->type->value] = ($losses[$id]['ships'][$group->type->value] ?? 0) + $group->lost();
+            }
+        }
+
+        return $losses;
     }
 
     /** @return list<User> everybody who took part */

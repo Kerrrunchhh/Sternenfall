@@ -5,6 +5,7 @@ namespace App\Form;
 use App\Entity\User;
 use App\Game\LifeForm;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
@@ -49,6 +50,12 @@ class RegistrationFormType extends AbstractType
                 'choice_label' => static fn (LifeForm $form): string => $form->label(),
                 'data' => LifeForm::Settler,
                 'constraints' => [new Assert\NotNull(message: 'Bitte wähle eine Lebensform.')],
+            ])
+            // The terms of use (AGB) must be accepted; the label with the links is rendered in the template.
+            ->add('agreeTerms', CheckboxType::class, [
+                'mapped' => false,
+                'label' => false,
+                'constraints' => [new Assert\IsTrue(message: 'Bitte akzeptiere die Nutzungsbedingungen (AGB).')],
             ])
         ;
     }

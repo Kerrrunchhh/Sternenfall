@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Controller\Attribute\RequiresFleetControl;
 use App\I18n\NumberInput;
 use App\Entity\Planet;
 use App\Entity\TransportRequest;
@@ -76,6 +77,7 @@ class TransportRequestController extends AbstractGameController
         return $this->redirectToRoute('app_transport_requests');
     }
 
+    #[RequiresFleetControl(redirectTo: 'app_transport_requests')]
     #[Route('/transportgesuche/beliefern', name: 'app_transport_request_serve', methods: ['POST'])]
     #[IsCsrfTokenValid('transport_requests', tokenKey: '_token')]
     public function serve(Request $request): Response

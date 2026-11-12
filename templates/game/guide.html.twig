@@ -1,0 +1,86 @@
+{% extends 'game/_layout.html.twig' %}
+
+{% block title %}{{ 'Spielhilfe – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
+
+{% block content %}
+    <h1>{{ 'Hilfe & Meldungen'|trans }}</h1>
+    {{ include('game/_help_tabs.html.twig') }}
+    <p class="muted">{{ 'Die wichtigsten Schritte für einen guten Start und welche Gebäude, Forschungen und Schiffe du zuerst erreichst. Fragen, Vorschläge oder Fehler? Schreib uns unter <a href="{support}">Meldungen</a>.'|trans({'{support}': path('app_support')|e})|raw }}</p>
+
+    <section class="panel guide">
+        <h2>{{ '🚀 Schnellstart'|trans }}</h2>
+        <ol class="guide-steps">
+            <li>
+                <strong>{{ 'Nutze den Startbonus.'|trans }}</strong>
+                {{ 'In deinen ersten {hours} Stunden baut und forscht alles doppelt so schnell, und deine Planeten liefern doppelt so viele Rohstoffe, Credits und Einwohner. Halte die Bauschleife in dieser Zeit immer voll.'|trans({'{hours}': starter_bonus_hours}) }}
+            </li>
+            <li>
+                <strong>{{ 'Baue die Rohstoffversorgung aus.'|trans }}</strong>
+                {{ 'Eisenmine und Titanmine liefern die Baustoffe für fast alles. Wasserpumpwerk und Hydrokulturfarm versorgen deine Einwohner – geht Nahrung oder Wasser aus, verhungern sie. Die Elektrolyseanlage macht aus Wasser Wasserstoff, den Treibstoff deiner Flotten.'|trans }}
+                <a href="{{ path('app_buildings') }}">{{ 'Zu den Gebäuden'|trans }}</a>
+            </li>
+            <li>
+                <strong>{{ 'Erhöhe die Kommandozentrale.'|trans }}</strong>
+                {{ 'Jede Stufe verkürzt die Bauzeit aller Gebäude. Ab Stufe 2 kannst du Forschungslabor, Elektrolyseanlage und Bunker bauen, ab Stufe 3 Raumwerft und Schildgenerator. In der Bauschleife wartet höchstens ein zweiter Auftrag, und der kostet 30 % mehr.'|trans }}
+            </li>
+            <li>
+                <strong>{{ 'Lass deine Bevölkerung wachsen.'|trans }}</strong>
+                {{ 'Einwohner bringen Credits und bemannen deine Schiffe. Wie viele auf einem Planeten leben können, bestimmt die Biozelle. Auf blauen Planeten wächst die Bevölkerung doppelt so schnell.'|trans }}
+            </li>
+            <li>
+                <strong>{{ 'Schütze, was du hast.'|trans }}</strong>
+                {{ 'Rohstoffe bis zur Kapazität des Lagerkomplexes können nicht geplündert werden, der Bunker schützt deine Einwohner bei Bombardements. Türme aus der Planetenverteidigung wehren Angreifer ab.'|trans }}
+            </li>
+            <li>
+                <strong>{{ 'Forsche.'|trans }}</strong>
+                {{ 'Mit dem Forschungslabor erforschst du Antriebe, Waffen, Schilde und Technologien. Je höher das Labor des Planeten, auf dem du forschst, desto schneller geht es. Forschung gilt für alle deine Planeten.'|trans }}
+                <a href="{{ path('app_research') }}">{{ 'Zur Forschung'|trans }}</a>
+            </li>
+            <li>
+                <strong>{{ 'Baue Schiffe und befehlige Flotten.'|trans }}</strong>
+                {{ 'In der Raumwerft baust du Schiffe. Um sie als Flotte zu schicken, brauchst du auf dem gewählten Planeten ein Flottenkontrollzentrum – jede Stufe auf einem deiner Planeten erlaubt eine Flotte. Spionagesonden und Kolonieschiffe starten auch ohne, direkt aus der Galaxie.'|trans }}
+            </li>
+            <li>
+                <strong>{{ 'Gründe Kolonien.'|trans }}</strong>
+                {{ 'Mit Kolonisationstechnik und einem Kolonieschiff besiedelst du freie Planeten in der Galaxie. Mehr Planeten bedeuten mehr Rohstoffe – achte auf den Planetentyp: Rote Planeten liefern mehr Nahrung, Wasserplaneten mehr Wasser, Stein- und Wüstenplaneten weniger.'|trans }}
+                <a href="{{ path('app_galaxy') }}">{{ 'Zur Galaxie'|trans }}</a>
+            </li>
+            <li>
+                <strong>{{ 'Hol dir Hilfe von anderen.'|trans }}</strong>
+                {{ 'Fehlen dir Rohstoffe, stell ein Transportgesuch – Händler liefern zum festen Preis von 1 Credit je {per} Rohstoffe. In einer Allianz helft ihr euch gegenseitig und tauscht euch am Schwarzen Brett aus.'|trans({'{per}': resources_per_credit}) }}
+                <a href="{{ path('app_transport_requests') }}">{{ 'Zu den Transportgesuchen'|trans }}</a>
+            </li>
+            <li>
+                <strong>{{ 'Behalte den Überblick.'|trans }}</strong>
+                {{ 'Unter „Alle Planeten“ siehst du Rohstoffe, Gebäude und Bauschleifen all deiner Planeten auf einen Blick. Neuigkeiten und Nachrichten findest du rechts im Menü.'|trans }}
+                <a href="{{ path('app_empire') }}">{{ 'Zu allen Planeten'|trans }}</a>
+            </li>
+        </ol>
+        {% if newbie_protected %}
+            <p class="newbie-protected small">{{ '🛡 Du stehst unter Noobschutz: Solange du nur einen Planeten und kein Flottenkontrollzentrum hast, darf dich niemand angreifen, bei dir stationieren oder dir Rohstoffe schicken. Baust du ein Flottenkontrollzentrum oder gründest eine Kolonie, endet der Schutz.'|trans }}</p>
+        {% endif %}
+    </section>
+
+    <section class="panel guide">
+        <h2>{{ '🌳 Technikbaum für den Anfang'|trans }}</h2>
+        <p class="muted small">{{ 'Was du wofür brauchst. Grün ist bei dir schon erfüllt, rot fehlt noch (Gebäude auf dem gewählten Planeten, Forschung für alle Planeten).'|trans }}</p>
+        {% for group in tree %}
+            <h3>{{ group.title|trans }}</h3>
+            <ul class="tech-tree">
+                {% for node in group.nodes %}
+                    <li class="tech-node {{ node.ready ? 'tech-ready' : 'tech-locked' }}">
+                        <a class="tech-name" href="{{ path(node.route, node.params) }}">{{ node.label|trans }}</a>
+                        {% if node.level is not null and node.level > 0 %}<span class="muted small">{{ 'Stufe {level}'|trans({'{level}': node.level}) }}</span>{% endif %}
+                        <div class="tech-reqs">
+                            {% for r in node.requirements %}
+                                <span class="tech-req {{ r.met ? 'met' : 'missing' }}">{{ r.met ? '✓' : '✗' }} {{ r.label|trans }}</span>
+                            {% else %}
+                                <span class="tech-req met">{{ '✓ sofort verfügbar'|trans }}</span>
+                            {% endfor %}
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endfor %}
+    </section>
+{% endblock %}

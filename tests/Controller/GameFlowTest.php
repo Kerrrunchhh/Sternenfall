@@ -44,6 +44,7 @@ class GameFlowTest extends WebTestCase
 
         $user = static::getContainer()->get(UserRepository::class)->findOneBy(['username' => 'Kommandant']);
         self::assertNotNull($user);
+        self::assertNotNull($user->getTermsAcceptedAt(), 'the terms were accepted at sign-up');
         self::assertCount(1, $user->getPlanets());
         self::assertSame(1, $user->getPlanets()->first()->getBuildingLevel(BuildingType::CommandCenter));
         self::assertSame(1, $user->getPlanets()->first()->getBuildingLevel(BuildingType::BioCell));
@@ -280,6 +281,63 @@ class GameFlowTest extends WebTestCase
         self::assertSelectorTextContains('.message', 'Neue Kolonie');
     }
 
+    public function testNewPlayersSeeTheWelcomeNewsUntilTheyMarkItRead(): void
+    {
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $welcome = new \App\Entity\News(new \DateTimeImmutable('-1 year'));
+        $welcome->setTitle('Willkommen!');
+        $welcome->setBody('Schön, dass du da bist.');
+        $welcome->setWelcome(true);
+        $old = new \App\Entity\News(new \DateTimeImmutable('-1 year'));
+        $old->setTitle('Alte Meldung');
+        $old->setBody('Von vor deiner Zeit.');
+        $em->persist($welcome);
+        $em->persist($old);
+        $em->flush();
+
+        $this->register('Neuling2');
+        $crawler = $this->client->request('GET', '/overview');
+        self::assertSelectorTextContains('.news-unread h2', 'Willkommen!');
+        self::assertSelectorNotExists('#news-'.$old->getId().'.news-unread', 'news from before joining are not pushed');
+
+        $this->client->submit($crawler->filter('#news-read-'.$welcome->getId())->form());
+        $this->client->followRedirect();
+        self::assertSelectorNotExists('.news-unread');
+
+        $this->client->request('GET', '/neuigkeiten');
+        self::assertSelectorTextContains('#news-'.$welcome->getId().' h2', 'Willkommen!', 'read news stay in the archive');
+    }
+
+    public function testEmpirePageListsEveryPlanetWithTotals(): void
+    {
+        $this->register('Imperator');
+        $home = $this->planet('Imperator');
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $colony = new Planet($home->getOwner(), 'Kolonie', 9, 9, 9, new \DateTimeImmutable());
+        $colony->setBuildingLevel(BuildingType::IronMine, 3);
+        $em->persist($colony);
+        $em->flush();
+
+        $this->client->request('GET', '/imperium');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorCount(6, 'tbody th.empire-planet', 'two planets in each of the three tables');
+        self::assertSelectorTextContains('.empire-buildings tbody', 'Kolonie');
+        self::assertSelectorTextContains('.empire-buildings tfoot', (string) (3 + $home->getBuildingLevel(BuildingType::IronMine)));
+    }
+
+    public function testGuideShowsQuickStartAndTheEarlyTechTree(): void
+    {
+        $this->register('Lehrling');
+
+        $this->client->request('GET', '/spielhilfe');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('.guide-steps li');
+        self::assertSelectorTextContains('.tech-tree', 'Raumwerft');
+        self::assertSelectorExists('.tech-node.tech-locked', 'a new player still misses things');
+    }
+
     public function testTransportRequestCostsAFixedPrice(): void
     {
         $this->register('Neuling');
@@ -306,6 +364,7 @@ class GameFlowTest extends WebTestCase
             'registration_form[username]' => $username,
             'registration_form[plainPassword][first]' => 'geheim12345',
             'registration_form[plainPassword][second]' => 'geheim12345',
+            'registration_form[agreeTerms]' => '1',
         ]);
     }
 

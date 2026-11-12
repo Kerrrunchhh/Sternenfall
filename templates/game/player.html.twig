@@ -16,9 +16,14 @@
                 {{ (listed_planets|length == 1 ? '· {count} Planet · dabei seit {createdAt}' : '· {count} Planeten · dabei seit {createdAt}')|trans({'{count}': listed_planets|length, '{createdAt}': profile.createdAt|date('d.m.Y')}) }}
             </p>
             <p class="player-scores">
-                {{ '<span title="Wie weit die Planeten ausgebaut sind: jede Gebäudestufe zählt mit dem Punktesatz des Gebäudes"><strong>{player_points}</strong> Punkte</span> <span title="Nur aus Schlachten: zerstörte Schildpunkte gegnerischer Einheiten, aufgeteilt nach der Bauzeit der eigenen Einheiten"><strong>{combatExperience}</strong> Kampferfahrung</span>'|trans({'{player_points}': player_points(profile)|num|e, '{combatExperience}': profile.combatExperience|num|e})|raw }}
+                {{ '<span title="Wie weit die Planeten ausgebaut sind: jede Gebäudestufe zählt mit dem Punktesatz des Gebäudes"><strong>{player_points}</strong> Punkte</span> <span title="Nur aus Schlachten: zerstörte Schildpunkte gegnerischer Einheiten (Verteidigungstürme zählen halb), aufgeteilt nach der Bauzeit der eigenen Einheiten"><strong>{combatExperience}</strong> Kampferfahrung</span>'|trans({'{player_points}': player_points(profile)|num|e, '{combatExperience}': profile.combatExperience|num|e})|raw }}
                 {% if not own %}{{ ui.presence(profile) }}{% endif %}
             </p>
+            {% if newbie_protected(profile) %}
+                <p class="small newbie-protected">{{ own
+                    ? '🛡 Du stehst unter Noobschutz: Niemand darf dich angreifen, bei dir stationieren oder dir Rohstoffe schicken – bis du einen zweiten Planeten oder ein Flottenkontrollzentrum hast.'|trans
+                    : '🛡 Noobschutz: {player} darf weder angegriffen werden noch Schiffe oder Rohstoffe von anderen bekommen, solange er nur einen Planeten und kein Flottenkontrollzentrum hat.'|trans({'{player}': profile.username}) }}</p>
+            {% endif %}
             {% if profile.profileText %}
                 <div class="message-body">{{ profile.profileText }}</div>
             {% else %}
@@ -33,6 +38,7 @@
             {% if not own %}
                 <div class="profile-actions">
                     <a class="btn" href="{{ path('app_mail_compose', {to: profile.username}) }}" id="profile-write">{{ '✉ Nachricht schreiben'|trans }}</a>
+                    <a class="btn btn-secondary" href="{{ path('app_contracts', {bounty: profile.username}) }}#kopfgeld" id="profile-bounty">{{ '💀 Kopfgeld aussetzen'|trans }}</a>
                     <a class="btn btn-secondary" href="{{ path('app_support', {kind: 'report', report: profile.username}) }}" id="profile-report" title="{{ 'Zum Beispiel bei Beleidigungen'|trans }}">{{ '🚩 Melden'|trans }}</a>
                     {% if contact is null %}
                         <form method="post" action="{{ path('app_contact_request', {id: profile.id}) }}">

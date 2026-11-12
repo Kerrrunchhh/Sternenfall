@@ -1,0 +1,14 @@
+{% extends 'game/_layout.html.twig' %}
+
+{% block title %}{{ 'Neuigkeit bearbeiten – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
+
+{% block content %}
+    <h1>{{ 'Neuigkeit bearbeiten'|trans }}</h1>
+    <section class="panel">
+        {{ form_start(form, {attr: {class: 'mail-form'}}) }}
+            {{ form_widget(form) }}
+            <button class="btn" type="submit" id="news-save">{{ 'Speichern'|trans }}</button>
+            <a class="btn btn-secondary" href="{{ path('app_news') }}">{{ 'Abbrechen'|trans }}</a>
+        {{ form_end(form) }}
+    </section>
+{% endblock %}

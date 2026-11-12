@@ -32,6 +32,71 @@
         {% endif %}
     </section>
 
+    <section class="panel" id="kopfgeld">
+        <h2>{{ '💀 Kopfgelder'|trans }}</h2>
+        <p class="muted small">{{ 'Wer die verlangten Schildpunkte der Raumschiffe eines Spielers zerstört, bekommt das Kopfgeld – egal ob als Angreifer oder Verteidiger, über beliebig viele Kämpfe zusammengezählt. Verteidigungsanlagen zählen nicht. Kämpfen mehrere gemeinsam, wird nach eingesetzter Flottenstärke aufgeteilt.'|trans }}</p>
+        {% if bounties is empty %}
+            <p class="muted">{{ 'Gerade ist auf niemanden ein Kopfgeld ausgesetzt.'|trans }}</p>
+        {% else %}
+            {% for b in bounties %}
+                {% set mine = b.huntOf(player) %}
+                {% set leader = b.leader %}
+                <div class="proposal">
+                    <div>
+                        {{ '<strong>💀 {target}</strong> · <strong>{reward} Credits</strong> für {shield} Schildpunkte · bis {endsAt} · von {client}'|trans({'{target}': ui.player(b.target), '{reward}': b.reward|num|e, '{shield}': b.requiredShield|num|e, '{endsAt}': b.endsAt|date('d.m.Y')|e, '{client}': ui.player(b.client)})|raw }}
+                        <div class="muted small">
+                            {% if b.target.id == player.id %}{{ 'Das Kopfgeld ist auf dich ausgesetzt.'|trans }}
+                            {% elseif b.client.id == player.id %}{{ 'Dein Kopfgeld'|trans }}
+                            {% else %}{{ 'Du: {shield} von {required}'|trans({'{shield}': (mine ? mine.shield : 0)|round(0, 'floor')|num, '{required}': b.requiredShield|num}) }}{% endif %}
+                            {% if leader %}{{ '· Bester Jäger: {hunter} mit {shield}'|trans({'{hunter}': leader.hunter.username, '{shield}': leader.shield|round(0, 'floor')|num}) }}{% endif %}
+                        </div>
+                        {% if b.note %}<blockquote class="proposal-message">{{ b.note }}</blockquote>{% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% if my_bounties is not empty %}
+            <h3>{{ 'Deine Kopfgelder'|trans }}</h3>
+            {% for b in my_bounties %}
+                {% set leader = b.leader %}
+                <div class="proposal">
+                    <div>
+                        {{ '💀 {target} · {reward} Credits für {shield} Schildpunkte'|trans({'{target}': ui.player(b.target), '{reward}': b.reward|num|e, '{shield}': b.requiredShield|num|e})|raw }}
+                        <div class="muted small">
+                            {{ b.statusLabel|trans }}
+                            {% if b.winner %}{{ '· verdient von {hunter}'|trans({'{hunter}': b.winner.username}) }}
+                            {% elseif leader %}{{ '· Bester Jäger: {hunter} mit {shield}'|trans({'{hunter}': leader.hunter.username, '{shield}': leader.shield|round(0, 'floor')|num}) }}{% endif %}
+                            {% if b.open %}{{ '· bis {endsAt}'|trans({'{endsAt}': b.endsAt|date('d.m.Y H:i')}) }}{% endif %}
+                        </div>
+                    </div>
+                    {% if b.open and b.hunts is empty %}
+                        <form method="post" action="{{ path('app_bounty_cancel', {id: b.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('contracts') }}">
+                            <button class="btn btn-small btn-secondary" type="submit">{{ 'Zurückziehen'|trans }}</button>
+                        </form>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <h3>{{ 'Kopfgeld aussetzen'|trans }}</h3>
+        <form method="post" action="{{ path('app_bounty_create') }}" class="mail-form">
+            <input type="hidden" name="_token" value="{{ csrf_token('contracts') }}">
+            <div class="coords">
+                <label>{{ 'Spieler'|trans }} <input type="text" name="target" maxlength="30" value="{{ bounty_target }}" required></label>
+                <label>{{ 'Kopfgeld (Credits)'|trans }} <input type="text" name="reward" inputmode="numeric" required placeholder="{{ 'z. B. 50.000'|trans }}"></label>
+            </div>
+            <div class="coords">
+                <label>{{ 'Zu zerstörende Schildpunkte'|trans }} <input type="text" name="shield" inputmode="numeric" required placeholder="{{ 'z. B. {shield}'|trans({'{shield}': bounty_example.shield|num}) }}"></label>
+                <label>{{ 'Dauer (Tage)'|trans }} <input type="number" name="days" min="{{ bounty_min_days }}" max="{{ bounty_max_days }}" value="7" required></label>
+            </div>
+            <p class="muted small">{{ 'Zum Vergleich: Eine kleine Flotte aus {ships} hat zusammen <strong>{shield} Schildpunkte</strong> (ohne Schildforschung; jede Stufe Schildforschung des Ziels erhöht das).'|trans({'{ships}': bounty_example.ships|map(e => e.count ~ ' × ' ~ (e.type.label|trans))|join(', ')|e, '{shield}': bounty_example.shield|num|e})|raw }}</p>
+            <label>{{ 'Begründung (optional)'|trans }} <textarea name="note" rows="2" maxlength="1000"></textarea></label>
+            <button class="btn" type="submit" id="bounty-create">{{ 'Kopfgeld aussetzen'|trans }}</button>
+        </form>
+    </section>
+
     <section class="panel">
         <h2>{{ 'Deine Aufträge'|trans }}</h2>
         {% if mine is empty %}

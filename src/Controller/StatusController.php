@@ -13,7 +13,9 @@ class StatusController extends AbstractController
     #[Route('/status', name: 'app_status', methods: ['GET'])]
     public function status(GameStats $stats): Response
     {
-        return $this->render('status.html.twig', ['stats' => $stats->status(), 'top' => $stats->topExperienceToday()]);
+        $stats->recordDailySnapshot();
+
+        return $this->render('status.html.twig', ['stats' => $stats->status(), 'top' => $stats->topExperienceToday(), 'economy' => $stats->economy()]);
     }
 
     #[Route('/impressum', name: 'app_imprint', methods: ['GET'])]

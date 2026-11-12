@@ -1,0 +1,5 @@
+{# Tabs of the help area: game guide and reports. Needs: route #}
+<nav class="tabs" aria-label="{{ 'Hilfe & Meldungen'|trans }}">
+    <a href="{{ path('app_guide') }}" class="{{ route == 'app_guide' ? 'active' }}" {{ route == 'app_guide' ? 'aria-current="page"' }}>{{ '📖 Spielhilfe'|trans }}</a>
+    <a href="{{ path('app_support') }}" class="{{ route starts with 'app_support' ? 'active' }}" {{ route starts with 'app_support' ? 'aria-current="page"' }}>{{ '✉ Meldungen'|trans }}</a>
+</nav>

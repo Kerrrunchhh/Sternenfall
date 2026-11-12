@@ -56,6 +56,9 @@ final readonly class FleetService
         private ?ContractService $contracts = null,
         private ?TransportRequests $transportRequests = null,
         private ?PushingGuard $pushing = null,
+        private ?BountyService $bounties = null,
+        private ?GameStats $stats = null,
+        private ?AttackBans $attackBans = null,
     ) {
     }
 
@@ -206,6 +209,7 @@ final readonly class FleetService
                     continue; // hovers at the target, costs nothing
                 }
                 $this->validateMission($mission, $fleet->getOwner(), $target, $fleet->getShips(), $fleet->isNamed(), $post);
+                $this->assertNotNewbie($mission, $fleet, $target);
                 $ships = $fleet->getShips();
                 $distance = $this->navigation->distance($fleet->getGalaxy(), $fleet->getSystem(), $fleet->getPosition(), $galaxy, $system, $position);
                 $seconds = $this->navigation->flightSeconds($distance, $this->navigation->slowestSpeed($ships, $fleet->getOwner()), $speedPercent);
@@ -280,6 +284,15 @@ final readonly class FleetService
         $freighters = array_filter([ShipType::Freighter, ShipType::LargeFreighter], static fn (ShipType $t): bool => ($ships[$t->value] ?? 0) > 0);
 
         return [] === $freighters ? null : t('{value} gehören nicht in eine Kriegsflotte. Für die Beute nimm Bergungsschiffe mit (je {salvageCapacity} Frachtraum) – lass die Frachter zu Hause oder teile die Flotte auf.', ['{value}' => implode(' und ', array_map(static fn (ShipType $t): string => $t->label(), $freighters)), '{salvageCapacity}' => new Num(ShipType::Salvager->salvageCapacity())]);
+    }
+
+    /** Newbie protection; a delivery for a paid transport request may still fly. */
+    private function assertNotNewbie(FleetMission $mission, Fleet $fleet, ?Planet $target): void
+    {
+        $reason = NewbieProtection::refusal($mission, $fleet->getOwner(), $target);
+        if (null !== $reason && !(FleetMission::Transport === $mission && true === $this->transportRequests?->isPaidDelivery($fleet))) {
+            throw new GameException($reason);
+        }
     }
 
     /**
@@ -428,6 +441,7 @@ final readonly class FleetService
     {
         $name = $this->validName($name);
         $this->withEventLock(fn () => $this->planets->transaction($planet, function (Planet $planet) use ($name, $ships): void {
+            $this->assertFleetCapacity($planet->getOwner());
             // An empty fleet is allowed: a rally point to gather ships at later.
             $ships = [] === array_filter(array_map('intval', $ships), static fn (int $n): bool => $n > 0) ? [] : $this->takeFromHangar($planet, $ships);
             $this->em->persist(new Fleet($planet->getOwner(), $name, $planet->getGalaxy(), $planet->getSystem(), $planet->getPosition(), $ships));
@@ -515,6 +529,7 @@ final readonly class FleetService
             if (array_sum($taken) >= array_sum($fleet->getShips())) {
                 throw new GameException(t('Mindestens ein Schiff muss in der ursprünglichen Flotte bleiben. Zum Umbenennen nutze „Umbenennen“.'));
             }
+            $this->assertFleetCapacity($fleet->getOwner());
             foreach ($taken as $type => $count) {
                 $fleet->removeShips(ShipType::from($type), $count);
             }
@@ -544,6 +559,18 @@ final readonly class FleetService
         $this->split($fleet, $actor, $name, $ships);
 
         return t('hat Schiffe abgegeben – sie warten als neue Flotte „{name}“ am selben Ort', ['{name}' => $name]);
+    }
+
+    /** One fleet per level of fleet control center (summed over all planets); a new fleet needs a free one. */
+    private function assertFleetCapacity(User $owner): void
+    {
+        $capacity = Economy::fleetCapacity($owner);
+        $fleets = $this->fleetRepository->countNamed($owner);
+        if ($fleets >= $capacity) {
+            throw new GameException(0 === $capacity
+                ? t('Für eine Flotte brauchst du ein Flottenkontrollzentrum. Jede Stufe auf einem deiner Planeten erlaubt eine Flotte.')
+                : t('Du befehligst schon {fleets} von {capacity} Flotten. Jede weitere Stufe Flottenkontrollzentrum erlaubt eine Flotte mehr – oder lege Flotten zusammen.', ['{fleets}' => $fleets, '{capacity}' => $capacity]));
+        }
     }
 
     /** A fleet name not used by the player yet ("Name", "Name 2", …). */
@@ -909,6 +936,9 @@ final readonly class FleetService
             if (!$fleet->isIdle()) {
                 throw new GameException(t('Die Flotte ist bereits unterwegs.'));
             }
+            if (null !== $ban = $this->attackBans?->refusal()) {
+                throw new GameException($ban);
+            }
             $this->attackRules?->assertMayAttack($fleet);
             if (null !== $reason = self::freightersInWarfleet($fleet->getShips())) {
                 throw new GameException($reason);
@@ -1080,6 +1110,9 @@ final readonly class FleetService
             $this->giveUpAbandonedPlanets();
             $this->accountDeletion?->deleteDue();
             $this->contracts?->settleDue();
+            $this->bounties?->settleDue();
+            // Once a day: ships and resources of the whole game for the status page history.
+            $this->stats?->recordDailySnapshot();
             $this->transportRequests?->reopenOrphans();
             $this->em->flush();
         });
@@ -1215,6 +1248,7 @@ final readonly class FleetService
         }
         $order = array_filter(array_map(static fn (mixed $v): float => max(0, floor((float) $v)), array_intersect_key($order, array_flip(TradeDeal::goods()))));
         $this->validateMission($mission, $owner, $target, $ships, $fleet->isNamed(), $post, $order);
+        $this->assertNotNewbie($mission, $fleet, $target);
         // Pushing protection: resources for another player without payment are limited
         // (a delivery for a paid transport request is no gift).
         if (\in_array($mission, [FleetMission::Transport, FleetMission::TransportStation], true) && null !== $target
@@ -1400,6 +1434,7 @@ final readonly class FleetService
                 default => null,
             },
             FleetMission::Attack => match (true) {
+                null !== $this->attackBans?->refusal() => $this->attackBans->refusal(),
                 null === $target && null !== $post && !$this->mayAttack($player, $post->getOwner()) => t('Dort steht der Handelsstützpunkt „{name}“ von {player} – mit ihm habt ihr ein {value}, Angriffe sind ausgeschlossen. Handelsstützpunkte lassen sich ohnehin nicht angreifen.', ['{name}' => $post->getName(), '{player}' => $post->getOwner()->getUsername(), '{value}' => $this->diplomacy?->kindBetween($player, $post->getOwner())?->label() ?? 'Abkommen']),
                 null === $target && null !== $post => t('Dort steht der Handelsstützpunkt „{name}“ – Handelsstützpunkte können nicht angegriffen werden.', ['{name}' => $post->getName()]),
                 null === $target => 'Dort gibt es keinen Planeten.',
@@ -1627,7 +1662,7 @@ final readonly class FleetService
                     $this->inbox->send($player, t('Angriff auf {where} abgebrochen', ['{where}' => $where]), t('Das Ziel ist kein gegnerischer Planet mehr (eigener Planet, Allianz, Bündnis oder Nichtangriffspakt). {name} kehrt zurück.', ['{name}' => $name]));
                     break;
                 }
-                if (null !== $reason = $this->vacationProtects($target)) {
+                if (null !== $reason = $this->attackBans?->refusal() ?? $this->vacationProtects($target) ?? NewbieProtection::refusal(FleetMission::Attack, $player, $target)) {
                     $this->inbox->send($player, t('Angriff auf {where} abgebrochen', ['{where}' => $where]), t('{reason} {name} kehrt zurück.', ['{reason}' => $reason, '{name}' => $name]));
                     break;
                 }
@@ -1667,6 +1702,10 @@ final readonly class FleetService
                     && $prey->getNextEventAt() >= $fleet->getArriveAt() && ($raid ? $prey->getCargo()->total() >= 1 : FleetMission::Attack === $prey->getMission() && !$prey->isReturning());
                 if (!$stillComing) {
                     $this->inbox->send($player, $raid ? t('Überfall bei {where} verpasst', ['{where}' => $where]) : t('Abfangen bei {where} verpasst', ['{where}' => $where]), t('Das Ziel ist nicht mehr dorthin unterwegs. {name} kehrt zurück.', ['{name}' => $name]));
+                    break;
+                }
+                if (null !== $ban = $this->attackBans?->refusal()) {
+                    $this->inbox->send($player, $raid ? t('Überfall bei {where} abgebrochen', ['{where}' => $where]) : t('Abfangen bei {where} abgebrochen', ['{where}' => $where]), t('{reason} {name} kehrt zurück.', ['{reason}' => $ban, '{name}' => $name]));
                     break;
                 }
                 // The whole convoy (escorts included) or joint attack is in the fight.

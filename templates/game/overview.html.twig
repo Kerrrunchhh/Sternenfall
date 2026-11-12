@@ -31,6 +31,10 @@
             </table>
         </section>
     {% endif %}
+    {# News the player has not read yet: welcome message and announcements. #}
+    {% for n in unread_news %}
+        {{ include('game/_news_item.html.twig', {n: n, unread: true, back: 'app_overview'}) }}
+    {% endfor %}
     {% if at_trade_posts is not empty %}
         <section class="panel trade-waiting">
             {% for w in at_trade_posts %}

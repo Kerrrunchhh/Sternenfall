@@ -1,0 +1,41 @@
+{% extends 'game/_layout.html.twig' %}
+
+{% block title %}{{ 'Neuigkeiten – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
+
+{% block content %}
+    <div class="page-head">
+        <h1>{{ 'Neuigkeiten'|trans }}</h1>
+        {% if unread_news|length > 1 %}
+            <form method="post" action="{{ path('app_news_read_all') }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('news') }}">
+                <button class="btn btn-small btn-secondary" type="submit" id="news-read-all">{{ 'Alle als gelesen markieren'|trans }}</button>
+            </form>
+        {% endif %}
+    </div>
+
+    {% if form %}
+        <details class="panel news-compose" {{ form.vars.submitted ? 'open' }}>
+            <summary>{{ '✍ Neuigkeit verfassen'|trans }}</summary>
+            {{ form_start(form, {attr: {class: 'mail-form'}}) }}
+                {{ form_widget(form) }}
+                <button class="btn" type="submit" id="news-create">{{ 'Veröffentlichen'|trans }}</button>
+            {{ form_end(form) }}
+        </details>
+    {% endif %}
+
+    {% set unread_ids = unread_news|map(n => n.id) %}
+    {% for n in all_news %}
+        {{ include('game/_news_item.html.twig', {n: n, unread: n.id in unread_ids, back: 'app_news'}) }}
+        {% if is_granted('ROLE_ADMIN') %}
+            <div class="news-admin small">
+                <a href="{{ path('app_news_edit', {id: n.id}) }}">{{ 'Bearbeiten'|trans }}</a>
+                <form method="post" action="{{ path('app_news_delete', {id: n.id}) }}" class="inline">
+                    <input type="hidden" name="_token" value="{{ csrf_token('news') }}">
+                    <button class="link-button" type="submit" data-confirm="{{ 'Neuigkeit „{title}“ löschen?'|trans({'{title}': n.title}) }}" data-confirm-label="{{ 'Löschen'|trans }}">{{ 'Löschen'|trans }}</button>
+                </form>
+            </div>
+        {% endif %}
+    {% else %}
+        <p class="panel muted">{{ 'Noch keine Neuigkeiten.'|trans }}</p>
+    {% endfor %}
+{% endblock %}

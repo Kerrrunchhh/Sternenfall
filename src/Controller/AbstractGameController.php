@@ -18,6 +18,7 @@ use App\Repository\TickerRepository;
 use App\Repository\TicketRepository;
 use App\Repository\TradePostRepository;
 use App\Repository\MessageRepository;
+use App\Repository\NewsRepository;
 use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -32,12 +33,12 @@ use Symfony\Contracts\Translation\TranslatableInterface;
 #[IsGranted('ROLE_USER')]
 abstract class AbstractGameController extends AbstractController
 {
-    protected const string SESSION_PLANET = 'current_planet_id';
+    public const string SESSION_PLANET = 'current_planet_id';
 
     /** Pages a form may send the player back to (no open redirects). */
     protected const array GAME_ROUTES = [
         'app_overview', 'app_buildings', 'app_queues', 'app_research', 'app_shipyard', 'app_defense', 'app_fleet', 'app_galaxy', 'app_trade_fusionators', 'app_bookmarks',
-        'app_radar', 'app_fusion', 'app_trade', 'app_messages', 'app_lifeform', 'app_alliance', 'app_mail', 'app_newspaper', 'app_tickers', 'app_highscores', 'app_diplomacy', 'app_notes', 'app_account', 'app_support',
+        'app_radar', 'app_fusion', 'app_trade', 'app_messages', 'app_lifeform', 'app_alliance', 'app_mail', 'app_newspaper', 'app_tickers', 'app_highscores', 'app_diplomacy', 'app_notes', 'app_account', 'app_support', 'app_news', 'app_empire', 'app_guide',
     ];
 
     protected PlanetService $planetService;
@@ -55,6 +56,16 @@ abstract class AbstractGameController extends AbstractController
     private RequestStack $requestStack;
     private AllianceRepository $allianceRepository;
     private TradePostRepository $tradePosts;
+    private NewsRepository $newsRepository;
+
+    private \App\Game\AttackBans $attackBans;
+
+    #[Required]
+    public function setNewsRepository(NewsRepository $newsRepository, \App\Game\AttackBans $attackBans): void
+    {
+        $this->newsRepository = $newsRepository;
+        $this->attackBans = $attackBans;
+    }
 
     #[Required]
     public function setGameServices(
@@ -207,6 +218,10 @@ abstract class AbstractGameController extends AbstractController
                 array_map(static fn (ShipType $type): array => ['type' => $type, 'count' => $planet->getShipCount($type)], ShipType::cases()),
                 static fn (array $entry): bool => $entry['count'] > 0,
             )),
+            // News the player has not marked read yet: shown on the overview, counted in the menu.
+            'unread_news' => $this->newsRepository->findUnreadFor($planet->getOwner()),
+            // A general attack ban by the admins is shown on every page.
+            'attack_ban' => $this->attackBans->current(),
             'now' => $this->clock->now(),
         ];
     }

@@ -1,0 +1,116 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}{{ 'Alle Planeten – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
+
+{% macro planet_cell(p) %}
+    <th scope="row" class="empire-planet">
+        <a href="{{ path('app_planet_select', {id: p.id, to: 'app_overview'}) }}" title="{{ 'Planet auswählen'|trans }}">{{ p.homeworld ? '🏠 ' }}{{ p.name }}</a>
+        <span class="muted small">[{{ p.coordinates }}]</span>
+    </th>
+{% endmacro %}
+
+{% block content %}
+    <h1>{{ 'Alle Planeten'|trans }}</h1>
+    <p class="muted small">{{ 'Ein Klick auf den Namen wählt den Planeten aus. Die Summen stehen jeweils in der letzten Zeile.'|trans }}</p>
+
+    {% if player.researching %}
+        <p class="panel empire-research">{{ '🔬 Forschung: <strong>{research} → Stufe {level}</strong>, fertig in {countdown}'|trans({'{research}': player.researchType.label|trans|e, '{level}': player.researchTargetLevel, '{countdown}': ui.countdown(player.researchFinishesAt, now)})|raw }}</p>
+    {% endif %}
+
+    <section class="panel">
+        <h2>{{ 'Rohstoffe und Einwohner'|trans }}</h2>
+        <div class="table-scroll">
+            <table class="table empire-table">
+                <thead><tr>
+                    <th scope="col">{{ 'Planet'|trans }}</th>
+                    {% for type in resource_types %}<th scope="col" class="num">{{ type.label|trans }}</th>{% endfor %}
+                    <th scope="col" class="num">{{ 'Einwohner'|trans }}</th>
+                </tr></thead>
+                <tbody>
+                    {% for row in rows %}
+                        {% set p = row.planet %}
+                        <tr class="{{ p.id == planet.id ? 'empire-current' }}">
+                            {{ _self.planet_cell(p) }}
+                            {% for type in resource_types %}<td class="num">{{ p.resources.get(type)|round(0, 'floor')|num }}</td>{% endfor %}
+                            <td class="num">{{ p.population|round(0, 'floor')|num }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot><tr>
+                    <th scope="row">{{ 'Summe'|trans }}</th>
+                    {% for type in resource_types %}<td class="num">{{ sums.resources[type.value]|round(0, 'floor')|num }}</td>{% endfor %}
+                    <td class="num">{{ sums.population|round(0, 'floor')|num }}</td>
+                </tr></tfoot>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel">
+        <h2>{{ 'Gebäudestufen'|trans }}</h2>
+        <div class="table-scroll">
+            <table class="table empire-table empire-buildings">
+                <thead><tr>
+                    <th scope="col">{{ 'Planet'|trans }}</th>
+                    {% for type in building_types %}<th scope="col" class="num empire-vertical"><span>{{ type.label|trans }}</span></th>{% endfor %}
+                </tr></thead>
+                <tbody>
+                    {% for row in rows %}
+                        {% set p = row.planet %}
+                        <tr class="{{ p.id == planet.id ? 'empire-current' }}">
+                            {{ _self.planet_cell(p) }}
+                            {% for type in building_types %}
+                                {% set level = p.buildingLevel(type) %}
+                                <td class="num {{ level == 0 ? 'muted' }}">{{ level }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot><tr>
+                    <th scope="row">{{ 'Summe'|trans }}</th>
+                    {% for type in building_types %}<td class="num">{{ sums.buildings[type.value] }}</td>{% endfor %}
+                </tr></tfoot>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel">
+        <h2>{{ 'In den Bauschleifen'|trans }} <small><a href="{{ path('app_queues') }}">{{ 'Bauschleifen ordnen'|trans }}</a></small></h2>
+        <div class="table-scroll">
+            <table class="table empire-table empire-queues">
+                <thead><tr>
+                    <th scope="col">{{ 'Planet'|trans }}</th>
+                    <th scope="col">{{ 'Gebäude'|trans }}</th>
+                    <th scope="col">{{ 'Werft'|trans }}</th>
+                    <th scope="col">{{ 'Verteidigung'|trans }}</th>
+                </tr></thead>
+                <tbody>
+                    {% for row in rows %}
+                        <tr class="{{ row.planet.id == planet.id ? 'empire-current' }}">
+                            {{ _self.planet_cell(row.planet) }}
+                            {% for kind in queue_kinds %}
+                                {% set entries = row.queues[kind.value] %}
+                                <td>
+                                    {% if entries is empty %}<span class="muted">–</span>
+                                    {% else %}
+                                        {% set first = entries|first %}
+                                        <div>{{ first.label|trans }}{% if first.detail %} <span class="muted small">{{ first.detail|trans }}</span>{% endif %}</div>
+                                        <div class="small">{% if first.active %}{{ ui.countdown(first.finishesAt, now) }}{% else %}<span class="muted">{{ 'wartet'|trans }}</span>{% endif %}
+                                            {% if entries|length > 1 %}<span class="muted">{{ (entries|length == 2 ? '+ 1 weiterer' : '+ {count} weitere')|trans({'{count}': entries|length - 1}) }}</span>{% endif %}</div>
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot><tr>
+                    <th scope="row">{{ 'Summe'|trans }}</th>
+                    {% for kind in queue_kinds %}
+                        {% set n = sums.queues[kind.value] %}
+                        <td>{{ (n == 1 ? '{count} Auftrag' : '{count} Aufträge')|trans({'{count}': n}) }}</td>
+                    {% endfor %}
+                </tr></tfoot>
+            </table>
+        </div>
+    </section>
+{% endblock %}

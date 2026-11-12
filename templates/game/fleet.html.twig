@@ -51,6 +51,10 @@
 
 {% block content %}
     <h1>{{ 'Flotten'|trans }}</h1>
+    <p class="muted small fleet-capacity">{{ 'Flotten: <strong>{fleets}</strong> von {capacity} – jede Stufe Flottenkontrollzentrum auf einem deiner Planeten erlaubt eine Flotte. Sonden und Kolonieschiffe zählen nicht mit.'|trans({'{fleets}': named_fleets|num|e, '{capacity}': fleet_capacity|num|e})|raw }}</p>
+    {% if not fleet_control %}
+        <p class="panel fleet-control-missing">{{ '⚠ {name} {coordinates} hat kein Flottenkontrollzentrum. Von hier aus kannst du keine Flotten bilden, schicken oder befehligen – wähle links einen Planeten mit Flottenkontrollzentrum oder <a href="{url}">baue eins</a>.'|trans({'{name}': planet.name|e, '{coordinates}': ui.coords(planet.coordinates), '{url}': path('app_buildings')|e})|raw }}</p>
+    {% endif %}
 
     {% if incoming is not empty %}
         <section class="panel construction">

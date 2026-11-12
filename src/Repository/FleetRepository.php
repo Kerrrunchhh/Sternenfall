@@ -36,6 +36,18 @@ class FleetRepository extends ServiceEntityRepository
         return $fleets;
     }
 
+    /** Named fleets of a player: the ones that count against his fleet control centers (not probes, colony ships or gathering groups). */
+    public function countNamed(User $owner): int
+    {
+        return (int) $this->createQueryBuilder('f')
+            ->select('COUNT(f.id)')
+            ->where('f.owner = :owner')
+            ->andWhere('f.name IS NOT NULL')
+            ->setParameter('owner', $owner)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
     /**
      * All fleets of a player: named fleets first (by name), then quick dispatches.
      *

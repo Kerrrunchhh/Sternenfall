@@ -1,0 +1,15 @@
+{# One news item. Needs: n (News), unread (bool), back (route to return to after "read"). #}
+<article class="panel news-item {{ unread ? 'news-unread' }}" id="news-{{ n.id }}">
+    <header class="news-head">
+        <h2>{{ n.welcome ? '👋 ' }}{{ n.title }}</h2>
+        <span class="muted small">{{ n.createdAt|date('d.m.Y') }}{% if n.updatedAt %} · {{ 'bearbeitet {updatedAt}'|trans({'{updatedAt}': n.updatedAt|date('d.m.Y')}) }}{% endif %}</span>
+    </header>
+    <div class="news-body">{{ n.body|link_coordinates|nl2br }}</div>
+    {% if unread %}
+        <form method="post" action="{{ path('app_news_read', {id: n.id}) }}" class="news-actions">
+            <input type="hidden" name="_token" value="{{ csrf_token('news') }}">
+            <input type="hidden" name="to" value="{{ back }}">
+            <button class="btn btn-small" type="submit" id="news-read-{{ n.id }}">{{ '✓ Gelesen'|trans }}</button>
+        </form>
+    {% endif %}
+</article>
