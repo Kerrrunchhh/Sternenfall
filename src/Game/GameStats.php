@@ -128,7 +128,7 @@ final readonly class GameStats
         $scalar = fn (string $dql, array $params = []): int => (int) $this->em->createQuery($dql)->setParameters($params)->getSingleScalarResult();
 
         $status = [
-            'players' => $scalar('SELECT COUNT(u.id) FROM '.User::class.' u WHERE u.system = false'),
+            'players' => $scalar('SELECT COUNT(u.id) FROM '.User::class.' u WHERE u.system = false AND u.deactivatedAt IS NULL'),
             // The trade guild's central systems are no planets of players and not free either.
             'planets' => $scalar('SELECT COUNT(p.id) FROM '.Planet::class.' p JOIN p.owner o WHERE o.username <> :guild OR o.system = false', ['guild' => TradeGuild::NAME]),
             'colonized_slots' => $scalar('SELECT COALESCE(SUM(p.fusionSize), 0) FROM '.Planet::class.' p JOIN p.owner o WHERE o.username <> :guild OR o.system = false', ['guild' => TradeGuild::NAME]),

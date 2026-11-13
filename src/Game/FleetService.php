@@ -1502,7 +1502,7 @@ final readonly class FleetService
                 null === $target => 'Dort gibt es keinen Planeten.',
                 null !== self::freightersInWarfleet($ships) => self::freightersInWarfleet($ships),
                 // A fused home planet can lose its lower planets, only a single one is untouchable.
-                $target->isHomeworld() && !$target->isFused() && ($ships[ShipType::InvasionShip->value] ?? 0) > 0 && !$owned
+                $target->isHomeworld() && !$target->isFused() && ($ships[ShipType::InvasionShip->value] ?? 0) > 0 && !$owned && !$target->getOwner()->isInactive($this->now())
                     => t('{name} [{coords}] ist der Heimatplanet von {player} und kann nicht erobert werden. Lass die Invasionsschiffe zu Hause oder wähle ein anderes Ziel.', ['{name}' => $target->getName(), '{coords}' => $target->getCoordinates(), '{player}' => $target->getOwner()->getUsername()]),
                 $owned => 'Deine eigenen Planeten kannst du nicht angreifen.',
                 $target->getOwner()->isSystem() && TradeGuild::NAME === $target->getOwner()->getUsername() => t('Die Zentralbörsen der Handelsgilde können nicht angegriffen werden.'),

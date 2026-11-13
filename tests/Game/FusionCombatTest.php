@@ -6,6 +6,8 @@ use App\Entity\Fleet;
 use App\Entity\Message;
 use App\Entity\Planet;
 use App\Entity\User;
+use App\Game\AccountDeletion;
+use App\Game\AllianceService;
 use App\Game\BuildingType;
 use App\Game\CombatService;
 use App\Game\Economy;
@@ -19,6 +21,7 @@ use App\Game\Resources;
 use App\Game\ShipType;
 use App\Repository\DebrisFieldRepository;
 use App\Repository\FleetRepository;
+use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Random\Engine;
@@ -142,6 +145,55 @@ class FusionCombatTest extends TestCase
         self::assertSame(3, $fleet->getShipCount(ShipType::InvasionShip), 'only at a home planet the invasion ships come back');
     }
 
+    public function testHomeworldOfAnInactivePlayerFallsAndTakesAllHisPlanetsWithIt(): void
+    {
+        $this->defender->markSeen($this->now->modify('-31 days'));
+        $home = new Planet($this->defender, 'Heimat', 1, 1, 5, $this->now);
+        $home->markHomeworld();
+        $home->setPopulation(10);
+        $colony = new Planet($this->defender, 'Kolonie', 1, 1, 7, $this->now);
+
+        $this->attack($home, ['leviathan' => 1, 'invasion_ship' => 3], lucky: true, deletion: true);
+
+        self::assertSame($this->attacker, $home->getOwner());
+        self::assertFalse($home->isHomeworld());
+        self::assertFalse($home->isIntegrating($this->now), 'belongs to the conqueror at once');
+        self::assertSame(1, $home->slotCost($this->now));
+        self::assertSame(AccountDeletion::NOBODY, $colony->getOwner()->getUsername());
+        self::assertCount(0, $this->defender->getPlanets());
+        self::assertStringContainsString('verteidiger war inaktiv', $this->report());
+        self::assertStringContainsString('Alle übrigen Planeten von verteidiger sind jetzt herrenlos', $this->report());
+    }
+
+    public function testAnInactivePlayersColonyTakesOneSlotAndKeepsHisOtherPlanets(): void
+    {
+        $this->defender->markSeen($this->now->modify('-31 days'));
+        $home = new Planet($this->defender, 'Heimat', 1, 1, 5, $this->now);
+        $home->markHomeworld();
+        $colony = new Planet($this->defender, 'Kolonie', 1, 1, 7, $this->now);
+        $colony->setPopulation(10);
+        $this->attacker->setResearchLevel(ResearchType::Colonization, 1); // 10 slots, 9 taken: enough for 1, not for 3
+        for ($i = 1; $i <= 9; ++$i) {
+            new Planet($this->attacker, 'Eigen'.$i, 2, 2, $i, $this->now);
+        }
+
+        $this->attack($colony, ['leviathan' => 1, 'invasion_ship' => 3], lucky: true, deletion: true);
+
+        self::assertSame($this->attacker, $colony->getOwner());
+        self::assertSame(1, $colony->slotCost($this->now));
+        self::assertSame($this->defender, $home->getOwner(), 'only the fall of the home planet frees the others');
+    }
+
+    public function testPlayersSeenWithinThirtyDaysOrOnVacationAreNotInactive(): void
+    {
+        $this->defender->markSeen($this->now->modify('-29 days'));
+        self::assertFalse($this->defender->isInactive($this->now));
+        $this->defender->markSeen($this->now->modify('-31 days'));
+        self::assertTrue($this->defender->isInactive($this->now));
+        $this->defender->startVacation($this->now->modify('-1 day'), $this->now->modify('+5 days'));
+        self::assertFalse($this->defender->isInactive($this->now));
+    }
+
     public function testInvasionFailsAtThePlanetLimit(): void
     {
         $this->attacker->setResearchLevel(ResearchType::Colonization, 0); // one slot: the home planet
@@ -230,7 +282,7 @@ class FusionCombatTest extends TestCase
     }
 
     /** @param list<Fleet> $joiners */
-    private function attack(Planet $target, array $ships, bool $lucky = true, array $joiners = []): Fleet
+    private function attack(Planet $target, array $ships, bool $lucky = true, array $joiners = [], bool $deletion = false): Fleet
     {
         $fleet = new Fleet($this->attacker, 'Sturm', 1, 2, 1, $ships);
         $fleet->depart(FleetMission::Attack, $target->getGalaxy(), $target->getSystem(), $target->getPosition(), $this->now, 60);
@@ -246,12 +298,12 @@ class FusionCombatTest extends TestCase
         $debris = $this->createStub(DebrisFieldRepository::class);
         $debris->method('findAt')->willReturn(null);
 
-        $this->combat($lucky)->attackPlanet($fleet, $target, $joiners);
+        $this->combat($lucky, $deletion)->attackPlanet($fleet, $target, $joiners);
 
         return $fleet;
     }
 
-    private function combat(bool $lucky): CombatService
+    private function combat(bool $lucky, bool $deletion = false): CombatService
     {
         $em = $this->createStub(EntityManagerInterface::class);
         $em->method('persist')->willReturnCallback(function (object $entity): void {
@@ -277,7 +329,26 @@ class FusionCombatTest extends TestCase
             $clock,
             new Randomizer(new FixedEngine($lucky)),
             planetRepository: $planets,
+            deletion: $deletion ? $this->deletion($em, $clock) : null,
         );
+    }
+
+    private function deletion(EntityManagerInterface $em, MockClock $clock): AccountDeletion
+    {
+        $nobody = new User(AccountDeletion::NOBODY, $this->now);
+        $nobody->markSystem();
+        $users = $this->createStub(UserRepository::class);
+        $users->method('findOneBy')->willReturn($nobody);
+
+        return new AccountDeletion($em, $users, $this->createStub(FleetRepository::class), new AllianceService(
+            $em,
+            $this->createStub(\App\Repository\AllianceRepository::class),
+            $users,
+            new Inbox($em, $clock),
+            new LockFactory(new InMemoryStore()),
+            $clock,
+            new \App\Game\ImageStore(\Symfony\Component\Validator\Validation::createValidator(), sys_get_temp_dir()),
+        ), $clock);
     }
 
     /** @return list<Planet> */

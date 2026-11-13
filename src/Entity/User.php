@@ -21,6 +21,9 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[UniqueEntity(fields: ['email'], message: 'Diese E-Mail-Adresse wird schon verwendet.')]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
+    /** Without logging in for this long a player counts as inactive (see isInactive()). */
+    public const string INACTIVE_AFTER = '30 days';
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -102,6 +105,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /** On deletion the buildings of the planets are destroyed (else the planets are just left). */
     #[ORM\Column(options: ['default' => false])]
     private bool $deleteDestroysBuildings = false;
+
+    /** Set by an admin: no login, hidden from highscores and search, planets ownerless – can be reactivated. */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $deactivatedAt = null;
 
     /** Vacation: everything rests from $vacationSince to $vacationUntil. */
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
@@ -433,7 +440,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function wantsMail(string $topic): bool
     {
-        return $this->isEmailVerified() && \in_array($topic, $this->getMailTopics(), true);
+        return !$this->isDeactivated() && $this->isEmailVerified() && \in_array($topic, $this->getMailTopics(), true);
     }
 
     public function getAttackMailsPerMinute(): int
@@ -504,6 +511,26 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->deleteDestroysBuildings = false;
     }
 
+    public function isDeactivated(): bool
+    {
+        return null !== $this->deactivatedAt;
+    }
+
+    public function getDeactivatedAt(): ?\DateTimeImmutable
+    {
+        return $this->deactivatedAt;
+    }
+
+    public function deactivate(\DateTimeImmutable $at): void
+    {
+        $this->deactivatedAt = $at;
+    }
+
+    public function reactivate(): void
+    {
+        $this->deactivatedAt = null;
+    }
+
     public function getVacationSince(): ?\DateTimeImmutable
     {
         return $this->vacationSince;
@@ -525,6 +552,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     /** On vacation at this moment (started, not over yet). */
+    /**
+     * Not seen for INACTIVE_AFTER (and not on vacation): his planets show yellow in the galaxy,
+     * even his home planet can be invaded, and invaded planets take one slot and belong to the
+     * conqueror at once. Logging in again ends it.
+     */
+    public function isInactive(\DateTimeImmutable $now): bool
+    {
+        return !$this->system && !$this->isDeactivated() && !$this->isOnVacation($now)
+            && ($this->lastSeenAt ?? $this->createdAt) <= $now->modify('-'.self::INACTIVE_AFTER);
+    }
+
     public function isOnVacation(\DateTimeImmutable $now): bool
     {
         return null !== $this->vacationSince && $this->vacationSince <= $now && $now < $this->vacationUntil;

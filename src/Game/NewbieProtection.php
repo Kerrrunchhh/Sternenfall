@@ -12,7 +12,8 @@ use Symfony\Contracts\Translation\TranslatableInterface;
 /**
  * Newbie protection: as long as a player has only one planet and no fleet control
  * center, nobody else may attack him, station ships at him or send him resources.
- * Spying stays allowed, and so do paid deliveries for his transport requests.
+ * Spying stays allowed, and so do paid deliveries for his transport requests. Inactive
+ * players (User::isInactive()) have no newbie protection.
  */
 final class NewbieProtection
 {
@@ -21,7 +22,9 @@ final class NewbieProtection
 
     public static function isProtected(User $player): bool
     {
-        return 1 === $player->getPlanets()->count() && 0 === Economy::fleetCapacity($player);
+        // Inactive players lose it: otherwise accounts left right after signing up would stay untouchable.
+        return 1 === $player->getPlanets()->count() && 0 === Economy::fleetCapacity($player)
+            && !$player->isInactive(\Symfony\Component\Clock\now());
     }
 
     /** Why the mission is refused, or null if it may fly. */

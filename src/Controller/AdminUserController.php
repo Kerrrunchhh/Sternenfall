@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\I18n\Lines;
 use App\Entity\User;
+use App\Game\AccountDeactivation;
 use App\Game\AccountDeletion;
 use App\Game\GameException;
 use App\Game\Inbox;
@@ -19,7 +20,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 use function Symfony\Component\Translation\t;
 
-/** Admin area for players: roles, vacation, messages, deleting. */
+/** Admin area for players: roles, vacation, messages, deactivating, deleting. */
 #[IsGranted('ROLE_ADMIN')]
 class AdminUserController extends AbstractGameController
 {
@@ -50,7 +51,7 @@ class AdminUserController extends AbstractGameController
 
     #[Route('/admin/benutzer/{id}', name: 'app_admin_user', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('admin_users', tokenKey: '_token')]
-    public function act(User $user, Request $request, EntityManagerInterface $em, VacationService $vacations, Inbox $inbox, AccountDeletion $deletion): Response
+    public function act(User $user, Request $request, EntityManagerInterface $em, VacationService $vacations, Inbox $inbox, AccountDeletion $deletion, AccountDeactivation $deactivation): Response
     {
         $this->currentPlanet();
         $form = $request->request;
@@ -86,6 +87,20 @@ class AdminUserController extends AbstractGameController
                     $inbox->send($user, t('Nachricht der Spielleitung'), new Lines([$body, t("\n– {player} (Spielleitung)", ['{player}' => $admin->getUsername()])]));
                     $em->flush();
                     $this->addFlash('success', t('Nachricht an {player} gesendet.', ['{player}' => $user->getUsername()]));
+                    break;
+                case 'deactivate':
+                    if ($user->isSameAs($admin)) {
+                        throw new GameException(t('Dein eigenes Konto kannst du nicht deaktivieren.'));
+                    }
+                    if ($user->getUsername() !== trim($form->getString('confirm'))) {
+                        throw new GameException(t('Zur Bestätigung den Spielernamen genau eintippen.'));
+                    }
+                    $deactivation->deactivate($user, 'destroy' === $form->getString('planets'));
+                    $this->addFlash('success', t('{player} ist deaktiviert; seine Planeten sind herrenlos.', ['{player}' => $user->getUsername()]));
+                    break;
+                case 'reactivate':
+                    $deactivation->reactivate($user);
+                    $this->addFlash('success', t('{player} ist wieder aktiv und hat eine neue Heimatwelt.', ['{player}' => $user->getUsername()]));
                     break;
                 case 'delete':
                     if ($user->isSameAs($admin)) {

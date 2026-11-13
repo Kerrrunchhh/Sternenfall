@@ -46,6 +46,9 @@ final readonly class Mailbox
         if ($recipient->isSystem()) {
             throw new GameException(t('{player} ist kein Spieler – Post kommt dort nicht an.', ['{player}' => $recipient->getUsername()]));
         }
+        if ($recipient->isDeactivated()) {
+            throw new GameException(t('{player} spielt nicht mehr mit – Post kommt dort nicht an.', ['{player}' => $recipient->getUsername()]));
+        }
         $subject = trim($subject);
         $body = trim($body);
         if ('' === $body) {

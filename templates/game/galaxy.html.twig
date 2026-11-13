@@ -33,8 +33,9 @@
                 {% set coords = {galaxy: galaxy, system: system, position: position} %}
                 {# Protected owners at a glance: vacation and newbie protection colour the row. #}
                 {% set on_vacation = p and p.owner.onVacation(now) %}
-                {% set newbie = p and not on_vacation and p.owner.id != player.id and newbie_protected(p.owner) %}
-                <tr id="slot-{{ position }}" class="{{ p and p.owner.id == player.id ? 'own' }} {{ not p and posts[position] is defined ? 'trade-post' }} {{ on_vacation ? 'vacation' }} {{ newbie ? 'newbie' }}">
+                {% set inactive = p and p.owner.id != player.id and p.owner.inactive(now) %}
+                {% set newbie = p and not on_vacation and not inactive and p.owner.id != player.id and newbie_protected(p.owner) %}
+                <tr id="slot-{{ position }}" class="{{ p and p.owner.id == player.id ? 'own' }} {{ not p and posts[position] is defined ? 'trade-post' }} {{ on_vacation ? 'vacation' }} {{ newbie ? 'newbie' }} {{ inactive ? 'inactive' }}">
                     {% set slot_type = types[position] %}
                     <td class="num pos">{{ position }}{% if debris[position] is defined %} <a class="debris" href="{{ path('app_fleet', coords|merge({mission: 'salvage'})) }}" title="{{ 'Trümmerfeld: {debrisIron} Eisen, {debrisTitanium} Titan (Stand {debrisSeenAt}) – bergen'|trans({'{debrisIron}': debris[position].debrisIron|num, '{debrisTitanium}': debris[position].debrisTitanium|num, '{debrisSeenAt}': debris[position].debrisSeenAt|date('d.m. H:i')}) }}">✦</a>{% endif %}</td>
                     {% if p and position != p.position %}
@@ -81,7 +82,7 @@
                     {% endif %}
                     {% if p %}
                         <td>
-                            {% if p.homeworld %}<span title="{{ 'Heimatplanet – kann nicht invadiert werden'|trans }}">🏠</span> {% endif %}{{ p.name }}{% if p.fused %} <span class="muted small" title="{{ 'Fusion aus {fusionSize} Planeten, Plätze {position}–{lastPosition}'|trans({'{fusionSize}': p.fusionSize, '{position}': p.position, '{lastPosition}': p.lastPosition}) }}">{{ '🔗 {fusionSize} Planeten</span>'|trans({'{fusionSize}': p.fusionSize|e})|raw }}{% endif %}{% if p.integrating(now) %} <span class="muted small">{{ '(invadiert, Übergang am {integratedAt})'|trans({'{integratedAt}': p.integratedAt|date('d.m.Y')}) }}</span>{% endif %}
+                            {% if p.homeworld %}<span title="{{ (inactive ? 'Heimatplanet eines inaktiven Spielers – kann invadiert werden' : 'Heimatplanet – kann nicht invadiert werden')|trans }}">🏠</span> {% endif %}{{ p.name }}{% if p.fused %} <span class="muted small" title="{{ 'Fusion aus {fusionSize} Planeten, Plätze {position}–{lastPosition}'|trans({'{fusionSize}': p.fusionSize, '{position}': p.position, '{lastPosition}': p.lastPosition}) }}">{{ '🔗 {fusionSize} Planeten</span>'|trans({'{fusionSize}': p.fusionSize|e})|raw }}{% endif %}{% if p.integrating(now) %} <span class="muted small">{{ '(invadiert, Übergang am {integratedAt})'|trans({'{integratedAt}': p.integratedAt|date('d.m.Y')}) }}</span>{% endif %}
                             {% set planet_post = posts[p.position] ?? null %}
                             {% if planet_post %}<br><a class="small" href="{{ path('app_trade_post', {id: planet_post.id}) }}" title="{{ 'Preise und Handel'|trans }}">⚖ {{ planet_post.name }}</a> <span class="muted small">{{ 'Handelsstützpunkt'|trans }}</span>{% endif %}
                         </td>
@@ -90,6 +91,7 @@
                             {# Calendar days until the day the vacation ends (no time of day). #}
                             {% set days = date(p.owner.vacationUntil|date('Y-m-d')).diff(date(now|date('Y-m-d'))).days %}
                             <span class="vacation-tag">{{ (days == 0 ? '🌴 Urlaub · endet heute' : (days == 1 ? '🌴 Urlaub · noch 1 Tag' : '🌴 Urlaub · noch {days} Tage'))|trans({'{days}': days}) }}</span>
+                        {%- elseif inactive %} <span class="inactive-tag" title="{{ 'Seit über 30 Tagen nicht eingeloggt: Auch der Heimatplanet kann invadiert werden. Ein eroberter Planet belegt nur 1 Planetenplatz und gehört sofort dir. Fällt der Heimatplanet, werden alle übrigen Planeten herrenlos.'|trans }}">{{ '💤 inaktiv'|trans }}</span>
                         {%- elseif newbie %} <span class="newbie-tag" title="{{ 'Nur ein Planet und kein Flottenkontrollzentrum: darf nicht angegriffen werden, keine fremden Schiffe oder Rohstoffe bekommen.'|trans }}">{{ '🛡 Noobschutz'|trans }}</span>{% endif %}</td>
                         <td class="num actions">
                             {% if p.owner.id == player.id %}
@@ -136,6 +138,6 @@
             {% endfor %}
             </tbody>
         </table>
-        <p class="muted small galaxy-legend"><span class="legend-swatch legend-vacation"></span> {{ 'Im Urlaub'|trans }} <span class="legend-swatch legend-newbie"></span> {{ 'Noobschutz'|trans }} <span class="legend-swatch legend-trade"></span> {{ 'Handelsstützpunkt'|trans }}</p>
+        <p class="muted small galaxy-legend"><span class="legend-swatch legend-vacation"></span> {{ 'Im Urlaub'|trans }} <span class="legend-swatch legend-newbie"></span> {{ 'Noobschutz'|trans }} <span class="legend-swatch legend-inactive"></span> {{ 'Inaktiv (30 Tage)'|trans }} <span class="legend-swatch legend-trade"></span> {{ 'Handelsstützpunkt'|trans }}</p>
     </section>
 {% endblock %}

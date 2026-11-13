@@ -18,6 +18,9 @@ final class UserChecker implements UserCheckerInterface
         if ($user->isSystem()) {
             throw new CustomUserMessageAccountStatusException('Mit diesem Konto kann man sich nicht anmelden.');
         }
+        if ($user->isDeactivated()) {
+            throw new CustomUserMessageAccountStatusException('Dieses Konto wurde von der Spielleitung deaktiviert. Bei Fragen schreib uns – die Adresse steht im Impressum.');
+        }
         // Only new accounts that never played wait for the confirmation; others may add an address later.
         if ($user->needsEmailConfirmation() && null === $user->getLastSeenAt()) {
             throw new CustomUserMessageAccountStatusException('Bitte bestätige zuerst deine E-Mail-Adresse – den Link haben wir dir geschickt. Keine Mail bekommen? Unter „Bestätigungsmail erneut senden“ kannst du sie neu anfordern.');

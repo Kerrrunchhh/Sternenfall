@@ -45,6 +45,7 @@ final readonly class CombatService
         private ?\App\Repository\PlanetRepository $planetRepository = null,
         private ?ContractService $contracts = null,
         private ?BountyService $bounties = null,
+        private ?AccountDeletion $deletion = null,
     ) {
     }
 
@@ -308,8 +309,11 @@ final readonly class CombatService
         if (0 === $invaders) {
             return [];
         }
+        // Inactive players lose their protection: even the home planet falls, and at once.
+        $defender = $target->getOwner();
+        $inactive = $defender->isInactive($now);
         // Home planets can't be taken: only then the invasion ships come back.
-        if (null === $brokenOff && !$target->isFused() && $target->isHomeworld()) {
+        if (null === $brokenOff && !$target->isFused() && $target->isHomeworld() && !$inactive) {
             return [t('Invasion fehlgeschlagen: {name} [{coords}] ist der Heimatplanet von {player}. Heimatplaneten können nicht erobert werden. Die Invasionsschiffe kehren zurück.', ['{name}' => $target->getName(), '{coords}' => $target->getCoordinates(), '{player}' => $target->getOwner()->getUsername()])];
         }
 
@@ -323,7 +327,7 @@ final readonly class CombatService
         $refusals = [];
         foreach ($byPlayer as ['user' => $user]) {
             $inWar = $this->diplomacy?->atWar($user, $target->getOwner()) ?? false;
-            $cost = Planet::invadedSlots($now, $inWar, $now);
+            $cost = $inactive ? 1 : Planet::invadedSlots($now, $inWar, $now);
             $slots = $this->economy->colonySlots($user);
             $owned = Economy::ownedSlots($user, $now);
             if ($owned + $cost <= $slots) {
@@ -333,7 +337,9 @@ final readonly class CombatService
             }
         }
         if ([] === $candidates) {
-            return [t('Invasion fehlgeschlagen: Ein invadierter Planet belegt 3 Planetenplätze (im Krieg 2) – {value}. Die Invasionsschiffe sind verloren.', ['{value}' => new Lines($refusals, '; ')])];
+            return [$inactive
+                ? t('Invasion fehlgeschlagen: Ein Planet eines inaktiven Spielers belegt 1 Planetenplatz – {value}. Die Invasionsschiffe sind verloren.', ['{value}' => new Lines($refusals, '; ')])
+                : t('Invasion fehlgeschlagen: Ein invadierter Planet belegt 3 Planetenplätze (im Krieg 2) – {value}. Die Invasionsschiffe sind verloren.', ['{value}' => new Lines($refusals, '; ')])];
         }
         ['user' => $conqueror, 'war' => $inWar] = $candidates[\count($candidates) > 1 ? $this->random->getInt(0, \count($candidates) - 1) : 0];
 
@@ -343,7 +349,6 @@ final readonly class CombatService
             return [t('Invasion gescheitert ({odds}). Die Invasionsschiffe sind verloren.', ['{odds}' => $odds])];
         }
 
-        $defender = $target->getOwner();
         $victim = $brokenOff;
         if (null === $victim && $target->isFused()) {
             $victim = Fusion::breakOff($target, $now);
@@ -351,12 +356,19 @@ final readonly class CombatService
         }
         $victim ??= $target;
 
+        $wasHome = $victim->isHomeworld();
         $victim->conquer($conqueror, $now, $inWar);
+        if ($inactive) {
+            $victim->markFullyOwned();
+            $victim->loseHomeworldStatus();
+        }
         $this->contracts?->conquered($victim, $conqueror);
         $victim->setPopulation($victim->getPopulation() + $invaders * ShipType::InvasionShip->spec()->crew);
-        $slotsNote = $inWar
-            ? t('Im Krieg belegt er 2 Planetenplätze, nach 30 Tagen geht er vollständig in seinen Besitz über.')
-            : t('Er belegt 3 Planetenplätze, nach 14 Tagen 2, und geht nach 30 Tagen vollständig in seinen Besitz über.');
+        $slotsNote = match (true) {
+            $inactive => t('{player} war inaktiv: Der Planet belegt 1 Planetenplatz und gehört sofort vollständig dem Eroberer.', ['{player}' => $defender->getUsername()]),
+            $inWar => t('Im Krieg belegt er 2 Planetenplätze, nach 30 Tagen geht er vollständig in seinen Besitz über.'),
+            default => t('Er belegt 3 Planetenplätze, nach 14 Tagen 2, und geht nach 30 Tagen vollständig in seinen Besitz über.'),
+        };
         $who = \count($candidates) > 1 ? t('{player} (ausgelost unter {value})', ['{player}' => $conqueror->getUsername(), '{value}' => implode(', ', array_map(static fn (array $c): string => $c['user']->getUsername(), $candidates))]) : $conqueror->getUsername();
         $lines = [t('Invasion gelungen ({odds}): {name} [{coords}] gehört jetzt {who}. {slotsNote}', ['{odds}' => $odds, '{name}' => $victim->getName(), '{coords}' => $victim->getCoordinates(), '{who}' => $who, '{slotsNote}' => $slotsNote])];
         if ($victim !== $target) {
@@ -367,6 +379,18 @@ final readonly class CombatService
         if ($defender->isResearchingOn($victim)) {
             $lines[] = t('Die Forschung an {label} von {player} ist mit dem Planeten verloren.', ['{label}' => t($defender->getResearchType()->label()), '{player}' => $defender->getUsername()]);
             $defender->clearResearch();
+        }
+
+        // The home planet of an inactive player fell: all his other planets become ownerless.
+        if ($inactive && $wasHome && null !== $this->deletion && !$defender->getPlanets()->isEmpty()) {
+            $nobody = $this->deletion->nobody();
+            foreach ($defender->getPlanets()->toArray() as $planet) {
+                if ($defender->isResearchingOn($planet)) {
+                    $defender->clearResearch();
+                }
+                $planet->leaveToNobody($nobody, false);
+            }
+            $lines[] = t('Das war der Heimatplanet von {player}: Alle übrigen Planeten von {player} sind jetzt herrenlos.', ['{player}' => $defender->getUsername()]);
         }
 
         return $lines;

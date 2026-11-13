@@ -21,6 +21,7 @@
                 {{ ui.player(u) }}
                 <span class="ticket-status">{{ roles[current] }}</span>
                 {% if u.onVacation(now) %}<span class="vacation-tag">{{ '🌴 bis {vacationUntil}'|trans({'{vacationUntil}': u.vacationUntil|date('d.m. H:i')}) }}</span>{% endif %}
+                {% if u.deactivated %}<span class="small" style="color: var(--bad)">{{ 'deaktiviert seit {deactivatedAt}'|trans({'{deactivatedAt}': u.deactivatedAt|date('d.m.Y')}) }}</span>{% endif %}
                 {% if u.deleteAt %}<span class="small" style="color: var(--bad)">{{ 'wird am {deleteAt} gelöscht'|trans({'{deleteAt}': u.deleteAt|date('d.m. H:i')}) }}</span>{% endif %}
                 <span class="muted small">{{ '{Mail} · seit {createdAt} · {planets} Planeten'|trans({'{Mail}': u.email ?? 'keine E-Mail'|trans, '{createdAt}': u.createdAt|date('d.m.Y'), '{planets}': u.planets|length}) }}</span>
             </summary>
@@ -41,6 +42,19 @@
                     <textarea name="body" rows="2" required placeholder="{{ 'Nachricht der Spielleitung an {username}'|trans({'{username}': u.username}) }}"></textarea>
                     <button class="btn btn-small btn-secondary" type="submit">{{ 'Nachricht senden'|trans }}</button>
                 </form>
+                {% if u.deactivated %}
+                    <form method="post" action="{{ path('app_admin_user', {id: u.id}) }}" class="inline-action">
+                        <input type="hidden" name="_token" value="{{ csrf_token('admin_users') }}"><input type="hidden" name="do" value="reactivate"><input type="hidden" name="q" value="{{ query }}">
+                        <button class="btn btn-small btn-secondary" type="submit" data-confirm="{{ '{username} wieder aktivieren? Er bekommt eine neue Heimatwelt.'|trans({'{username}': u.username}) }}" data-confirm-label="{{ 'Reaktivieren'|trans }}">{{ 'Reaktivieren'|trans }}</button>
+                    </form>
+                {% elseif u.id != player.id %}
+                    <form method="post" action="{{ path('app_admin_user', {id: u.id}) }}" class="inline-action admin-delete">
+                        <input type="hidden" name="_token" value="{{ csrf_token('admin_users') }}"><input type="hidden" name="do" value="deactivate"><input type="hidden" name="q" value="{{ query }}">
+                        <select name="planets"><option value="leave">{{ 'Planeten verlassen (Gebäude bleiben)'|trans }}</option><option value="destroy">{{ 'Gebäude zerstören'|trans }}</option></select>
+                        <input type="text" name="confirm" required placeholder="{{ 'Name zur Bestätigung'|trans }}" aria-label="{{ 'Spielername zur Bestätigung'|trans }}">
+                        <button class="btn btn-small btn-danger" type="submit" data-confirm="{{ '{username} deaktivieren? Seine Planeten werden herrenlos, er verlässt seine Allianz und kann sich nicht mehr anmelden. Reaktivieren gibt ihm nur eine neue Heimatwelt.'|trans({'{username}': u.username}) }}" data-confirm-label="{{ 'Deaktivieren'|trans }}">{{ 'Deaktivieren'|trans }}</button>
+                    </form>
+                {% endif %}
                 {% if u.id != player.id %}
                     <form method="post" action="{{ path('app_admin_user', {id: u.id}) }}" class="inline-action admin-delete">
                         <input type="hidden" name="_token" value="{{ csrf_token('admin_users') }}"><input type="hidden" name="do" value="delete"><input type="hidden" name="q" value="{{ query }}">

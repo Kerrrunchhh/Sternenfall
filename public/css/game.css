@@ -669,10 +669,14 @@ label.checkbox { display: flex; gap: .4rem; align-items: center; color: var(--te
 .galaxy-table tr.vacation td:first-child { box-shadow: inset 3px 0 0 var(--ok); }
 .galaxy-table tr.newbie td, .galaxy-table tr.newbie:nth-child(even) td { background: rgba(255, 183, 77, .13); }
 .galaxy-table tr.newbie td:first-child { box-shadow: inset 3px 0 0 var(--accent-2); }
+.galaxy-table tr.inactive td, .galaxy-table tr.inactive:nth-child(even) td { background: rgba(255, 235, 59, .16); }
+.galaxy-table tr.inactive td:first-child { box-shadow: inset 3px 0 0 #fdd835; }
+.inactive-tag { font-size: .75rem; color: #fdd835; white-space: nowrap; }
 .galaxy-legend { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .6rem; margin-top: .5rem; }
 .legend-swatch { display: inline-block; width: .8rem; height: .8rem; border-radius: 3px; vertical-align: middle; }
 .legend-vacation { background: rgba(102, 187, 106, .45); }
 .legend-newbie { background: rgba(255, 183, 77, .45); }
+.legend-inactive { background: rgba(255, 235, 59, .5); }
 .legend-trade { background: rgba(38, 166, 154, .45); }
 /* Alliance members: name, status and scores on one line */
 .member-table .member-name + .muted.small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

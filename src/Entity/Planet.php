@@ -219,6 +219,20 @@ class Planet
         $this->invadedInWar = $inWar;
     }
 
+    /** Taken from an inactive player: no integration period, the planet is fully owned at once. */
+    public function markFullyOwned(): void
+    {
+        $this->integratedAt = null;
+        $this->invadedAt = null;
+        $this->invadedInWar = false;
+    }
+
+    /** The home planet of an inactive player was conquered: it is an ordinary planet now. */
+    public function loseHomeworldStatus(): void
+    {
+        $this->homeworld = false;
+    }
+
     /** Slots an invaded planet takes while it is not fully owned: 3, after 14 days (or in a war) 2. */
     public static function invadedSlots(\DateTimeImmutable $invadedAt, bool $inWar, \DateTimeImmutable $now): int
     {

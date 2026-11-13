@@ -120,7 +120,7 @@ final readonly class GameMailer
     private function send(User $user, TranslatableInterface $subject, TranslatableInterface $text, ?TranslatableInterface $footer = null): void
     {
         $to = $user->getEmail();
-        if (null === $to) {
+        if (null === $to || $user->isDeactivated()) {
             return;
         }
         $locale = $user->getLocale();

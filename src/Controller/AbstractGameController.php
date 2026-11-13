@@ -27,6 +27,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Contracts\Service\Attribute\Required;
 use Symfony\Contracts\Translation\TranslatableInterface;
 
+use function Symfony\Component\Translation\t;
+
 /**
  * Shared plumbing for all in-game pages: the current planet and the data of the top bar.
  */
@@ -61,6 +63,17 @@ abstract class AbstractGameController extends AbstractController
     private \App\Game\AttackBans $attackBans;
 
     private \App\Repository\FleetRepository $fleetRepository;
+
+    private \App\Game\Colonizer $colonizer;
+
+    private \Doctrine\ORM\EntityManagerInterface $entityManager;
+
+    #[Required]
+    public function setColonizer(\App\Game\Colonizer $colonizer, \Doctrine\ORM\EntityManagerInterface $entityManager): void
+    {
+        $this->colonizer = $colonizer;
+        $this->entityManager = $entityManager;
+    }
 
     #[Required]
     public function setNewsRepository(NewsRepository $newsRepository, \App\Game\AttackBans $attackBans, \App\Repository\FleetRepository $fleetRepository): void
@@ -169,7 +182,10 @@ abstract class AbstractGameController extends AbstractController
         $selectedId = $this->requestStack->getSession()->get(self::SESSION_PLANET);
         $planet = $planets->findFirst(static fn (int $key, Planet $p): bool => $p->getId() === $selectedId) ?? $planets->first();
         if (!$planet instanceof Planet) {
-            throw $this->createNotFoundException('Du besitzt keinen Planeten.');
+            // All planets lost (e.g. while inactive): a fresh start on a new home world.
+            $planet = $this->colonizer->createHomePlanet($user);
+            $this->entityManager->flush();
+            $this->addFlash('success', t('Du hattest keinen Planeten mehr – auf einer neuen Heimatwelt fängst du von vorn an.'));
         }
 
         $this->planetService->synchronize($planet);

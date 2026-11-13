@@ -19,7 +19,7 @@ class PlayerSearchController extends AbstractGameController
         $found = [];
         if (mb_strlen($query) >= 2) {
             $found = $users->createQueryBuilder('u')
-                ->where('u.username LIKE :q AND u.system = false')
+                ->where('u.username LIKE :q AND u.system = false AND u.deactivatedAt IS NULL')
                 ->setParameter('q', '%'.addcslashes($query, '%_').'%')
                 ->orderBy('u.username', 'ASC')
                 ->setMaxResults(50)

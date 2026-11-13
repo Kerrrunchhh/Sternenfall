@@ -65,6 +65,20 @@ final readonly class AccountDeletion
 
     public function delete(User $user): void
     {
+        $now = $this->now();
+        $this->abandon($user, $user->isDeleteDestroyingBuildings());
+
+        $this->em->persist(new DeletedAccount($user->getUsername(), $now));
+        $this->em->remove($user);
+        $this->em->flush();
+    }
+
+    /**
+     * The player leaves his alliance and hands planets, fleets and trade posts to nobody
+     * (not flushed) – for deleting and for deactivating an account.
+     */
+    public function abandon(User $user, bool $destroyBuildings): void
+    {
         $nobody = $this->nobody();
         $now = $this->now();
 
@@ -74,7 +88,7 @@ final readonly class AccountDeletion
             if ($user->isResearchingOn($planet)) {
                 $user->clearResearch();
             }
-            $planet->leaveToNobody($nobody, $user->isDeleteDestroyingBuildings());
+            $planet->leaveToNobody($nobody, $destroyBuildings);
         }
         foreach ($this->fleets->findByOwner($user) as $fleet) {
             if ($fleet->isMoving() && !$fleet->isReturning()) {
@@ -91,10 +105,6 @@ final readonly class AccountDeletion
                 $fleet->revokeFrom($user);
             }
         }
-
-        $this->em->persist(new DeletedAccount($user->getUsername(), $now));
-        $this->em->remove($user);
-        $this->em->flush();
     }
 
     /** The owner of all ownerless planets, created on first use. */
