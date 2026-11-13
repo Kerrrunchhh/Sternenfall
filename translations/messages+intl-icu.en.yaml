@@ -2522,3 +2522,6 @@
 "Inaktiv (30 Tage)": "Inactive (30 days)"
 "🛡 Verwalten (Admin)": "🛡 Manage (admin)"
 "Herrenlose Planeten": "Ownerless planets"
+"Verbrauch Nahrung": "Food consumption"
+"Verbrauch Wasser": "Water consumption"
+"Produktion +{produced}/h, Verbrauch der Bevölkerung −{consumed}/h": "Production +{produced}/h, population consumption −{consumed}/h"

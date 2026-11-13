@@ -101,6 +101,20 @@ class GameFlowTest extends WebTestCase
         self::assertResponseRedirects('/overview');
     }
 
+    public function testOverviewAndTopBarShowWhatThePopulationEatsAndDrinks(): void
+    {
+        $this->register('Pilotin');
+
+        $crawler = $this->client->request('GET', '/overview');
+
+        // 100 inhabitants à 0,05 food and water per hour
+        self::assertSelectorTextContains('table', 'Verbrauch Nahrung');
+        self::assertStringContainsString('−5/h', $crawler->filterXPath('//tr[td[1][normalize-space()="Verbrauch Nahrung"]]')->text());
+        self::assertStringContainsString('−5/h', $crawler->filterXPath('//tr[td[1][normalize-space()="Verbrauch Wasser"]]')->text());
+        self::assertStringContainsString('Verbrauch der Bevölkerung −5/h', (string) $crawler->filter('.res-food .res-rate')->attr('title'));
+        self::assertNull($crawler->filter('.res-iron .res-rate')->attr('title'), 'nobody eats iron');
+    }
+
     public function testResetPasswordPageLinksBackToLoginAndLogoToHome(): void
     {
         $this->register('Pilotin');

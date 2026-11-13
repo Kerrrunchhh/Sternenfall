@@ -5,12 +5,12 @@
     <script src="{{ asset('js/game.js') }}" defer></script>
 {% endblock %}
 
-{% macro resource(label, key, amount, rate, protected) %}
+{% macro resource(label, key, amount, rate, protected, produced = null, consumed = 0) %}
     <div class="res res-{{ key }}">
         <span class="res-label">{{ label }}</span>
         <span class="res-amount{{ amount > protected ? ' res-exposed' }}" title="{{ 'Geschützt: {protected}'|trans({'{protected}': protected|num}) }}"
               data-resource="{{ key }}" data-amount="{{ amount }}" data-rate="{{ rate }}" data-protected="{{ protected }}">{{ amount|num }}</span>
-        <span class="res-rate{{ rate < 0 ? ' res-negative' }}">{{ rate >= 0 ? '+' }}{{ rate|num }}/h</span>
+        <span class="res-rate{{ rate < 0 ? ' res-negative' }}"{% if consumed > 0 %} title="{{ 'Produktion +{produced}/h, Verbrauch der Bevölkerung −{consumed}/h'|trans({'{produced}': produced|num, '{consumed}': consumed|num}) }}"{% endif %}>{{ rate >= 0 ? '+' }}{{ rate|num }}/h</span>
     </div>
 {% endmacro %}
 
@@ -19,7 +19,7 @@
         <a class="logo-link" href="{{ path('app_overview') }}" title="{{ 'Zur Übersicht'|trans }}"><img class="logo-image" src="{{ asset('pictures/brand/logo-header.webp') }}" alt="{{ game_name }}" width="206" height="48"></a>
         <div class="resources">
             {% for type in enum_cases('App\\Game\\ResourceType') %}
-                {{ _self.resource(type.label|trans, type.value, planet.resources.get(type), net.get(type), protected) }}
+                {{ _self.resource(type.label|trans, type.value, planet.resources.get(type), net.get(type), protected, production.get(type), consumption.get(type)) }}
             {% endfor %}
             <div class="res res-credits">
                 <span class="res-label">{{ 'Credits'|trans }}</span>

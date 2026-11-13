@@ -173,6 +173,8 @@
             <table class="table">
                 <tr><td>{{ 'Einwohner'|trans }}</td><td class="num">{{ planet.population|num }}</td></tr>
                 <tr><td>{{ 'Platz in Biozellen'|trans }}</td><td class="num">{{ population_capacity|num }}</td></tr>
+                <tr><td>{{ 'Verbrauch Nahrung'|trans }}</td><td class="num">−{{ consumption.food|num }}/h</td></tr>
+                <tr><td>{{ 'Verbrauch Wasser'|trans }}</td><td class="num">−{{ consumption.water|num }}/h</td></tr>
                 <tr><td>{{ 'Wachstum'|trans }}</td><td class="num">{{ population_growth > 0 ? '+' ~ population_growth|num ~ '/h' : (population_capacity > 0 ? ('Biozellen voll'|trans) : ('keine Biozelle'|trans)) }}</td></tr>
                 <tr><td>{{ 'Bunkerplätze'|trans }}</td><td class="num">{{ bunker_capacity|num }}</td></tr>
             </table>
