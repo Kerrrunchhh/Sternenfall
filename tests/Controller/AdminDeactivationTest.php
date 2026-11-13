@@ -55,6 +55,10 @@ class AdminDeactivationTest extends WebTestCase
         self::assertTrue($victim->isDeactivated());
         self::assertCount(0, $victim->getPlanets());
         self::assertSame(AccountDeletion::NOBODY, $this->em()->find(\App\Entity\Planet::class, $homeId)->getOwner()->getUsername());
+        $status = static::getContainer()->get(\App\Game\GameStats::class)->status();
+        self::assertSame(1, $status['players'], 'only Chefin is left');
+        self::assertSame(1, $status['planets'], 'planets of players only');
+        self::assertSame(1, $status['ownerless']);
 
         $this->client->request('GET', '/highscores');
         self::assertStringNotContainsString('Opfer', (string) $this->client->getResponse()->getContent());

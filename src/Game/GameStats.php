@@ -120,7 +120,7 @@ final readonly class GameStats
     }
 
     /**
-     * @return array{players: int, planets: int, slots: int, colonized_slots: int, guild_slots: int, free_slots: int, ownerless: int, transports: int, attacks: int, signups: int, signoffs: int}
+     * @return array{players: int, planets: int, slots: int, colonized_slots: int, ownerless_slots: int, guild_slots: int, free_slots: int, ownerless: int, transports: int, attacks: int, signups: int, signoffs: int}
      */
     public function status(): array
     {
@@ -129,9 +129,10 @@ final readonly class GameStats
 
         $status = [
             'players' => $scalar('SELECT COUNT(u.id) FROM '.User::class.' u WHERE u.system = false AND u.deactivatedAt IS NULL'),
-            // The trade guild's central systems are no planets of players and not free either.
-            'planets' => $scalar('SELECT COUNT(p.id) FROM '.Planet::class.' p JOIN p.owner o WHERE o.username <> :guild OR o.system = false', ['guild' => TradeGuild::NAME]),
-            'colonized_slots' => $scalar('SELECT COALESCE(SUM(p.fusionSize), 0) FROM '.Planet::class.' p JOIN p.owner o WHERE o.username <> :guild OR o.system = false', ['guild' => TradeGuild::NAME]),
+            // Planets of players only: the trade guild's central systems and ownerless planets are counted apart.
+            'planets' => $scalar('SELECT COUNT(p.id) FROM '.Planet::class.' p JOIN p.owner o WHERE o.system = false'),
+            'colonized_slots' => $scalar('SELECT COALESCE(SUM(p.fusionSize), 0) FROM '.Planet::class.' p JOIN p.owner o WHERE o.system = false'),
+            'ownerless_slots' => $scalar('SELECT COALESCE(SUM(p.fusionSize), 0) FROM '.Planet::class.' p JOIN p.owner o WHERE o.system = true AND o.username <> :guild', ['guild' => TradeGuild::NAME]),
             'guild_slots' => $scalar('SELECT COALESCE(SUM(p.fusionSize), 0) FROM '.Planet::class.' p JOIN p.owner o WHERE o.username = :guild AND o.system = true', ['guild' => TradeGuild::NAME]),
             'ownerless' => $scalar('SELECT COUNT(p.id) FROM '.Planet::class.' p JOIN p.owner o WHERE o.system = true AND o.username <> :guild', ['guild' => TradeGuild::NAME]),
             'slots' => $this->universeSlots(),
@@ -141,7 +142,7 @@ final readonly class GameStats
             'signoffs' => $scalar('SELECT COUNT(d.id) FROM '.DeletedAccount::class.' d WHERE d.deletedAt >= :since', ['since' => $since]),
         ];
         // Planet slots nobody has colonized yet.
-        $status['free_slots'] = max(0, $status['slots'] - $status['colonized_slots'] - $status['guild_slots']);
+        $status['free_slots'] = max(0, $status['slots'] - $status['colonized_slots'] - $status['ownerless_slots'] - $status['guild_slots']);
 
         return $status;
     }
