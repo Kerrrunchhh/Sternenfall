@@ -16,6 +16,7 @@
         <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
         <input type="hidden" name="device_fingerprint" value="" data-device-fingerprint>
         <button class="btn" type="submit">{{ 'Anmelden'|trans }}</button>
+        <p class="small"><a href="{{ path('app_forgot_password') }}">{{ 'Passwort vergessen?'|trans }}</a></p>
         <p class="muted small">{{ 'Zum Schutz vor Mehrfach-Accounts speichern wir beim Anmelden IP-Adresse und eine Gerätekennung für 30 Tage.'|trans }} <a href="{{ path('app_privacy') }}#multi">{{ 'Details'|trans }}</a></p>
     </form>
     <script src="{{ asset('js/login.js') }}" defer></script>

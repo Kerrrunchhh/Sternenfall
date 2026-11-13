@@ -55,6 +55,12 @@ final readonly class GameMailer
         return $url;
     }
 
+    /** The link to set a new password ("Passwort vergessen", valid for one hour). */
+    public function sendPasswordReset(User $user, string $url): void
+    {
+        $this->send($user, t('Neues Passwort für {game}', ['{game}' => $this->gameName]), t("Hallo {name},\n\njemand – hoffentlich du – möchte ein neues Passwort für dein Konto bei {game}. Mit diesem Link setzt du es (1 Stunde gültig, nur einmal verwendbar):\n\n{url}\n\nWenn du das nicht warst, ignoriere diese Mail einfach – dein Passwort bleibt, wie es ist.", ['{name}' => $user->getUsername(), '{game}' => $this->gameName, '{url}' => $url]));
+    }
+
     /** A mail the player gets regardless of his notification settings (e.g. a contract confirmation). */
     public function sendAlways(User $user, TranslatableInterface $subject, TranslatableInterface $text): void
     {

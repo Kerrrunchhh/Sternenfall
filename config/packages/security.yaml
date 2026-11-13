@@ -41,6 +41,7 @@ security:
         - { path: ^/kampfbericht/, roles: PUBLIC_ACCESS }
         - { path: ^/(status|impressum|datenschutz|agb)$, roles: PUBLIC_ACCESS }
         - { path: ^/email/, roles: PUBLIC_ACCESS }
+        - { path: ^/passwort/, roles: PUBLIC_ACCESS }
         - { path: ^/paypal/webhook$, roles: PUBLIC_ACCESS }
         - { path: ^/ads\.txt$, roles: PUBLIC_ACCESS }
         - { path: ^/(robots\.txt|sitemap\.xml)$, roles: PUBLIC_ACCESS }
