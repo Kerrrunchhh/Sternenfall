@@ -49,7 +49,7 @@ class AdminDeactivationTest extends WebTestCase
         self::assertCount(1, $crawler->filter('details.admin-user[open]'));
         self::assertCount(1, $crawler->filter('details[open] input[name="do"][value="deactivate"]'));
 
-        $this->act('Opfer', ['do' => 'deactivate', 'confirm' => 'Opfer', 'planets' => 'leave']);
+        $this->act('Opfer', ['do' => 'deactivate', 'planets' => 'leave']);
 
         $victim = $this->user('Opfer');
         self::assertTrue($victim->isDeactivated());

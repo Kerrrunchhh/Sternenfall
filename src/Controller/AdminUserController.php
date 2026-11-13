@@ -92,9 +92,7 @@ class AdminUserController extends AbstractGameController
                     if ($user->isSameAs($admin)) {
                         throw new GameException(t('Dein eigenes Konto kannst du nicht deaktivieren.'));
                     }
-                    if ($user->getUsername() !== trim($form->getString('confirm'))) {
-                        throw new GameException(t('Zur Bestätigung den Spielernamen genau eintippen.'));
-                    }
+                    // Reversible: the confirmation dialog is enough, no typing the name as for deleting.
                     $deactivation->deactivate($user, 'destroy' === $form->getString('planets'));
                     $this->addFlash('success', t('{player} ist deaktiviert; seine Planeten sind herrenlos.', ['{player}' => $user->getUsername()]));
                     break;

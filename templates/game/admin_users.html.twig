@@ -51,7 +51,6 @@
                     <form method="post" action="{{ path('app_admin_user', {id: u.id}) }}" class="inline-action admin-delete">
                         <input type="hidden" name="_token" value="{{ csrf_token('admin_users') }}"><input type="hidden" name="do" value="deactivate"><input type="hidden" name="q" value="{{ query }}">
                         <select name="planets"><option value="leave">{{ 'Planeten verlassen (Gebäude bleiben)'|trans }}</option><option value="destroy">{{ 'Gebäude zerstören'|trans }}</option></select>
-                        <input type="text" name="confirm" required placeholder="{{ 'Name zur Bestätigung'|trans }}" aria-label="{{ 'Spielername zur Bestätigung'|trans }}">
                         <button class="btn btn-small btn-danger" type="submit" data-confirm="{{ '{username} deaktivieren? Seine Planeten werden herrenlos, er verlässt seine Allianz und kann sich nicht mehr anmelden. Reaktivieren gibt ihm nur eine neue Heimatwelt.'|trans({'{username}': u.username}) }}" data-confirm-label="{{ 'Deaktivieren'|trans }}">{{ 'Deaktivieren'|trans }}</button>
                     </form>
                 {% endif %}
