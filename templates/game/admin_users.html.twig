@@ -16,7 +16,7 @@
 
     {% for u in users %}
         {% set current = u.roles|filter(r => r == 'ROLE_ADMIN')|length > 0 ? 'ROLE_ADMIN' : (u.roles|filter(r => r == 'ROLE_MODERATOR')|length > 0 ? 'ROLE_MODERATOR' : 'player') %}
-        <details class="panel admin-user">
+        <details class="panel admin-user" {{ u.username|lower == query|lower ? 'open' }}>
             <summary>
                 {{ ui.player(u) }}
                 <span class="ticket-status">{{ roles[current] }}</span>

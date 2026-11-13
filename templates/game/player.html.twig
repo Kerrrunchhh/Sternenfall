@@ -76,6 +76,9 @@
                             <button class="btn btn-small" type="submit" id="profile-contact-accept">{{ 'Annehmen'|trans }}</button>
                         </form>
                     {% endif %}
+                    {% if is_granted('ROLE_ADMIN') %}
+                        <a class="btn btn-small btn-secondary" href="{{ path('app_admin_users', {q: profile.username}) }}" id="profile-admin">{{ '🛡 Verwalten (Admin)'|trans }}</a>
+                    {% endif %}
                 </div>
             {% endif %}
         </div>
