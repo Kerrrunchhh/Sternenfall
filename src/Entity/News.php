@@ -81,4 +81,11 @@ class News
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
     public function getUpdatedAt(): ?\DateTimeImmutable { return $this->updatedAt; }
     public function touch(\DateTimeImmutable $at): void { $this->updatedAt = $at; }
+
+    /** When the players who want it were told by e-mail; null while that is still to do. */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $mailedAt = null;
+
+    public function getMailedAt(): ?\DateTimeImmutable { return $this->mailedAt; }
+    public function markMailed(\DateTimeImmutable $at): void { $this->mailedAt = $at; }
 }

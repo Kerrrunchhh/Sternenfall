@@ -419,10 +419,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->termsAcceptedAt = $at;
     }
 
-    /** @return list<string> */
+    /** @return list<string> until the player chooses, every notification is on */
     public function getMailTopics(): array
     {
-        return $this->mailTopics ?? ['attack'];
+        return $this->mailTopics ?? array_keys(\App\Game\GameMailer::TOPICS);
     }
 
     /** @param list<string> $topics */

@@ -5,7 +5,9 @@ namespace App\Game;
 use App\Entity\News;
 use App\Entity\NewsRead;
 use App\Entity\User;
+use App\I18n\Raw;
 use App\Repository\NewsRepository;
+use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
@@ -16,6 +18,8 @@ final readonly class NewsService
         private EntityManagerInterface $em,
         private NewsRepository $news,
         private ClockInterface $clock,
+        private ?UserRepository $users = null,
+        private ?GameMailer $mailer = null,
     ) {
     }
 
@@ -55,6 +59,32 @@ final readonly class NewsService
             $this->em->persist(new NewsRead($news, $user, $this->now()));
         }
         $this->em->flush();
+    }
+
+    /**
+     * Tells every player who wants it (account settings, on by default) about news not yet
+     * mailed – in his language. The welcome message is no news: it is never mailed.
+     *
+     * @return int how many news items were sent out
+     */
+    public function mailPending(): int
+    {
+        $pending = $this->news->findBy(['mailedAt' => null, 'welcome' => false], ['createdAt' => 'ASC']);
+        if ([] === $pending || null === $this->users || null === $this->mailer) {
+            return 0;
+        }
+        // Marked first: a crash halfway must not mail everybody twice.
+        foreach ($pending as $news) {
+            $news->markMailed($this->now());
+        }
+        $this->em->flush();
+
+        $players = $this->users->findBy(['system' => false]);
+        foreach ($pending as $news) {
+            $this->mailer->broadcast($players, 'news', static fn (string $locale): Raw => new Raw($news->titleIn($locale)), static fn (string $locale): Raw => new Raw($news->bodyIn($locale)));
+        }
+
+        return \count($pending);
     }
 
     private function now(): \DateTimeImmutable

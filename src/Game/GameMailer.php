@@ -29,6 +29,7 @@ final readonly class GameMailer
         'research' => 'Forschung abgeschlossen',
         'mail' => 'Neue Nachricht in der Post',
         'battle' => 'Kampfbericht (ich war an einer Schlacht beteiligt)',
+        'news' => 'Neuigkeiten zum Spiel',
     ];
 
     public function __construct(
@@ -67,6 +68,46 @@ final readonly class GameMailer
             return;
         }
         $this->send($user, $subject, $text, t("– {game}\nWelche Mails du bekommst, stellst du im Spiel unter Konto ein.", ['{game}' => $this->gameName]));
+    }
+
+    /** Recipients per mail: Gmail's SMTP takes at most 100. */
+    public const int BCC_BATCH = 100;
+
+    /**
+     * One mail to many players who chose the topic: per language one mail (in batches of
+     * BCC_BATCH), the players in blind copy so nobody sees the others' addresses.
+     *
+     * @param iterable<User>                            $users
+     * @param callable(string): TranslatableInterface $subject subject for a locale
+     * @param callable(string): TranslatableInterface $text    text for a locale
+     *
+     * @return int how many players it went to
+     */
+    public function broadcast(iterable $users, string $topic, callable $subject, callable $text): int
+    {
+        $byLocale = [];
+        foreach ($users as $user) {
+            if ($user->wantsMail($topic) && null !== $user->getEmail()) {
+                $byLocale[$user->getLocale()][] = $user->getEmail();
+            }
+        }
+        $count = 0;
+        foreach ($byLocale as $locale => $addresses) {
+            $locale = (string) $locale;
+            $footer = t("– {game}\nWelche Mails du bekommst, stellst du im Spiel unter Konto ein.", ['{game}' => $this->gameName]);
+            $body = $text($locale)->trans($this->translator, $locale)."\n\n".$footer->trans($this->translator, $locale);
+            $title = '['.$this->gameName.'] '.$subject($locale)->trans($this->translator, $locale);
+            foreach (array_chunk(array_values(array_unique($addresses)), self::BCC_BATCH) as $batch) {
+                try {
+                    $this->mailer->send((new Email())->from($this->from)->to($this->from)->bcc(...$batch)->subject($title)->text($body));
+                    $count += \count($batch);
+                } catch (TransportExceptionInterface $e) {
+                    $this->logger->error('Could not send e-mail to {count} players: {error}', ['count' => \count($batch), 'error' => $e->getMessage()]);
+                }
+            }
+        }
+
+        return $count;
     }
 
     /** Sends a mail in the language the player chose. */
