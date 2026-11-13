@@ -101,6 +101,20 @@ class GameFlowTest extends WebTestCase
         self::assertResponseRedirects('/overview');
     }
 
+    public function testResetPasswordPageLinksBackToLoginAndLogoToHome(): void
+    {
+        $this->register('Pilotin');
+        $this->client->request('GET', '/logout');
+        $user = static::getContainer()->get(UserRepository::class)->findOneBy(['username' => 'Pilotin']);
+        $link = static::getContainer()->get(\App\Security\PasswordReset::class)->link($user);
+
+        $crawler = $this->client->request('GET', $link);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('/login', $crawler->selectLink('Zur Anmeldung')->attr('href'));
+        self::assertSame('/', $crawler->filter('h1.logo-hero a')->attr('href'));
+    }
+
     public function testBuildingDeductsResourcesAndCompletesOverTime(): void
     {
         $clock = static::mockTime('2026-01-01 12:00:00');
