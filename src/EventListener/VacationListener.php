@@ -25,7 +25,7 @@ final readonly class VacationListener
     public const array ALLOWED = [
         'app_vacation*', 'app_galaxy', 'app_planet_select', 'app_alliance*', 'app_diplomacy*', 'app_tickers', 'app_ticker*',
         'app_mail*', 'app_contact_*', 'app_messages', 'app_message_*', 'app_messages_*', 'app_player', 'app_notes*', 'app_account',
-        'app_account_email', 'app_support*', 'app_highscores', 'app_newspaper', 'app_game_status', 'app_ship_info', 'app_media', 'app_player_search', 'app_extended*', 'app_paypal_webhook',
+        'app_account_email', 'app_account_timezone', 'app_support*', 'app_highscores', 'app_newspaper', 'app_game_status', 'app_ship_info', 'app_media', 'app_player_search', 'app_extended*', 'app_paypal_webhook',
         'app_news', 'app_news_read', 'app_news_read_all', 'app_guide',
     ];
 

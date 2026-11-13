@@ -2,6 +2,7 @@
 
 namespace App\Game;
 
+use App\I18n\When;
 use App\Entity\Planet;
 use App\Repository\FleetRepository;
 use App\Repository\PlanetRepository;
@@ -62,8 +63,8 @@ final readonly class FusionService
             1 === $target->getPosition() => 'Über diesem Planeten liegt kein Platz mehr – angeschweißt wird immer an den Planeten direkt darüber.',
             null === $top => t('Platz {value} direkt darüber ist frei – angeschweißt wird immer an den Planeten direkt darüber.', ['{value}' => $target->getPosition() - 1]),
             !$top->getOwner()->isSameAs($player) => t('{name} [{coords}] direkt darüber gehört {player}.', ['{name}' => $top->getName(), '{coords}' => $top->getCoordinates(), '{player}' => $top->getOwner()->getUsername()]),
-            $target->isIntegrating($now) => t('{name} wurde invadiert und geht erst am {value} in deinen Besitz über.', ['{name}' => $target->getName(), '{value}' => $target->getIntegratedAt()->format('d.m.Y H:i')]),
-            $top->isIntegrating($now) => t('{name} wurde invadiert und geht erst am {value} in deinen Besitz über.', ['{name}' => $top->getName(), '{value}' => $top->getIntegratedAt()->format('d.m.Y H:i')]),
+            $target->isIntegrating($now) => t('{name} wurde invadiert und geht erst am {value} in deinen Besitz über.', ['{name}' => $target->getName(), '{value}' => new When($target->getIntegratedAt())]),
+            $top->isIntegrating($now) => t('{name} wurde invadiert und geht erst am {value} in deinen Besitz über.', ['{name}' => $top->getName(), '{value}' => new When($top->getIntegratedAt())]),
             0 === $capacity => 'Für eine Fusion wird Fusionstechnik benötigt.',
             $top->getFusionSize() + $target->getFusionSize() > $capacity => t('Deine Fusionstechnik (Stufe {capacity}) erlaubt Fusionen aus höchstens {capacity} Planeten – zusammen wären es {fusionSize}.', ['{capacity}' => $capacity, '{fusionSize}' => $top->getFusionSize() + $target->getFusionSize()]),
             default => null,

@@ -109,7 +109,7 @@ final readonly class SupportService
                 ->to($this->developerEmail)
                 ->subject(\sprintf('[%s #%d] %s', $ticket->getKind()->label(), $ticket->getId(), $ticket->getSubject()))
                 ->text(implode("\n\n", array_filter([
-                    \sprintf('Von %s, %s', $ticket->getAuthor()?->getUsername() ?? 'gelöschter Spieler', $ticket->getCreatedAt()->format('d.m.Y H:i')),
+                    \sprintf('Von %s, %s', $ticket->getAuthor()?->getUsername() ?? 'gelöschter Spieler', $ticket->getCreatedAt()->setTimezone(new \DateTimeZone(\App\I18n\DisplayZone::DEFAULT))->format('d.m.Y H:i')),
                     $ticket->getBody(),
                     '' === $note ? null : 'Anmerkung von '.$admin->getUsername().":\n".$note,
                 ]))));

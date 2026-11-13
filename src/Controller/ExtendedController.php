@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\I18n\When;
 use App\Game\FleetFilters;
 use App\Game\GameMailer;
 use App\Game\Inbox;
@@ -51,7 +52,7 @@ class ExtendedController extends AbstractGameController
             $text = t("Danke für dein Abo! Hiermit bestätigen wir den Vertrag über den erweiterten Account im Spiel {game}:\n\n– Preis: 5,00 € pro Monat, Zahlung über PayPal im Voraus, verlängert sich monatlich, jederzeit zum Monatsende kündbar (im Spiel unter „Erweiterter Account“ oder bei PayPal).\n– Abo-Kennung: {subscription}\n– Abgeschlossen am: {date}\n\nDu hast ausdrücklich verlangt, dass der erweiterte Account sofort beginnt, und bestätigt, dass dir bekannt ist, dass du dadurch dein Widerrufsrecht verlierst.\n\nDie Nutzungsbedingungen mit der Widerrufsbelehrung findest du unter {terms}.", [
                 '{game}' => $gameName,
                 '{subscription}' => (string) $player->getSubscriptionId(),
-                '{date}' => (new \DateTimeImmutable('now', new \DateTimeZone('Europe/Berlin')))->format('d.m.Y H:i'),
+                '{date}' => new When(new \DateTimeImmutable()),
                 '{terms}' => $this->generateUrl('app_terms', [], \Symfony\Component\Routing\Generator\UrlGeneratorInterface::ABSOLUTE_URL),
             ]);
             $inbox->send($player, $subject, $text);

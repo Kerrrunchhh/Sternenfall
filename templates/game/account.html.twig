@@ -18,6 +18,24 @@
         </form>
     </section>
 
+    <section class="panel" id="zeitzone">
+        <h2>{{ '🕒 Zeitzone'|trans }}</h2>
+        <p class="muted small">{{ 'Alle Zeiten im Spiel – Ankunft von Flotten, Bauende, Nachrichten und Mails – werden in dieser Zeitzone angezeigt. Sommer- und Winterzeit stellen sich von selbst um. Das Spiel selbst läuft für alle gleich.'|trans }}</p>
+        <form method="post" action="{{ path('app_account_timezone') }}" class="inline-action">
+            <input type="hidden" name="_token" value="{{ csrf_token('account') }}">
+            <select name="timezone" aria-label="{{ 'Zeitzone'|trans }}" data-timezone-select>
+                {% for region, zones in timezones %}
+                    <optgroup label="{{ region }}">
+                        {% for zone, label in zones %}<option value="{{ zone }}" {{ zone == player.timezone ? 'selected' }}>{{ label }}</option>{% endfor %}
+                    </optgroup>
+                {% endfor %}
+            </select>
+            <button class="btn btn-small" type="submit" id="timezone-save">{{ 'Speichern'|trans }}</button>
+            <button class="btn btn-small btn-secondary" type="button" data-browser-timezone hidden>{{ 'Zeitzone dieses Geräts übernehmen'|trans }}</button>
+        </form>
+        <p class="small muted">{{ 'Jetzt bei dir: {time}'|trans({'{time}': 'now'|date('d.m.Y H:i')}) }}</p>
+    </section>
+
     <section class="panel" id="email">
         <h2>{{ '✉ E-Mail-Benachrichtigungen'|trans }}</h2>
         <form method="post" action="{{ path('app_account_email') }}" class="mail-form">

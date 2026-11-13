@@ -2,6 +2,7 @@
 
 namespace App\Game;
 
+use App\I18n\When;
 use App\Entity\FusionatorOffer;
 use App\Entity\Planet;
 use App\Entity\TradePost;
@@ -170,7 +171,7 @@ final readonly class TradeGuild
                 ShipType::LargeFreighter->spec()->speed,
             );
             $request->assignToGuild($guild, $now->modify('+'.$seconds.' seconds'));
-            $this->inbox->send($request->getRequester(), t('Die Handelsgilde liefert'), t('Für dein Transportgesuch an {planet} [{coords}] hat sich kein Händler gefunden – die Handelsgilde liefert: {goods}. Ankunft {arrival}.', ['{planet}' => $request->getPlanetName(), '{coords}' => $request->getCoordinates(), '{goods}' => \App\I18n\Goods::summary($request->getGoods()->toArray()), '{arrival}' => $request->getGuildDeliveryAt()?->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m. H:i')]));
+            $this->inbox->send($request->getRequester(), t('Die Handelsgilde liefert'), t('Für dein Transportgesuch an {planet} [{coords}] hat sich kein Händler gefunden – die Handelsgilde liefert: {goods}. Ankunft {arrival}.', ['{planet}' => $request->getPlanetName(), '{coords}' => $request->getCoordinates(), '{goods}' => \App\I18n\Goods::summary($request->getGoods()->toArray()), '{arrival}' => new When($request->getGuildDeliveryAt(), 'd.m. H:i')]));
         }
 
         foreach ($this->requests->findBy(['status' => TransportRequest::ASSIGNED, 'fleet' => null]) as $request) {

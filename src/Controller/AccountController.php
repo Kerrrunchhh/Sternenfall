@@ -2,6 +2,8 @@
 
 namespace App\Controller;
 
+use App\I18n\DisplayZone;
+use App\I18n\When;
 use App\I18n\Lines;
 use App\Game\GameException;
 use App\Game\VacationService;
@@ -12,7 +14,7 @@ use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 
 use function Symfony\Component\Translation\t;
 
-/** Account settings: vacation, e-mail notifications, deleting the account. */
+/** Account settings: vacation, time zone, e-mail notifications, deleting the account. */
 class AccountController extends AbstractGameController
 {
     #[Route('/konto', name: 'app_account', methods: ['GET'])]
@@ -22,7 +24,42 @@ class AccountController extends AbstractGameController
             'vacation_min' => VacationService::MIN_DAYS,
             'vacation_max' => VacationService::MAX_DAYS,
             'topics' => \App\Game\GameMailer::TOPICS,
+            'timezones' => self::timezones(new \DateTimeImmutable()),
         ]);
+    }
+
+    #[Route('/konto/zeitzone', name: 'app_account_timezone', methods: ['POST'])]
+    #[IsCsrfTokenValid('account', tokenKey: '_token')]
+    public function timezone(Request $request, \Doctrine\ORM\EntityManagerInterface $em): Response
+    {
+        $this->currentPlanet();
+        $zone = $request->request->getString('timezone');
+        if (!DisplayZone::isValid($zone)) {
+            $this->addFlash('error', t('Diese Zeitzone kenne ich nicht.'));
+
+            return $this->redirectToRoute('app_account');
+        }
+        $this->player()->setTimezone($zone);
+        $em->flush();
+        $this->addFlash('success', t('Zeitzone gespeichert: {zone}. Alle Zeiten werden jetzt darin angezeigt.', ['{zone}' => $zone]));
+
+        return $this->redirectToRoute('app_account', ['_fragment' => 'zeitzone']);
+    }
+
+    /**
+     * Time zones grouped by region, each with its current offset to UTC (it changes with daylight saving).
+     *
+     * @return array<string, array<string, string>> region => [zone => label]
+     */
+    public static function timezones(\DateTimeImmutable $now): array
+    {
+        $groups = [];
+        foreach (\DateTimeZone::listIdentifiers() as $zone) {
+            $region = str_contains($zone, '/') ? strstr($zone, '/', true) : 'UTC';
+            $groups[$region][$zone] = \sprintf('%s (UTC%s)', str_replace('_', ' ', $zone), $now->setTimezone(new \DateTimeZone($zone))->format('P'));
+        }
+
+        return $groups;
     }
 
     #[Route('/konto/email', name: 'app_account_email', methods: ['POST'])]
@@ -80,7 +117,7 @@ class AccountController extends AbstractGameController
         $this->currentPlanet();
         try {
             $until = $vacations->start($this->player(), VacationService::parseDays($request->request->getString('days')));
-            $this->addFlash('success', t('Gute Erholung! Dein Urlaub dauert bis {until}.', ['{until}' => $until->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i')]));
+            $this->addFlash('success', t('Gute Erholung! Dein Urlaub dauert bis {until}.', ['{until}' => new When($until)]));
 
             return $this->redirectToRoute('app_vacation');
         } catch (GameException $e) {

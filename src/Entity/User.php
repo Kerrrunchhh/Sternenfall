@@ -125,6 +125,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?string $vacationReason = null;
 
     /** Language of the interface, system messages and e-mails (see translation.yaml enabled_locales). */
+    /** IANA time zone times are shown in (App\I18n\DisplayZone); the game itself computes in UTC. */
+    #[ORM\Column(length: 64, options: ['default' => \App\I18n\DisplayZone::DEFAULT])]
+    private string $timezone = \App\I18n\DisplayZone::DEFAULT;
+
     #[ORM\Column(length: 5, options: ['default' => 'de'])]
     private string $locale = 'de';
 
@@ -772,5 +776,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setLocale(string $locale): void
     {
         $this->locale = $locale;
+    }
+
+    public function getTimezone(): string
+    {
+        return $this->timezone;
+    }
+
+    public function setTimezone(string $timezone): void
+    {
+        if (!\App\I18n\DisplayZone::isValid($timezone)) {
+            throw new \InvalidArgumentException(\sprintf('Unknown time zone "%s".', $timezone));
+        }
+        $this->timezone = $timezone;
     }
 }

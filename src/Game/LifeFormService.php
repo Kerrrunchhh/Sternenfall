@@ -2,6 +2,7 @@
 
 namespace App\Game;
 
+use App\I18n\When;
 use App\I18n\Lines;
 use App\Entity\Planet;
 use App\Repository\TradePostRepository;
@@ -45,7 +46,7 @@ final readonly class LifeFormService
                     throw new GameException(t('Du bist in „{name}“ ({type}) – dort sind nur {label}. Tritt erst aus, dann kannst du die Lebensform wechseln.', ['{name}' => $alliance->getName(), '{type}' => $alliance->getType(), '{label}' => t($alliance->getLifeForm()->label())]));
                 }
                 if ($player->getNextLifeFormChangeAt() > $now) {
-                    throw new GameException(t('Ein Wechsel ist erst ab {value} möglich.', ['{value}' => $player->getNextLifeFormChangeAt()->format('d.m.Y H:i')]));
+                    throw new GameException(t('Ein Wechsel ist erst ab {value} möglich.', ['{value}' => new When($player->getNextLifeFormChangeAt())]));
                 }
 
                 if (LifeForm::Trader === $player->getLifeForm()) {

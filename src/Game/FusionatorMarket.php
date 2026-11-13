@@ -2,6 +2,7 @@
 
 namespace App\Game;
 
+use App\I18n\When;
 use App\Entity\Fleet;
 use App\Entity\FusionatorOffer;
 use App\Entity\Planet;
@@ -145,7 +146,7 @@ final readonly class FusionatorMarket
             $this->em->persist($fleet);
             $this->em->flush();
 
-            $arrival = $fleet->getArriveAt()->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i:s');
+            $arrival = new When($fleet->getArriveAt(), 'd.m.Y H:i:s');
             $this->inbox->send($seller, t('Fusionatoren an {player} verkauft', ['{player}' => $buyer->getUsername()]), t("{player} hat {quantity} Fusionator(en) aus deinem Angebot bei [{coords}] gekauft.\nEinnahme: {price} Credits\nIm Angebot sind noch {quantity2}.", ['{player}' => $buyer->getUsername(), '{quantity}' => $quantity, '{coords}' => $offer->getCoordinates(), '{price}' => new Num($price), '{quantity2}' => $offer->getQuantity()]));
             $this->inbox->send($buyer, t('{quantity} Fusionator(en) gekauft', ['{quantity}' => $quantity]), t("Du hast {quantity} Fusionator(en) von {player} für {price} Credits gekauft.\nSie fliegen als Flotte „{name}“ von [{coords}] zu {name2} [{coords2}], Ankunft {arrival}.", ['{quantity}' => $quantity, '{player}' => $seller->getUsername(), '{price}' => new Num($price), '{name}' => $name, '{coords}' => $offer->getCoordinates(), '{name2}' => $home->getName(), '{coords2}' => $home->getCoordinates(), '{arrival}' => $arrival]));
             $message = t('{quantity} Fusionator(en) gekauft. Sie fliegen als Flotte „{name}“ zu {name2} [{coords}], Ankunft {arrival}.', ['{quantity}' => $quantity, '{name}' => $name, '{name2}' => $home->getName(), '{coords}' => $home->getCoordinates(), '{arrival}' => $arrival]);

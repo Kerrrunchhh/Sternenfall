@@ -2,6 +2,7 @@
 
 namespace App\Game;
 
+use App\I18n\When;
 use App\Entity\DebrisField;
 use App\Entity\Fleet;
 use App\Entity\FleetIntel;
@@ -247,7 +248,7 @@ final readonly class Espionage
 
         [$g, $s, $p] = Radar::nextStop($target);
         $lines = [
-            t('Flotte von {player}: {value} nach [{g}:{s}:{p}], Ankunft {value2}', ['{player}' => $target->getOwner()->getUsername(), '{value}' => t($target->getMission()?->label() ?? 'unterwegs'), '{g}' => $g, '{s}' => $s, '{p}' => $p, '{value2}' => $target->getNextEventAt()->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i:s')]),
+            t('Flotte von {player}: {value} nach [{g}:{s}:{p}], Ankunft {value2}', ['{player}' => $target->getOwner()->getUsername(), '{value}' => t($target->getMission()?->label() ?? 'unterwegs'), '{g}' => $g, '{s}' => $s, '{p}' => $p, '{value2}' => new When($target->getNextEventAt(), 'd.m.Y H:i:s')]),
             '',
             t('Schiffe:'),
             ...$this->shipLines($target->getShips(), '  '),

@@ -2,6 +2,7 @@
 
 namespace App\Game;
 
+use App\I18n\When;
 use App\Entity\Contract;
 use App\Entity\Planet;
 use App\Entity\User;
@@ -86,7 +87,7 @@ final readonly class ContractService
         foreach ($contract->getApplications() as $other) {
             $won = $other === $application;
             $this->inbox->send($other->getApplicant(), $won ? t('Auftrag erhalten: {kind}', ['{kind}' => t($contract->kindLabel())]) : t('Auftrag vergeben'), $won
-                ? t("{player} hat dir den Auftrag gegeben: {kindLabel} für {planetName} [{coords}], Belohnung {reward} Credits, bis {value}.\n{value2}", ['{player}' => $client->getUsername(), '{kindLabel}' => t($contract->kindLabel()), '{planetName}' => $contract->getPlanetName(), '{coords}' => $contract->getCoordinates(), '{reward}' => new Num($contract->getReward()), '{value}' => $contract->getEndsAt()->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i'), '{value2}' => $contract->isProtection() ? t('Du darfst so lange Schiffe auf dem Planeten stationieren.') : t('Bei einer Fusion: erst sprengen, dann den obersten Planeten invadieren.')])
+                ? t("{player} hat dir den Auftrag gegeben: {kindLabel} für {planetName} [{coords}], Belohnung {reward} Credits, bis {value}.\n{value2}", ['{player}' => $client->getUsername(), '{kindLabel}' => t($contract->kindLabel()), '{planetName}' => $contract->getPlanetName(), '{coords}' => $contract->getCoordinates(), '{reward}' => new Num($contract->getReward()), '{value}' => new When($contract->getEndsAt()), '{value2}' => $contract->isProtection() ? t('Du darfst so lange Schiffe auf dem Planeten stationieren.') : t('Bei einer Fusion: erst sprengen, dann den obersten Planeten invadieren.')])
                 : t('Der Auftrag „{kindLabel}“ für {planetName} [{coords}] ging an jemand anderen.', ['{kindLabel}' => t($contract->kindLabel()), '{planetName}' => $contract->getPlanetName(), '{coords}' => $contract->getCoordinates()]));
         }
         $this->em->flush();

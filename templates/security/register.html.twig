@@ -34,7 +34,10 @@
         </div>
         {{ form_rest(form) }}
         <p class="muted small">{{ '🚀 Startbonus: An deinem ersten Tag baut und forscht alles doppelt so schnell, und deine Planeten liefern doppelt so viele Rohstoffe, Credits und Einwohner.'|trans }}</p>
+        {# Times are shown in the zone of the device the player signs up with (changeable under Konto). #}
+        <input type="hidden" name="timezone" data-device-timezone>
         <button class="btn" type="submit">{{ 'Kolonie gründen'|trans }}</button>
     {{ form_end(form) }}
+    <script>document.querySelectorAll('[data-device-timezone]').forEach((f) => { try { f.value = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { /* default zone */ } });</script>
     <p class="hint">{{ 'Schon dabei?'|trans }} <a href="{{ path('app_login') }}">{{ 'Anmelden'|trans }}</a></p>
 {% endblock %}

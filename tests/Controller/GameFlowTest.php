@@ -101,6 +101,30 @@ class GameFlowTest extends WebTestCase
         self::assertResponseRedirects('/overview');
     }
 
+    public function testPlayersGetTheTimeZoneOfTheirDeviceAndCanChangeIt(): void
+    {
+        $this->client->request('GET', '/register');
+        $this->client->submitForm('Kolonie gründen', [
+            'registration_form[username]' => 'Pilotin',
+            'registration_form[plainPassword][first]' => 'geheim12345',
+            'registration_form[plainPassword][second]' => 'geheim12345',
+            'registration_form[agreeTerms]' => '1',
+            'timezone' => 'Asia/Tokyo',
+        ]);
+        self::assertSame('Asia/Tokyo', $this->user('Pilotin')->getTimezone());
+
+        $crawler = $this->client->request('GET', '/konto');
+        self::assertSame('Asia/Tokyo', $crawler->filter('select[name="timezone"] option[selected]')->attr('value'));
+        $this->client->submit($crawler->filter('#timezone-save')->form(['timezone' => 'America/New_York']));
+        self::assertResponseRedirects();
+        self::assertSame('America/New_York', $this->user('Pilotin')->getTimezone());
+
+        $crawler = $this->client->request('GET', '/konto');
+        $token = $crawler->filter('#zeitzone input[name="_token"]')->attr('value');
+        $this->client->request('POST', '/konto/zeitzone', ['_token' => $token, 'timezone' => 'Mars/Olympus_Mons']);
+        self::assertSame('America/New_York', $this->user('Pilotin')->getTimezone(), 'unknown zones are refused');
+    }
+
     public function testOverviewAndTopBarShowWhatThePopulationEatsAndDrinks(): void
     {
         $this->register('Pilotin');
@@ -422,6 +446,14 @@ class GameFlowTest extends WebTestCase
         $crawler = $this->client->request('GET', '/buildings');
 
         return $crawler->filter('form[action$="/build"] input[name="_token"]')->first()->attr('value');
+    }
+
+    private function user(string $username): User
+    {
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $em->clear();
+
+        return $em->getRepository(User::class)->findOneBy(['username' => $username]);
     }
 
     private function planet(string $username): Planet

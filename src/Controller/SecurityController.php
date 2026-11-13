@@ -162,6 +162,10 @@ class SecurityController extends AbstractController
             $user->setPassword($hasher->hashPassword($user, $form->get('plainPassword')->getData()));
             // Messages and e-mails go out in the language the player signed up in.
             $user->setLocale($request->getLocale());
+            // … and see times in the time zone of the device they signed up with.
+            if (\App\I18n\DisplayZone::isValid($zone = $request->request->getString('timezone'))) {
+                $user->setTimezone($zone);
+            }
             // Chosen life form from the very start (the 30-day change cooldown counts from the sign-up).
             $user->changeLifeForm($form->get('lifeForm')->getData(), $user->getCreatedAt());
             $user->acceptTerms($user->getCreatedAt());

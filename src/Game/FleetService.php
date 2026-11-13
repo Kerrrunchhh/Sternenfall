@@ -2,6 +2,7 @@
 
 namespace App\Game;
 
+use App\I18n\When;
 use App\I18n\Goods;
 use App\I18n\Lines;
 use App\Entity\Fleet;
@@ -837,7 +838,7 @@ final readonly class FleetService
         if (null === $target || null === $this->gameMailer || !$target->getOwner()->wantsMail('attack') || !$target->getOwner()->allowAttackMail($this->now())) {
             return;
         }
-        $this->gameMailer->notify($target->getOwner(), 'attack', t('Angriff auf {name}', ['{name}' => $target->getName()]), t("{player} greift deinen Planeten {name} [{coords}] an.\nEinschlag: {value} (Serverzeit)\n\nIm Spiel siehst du den Angriff auf der Übersicht und kannst die Flotte ausspionieren.", ['{player}' => $attacker->getOwner()->getUsername(), '{name}' => $target->getName(), '{coords}' => $target->getCoordinates(), '{value}' => $this->localTime($attacker->getArriveAt())]));
+        $this->gameMailer->notify($target->getOwner(), 'attack', t('Angriff auf {name}', ['{name}' => $target->getName()]), t("{player} greift deinen Planeten {name} [{coords}] an.\nEinschlag: {value}\n\nIm Spiel siehst du den Angriff auf der Übersicht und kannst die Flotte ausspionieren.", ['{player}' => $attacker->getOwner()->getUsername(), '{name}' => $target->getName(), '{coords}' => $target->getCoordinates(), '{value}' => $this->localTime($attacker->getArriveAt())]));
     }
 
     /** Systems around an attacked planet in which guardians receive the distress call. */
@@ -1467,7 +1468,7 @@ final readonly class FleetService
             },
             FleetMission::Fuse => match (true) {
                 !$owned => 'Fusionieren ist nur auf deinen eigenen Planeten möglich.',
-                $target->isIntegrating($this->now()) => t('{name} geht erst am {value} in deinen Besitz über.', ['{name}' => $target->getName(), '{value}' => $target->getIntegratedAt()->format('d.m.Y H:i')]),
+                $target->isIntegrating($this->now()) => t('{name} geht erst am {value} in deinen Besitz über.', ['{name}' => $target->getName(), '{value}' => new When($target->getIntegratedAt())]),
                 ($ships[ShipType::Fusionator->value] ?? 0) < 1 => 'Zum Fusionieren wird ein Fusionator benötigt.',
                 // Checked already now: planet above, owner, and whether both together are a legal fusion.
                 default => $this->fusion->plan($target)['reason'],
@@ -1965,10 +1966,10 @@ final readonly class FleetService
         }
     }
 
-    /** Times in messages are shown in German time (data is stored in UTC). */
-    private function localTime(\DateTimeImmutable $at): string
+    /** Times in messages are shown in the reader's time zone (data is stored in UTC). */
+    private function localTime(\DateTimeImmutable $at): When
     {
-        return $at->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i:s');
+        return new When($at, 'd.m.Y H:i:s');
     }
 
     private function now(): \DateTimeImmutable

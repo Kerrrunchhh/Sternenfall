@@ -2,6 +2,7 @@
 
 namespace App\Game;
 
+use App\I18n\When;
 use App\Entity\User;
 use App\Repository\FleetRepository;
 use App\Repository\UserRepository;
@@ -69,7 +70,7 @@ final readonly class VacationService
             $this->finish($user, $now);
         }
         $until = $this->begin($user, $days, true, $reason);
-        $this->inbox->send($user, t('Strafe: Urlaub bis {until}', ['{until}' => $until->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i')]), t("Die Spielleitung hat dich für {value} Tage in den Urlaub geschickt.\nGrund: {reason}", ['{value}' => str_replace('.', ',', (string) round($days, 2)), '{reason}' => $reason]));
+        $this->inbox->send($user, t('Strafe: Urlaub bis {until}', ['{until}' => new When($until)]), t("Die Spielleitung hat dich für {value} Tage in den Urlaub geschickt.\nGrund: {reason}", ['{value}' => str_replace('.', ',', (string) round($days, 2)), '{reason}' => $reason]));
         $this->em->flush();
 
         return $until;
@@ -86,7 +87,7 @@ final readonly class VacationService
         }
         $earliest = $user->getVacationSince()->modify('+1 day');
         if ($now < $earliest) {
-            throw new GameException(t('Urlaub dauert mindestens einen Tag. Beenden kannst du ihn ab {earliest}.', ['{earliest}' => $earliest->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i')]));
+            throw new GameException(t('Urlaub dauert mindestens einen Tag. Beenden kannst du ihn ab {earliest}.', ['{earliest}' => new When($earliest)]));
         }
         $this->finish($user, $now);
     }

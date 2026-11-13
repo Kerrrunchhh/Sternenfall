@@ -1,7 +1,7 @@
 {% extends 'base.html.twig' %}
 
 {% block javascripts %}
-    <script>window.I18N = {{ js_i18n()|json_encode|raw }}; window.LOCALE = {{ app.request.locale|json_encode|raw }};</script>
+    <script>window.I18N = {{ js_i18n()|json_encode|raw }}; window.LOCALE = {{ app.request.locale|json_encode|raw }}; window.TIMEZONE = {{ player.timezone|json_encode|raw }};</script>
     <script src="{{ asset('js/game.js') }}" defer></script>
 {% endblock %}
 
@@ -30,8 +30,8 @@
                 {{ '<span class="res-label">Bevölkerung</span> <span class="res-amount">{population}</span> <span class="res-rate">max. {population_capacity}</span>'|trans({'{population}': planet.population|num|e, '{population_capacity}': population_capacity|num|e})|raw }}
             </div>
         </div>
-        <div class="server-clock" title="{{ 'Serverzeit (Europe/Berlin) – danach richten sich alle Flotten'|trans }}">
-            <span class="res-label">{{ 'Serverzeit'|trans }}</span>
+        <div class="server-clock" title="{{ 'Deine Zeitzone: {zone} – ändern unter Konto. Alle Zeiten im Spiel werden darin angezeigt.'|trans({'{zone}': player.timezone}) }}">
+            <span class="res-label">{{ 'Uhrzeit'|trans }}</span>
             <time data-server-clock data-server-ms="{{ server_time_ms() }}">{{ 'now'|date('H:i:s') }}</time>
         </div>
         {% if is_granted('ROLE_ALLOWED_TO_SWITCH') or is_granted('IS_IMPERSONATOR') %}

@@ -2,6 +2,7 @@
 
 namespace App\Game;
 
+use App\I18n\When;
 use App\Entity\PlayerMessage;
 use App\Entity\User;
 use App\Repository\UserRepository;
@@ -112,6 +113,6 @@ final readonly class Mailbox
         $quote = implode("\n", array_map(static fn (string $line): string => '> '.$line, explode("\n", $message->getBody())));
         $from = $message->getSender()?->getUsername() ?? 'Unbekannt';
 
-        return [mb_substr($subject, 0, PlayerMessage::MAX_SUBJECT), t("\n\n{from} schrieb am {value}:\n{quote}", ['{from}' => $from, '{value}' => $message->getCreatedAt()->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i'), '{quote}' => $quote])];
+        return [mb_substr($subject, 0, PlayerMessage::MAX_SUBJECT), t("\n\n{from} schrieb am {value}:\n{quote}", ['{from}' => $from, '{value}' => new When($message->getCreatedAt()), '{quote}' => $quote])];
     }
 }

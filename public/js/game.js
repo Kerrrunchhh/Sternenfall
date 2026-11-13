@@ -16,7 +16,8 @@ const serverClock = (() => {
         offset = parseInt(el.dataset.serverMs, 10) - received;
     }
     const now = () => new Date(Date.now() + offset);
-    const zone = { timeZone: 'Europe/Berlin' };
+    // Times show in the player's time zone (Konto); the game itself runs on server time.
+    const zone = { timeZone: window.TIMEZONE || 'Europe/Berlin' };
     const format = (date, options) => date.toLocaleString(LOCALE_TAG, { ...zone, ...options });
     const day = (date) => format(date, { year: 'numeric', month: '2-digit', day: '2-digit' });
 
@@ -248,7 +249,7 @@ const serverClock = (() => {
         const show = () => {
             const days = parseFloat(input.value.replace(',', '.'));
             out.textContent = days >= 1 && days <= 30
-                ? t('endet am {date}', { date: new Date(Date.now() + days * 86400000).toLocaleString(LOCALE_TAG, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) })
+                ? t('endet am {date}', { date: new Date(Date.now() + days * 86400000).toLocaleString(LOCALE_TAG, { timeZone: window.TIMEZONE || 'Europe/Berlin', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) })
                 : (input.value ? t('1 bis 30 Tage') : '');
         };
         input.addEventListener('input', show);
@@ -759,6 +760,21 @@ const serverClock = (() => {
         }));
         update();
     });
+
+    // Account: offer the time zone of this device if it differs from the saved one.
+    const zoneSelect = document.querySelector('[data-timezone-select]');
+    const zoneButton = document.querySelector('[data-browser-timezone]');
+    if (zoneSelect && zoneButton) {
+        const deviceZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (deviceZone && deviceZone !== zoneSelect.value && [...zoneSelect.options].some((o) => o.value === deviceZone)) {
+            zoneButton.hidden = false;
+            zoneButton.textContent += ' (' + deviceZone + ')';
+            zoneButton.addEventListener('click', () => {
+                zoneSelect.value = deviceZone;
+                zoneSelect.form.requestSubmit();
+            });
+        }
+    }
 
     // Confirmation modal for dangerous buttons (data-confirm="question", data-confirm-label="Do it").
     const dialog = document.getElementById('confirm-dialog');

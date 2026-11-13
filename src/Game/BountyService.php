@@ -2,6 +2,7 @@
 
 namespace App\Game;
 
+use App\I18n\When;
 use App\Entity\Bounty;
 use App\Entity\User;
 use App\I18n\Num;
@@ -70,7 +71,7 @@ final readonly class BountyService
 
         $bounty = new Bounty($client, $target, $reward, $requiredShield, $days, $note, $this->now());
         $this->em->persist($bounty);
-        $this->inbox->send($target, t('Kopfgeld auf dich ausgesetzt'), t('Auf dich ist ein Kopfgeld von {reward} Credits ausgesetzt: Wer {shield} Schildpunkte deiner Raumschiffe zerstört, bekommt es. Es gilt bis {endsAt}.', ['{reward}' => new Num($reward), '{shield}' => new Num($requiredShield), '{endsAt}' => $bounty->getEndsAt()->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i')]));
+        $this->inbox->send($target, t('Kopfgeld auf dich ausgesetzt'), t('Auf dich ist ein Kopfgeld von {reward} Credits ausgesetzt: Wer {shield} Schildpunkte deiner Raumschiffe zerstört, bekommt es. Es gilt bis {endsAt}.', ['{reward}' => new Num($reward), '{shield}' => new Num($requiredShield), '{endsAt}' => new When($bounty->getEndsAt())]));
         $this->em->flush();
 
         return $bounty;

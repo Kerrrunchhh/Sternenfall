@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\I18n\When;
 use App\Entity\Fleet;
 use App\Entity\Planet;
 use App\Game\BuildingType;
@@ -124,7 +125,7 @@ class GameController extends AbstractGameController
         } else {
             try {
                 $at = $this->planetService->abandon($planet, $this->player());
-                $this->addFlash('success', t('{name} wird am {value} verlassen. Bring vorher Flotten, Schiffe und Rohstoffe in Sicherheit – oder brich ab.', ['{name}' => $planet->getName(), '{value}' => $at->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i')]));
+                $this->addFlash('success', t('{name} wird am {value} verlassen. Bring vorher Flotten, Schiffe und Rohstoffe in Sicherheit – oder brich ab.', ['{name}' => $planet->getName(), '{value}' => new When($at)]));
             } catch (\App\Game\GameException $e) {
                 $this->addFlash('error', $e->translatable());
             }

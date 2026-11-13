@@ -26,6 +26,8 @@ final readonly class Inbox
     public function send(User $recipient, TranslatableInterface $subject, TranslatableInterface $body): void
     {
         $locale = $recipient->getLocale();
-        $this->em->persist(new Message($recipient, $subject->trans($this->translator, $locale), $body->trans($this->translator, $locale), \DateTimeImmutable::createFromInterface($this->clock->now())));
+        // Stored as text: times in it are shown in the recipient's time zone.
+        [$subjectText, $bodyText] = \App\I18n\DisplayZone::with($recipient->getTimezone(), fn (): array => [$subject->trans($this->translator, $locale), $body->trans($this->translator, $locale)]);
+        $this->em->persist(new Message($recipient, $subjectText, $bodyText, \DateTimeImmutable::createFromInterface($this->clock->now())));
     }
 }

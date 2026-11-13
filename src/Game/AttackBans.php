@@ -2,6 +2,7 @@
 
 namespace App\Game;
 
+use App\I18n\When;
 use App\Entity\AttackBan;
 use App\Repository\AttackBanRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -47,7 +48,7 @@ final readonly class AttackBans
 
         return null === $ban->getEndsAt()
             ? t('Die Spielleitung hat eine allgemeine Angriffssperre verhängt: {reason}', ['{reason}' => $ban->getReason()])
-            : t('Die Spielleitung hat bis {endsAt} eine allgemeine Angriffssperre verhängt: {reason}', ['{reason}' => $ban->getReason(), '{endsAt}' => $ban->getEndsAt()->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i')]);
+            : t('Die Spielleitung hat bis {endsAt} eine allgemeine Angriffssperre verhängt: {reason}', ['{reason}' => $ban->getReason(), '{endsAt}' => new When($ban->getEndsAt())]);
     }
 
     /** @param int|null $hours null: until it is lifted */

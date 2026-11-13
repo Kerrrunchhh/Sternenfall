@@ -2,6 +2,7 @@
 
 namespace App\Game;
 
+use App\I18n\When;
 use App\Entity\Fleet;
 use App\Entity\Planet;
 use App\Entity\TransportRequest;
@@ -78,7 +79,7 @@ final readonly class TransportRequestDispatcher
                 $this->em->flush();
                 $this->fleetService->sendFleet($fleet, $trader, $request->getGalaxy(), $request->getSystem(), $request->getPosition(), FleetMission::Transport, $request->getGoods());
                 $this->em->flush();
-                $lines[] = t('{where}: {label} ist unterwegs (Ankunft {value}).', ['{where}' => $where, '{label}' => $fleet->getLabel(), '{value}' => $fleet->getArriveAt()?->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m. H:i')]);
+                $lines[] = t('{where}: {label} ist unterwegs (Ankunft {value}).', ['{where}' => $where, '{label}' => $fleet->getLabel(), '{value}' => new When($fleet->getArriveAt(), 'd.m. H:i')]);
             } catch (GameException $e) {
                 $request->reopen();
                 $this->em->flush();

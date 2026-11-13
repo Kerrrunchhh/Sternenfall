@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\I18n\When;
 use App\I18n\Lines;
 use App\Entity\User;
 use App\Game\AccountDeactivation;
@@ -77,7 +78,7 @@ class AdminUserController extends AbstractGameController
                         throw new GameException(t('Gib einen Grund an – der Spieler bekommt ihn mitgeteilt.'));
                     }
                     $until = $vacations->impose($user, VacationService::parseDays($form->getString('days')), $reason);
-                    $this->addFlash('success', t('{player} ist bis {value} im Urlaub.', ['{player}' => $user->getUsername(), '{value}' => $until->setTimezone(new \DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i')]));
+                    $this->addFlash('success', t('{player} ist bis {value} im Urlaub.', ['{player}' => $user->getUsername(), '{value}' => new When($until)]));
                     break;
                 case 'message':
                     $body = trim($form->getString('body'));

@@ -124,9 +124,13 @@ final readonly class GameMailer
             return;
         }
         $locale = $user->getLocale();
-        $body = $text->trans($this->translator, $locale).(null === $footer ? '' : "\n\n".$footer->trans($this->translator, $locale));
+        // Times in the mail are shown in the recipient's time zone.
+        [$title, $body] = \App\I18n\DisplayZone::with($user->getTimezone(), fn (): array => [
+            '['.$this->gameName.'] '.$subject->trans($this->translator, $locale),
+            $text->trans($this->translator, $locale).(null === $footer ? '' : "\n\n".$footer->trans($this->translator, $locale)),
+        ]);
         try {
-            $this->mailer->send((new Email())->from($this->from)->to($to)->subject('['.$this->gameName.'] '.$subject->trans($this->translator, $locale))->text($body));
+            $this->mailer->send((new Email())->from($this->from)->to($to)->subject($title)->text($body));
         } catch (TransportExceptionInterface $e) {
             $this->logger->error('Could not send e-mail to {to}: {error}', ['to' => $to, 'error' => $e->getMessage()]);
         }
