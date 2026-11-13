@@ -32,7 +32,7 @@
                         <form method="post" action="{{ path('app_build', {type: b.type.value}) }}">
                             <input type="hidden" name="_token" value="{{ csrf_token('build') }}">
                             <button class="btn btn-small" type="submit" id="build-{{ b.type.value }}" {{ b.affordable ? '' : 'disabled data-unlock-when-affordable' }}>
-                                {{ b.planned == 0 ? ('Bauen'|trans) : ('Ausbauen auf'|trans ~ ' ') ~ (b.planned + 1) }}{{ queue is not empty ? ' (einreihen)' }}
+                                {{ b.planned == 0 ? ('Bauen'|trans) : ('Ausbauen auf'|trans ~ ' ') ~ (b.planned + 1) }}{{ queue is not empty ? ' (' ~ 'einreihen'|trans ~ ')' }}
                             </button>
                         </form>
                     {% endif %}

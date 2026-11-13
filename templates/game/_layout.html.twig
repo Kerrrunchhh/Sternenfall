@@ -90,7 +90,7 @@
                 <h2 class="sidebar-title">{{ 'Handelsstützpunkte <small>{own_trade_posts}</small>'|trans({'{own_trade_posts}': own_trade_posts|length|e})|raw }}</h2>
                 <div class="planet-list">
                     {% for tp in own_trade_posts %}
-                        <a href="{{ path('app_trade_post', {id: tp.id}) }}" class="planet-badge {{ app.request.attributes.get('_route') == 'app_trade_post' and app.request.attributes.get('id') == tp.id ~ '' ? 'current' }}" title="{{ tp.name }} [{{ tp.coordinates }}]{{ tp.active ? '' : ' – aufgegeben' }}">
+                        <a href="{{ path('app_trade_post', {id: tp.id}) }}" class="planet-badge {{ app.request.attributes.get('_route') == 'app_trade_post' and app.request.attributes.get('id') == tp.id ~ '' ? 'current' }}" title="{{ tp.name }} [{{ tp.coordinates }}]{{ tp.active ? '' : ' – ' ~ 'aufgegeben'|trans }}">
                             <span class="pb-icon" aria-hidden="true">⚖</span>
                             <span class="pb-name">{{ tp.name }}</span>
                             <span class="pb-coords">{{ tp.coordinates }}</span>

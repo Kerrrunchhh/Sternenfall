@@ -62,7 +62,7 @@
                             {% if not post.active %}{{ 'aufgegeben'|trans }}
                             {% elseif not post.restricted %}{{ 'offen für alle'|trans }}
                             {% else %}{{ 'nur für {allowedLifeForms}'|trans({'{allowedLifeForms}': (post.allowedLifeForms|map(l => l.label|trans)|merge(post.allowedAlliances|map(a => '[' ~ a.tag ~ ']')))|join(', ')}) }}{% endif %}
-                            {{ access ? '' : '· gesperrt' }}
+                            {{ access ? '' : '· ' ~ 'gesperrt'|trans }}
                             {% if post.buysAnything %}{{ '· kauft an'|trans }}{% endif %}
                         </td>
                     </tr>

@@ -114,7 +114,7 @@
                                 <form method="post" action="{{ path('app_fleet_recall', {id: f.id}) }}" class="inline" title="{{ 'Zurückrufen möglich bis {recall_until} (Kommunikationstechnik)'|trans({'{recall_until}': recall_until(f)|date('H:i:s')}) }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('fleet') }}">
                                     <input type="hidden" name="to" value="app_overview">
-                                    <button type="submit" class="link-button recall-link" id="recall-{{ f.id }}">{{ f.mission.value == 'hover' ? '↓ landen' : ('↩ zurückrufen'|trans) }}</button>
+                                    <button type="submit" class="link-button recall-link" id="recall-{{ f.id }}">{{ f.mission.value == 'hover' ? ('↓ landen'|trans) : ('↩ zurückrufen'|trans) }}</button>
                                 </form>
                             {% endif %}
                         </td>

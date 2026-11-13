@@ -55,7 +55,7 @@
             </div>
             <p class="small">
                 {% if c.intel %}
-                    {{ 'Erspäht {scoutedAt}:'|trans({'{scoutedAt}': c.intel.scoutedAt|date('H:i')}) }} {% for s in c.intel.shipList %}{{ s.count|num }} × {{ s.type.label|trans }}{{ not loop.last ? ', ' }}{% endfor %}{{ c.intel.cargo >= 1 ? ' · Ladung ' ~ c.intel.cargo|num }}
+                    {{ 'Erspäht {scoutedAt}:'|trans({'{scoutedAt}': c.intel.scoutedAt|date('H:i')}) }} {% for s in c.intel.shipList %}{{ s.count|num }} × {{ s.type.label|trans }}{{ not loop.last ? ', ' }}{% endfor %}{{ c.intel.cargo >= 1 ? ' · ' ~ 'Ladung {amount}'|trans({'{amount}': c.intel.cargo|num}) }}
                 {% else %}
                     {{ 'Zusammensetzung unbekannt'|trans }}{% if f.cargo.total >= 1 %} · {{ 'beladen'|trans }}{% endif %}
                 {% endif %}

@@ -41,7 +41,7 @@
             {% if own %}
                 <div class="profile-actions">
                     <a class="btn" href="{{ path('app_account') }}" id="profile-account" title="{{ 'Urlaubsmodus, E-Mail-Benachrichtigungen, Account löschen'|trans }}">{{ '⚙ Konto'|trans }}</a>
-                    <a class="btn btn-secondary" href="{{ path('app_extended') }}" id="profile-extended">{{ player.isExtended(now) ? '✨ Erweitert' : '✨ Erweitern' }}</a>
+                    <a class="btn btn-secondary" href="{{ path('app_extended') }}" id="profile-extended">{{ (player.isExtended(now) ? '✨ Erweitert' : '✨ Erweitern')|trans }}</a>
                 </div>
             {% endif %}
             {# The trade guild and the other system accounts are no players to write to, report or put a bounty on. #}

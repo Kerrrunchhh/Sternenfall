@@ -4,7 +4,7 @@
 {% block title %}{{ ticket.subject }} – {{ game_name }}{% endblock %}
 
 {% block content %}
-    <p><a href="{{ admin_view ? path('app_admin_tickets') : path('app_support') }}">← {{ admin_view ? ('Alle Meldungen'|trans) : 'Hilfe & Meldungen' }}</a></p>
+    <p><a href="{{ admin_view ? path('app_admin_tickets') : path('app_support') }}">← {{ admin_view ? ('Alle Meldungen'|trans) : ('Hilfe & Meldungen'|trans) }}</a></p>
     <article class="panel">
         <h1>{{ ticket.kind.icon }} {{ ticket.subject }}</h1>
         <p class="muted small">
