@@ -50,6 +50,7 @@
 
     <section class="panel">
         <h2>{{ 'Deine Gesuche und Lieferungen'|trans }}</h2>
+        <p class="muted small">{{ 'Erledigte und zurückgezogene Gesuche verschwinden nach 3 Tagen.'|trans }}</p>
         {% if mine is empty %}
             <p class="muted">{{ 'Noch keine.'|trans }}</p>
         {% else %}

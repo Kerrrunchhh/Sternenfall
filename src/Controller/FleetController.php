@@ -114,8 +114,8 @@ class FleetController extends AbstractGameController
             // Attacks on their way that own fleets may join (joint attack).
             'joinable_attacks' => $this->fleetService->joinableAttacks($player),
             'ship_types' => ShipType::cases(),
-            // Foreign fleets heading here are only known if the radar sees them.
-            'incoming' => array_values(array_filter($fleets->findIncoming($player), static fn (Fleet $f): bool => $radar->sees($player, $f))),
+            // Foreign fleets heading here: attacks always, everything else only if the radar sees it.
+            'incoming' => array_values(array_filter($fleets->findIncoming($player), static fn (Fleet $f): bool => $radar->knows($player, $f))),
             'target' => [
                 'galaxy' => $request->query->getInt('galaxy', $planet->getGalaxy()),
                 'system' => $request->query->getInt('system', $planet->getSystem()),

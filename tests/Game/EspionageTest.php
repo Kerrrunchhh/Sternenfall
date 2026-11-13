@@ -137,6 +137,34 @@ class EspionageTest extends TestCase
         self::assertFalse(Radar::emits($fleet), 'even with cargo on board');
     }
 
+    public function testAnAttackOnTheOwnPlanetIsOnTheRadarOnlyWithRadarResearchButAlwaysKnown(): void
+    {
+        $victim = new User('opfer');
+        $home = new Planet($victim, 'Heim', 1, 100, 5, $this->now);
+        $victim->addPlanet($home);
+        $attack = new Fleet(new User('angreifer'), 'Sturm', 1, 120, 3, ['pfeil' => 10]);
+        $attack->depart(FleetMission::Attack, 1, 100, 5, $this->now, 600);
+        $planets = $this->createStub(\App\Repository\PlanetRepository::class);
+        $planets->method('findAt')->willReturnCallback(static fn (int $g, int $s, int $p): ?Planet => 100 === $s && 5 === $p ? $home : null);
+        $fleets = $this->createStub(FleetRepository::class);
+        $fleets->method('findIncoming')->willReturn([$attack]);
+        $radar = new Radar($fleets, $planets, $this->espionage);
+
+        self::assertFalse($radar->sees($victim, $attack), 'no radar research: not on the radar');
+        self::assertTrue($radar->knows($victim, $attack), 'but the overview warns of it');
+        self::assertSame([$attack], $radar->incomingAttacks($victim), 'the alarm works without radar');
+        self::assertFalse($radar->knows(new User('zuschauer'), $attack), 'others only with radar');
+
+        $probe = new Fleet(new User('spaeher'), null, 1, 120, 3, ['scout' => 1]);
+        $probe->depart(FleetMission::Spy, 1, 100, 5, $this->now, 60);
+        $victim->setResearchLevel(ResearchType::Espionage, Espionage::LEVEL_SEE_PROBES);
+        self::assertFalse($radar->sees($victim, $probe), 'without radar the radar shows nothing at all, not even probes');
+
+        $victim->setResearchLevel(ResearchType::Radar, 1);
+        self::assertTrue($radar->sees($victim, $attack), 'radar 1 covers the own system');
+        self::assertTrue($radar->sees($victim, $probe), 'with radar, top espionage notices probes');
+    }
+
     public function testSpyReportNamesTheDebrisFieldAndRemembersIt(): void
     {
         $field = new \App\Entity\DebrisField(2, 50, 9);

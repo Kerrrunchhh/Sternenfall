@@ -46,6 +46,8 @@ final readonly class TransportRequests
 
     /** Requests a player may have running at the same time (open or on their way). */
     public const int MAX_ACTIVE = 3;
+    /** Delivered or cancelled requests stay in the lists this long, then they are deleted. */
+    public const string CLOSED_KEPT = '3 days';
 
     public function create(User $requester, Planet $planet, Resources $goods): TransportRequest
     {
@@ -84,7 +86,7 @@ final readonly class TransportRequests
         if (!$request->getRequester()->isSameAs($requester) || TransportRequest::OPEN !== $request->getStatus()) {
             throw new GameException(t('Zurückziehen geht nur, solange niemand liefert.'));
         }
-        $request->close(TransportRequest::CANCELLED);
+        $request->close(TransportRequest::CANCELLED, $this->now());
         $this->credit($requester, $request->getOffer());
         $this->em->flush();
     }
@@ -103,7 +105,7 @@ final readonly class TransportRequests
                 continue;
             }
             $trader = $request->getTrader();
-            $request->close(TransportRequest::DONE);
+            $request->close(TransportRequest::DONE, $this->now());
             if (null !== $trader) {
                 $this->credit($trader, $request->getOffer());
                 $this->inbox->send($trader, t('Transportgesuch erfüllt'), t('Geliefert an {planetName} [{coords}] von {player}: {offer} Credits.', ['{planetName}' => $request->getPlanetName(), '{coords}' => $request->getCoordinates(), '{player}' => $request->getRequester()->getUsername(), '{offer}' => new Num($request->getOffer())]));
@@ -119,6 +121,12 @@ final readonly class TransportRequests
         foreach ($this->requests->findBy(['status' => TransportRequest::ASSIGNED, 'fleet' => null, 'guildDeliveryAt' => null]) as $request) {
             $request->reopen();
         }
+    }
+
+    /** Deletes requests delivered or cancelled more than CLOSED_KEPT ago. @return int how many */
+    public function purgeClosed(): int
+    {
+        return $this->requests->deleteClosedBefore($this->now()->modify('-'.self::CLOSED_KEPT));
     }
 
     private function credit(User $user, float $amount): void

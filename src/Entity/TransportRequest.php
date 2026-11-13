@@ -117,9 +117,16 @@ class TransportRequest
         $this->status = self::OPEN;
     }
 
-    public function close(string $status): void
+    /** When it was delivered or cancelled; finished requests are deleted CLOSED_KEPT later. */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $closedAt = null;
+
+    public function getClosedAt(): ?\DateTimeImmutable { return $this->closedAt; }
+
+    public function close(string $status, \DateTimeImmutable $now): void
     {
         $this->status = $status;
         $this->fleet = null;
+        $this->closedAt = $now;
     }
 }

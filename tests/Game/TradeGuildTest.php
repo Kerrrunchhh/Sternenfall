@@ -54,4 +54,36 @@ final class TradeGuildTest extends TestCase
         self::assertTrue($fusion->covers(36));
         self::assertFalse($fusion->covers(37));
     }
+
+    public function testAttackingTheGuildIsRefusedFirstAndAFleetInFlightSaysWhereItGoes(): void
+    {
+        $now = new \DateTimeImmutable('2026-11-12 10:00:00');
+        $guild = new User(TradeGuild::NAME, $now);
+        $guild->markSystem();
+        $fusion = new \App\Entity\Planet($guild, TradeGuild::POST_NAME, 3, TradeGuild::SYSTEM, 1, $now);
+        $fusion->spanTo(36, TradeGuild::POST_NAME);
+        $planets = $this->createStub(\App\Repository\PlanetRepository::class);
+        $planets->method('findAt')->willReturnCallback(static fn (int $g, int $s, int $p): ?\App\Entity\Planet => TradeGuild::SYSTEM === $s && $fusion->covers($p) ? $fusion : null);
+        $posts = $this->createStub(\App\Repository\TradePostRepository::class);
+
+        $service = (new \ReflectionClass(\App\Game\FleetService::class))->newInstanceWithoutConstructor();
+        (new \ReflectionProperty(\App\Game\FleetService::class, 'planetRepository'))->setValue($service, $planets);
+        (new \ReflectionProperty(\App\Game\FleetService::class, 'tradePosts'))->setValue($service, $posts);
+        $refuse = new \ReflectionMethod(\App\Game\FleetService::class, 'refuseGuildAttack');
+
+        try {
+            $refuse->invoke($service, \App\Game\FleetMission::Attack, 3, TradeGuild::SYSTEM, 20);
+            self::fail('the guild fusion can not be attacked, on any of its slots');
+        } catch (\App\Game\GameException $e) {
+            self::assertStringContainsString('Handelsgilde', $e->getMessage());
+        }
+        $refuse->invoke($service, \App\Game\FleetMission::Attack, 3, 144, 1);
+        $refuse->invoke($service, \App\Game\FleetMission::Trade, 3, TradeGuild::SYSTEM, 1);
+
+        $fleet = new \App\Entity\Fleet(new User('pilot', $now), 'handel01', 3, 144, 6, ['large_freighter' => 1]);
+        $fleet->depart(\App\Game\FleetMission::Station, 3, 144, 1, $now, 600);
+        $text = (new \ReflectionMethod(\App\Game\FleetService::class, 'alreadyUnderway'))->invoke($service, $fleet)->trans(new \Symfony\Component\Translation\IdentityTranslator());
+        self::assertStringContainsString('handel01', $text);
+        self::assertStringContainsString('[3:144:1]', $text, 'says where the fleet is heading');
+    }
 }

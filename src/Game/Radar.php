@@ -88,17 +88,18 @@ final readonly class Radar
             : [$fleet->getTargetGalaxy(), $fleet->getTargetSystem(), $fleet->getTargetPosition()];
     }
 
+    /**
+     * Whether the fleet is on the player's radar – that depends on his radar research only,
+     * also for attacks on his own planets (those he learns of on the overview, see knows()).
+     */
     public function sees(User $player, Fleet $fleet): bool
     {
         if ($fleet->getOwner()->isSameAs($player)) {
             return true;
         }
-        // An attack on one of the own planets is seen at once, radar or not.
-        if (FleetMission::Attack === $fleet->getMission() && !$fleet->isReturning()) {
-            [$g, $s, $p] = self::nextStop($fleet);
-            if (true === $this->planets->findAt($g, $s, $p)?->getOwner()->isSameAs($player)) {
-                return true;
-            }
+        // Without radar research the radar shows nothing at all.
+        if (null === self::range($player->getResearchLevel(ResearchType::Radar))) {
+            return false;
         }
         if (FleetMission::Spy === $fleet->getMission()) {
             // Probes are silent; only top espionage notices those heading for the own planets.
@@ -114,8 +115,28 @@ final readonly class Radar
         return $this->covers($player, $galaxy, $system);
     }
 
+    /** Whether the fleet attacks one of the player's planets (it is aimed at it, flying there). */
+    public function attacks(User $player, Fleet $fleet): bool
+    {
+        if (FleetMission::Attack !== $fleet->getMission() || $fleet->isReturning()) {
+            return false;
+        }
+        [$g, $s, $p] = self::nextStop($fleet);
+
+        return true === $this->planets->findAt($g, $s, $p)?->getOwner()->isSameAs($player);
+    }
+
     /**
-     * Attacks on the player's planets that his radar sees, earliest impact first.
+     * Whether the player knows of the fleet: an attack on his own planets he is told of at
+     * once (overview, alarm), radar or not – everything else only his radar shows.
+     */
+    public function knows(User $player, Fleet $fleet): bool
+    {
+        return $this->attacks($player, $fleet) || $this->sees($player, $fleet);
+    }
+
+    /**
+     * Attacks on the player's planets, earliest impact first – with or without radar.
      *
      * @return list<Fleet>
      */
@@ -123,7 +144,7 @@ final readonly class Radar
     {
         return array_values(array_filter(
             $this->fleets->findIncoming($player),
-            fn (Fleet $fleet): bool => FleetMission::Attack === $fleet->getMission() && !$fleet->isReturning() && $this->sees($player, $fleet),
+            fn (Fleet $fleet): bool => $this->attacks($player, $fleet),
         ));
     }
 

@@ -186,7 +186,7 @@
                 <tr><td>{{ 'Koordinaten'|trans }}</td><td class="num">{{ planet.coordinates }}</td></tr>
                 <tr><td title="{{ 'Jede Gebäudestufe zählt mit dem Punktesatz des Gebäudes'|trans }}">{{ 'Punkte'|trans }}</td><td class="num">{{ planet_points(planet)|num }}</td></tr>
                 <tr><td>{{ 'Planetentyp'|trans }}</td><td class="num">{{ planet.type.icon }} {{ planet.type.label|trans }}<br><span class="muted small">{{ planet.type.effect|trans }}{% if planet.fused %}<br>{{ 'Fusion: zählt als blauer Planet, alle Rohstoffe ×1,5'|trans }}{% endif %}</span><br><a class="small" href="{{ path('app_fusion') }}">🔗 {{ planet.fused ? ('Fusion ansehen / sprengen'|trans) : ('Fusion: Vorschau anschweißen'|trans) }}</a></td></tr>
-                <tr><td>{{ 'Vor Plünderung geschützt'|trans }}</td><td class="num">{{ '{protected} je Rohstoff'|trans({'{protected}': protected|num}) }}</td></tr>
+                <tr><td>{{ 'Vor Plünderung geschützt'|trans }}</td><td class="num">{% if protected > 0 %}{{ '{protected} je Rohstoff'|trans({'{protected}': protected|num}) }}{% else %}<a href="{{ path('app_buildings') }}">{{ 'nichts – baue einen Lagerkomplex'|trans }}</a>{% endif %}</td></tr>
             </table>
         </section>
         <section class="panel">

@@ -42,4 +42,16 @@ class TransportRequestRepository extends ServiceEntityRepository
             ->getQuery()
             ->getSingleScalarResult();
     }
+
+    /** Deletes delivered and cancelled requests closed before $before. @return int how many */
+    public function deleteClosedBefore(\DateTimeImmutable $before): int
+    {
+        return (int) $this->createQueryBuilder('r')
+            ->delete()
+            ->where('r.status IN (:closed) AND r.closedAt < :before')
+            ->setParameter('closed', [TransportRequest::DONE, TransportRequest::CANCELLED])
+            ->setParameter('before', $before)
+            ->getQuery()
+            ->execute();
+    }
 }

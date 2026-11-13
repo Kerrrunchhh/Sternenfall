@@ -233,11 +233,14 @@ final readonly class Economy
 
     /**
      * Amount of each resource that is safe from being plundered in an attack.
-     * Storage is unlimited; this only limits what attackers can take.
+     * Storage is unlimited; this only limits what attackers can take. Without a storage
+     * complex nothing is protected.
      */
     public function protectedAmount(Planet $planet): float
     {
-        return floor(10000 * 1.5 ** $planet->getBuildingLevel(BuildingType::Storage));
+        $level = $planet->getBuildingLevel(BuildingType::Storage);
+
+        return 0 === $level ? 0.0 : floor(10000 * 1.5 ** $level);
     }
 
     /** Surcharge for a building upgrade queued behind one that is already waiting. */

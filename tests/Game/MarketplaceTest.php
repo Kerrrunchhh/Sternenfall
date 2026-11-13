@@ -114,6 +114,25 @@ final class MarketplaceTest extends TestCase
         $service->create($beginner, $home, new Resources(iron: 100));
     }
 
+    public function testFinishedRequestsAreDeletedThreeDaysAfterTheyClosed(): void
+    {
+        $beginner = new User('neu', $this->now);
+        $home = new Planet($beginner, 'Heim', 1, 1, 1, $this->now);
+        $request = new TransportRequest($beginner, $home, new Resources(iron: 100), 10, $this->now->modify('-5 days'));
+        $connection = $this->createStub(Connection::class);
+        $connection->method('executeStatement')->willReturn(1);
+        $em = $this->createStub(EntityManagerInterface::class);
+        $em->method('getConnection')->willReturn($connection);
+        $requests = $this->createMock(TransportRequestRepository::class);
+        $requests->expects(self::once())->method('deleteClosedBefore')
+            ->with(self::equalTo($this->now->modify('-3 days')))->willReturn(2);
+        $service = new TransportRequests($em, $requests, $this->inbox(), new MockClock($this->now));
+
+        $service->cancel($request, $beginner);
+        self::assertEquals($this->now, $request->getClosedAt(), 'the three days count from closing, not from posting');
+        self::assertSame(2, $service->purgeClosed());
+    }
+
     public function testCancelOnlyWhileOpen(): void
     {
         $beginner = new User('neu', $this->now);

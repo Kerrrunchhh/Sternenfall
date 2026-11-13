@@ -182,7 +182,7 @@ final readonly class TradeGuild
             $requester = $request->getRequester();
             if (null === $planet || !$planet->getOwner()->isSameAs($requester)) {
                 // The planet is gone or no longer his: no delivery, the price goes back.
-                $request->close(TransportRequest::CANCELLED);
+                $request->close(TransportRequest::CANCELLED, $now);
                 $this->em->getConnection()->executeStatement('UPDATE `user` SET credits = credits + ? WHERE id = ?', [$request->getOffer(), $requester->getId()]);
                 $this->inbox->send($requester, t('Lieferung der Handelsgilde gescheitert'), t('{planet} [{coords}] gehört dir nicht mehr. Die Handelsgilde hat nicht geliefert, du bekommst {offer} Credits zurück.', ['{planet}' => $request->getPlanetName(), '{coords}' => $request->getCoordinates(), '{offer}' => new Num($request->getOffer())]));
                 continue;
@@ -191,7 +191,7 @@ final readonly class TradeGuild
             $this->planetService->transaction($planet, static function (Planet $p) use ($goods): void {
                 $p->setResources($p->getResources()->add($goods));
             });
-            $request->close(TransportRequest::DONE);
+            $request->close(TransportRequest::DONE, $now);
             $this->inbox->send($requester, t('Lieferung angekommen'), t('Die Handelsgilde hat dein Transportgesuch für {planet} [{coords}] erfüllt.', ['{planet}' => $request->getPlanetName(), '{coords}' => $request->getCoordinates()]));
         }
         $this->em->flush();

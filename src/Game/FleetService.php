@@ -101,6 +101,7 @@ final readonly class FleetService
         foreach ($fleets as $fleet) {
             $this->assertControl($fleet, $actor);
         }
+        $this->refuseGuildAttack($mission, $galaxy, $system, $position);
         if (FleetMission::Attack === $mission) {
             if (!$cargo->isEmpty()) {
                 throw new GameException(t('Zu einem Angriff wird keine Ladung mitgenommen.'));
@@ -203,7 +204,7 @@ final readonly class FleetService
             $label = $fleet->getLabel();
             try {
                 if (!$fleet->isIdle()) {
-                    throw new GameException(t('Sie ist bereits unterwegs.'));
+                    throw new GameException($this->alreadyUnderway($fleet, false));
                 }
                 $this->assertReadyToLeave($fleet);
                 if ($fleet->isAt($galaxy, $system, $position)) {
@@ -413,7 +414,7 @@ final readonly class FleetService
      */
     public function spyFleet(User $player, Fleet $target): TranslatableInterface
     {
-        if ($target->getOwner()->isSameAs($player) || !$target->isMoving() || !$this->radar->sees($player, $target)) {
+        if ($target->getOwner()->isSameAs($player) || !$target->isMoving() || !$this->radar->knows($player, $target)) {
             throw new GameException(t('Diese Flotte ist nicht auf deinem Radar.'));
         }
         [$galaxy, $system, $position] = Radar::nextStop($target);
@@ -689,12 +690,13 @@ final readonly class FleetService
             [$galaxy, $system, $position] = [(int) $lead->getTargetGalaxy(), (int) $lead->getTargetSystem(), (int) $lead->getTargetPosition()];
             $mission = $lead->getMission() ?? $mission;
         }
+        $this->refuseGuildAttack($mission, $galaxy, $system, $position);
         $result = t('Flotte „{name}“ gestartet: {mission} nach [{coords}].', ['{name}' => $fleet->getName(), '{mission}' => t($mission->label()), '{coords}' => \sprintf('%d:%d:%d', $galaxy, $system, $position)]);
         $this->withEventLock(function () use ($fleet, $actor, $galaxy, $system, $position, $mission, $cargo, $order, $speedPercent, $lead, $shareChecked, &$result): void {
             $this->em->refresh($fleet);
             $this->assertControl($fleet, $actor);
             if (!$fleet->isIdle()) {
-                throw new GameException(t('Die Flotte ist bereits unterwegs.'));
+                throw new GameException($this->alreadyUnderway($fleet));
             }
             $this->assertReadyToLeave($fleet);
             if (!$fleet->getOwner()->isSameAs($actor)) {
@@ -789,6 +791,30 @@ final readonly class FleetService
         }
 
         return $result;
+    }
+
+    /** Why a fleet in flight can't take a new order – with where it is heading, so the player sees which one it is. */
+    private function alreadyUnderway(Fleet $fleet, bool $withLabel = true): TranslatableInterface
+    {
+        $where = $fleet->isReturning()
+            ? t('kehrt gerade heim')
+            : t('{mission} nach [{coords}]', ['{mission}' => t((string) $fleet->getMission()?->label()), '{coords}' => (string) $fleet->getTargetCoordinates()]);
+
+        return $withLabel
+            ? t('{label} ist schon unterwegs ({where}). Wähle eine Flotte, die steht, oder rufe diese erst zurück.', ['{label}' => $fleet->getLabel(), '{where}' => $where])
+            : t('Sie ist schon unterwegs ({where}). Nimm sie aus der Auswahl oder rufe sie erst zurück.', ['{where}' => $where]);
+    }
+
+    /** The guild can't be attacked – said first, whatever fleets were picked. */
+    private function refuseGuildAttack(FleetMission $mission, int $galaxy, int $system, int $position): void
+    {
+        if (FleetMission::Attack !== $mission) {
+            return;
+        }
+        $owner = $this->planetRepository->findAt($galaxy, $system, $position)?->getOwner() ?? $this->tradePosts->findAt($galaxy, $system, $position)?->getOwner();
+        if (null !== $owner && $owner->isSystem() && TradeGuild::NAME === $owner->getUsername()) {
+            throw new GameException(t('Die Zentralbörsen der Handelsgilde können nicht angegriffen werden.'));
+        }
     }
 
     /**
@@ -952,7 +978,7 @@ final readonly class FleetService
             $this->em->refresh($prey);
             $this->assertControl($fleet, $actor);
             if (!$fleet->isIdle()) {
-                throw new GameException(t('Die Flotte ist bereits unterwegs.'));
+                throw new GameException($this->alreadyUnderway($fleet));
             }
             if (null !== $ban = $this->attackBans?->refusal()) {
                 throw new GameException($ban);
@@ -1132,6 +1158,7 @@ final readonly class FleetService
             // Once a day: ships and resources of the whole game for the status page history.
             $this->stats?->recordDailySnapshot();
             $this->transportRequests?->reopenOrphans();
+            $this->transportRequests?->purgeClosed();
             // The trade guild: posts and offer in place, transport requests nobody took delivered.
             $this->tradeGuild?->tick();
             // Trade posts stand on planets: gone with a lost planet; old ones on free slots are dissolved.

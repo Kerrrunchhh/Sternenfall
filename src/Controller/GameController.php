@@ -43,7 +43,7 @@ class GameController extends AbstractGameController
         // Fleet movements: own fleets in flight and foreign fleets heading here that the radar sees.
         $own = array_values(array_filter($fleets->findByOwner($player), static fn (Fleet $f): bool => $f->isMoving()));
         usort($own, static fn (Fleet $a, Fleet $b): int => $a->getNextEventAt() <=> $b->getNextEventAt());
-        $incoming = array_values(array_filter($fleets->findIncoming($player), static fn (Fleet $f): bool => $radar->sees($player, $f)));
+        $incoming = array_values(array_filter($fleets->findIncoming($player), static fn (Fleet $f): bool => $radar->knows($player, $f)));
 
         return $this->renderGame('game/overview.html.twig', $planet, [
             'at_trade_posts' => $atTradePosts,

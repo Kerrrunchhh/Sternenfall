@@ -58,7 +58,10 @@ class PlanetUpdaterTest extends TestCase
     public function testStorageBuildingRaisesProtectedAmount(): void
     {
         $planet = $this->planet();
-        self::assertSame(10000.0, $this->economy->protectedAmount($planet));
+        self::assertSame(0.0, $this->economy->protectedAmount($planet), 'without a storage complex nothing is protected');
+
+        $planet->setBuildingLevel(BuildingType::Storage, 1);
+        self::assertSame(15000.0, $this->economy->protectedAmount($planet));
 
         $planet->setBuildingLevel(BuildingType::Storage, 2);
         self::assertSame(22500.0, $this->economy->protectedAmount($planet));
