@@ -27,7 +27,9 @@ class NavigationTest extends TestCase
         $sameGalaxy = $this->navigation->distance(1, 1, 5, 1, 20, 5);
         $otherGalaxy = $this->navigation->distance(1, 1, 5, 3, 1, 5);
 
-        self::assertSame(1400, $sameSystem);
+        // Within a system it depends on where the two planets are on their orbits (see OrbitTest).
+        self::assertGreaterThanOrEqual(\App\Game\Orbit::TRAVEL_BASE + 400, $sameSystem);
+        self::assertLessThanOrEqual(\App\Game\Orbit::TRAVEL_BASE + \App\Game\Orbit::radius(5) + \App\Game\Orbit::radius(9), $sameSystem);
         self::assertSame(29500, $sameGalaxy);
         self::assertSame(200000, $otherGalaxy);
         self::assertTrue($samePlanet < $sameSystem && $sameSystem < $sameGalaxy && $sameGalaxy < $otherGalaxy);

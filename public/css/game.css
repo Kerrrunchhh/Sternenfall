@@ -832,3 +832,20 @@ tr.suspicious-strong td { background: rgba(255, 138, 128, .08); }
 /* Spielhilfe: what buildings give per level; the levels of the current planet stand out. */
 .level-table td.current-level { background: rgba(79, 195, 247, .18); font-weight: 600; }
 .building-effect { margin: .25rem 0; color: var(--accent, inherit); }
+
+/* Galaxy: graphic system view – the sun and the planets on their orbits. */
+.system-view-canvas svg { display: block; width: 100%; max-width: 520px; height: auto; margin: .5rem auto; background: radial-gradient(circle, rgba(255,255,255,.04), transparent 70%); border-radius: 50%; }
+.sv-orbit { fill: none; stroke: currentColor; stroke-width: .25; opacity: .2; }
+.sv-planet { stroke: rgba(0,0,0,.4); stroke-width: .3; cursor: pointer; }
+.sv-free { fill: #78909c; opacity: .45; cursor: default; }
+.sv-post { fill: #ffb74d; }
+.sv-other { fill: #cfd8dc; }
+.sv-own { fill: #66bb6a; }
+.sv-criminal { fill: #4287f5; }
+.sv-inactive { fill: #fdd835; }
+.sv-vacation { fill: #a5d6a7; }
+.sv-selected { stroke: #fff; stroke-width: .9; }
+.sv-line { stroke: #4fc3f7; stroke-width: .5; stroke-dasharray: 1.5 1; }
+.system-time { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.system-time input[type=range] { flex: 1; min-width: 8rem; }
+.system-info { min-height: 2.5em; }

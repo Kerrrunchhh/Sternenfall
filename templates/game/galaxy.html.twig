@@ -14,6 +14,17 @@
         <a class="btn btn-small btn-secondary" href="{{ path('app_galaxy', {galaxy: galaxy, system: min(systems, system + 1)}) }}">→</a>
     </form>
 
+    {# The planets circle their sun; flights within the system depend on where they are (App\Game\Orbit). #}
+    <section class="panel system-view" id="systemansicht">
+        <h2>{{ '☀ {sun} im System {galaxy}:{system}'|trans({'{sun}': sun.label|trans, '{galaxy}': galaxy, '{system}': system}) }}</h2>
+        <p class="muted small">{{ 'Die Planeten kreisen um ihre Sonne – innen schnell, außen langsam. Flüge innerhalb des Systems sind kurz, wenn Start und Ziel auf derselben Seite stehen, und lang, wenn die Sonne dazwischen liegt. Mit dem Regler siehst du, wie es in den nächsten Tagen aussieht.'|trans }}</p>
+        <div class="system-view-canvas">
+            <svg data-system-view data-config="{{ system_view|json_encode }}" viewBox="-110 -110 220 220" role="img" aria-label="{{ 'Grafische Systemansicht'|trans }}"></svg>
+        </div>
+        <label class="system-time small">{{ 'Zeit:'|trans }} <input type="range" min="0" max="336" step="1" value="0" data-system-time aria-label="{{ 'Stunden in die Zukunft'|trans }}"> <output data-system-time-label>{{ 'jetzt'|trans }}</output></label>
+        <p class="small system-info" data-system-info aria-live="polite">{{ system_view.origin ? 'Tippe auf einen Planeten: Du siehst die Strecke von {name} dorthin und wann sie am kürzesten ist.'|trans({'{name}': system_view.originName}) : 'Tippe auf einen Planeten für Details. Strecken siehst du, wenn dein gewählter Planet in diesem System liegt.'|trans }}</p>
+    </section>
+
     <section class="panel">
         <h2>{{ 'System {galaxy}:{system} <small class="muted">· {slots} Planetenplätze</small>'|trans({'{galaxy}': galaxy|e, '{system}': system|e, '{slots}': slots|length|e})|raw }}</h2>
         <table class="table galaxy-table">

@@ -16,6 +16,12 @@ final class JsMessages
     public static function all(): array
     {
         return [
+            t('Platz {position}: frei'),
+            t('Platz {position}: {name} ({owner})'),
+            t('Das ist dein gewählter Planet.'),
+            t('{label} – Strecke von {origin}: {now} · am kürzesten in den nächsten 14 Tagen: {best} ({when})'),
+            t('→ in der Tabelle'),
+            t('jetzt'),
             t('Alles gelesen'),
             t('Kopiert ✓'),
             t('Link kopieren:'),

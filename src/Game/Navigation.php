@@ -13,7 +13,7 @@ use function Symfony\Component\Translation\t;
  */
 final readonly class Navigation
 {
-    public function __construct(private Economy $economy)
+    public function __construct(private Economy $economy, private ?\Psr\Clock\ClockInterface $clock = null)
     {
     }
 
@@ -22,12 +22,13 @@ final readonly class Navigation
         return $this->economy->speed();
     }
 
-    public function distance(int $galaxy1, int $system1, int $position1, int $galaxy2, int $system2, int $position2): int
+    /** Within a system the planets circle their sun: the distance depends on the moment (see Orbit). */
+    public function distance(int $galaxy1, int $system1, int $position1, int $galaxy2, int $system2, int $position2, ?\DateTimeInterface $at = null): int
     {
         return match (true) {
             $galaxy1 !== $galaxy2 => 100000 * abs($galaxy1 - $galaxy2),
             $system1 !== $system2 => 20000 + 500 * abs($system1 - $system2),
-            $position1 !== $position2 => 1000 + 100 * abs($position1 - $position2),
+            $position1 !== $position2 => Orbit::distance($galaxy1, $system1, $position1, $position2, $at ?? $this->clock?->now() ?? \Symfony\Component\Clock\now()),
             default => 5,
         };
     }

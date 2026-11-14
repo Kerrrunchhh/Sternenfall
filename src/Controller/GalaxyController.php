@@ -83,7 +83,38 @@ class GalaxyController extends AbstractGameController
             $types[$position] = $known[$position] ?? null;
         }
 
+        // The system view: the sun and every slot circling it (see Orbit, public/js/game.js).
+        $player = $this->player();
+        $now = \DateTimeImmutable::createFromInterface($this->clock->now());
+        $orbits = [];
+        foreach ($slots as $position => $p) {
+            $orbits[] = [
+                'position' => $position,
+                'name' => $p?->getName(),
+                'owner' => $p?->getOwner()->getUsername(),
+                'own' => null !== $p && $p->getOwner()->isSameAs($player),
+                'criminal' => null !== $p && $p->getOwner()->isCriminal(),
+                'inactive' => null !== $p && !$p->getOwner()->isSameAs($player) && $p->getOwner()->isInactive($now),
+                'vacation' => null !== $p && $p->getOwner()->isOnVacation($now),
+                // The further slots of a fusion circle with its first one.
+                'fusedInto' => null !== $p && $p->getPosition() !== $position ? $p->getPosition() : null,
+                'post' => null === $p && isset($posts[$position]),
+            ];
+        }
+        $sun = \App\Game\SunType::of($galaxy, $system);
+
         return $this->renderGame('game/galaxy.html.twig', $planet, [
+            'system_view' => [
+                'galaxy' => $galaxy,
+                'system' => $system,
+                'slots' => $orbits,
+                'sun' => ['color' => $sun->color(), 'size' => $sun->size(), 'binary' => \App\Game\SunType::BinaryStar === $sun],
+                // Distances from the chosen planet, if it lies in this system.
+                'origin' => $planet->getGalaxy() === $galaxy && $planet->getSystem() === $system ? $planet->getPosition() : null,
+                'originName' => $planet->getName(),
+                'orbit' => ['epoch' => \App\Game\Orbit::EPOCH, 'inner' => \App\Game\Orbit::INNER_PERIOD_DAYS, 'outer' => \App\Game\Orbit::OUTER_PERIOD_DAYS, 'base' => \App\Game\Orbit::RADIUS_BASE, 'step' => \App\Game\Orbit::RADIUS_STEP, 'travel' => \App\Game\Orbit::TRAVEL_BASE],
+            ],
+            'sun' => $sun,
             'bookmarks' => $bookmarks->findInSystem($this->player(), $galaxy, $system),
             'galaxy' => $galaxy,
             'system' => $system,

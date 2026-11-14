@@ -35,6 +35,50 @@ const serverClock = (() => {
     return { now, format, day };
 })();
 
+// Orbits – the same as App\Game\Orbit and Universe::planetsInSystem (keep both in step): the
+// planets circle their sun, so flights within a system get shorter and longer all the time.
+const orbit = (() => {
+    const EPOCH = 1767225600; // 01.01.2026 00:00 UTC
+    const INNER_DAYS = 1;
+    const OUTER_DAYS = 14;
+    const RADIUS_BASE = 200;
+    const RADIUS_STEP = 100;
+    const TRAVEL_BASE = 600;
+    const table = Array.from({ length: 256 }, (_, n) => {
+        let c = n;
+        for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+        return c >>> 0;
+    });
+    // CRC-32 like PHP's crc32() (the texts are plain ASCII).
+    const crc32 = (text) => {
+        let c = 0xffffffff;
+        for (let i = 0; i < text.length; i++) c = table[(c ^ text.charCodeAt(i)) & 0xff] ^ (c >>> 8);
+        return (c ^ 0xffffffff) >>> 0;
+    };
+    const slots = (g, s) => {
+        const roll = crc32(`slots:${g}:${s}`) % 10001;
+        return 10 + Math.floor(40 * roll * roll / 100000000);
+    };
+    const period = (g, s, p) => {
+        const n = slots(g, s);
+        const share = n > 1 ? Math.max(0, Math.min(1, (p - 1) / (n - 1))) : 0;
+        return 86400 * (INNER_DAYS + (OUTER_DAYS - INNER_DAYS) * share ** 1.5);
+    };
+    const angle = (g, s, p, ms) => {
+        const phase = crc32(`orbit:${g}:${s}:${p}`) / 4294967296 * 2 * Math.PI;
+        const turns = (Math.floor(ms / 1000) - EPOCH) / period(g, s, p);
+        return (phase + 2 * Math.PI * turns) % (2 * Math.PI);
+    };
+    const radius = (p) => RADIUS_BASE + RADIUS_STEP * p;
+    const distance = (g, s, from, to, ms) => {
+        const a = radius(from);
+        const b = radius(to);
+        return TRAVEL_BASE + Math.round(Math.sqrt(Math.max(0, a * a + b * b - 2 * a * b * Math.cos(angle(g, s, from, ms) - angle(g, s, to, ms)))));
+    };
+
+    return { slots, angle, distance };
+})();
+
 // Live resource counters and construction countdowns.
 (() => {
     const started = Date.now();
@@ -776,6 +820,120 @@ const serverClock = (() => {
         }
     }
 
+    // Galaxy: the system view – the sun, and the planets on their orbits (see orbit above).
+    const systemView = document.querySelector('[data-system-view]');
+    if (systemView) {
+        const cfg = JSON.parse(systemView.dataset.config);
+        const { galaxy: g, system: s, slots, sun, origin } = cfg;
+        const NS = 'http://www.w3.org/2000/svg';
+        const node = (name, attrs) => {
+            const element = document.createElementNS(NS, name);
+            Object.entries(attrs).forEach(([key, value]) => element.setAttribute(key, value));
+            return element;
+        };
+        const fmt = new Intl.NumberFormat(LOCALE_TAG, { maximumFractionDigits: 0 });
+        const sunRadius = 6 + 4 * sun.size;
+        const last = slots.length;
+        // Rings evenly spaced for the eye; the distances use the real orbit radii.
+        const ring = (p) => sunRadius + 6 + (p - 1) * (100 - sunRadius - 8) / Math.max(1, last - 1);
+        systemView.append(node('circle', { r: sunRadius * 1.9, fill: sun.color, opacity: 0.15 }));
+        if (sun.binary) {
+            systemView.append(node('circle', { cx: -sunRadius * 0.45, r: sunRadius * 0.6, fill: sun.color }));
+            systemView.append(node('circle', { cx: sunRadius * 0.45, r: sunRadius * 0.5, fill: '#ffcc80' }));
+        } else {
+            systemView.append(node('circle', { r: sunRadius, fill: sun.color }));
+        }
+        const line = node('line', { class: 'sv-line', x1: 0, y1: 0, x2: 0, y2: 0, visibility: 'hidden' });
+        const dots = [];
+        slots.filter((slot) => slot.fusedInto === null).forEach((slot) => {
+            systemView.append(node('circle', { class: 'sv-orbit', r: ring(slot.position) }));
+        });
+        systemView.append(line);
+        slots.filter((slot) => slot.fusedInto === null).forEach((slot) => {
+            const kind = slot.name === null ? (slot.post ? 'sv-post' : 'sv-free')
+                : slot.own ? 'sv-own' : slot.criminal ? 'sv-criminal' : slot.inactive ? 'sv-inactive' : slot.vacation ? 'sv-vacation' : 'sv-other';
+            const dot = node('circle', { class: `sv-planet ${kind}`, r: slot.name === null ? (slot.post ? 1.8 : 1) : slot.own ? 3.2 : 2.6, tabindex: slot.name === null ? -1 : 0 });
+            const title = node('title', {});
+            title.textContent = slot.name === null ? t('Platz {position}: frei', { position: slot.position }) : t('Platz {position}: {name} ({owner})', { position: slot.position, name: slot.name, owner: slot.owner });
+            dot.append(title);
+            systemView.append(dot);
+            dots.push({ slot, dot });
+        });
+
+        const slider = document.querySelector('[data-system-time]');
+        const sliderLabel = document.querySelector('[data-system-time-label]');
+        const info = document.querySelector('[data-system-info]');
+        let selected = null;
+        const moment = () => serverClock.now().getTime() + (slider ? parseInt(slider.value, 10) : 0) * 3600000;
+        const at = (p, ms) => {
+            const a = orbit.angle(g, s, p, ms);
+            return [ring(p) * Math.cos(a), ring(p) * Math.sin(a)];
+        };
+        const describe = () => {
+            if (!selected || !info) return;
+            const { slot } = selected;
+            const label = slot.name === null ? t('Platz {position}: frei', { position: slot.position }) : t('Platz {position}: {name} ({owner})', { position: slot.position, name: slot.name, owner: slot.owner });
+            info.textContent = '';
+            if (origin === null || origin === slot.position) {
+                info.textContent = origin === slot.position ? label + ' – ' + t('Das ist dein gewählter Planet.') : label;
+            } else {
+                // The shortest distance in the next 14 days, hour by hour.
+                const start = serverClock.now().getTime();
+                let best = Infinity;
+                let bestAt = start;
+                for (let hour = 0; hour <= 336; hour++) {
+                    const d = orbit.distance(g, s, origin, slot.position, start + hour * 3600000);
+                    if (d < best) { best = d; bestAt = start + hour * 3600000; }
+                }
+                info.textContent = t('{label} – Strecke von {origin}: {now} · am kürzesten in den nächsten 14 Tagen: {best} ({when})', {
+                    label,
+                    origin: cfg.originName,
+                    now: fmt.format(orbit.distance(g, s, origin, slot.position, moment())),
+                    best: fmt.format(best),
+                    when: serverClock.format(new Date(bestAt), { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }),
+                });
+            }
+            const link = document.createElement('a');
+            link.href = `#slot-${slot.position}`;
+            link.textContent = ' ' + t('→ in der Tabelle');
+            info.append(link);
+        };
+        const draw = () => {
+            const ms = moment();
+            dots.forEach(({ slot, dot }) => {
+                const [x, y] = at(slot.position, ms);
+                dot.setAttribute('cx', x.toFixed(2));
+                dot.setAttribute('cy', y.toFixed(2));
+            });
+            if (selected && origin !== null && origin !== selected.slot.position) {
+                const [x1, y1] = at(origin, ms);
+                const [x2, y2] = at(selected.slot.position, ms);
+                Object.entries({ x1, y1, x2, y2 }).forEach(([key, value]) => line.setAttribute(key, value.toFixed(2)));
+                line.setAttribute('visibility', 'visible');
+            } else {
+                line.setAttribute('visibility', 'hidden');
+            }
+            if (sliderLabel && slider) {
+                const hours = parseInt(slider.value, 10);
+                sliderLabel.textContent = hours === 0 ? t('jetzt') : serverClock.format(new Date(ms), { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+            }
+            describe();
+        };
+        dots.forEach((entry) => {
+            const choose = () => {
+                dots.forEach(({ dot }) => dot.classList.remove('sv-selected'));
+                entry.dot.classList.add('sv-selected');
+                selected = entry;
+                draw();
+            };
+            entry.dot.addEventListener('click', choose);
+            entry.dot.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); choose(); } });
+        });
+        slider?.addEventListener('input', draw);
+        draw();
+        setInterval(draw, 60000);
+    }
+
     // Confirmation modal for dangerous buttons (data-confirm="question", data-confirm-label="Do it").
     const dialog = document.getElementById('confirm-dialog');
     if (dialog && typeof dialog.showModal === 'function') {
@@ -838,7 +996,7 @@ const serverClock = (() => {
     const distance = (a, b) => {
         if (a[0] !== b[0]) return 100000 * Math.abs(a[0] - b[0]);
         if (a[1] !== b[1]) return 20000 + 500 * Math.abs(a[1] - b[1]);
-        if (a[2] !== b[2]) return 1000 + 100 * Math.abs(a[2] - b[2]);
+        if (a[2] !== b[2]) return orbit.distance(a[0], a[1], a[2], b[2], serverClock.now().getTime());
         return 5;
     };
     document.querySelectorAll('form[data-flight]').forEach((form) => {
