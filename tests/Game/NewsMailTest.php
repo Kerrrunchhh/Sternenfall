@@ -31,6 +31,20 @@ final class NewsMailTest extends TestCase
         self::assertSame(['attack'], $player->getMailTopics(), 'what he chose counts');
     }
 
+    public function testPlayersLeavingTheGameGetNoNotificationsAtAll(): void
+    {
+        $player = $this->verified('weg', 'weg@example.org', 'de');
+        self::assertTrue($player->wantsMail('attack'));
+        self::assertTrue($player->wantsMail('research'));
+
+        $player->requestDeletion(new \DateTimeImmutable('+48 hours'), false);
+        self::assertFalse($player->wantsMail('attack'), 'deletion pending: no attack warnings');
+        self::assertFalse($player->wantsMail('research'));
+
+        $player->cancelDeletion();
+        self::assertTrue($player->wantsMail('attack'), 'logging in again keeps the account – and the mails');
+    }
+
     public function testNewNewsAreMailedOnceInTheLanguageOfEachPlayer(): void
     {
         $now = new \DateTimeImmutable('2026-11-13 10:00:00');

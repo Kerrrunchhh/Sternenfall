@@ -461,7 +461,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function wantsMail(string $topic): bool
     {
-        return !$this->isDeactivated() && $this->isEmailVerified() && \in_array($topic, $this->getMailTopics(), true);
+        // Deactivated players and players whose deletion is pending get no notifications.
+        return !$this->isDeactivated() && null === $this->deleteAt && $this->isEmailVerified() && \in_array($topic, $this->getMailTopics(), true);
     }
 
     public function getAttackMailsPerMinute(): int
