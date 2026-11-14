@@ -876,3 +876,4 @@ tr.suspicious-strong td { background: rgba(255, 138, 128, .08); }
 .summary-table td:nth-child(5) { padding-left: .9rem; white-space: nowrap; }
 .example-tabs { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
 .example-tabs a { padding: .4rem .65rem; font-size: .9rem; white-space: nowrap; }
+.guide-list { margin: .5rem 0 .75rem; padding-left: 1.2rem; display: grid; gap: .35rem; }

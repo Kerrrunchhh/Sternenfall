@@ -62,6 +62,27 @@
         {% endif %}
     </section>
 
+    {# How a battle works (App\Game\Battle, TargetGroup), with the permanent sample battles. #}
+    <section class="panel guide" id="kampf">
+        <h2>{{ '⚔ So läuft ein Kampf'|trans }}</h2>
+        <ul class="guide-list">
+            <li>{{ '<strong>Runden:</strong> Ein Kampf dauert bis zu {rounds} Runden und endet früher, wenn eine Seite nichts mehr hat, was getroffen werden kann. Gibt es danach keinen Sieger, hält die Verteidigung.'|trans({'{rounds}': constant('App\\Game\\Battle::ROUNDS')})|raw }}</li>
+            <li>{{ '<strong>Schussreihenfolge:</strong> In jeder Runde schießt jede Einheit einmal – kleine Schiffe zuerst, große zuletzt. Gleiche Einheiten beider Seiten schießen gleichzeitig. Was vorher zerstört wird, kommt nicht mehr zum Schuss. Die Nummer der Schussreihenfolge steht in der Werft.'|trans|raw }}</li>
+            <li>{{ '<strong>Schild und Hülle:</strong> Treffer gehen zuerst auf den Schild, erst der Rest auf die Hülle. Zu Beginn jeder Runde sind die Schilde wieder voll, verlorene Hülle bleibt verloren. Ist die Hülle weg, ist die Einheit zerstört.'|trans|raw }}</li>
+            <li>{{ '<strong>Angriff und Verteidigung:</strong> Wer angreift – auch beim Abfangen und Überfallen –, kämpft mit dem Angriffswert seiner Schiffe, wer verteidigt, mit dem Verteidigungswert. Pfeil, Falke, Bastion und Hammerhai sind für die Verteidigung gebaut, Korsar, Schwerer Bomber und Brecher für den Angriff.'|trans|raw }}</li>
+            <li>{{ '<strong>Ziele:</strong> Jede Einheit schießt zuerst auf ihre Lieblingsziele: Jäger auf Invasionsschiffe, dann Bomber; Fregatten auf Jäger; Kreuzer auf Fregatten; Schlachtschiffe auf Kreuzer; Brecher auf Türme; Türme auf Invasionsschiffe. Die eigene Klasse kommt immer zuletzt. Innerhalb einer Zielgruppe verteilt sich der Schaden nach Trefferpunkten; ist sie zerstört, geht der Rest an die nächste.'|trans|raw }}</li>
+            <li>{{ '<strong>Spezialitäten:</strong> Jäger machen gegen Invasionsschiffe und Schwere Bomber, Brecher gegen Türme {bonus}-fachen Schaden.'|trans({'{bonus}': constant('App\\Game\\TargetGroup::BONUS')|num})|raw }}</li>
+            <li>{{ '<strong>Kampferfahrung:</strong> die zerstörten Schildpunkte des Gegners, aufgeteilt unter den Spielern einer Seite nach der Größe ihrer Flotten.'|trans|raw }}</li>
+        </ul>
+        <p>{{ 'Jeder Kampfbericht hat am Ende einen Link mit der Wiedergabe des Kampfes. So sieht das aus:'|trans }}</p>
+        <ul class="guide-list">
+            <li><a href="{{ path('app_battle_example', {example: 'kolonie'}) }}">{{ 'Angriff auf eine Kolonie'|trans }}</a> – {{ 'ein Angriff mit Invasionsschiffen gegen Jäger und Türme'|trans }}</li>
+            <li><a href="{{ path('app_battle_example', {example: 'verband'}) }}">{{ 'Verbandsangriff'|trans }}</a> – {{ 'mehrere Spieler auf beiden Seiten, Kampferfahrung wird aufgeteilt'|trans }}</li>
+            <li><a href="{{ path('app_battle_example', {example: 'angriff'}) }}">{{ 'Angriff gegen Angriff'|trans }}</a> – {{ 'eine Angriffsflotte trifft die gleiche Angriffsflotte daheim'|trans }}</li>
+            <li><a href="{{ path('app_battle_example', {example: 'verteidigung'}) }}">{{ 'Angriff gegen Verteidigung'|trans }}</a> – {{ 'dieselbe Angriffsflotte gegen eine Verteidigung mit gleich viel Bauzeit'|trans }}</li>
+        </ul>
+    </section>
+
     <section class="panel guide" id="stufen">
         <h2>{{ '📈 Was Gebäude pro Stufe bringen'|trans }}</h2>
         <p class="muted small">{{ 'Jede Stufe bringt gleich viel dazu – nur die Kosten steigen von Stufe zu Stufe. So holen neue Spieler schnell auf. Biozelle: Platz für Einwohner. Bunker: Einwohner, die vor Bombardements sicher sind. Lagerkomplex: so viel von jedem Rohstoff ist vor Plünderung sicher. Rohstoffgebäude: Produktion pro Stunde ohne Boni – Planetentyp, Lebensform, Fusion und Startbonus kommen dazu. Hervorgehoben: die Stufen auf {name}.'|trans({'{name}': planet.name}) }}</p>

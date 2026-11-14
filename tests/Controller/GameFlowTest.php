@@ -445,6 +445,11 @@ class GameFlowTest extends WebTestCase
         self::assertSelectorExists('.guide-steps li');
         self::assertSelectorTextContains('.tech-tree', 'Raumwerft');
         self::assertSelectorExists('.tech-node.tech-locked', 'a new player still misses things');
+        // How a battle works, with the four sample battles.
+        self::assertSelectorTextContains('#kampf', 'bis zu 3 Runden');
+        foreach (['/kampfbericht/beispiel', '/kampfbericht/beispiel/verband', '/kampfbericht/beispiel/angriff', '/kampfbericht/beispiel/verteidigung'] as $link) {
+            self::assertSelectorExists('#kampf a[href="'.$link.'"]');
+        }
     }
 
     public function testTransportRequestCostsAFixedPrice(): void
