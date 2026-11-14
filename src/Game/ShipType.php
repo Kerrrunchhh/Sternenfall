@@ -129,6 +129,12 @@ enum ShipType: string
         };
     }
 
+    /** @return list<TargetGroup> whom the unit shoots first (empty for units that don't fight) */
+    public function targetPriorities(): array
+    {
+        return $this->isCombatShip() || $this->isStationary() ? TargetGroup::prioritiesOf($this) : [];
+    }
+
     public function firingOrder(): int
     {
         return match ($this) {

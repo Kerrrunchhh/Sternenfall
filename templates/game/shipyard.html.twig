@@ -33,12 +33,15 @@
                     <div class="building-head">
                         <h2>
                             {% if s.type.combatShip or s.type.stationary %}<span class="firing-order" title="{{ 'Schussreihenfolge'|trans }}">#{{ s.type.firingOrder }}</span>{% endif %}
-                            {{ s.type.label|trans }}
+                            <a href="{{ path('app_ship_info', {type: s.type.value}) }}" title="{{ 'Alle Werte und Anforderungen'|trans }}">{{ s.type.label|trans }}</a>
                             {% if s.type.shipClass %}<span class="ship-class">{{ s.type.shipClass.label|trans }}</span>{% endif %}
                         </h2>
                         <span class="level">{{ defense ? ('Auf dem Planeten'|trans) : ('Im Hangar'|trans) }}: {{ s.stationed|num }}</span>
                     </div>
                     <p class="building-desc">{{ s.type.description|trans }}</p>
+                    {% if s.type.targetPriorities is not empty %}
+                        <p class="small target-priorities" title="{{ 'Geschossen wird auf die erste Gruppe, die noch Gegner hat; ist sie zerstört, geht der restliche Schaden an die nächste.'|trans }}">{{ '🎯 Zielt zuerst auf: {groups}'|trans({'{groups}': s.type.targetPriorities|map(g => g.label|trans)|join(' → ')}) }}</p>
+                    {% endif %}
                     <dl class="stats">
                         {{ ui.ship_stat(('Angriff'|trans), s.stats.attack) }}
                         {{ ui.ship_stat(('Schild'|trans), s.stats.shield) }}

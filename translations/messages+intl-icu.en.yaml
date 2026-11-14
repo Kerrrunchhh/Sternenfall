@@ -2592,3 +2592,4 @@
 "Geschossen wird auf die erste Gruppe, die noch Gegner hat; ist sie zerstört, geht der restliche Schaden an die nächste.": "It fires at the first group that still has enemies; once that is destroyed, the remaining damage goes on to the next."
 "Greifen keine Siedler an, die nicht kriminell sind (außer im Krieg) – andere Händler schon": "Don’t attack settlers who aren’t criminal (except in a war) – other traders they do"
 "Als {lifeForm} greifst du keine Siedler und Händler an, die nicht kriminell sind – außer im Krieg oder wenn sie deiner Lebensform angehören. {player} ist {victimLifeForm}.": "As a {lifeForm} you don’t attack settlers and traders who aren’t criminal – except in a war or if they belong to your life form. {player} is a {victimLifeForm}."
+"Alle Werte und Anforderungen": "All values and requirements"

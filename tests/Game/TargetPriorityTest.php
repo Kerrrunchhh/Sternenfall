@@ -48,6 +48,14 @@ class TargetPriorityTest extends TestCase
         self::assertSame(TargetGroup::Cruisers, TargetGroup::prioritiesOf(ShipType::HeavyBomber)[6], 'bombers shoot like cruisers');
     }
 
+    public function testOnlyFightingUnitsShowPriorities(): void
+    {
+        self::assertSame(TargetGroup::prioritiesOf(ShipType::Pfeil), ShipType::Pfeil->targetPriorities());
+        self::assertNotEmpty(ShipType::LaserTurret->targetPriorities());
+        self::assertSame([], ShipType::Freighter->targetPriorities());
+        self::assertSame([], ShipType::InvasionShip->targetPriorities());
+    }
+
     public function testEveryFightingUnitHasEveryTargetGroupOnceAndItsOwnClassLast(): void
     {
         foreach (ShipType::cases() as $type) {
