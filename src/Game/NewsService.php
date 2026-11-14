@@ -79,7 +79,8 @@ final readonly class NewsService
         }
         $this->em->flush();
 
-        $players = $this->users->findBy(['system' => false]);
+        // Players who are leaving (deletion requested, the 48 hours still running) get no news.
+        $players = array_filter($this->users->findBy(['system' => false]), static fn (User $player): bool => null === $player->getDeleteAt());
         foreach ($pending as $news) {
             $this->mailer->broadcast($players, 'news', static fn (string $locale): Raw => new Raw($news->titleIn($locale)), static fn (string $locale): Raw => new Raw($news->bodyIn($locale)));
         }

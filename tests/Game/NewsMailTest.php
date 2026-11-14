@@ -45,11 +45,15 @@ final class NewsMailTest extends TestCase
         $quiet = $this->verified('ruhig', 'q@example.org', 'de');
         $quiet->setMailTopics(['attack']);
         $unverified = new User('ohne');
+        $leaving = $this->verified('weg', 'weg@example.org', 'de');
+        $leaving->requestDeletion($now->modify('+48 hours'), false);
+        $deactivated = $this->verified('gesperrt', 'gesperrt@example.org', 'de');
+        $deactivated->deactivate($now);
 
         $repository = $this->createStub(NewsRepository::class);
         $repository->method('findBy')->willReturnCallback(static fn (array $by): array => null === $news->getMailedAt() ? [$news] : []);
         $users = $this->createStub(UserRepository::class);
-        $users->method('findBy')->willReturn([$german, $english, $quiet, $unverified]);
+        $users->method('findBy')->willReturn([$german, $english, $quiet, $unverified, $leaving, $deactivated]);
 
         $sent = [];
         $mailer = $this->createStub(MailerInterface::class);
@@ -63,7 +67,7 @@ final class NewsMailTest extends TestCase
         self::assertSame([
             ['[Starfall] Neue Gilde', ['de@example.org'], 'noreply@example.org'],
             ['[Starfall] New guild', ['en@example.org'], 'noreply@example.org'],
-        ], $sent, 'one mail per language, the players in blind copy – only who wants it and has a verified address');
+        ], $sent, 'one mail per language, the players in blind copy – only who wants it and has a verified address; not who is deleting his account or deactivated');
         self::assertEquals($now, $news->getMailedAt());
 
         $sent = [];
