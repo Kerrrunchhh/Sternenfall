@@ -41,6 +41,9 @@ final readonly class TradeGuild
     public const float MARGIN = 0.25;
     /** Player traders get the first chance: the guild only takes requests open this long. */
     public const string REQUEST_WAIT = '2 hours';
+
+    /** Longest flight of a guild delivery (before game speed): far from the central exchange is no big drawback. */
+    public const int MAX_DELIVERY_HOURS = 4;
     /** Stock, purchase limits and credits it is filled up to: practically unlimited. */
     private const float PLENTY = 1e12;
     private const int FUSIONATORS = 1000;
@@ -138,6 +141,12 @@ final readonly class TradeGuild
     }
 
     /** The guild's trade post in a galaxy, if there is one. */
+    /** The flight of a guild delivery, cut to MAX_DELIVERY_HOURS (sped up like everything by the game speed). */
+    public static function deliverySeconds(int $flightSeconds, float $gameSpeed): int
+    {
+        return min($flightSeconds, (int) round(self::MAX_DELIVERY_HOURS * 3600 / max(0.001, $gameSpeed)));
+    }
+
     public function postIn(int $galaxy): ?TradePost
     {
         $guild = $this->users->findOneBy(['system' => true, 'username' => self::NAME]);
@@ -166,10 +175,10 @@ final readonly class TradeGuild
             }
             $guild ??= $this->ensure();
             $post = $this->postIn($request->getGalaxy());
-            $seconds = null === $post ? 3600 : $this->navigation->flightSeconds(
+            $seconds = null === $post ? 3600 : self::deliverySeconds($this->navigation->flightSeconds(
                 $this->navigation->distance($post->getGalaxy(), $post->getSystem(), $post->getPosition(), $request->getGalaxy(), $request->getSystem(), $request->getPosition()),
                 ShipType::LargeFreighter->spec()->speed,
-            );
+            ), $this->navigation->gameSpeed());
             $request->assignToGuild($guild, $now->modify('+'.$seconds.' seconds'));
             $this->inbox->send($request->getRequester(), t('Die Handelsgilde liefert'), t('Für dein Transportgesuch an {planet} [{coords}] hat sich kein Händler gefunden – die Handelsgilde liefert: {goods}. Ankunft {arrival}.', ['{planet}' => $request->getPlanetName(), '{coords}' => $request->getCoordinates(), '{goods}' => \App\I18n\Goods::summary($request->getGoods()->toArray()), '{arrival}' => new When($request->getGuildDeliveryAt(), 'd.m. H:i')]));
         }

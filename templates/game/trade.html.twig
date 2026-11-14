@@ -20,7 +20,7 @@
                     {% endfor %}
                 </tbody>
             </table>
-            <p class="muted small">{{ 'Außerdem verkauft die Gilde Fusionatoren für {price} Credits das Stück (Fusionator-Markt, sie fliegen von Galaxie {galaxy} zu dir) und liefert Transportgesuche, die nach 2 Stunden noch kein Händler angenommen hat.'|trans({'{price}': guild_fusionator_price|num, '{galaxy}': guild_fusionator_galaxy}) }}</p>
+            <p class="muted small">{{ 'Außerdem verkauft die Gilde Fusionatoren für {price} Credits das Stück (Fusionator-Markt, sie fliegen von Galaxie {galaxy} zu dir) und liefert Transportgesuche, die nach 2 Stunden noch kein Händler angenommen hat – von der Zentralbörse deiner Galaxie, höchstens 4 Stunden Flug.'|trans({'{price}': guild_fusionator_price|num, '{galaxy}': guild_fusionator_galaxy}) }}</p>
             <p><a class="btn btn-small" href="{{ path('app_fleet', {galaxy: guild_post.galaxy, system: guild_post.system, position: guild_post.position, mission: 'trade'}) }}">{{ 'Flotte zur Zentralbörse schicken'|trans }}</a></p>
         </section>
     {% endif %}

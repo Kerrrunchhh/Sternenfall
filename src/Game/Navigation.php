@@ -17,6 +17,11 @@ final readonly class Navigation
     {
     }
 
+    public function gameSpeed(): float
+    {
+        return $this->economy->speed();
+    }
+
     public function distance(int $galaxy1, int $system1, int $position1, int $galaxy2, int $system2, int $position2): int
     {
         return match (true) {
