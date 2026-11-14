@@ -54,7 +54,7 @@ enum LifeForm: string
             self::Settler => ['Schiffe kosten keine Credits'],
             self::Guardian => ['Schiffe fliegen doppelt so schnell (nicht, wenn kriminell)', 'Können angreifende Flotten abfangen', 'Greifen keine Siedler und Händler an, die nicht kriminell sind (außer im Krieg)'],
             self::Pirate => ['Schiffe fliegen 1,5-mal so schnell', 'Können angreifende Flotten abfangen und Transporte überfallen'],
-            self::Trader => ['Doppelte Rohstoffproduktion', 'Schiffe kosten 1,5-mal so viel', 'Bauen als Einzige Fusionatoren', 'Können auf ihren Kolonien Handelsstützpunkte einrichten', 'Greifen keine Siedler und Händler an, die nicht kriminell sind (außer im Krieg)'],
+            self::Trader => ['Doppelte Rohstoffproduktion', 'Schiffe kosten 1,5-mal so viel', 'Bauen als Einzige Fusionatoren', 'Können auf ihren Kolonien Handelsstützpunkte einrichten', 'Greifen keine Siedler an, die nicht kriminell sind (außer im Krieg) – andere Händler schon'],
         };
     }
 

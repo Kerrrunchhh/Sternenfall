@@ -142,6 +142,7 @@ class HeroPointsTest extends TestCase
 
         self::assertNotNull(HeroPoints::attackRefusal($trader, $settler, false));
         self::assertNotNull(HeroPoints::attackRefusal($guardian, $otherTrader, false));
+        self::assertNull(HeroPoints::attackRefusal($trader, $otherTrader, false), 'the same life form may always attack each other');
         self::assertNull(HeroPoints::attackRefusal($guardian, $otherGuardian, false), 'guardians are no protected life form');
         self::assertNull(HeroPoints::attackRefusal($trader, $pirate, false));
         self::assertNull(HeroPoints::attackRefusal($trader, $settler, true), 'in a war everything goes');

@@ -6,9 +6,11 @@ use App\Entity\User;
 
 /**
  * One combat round. Every unit fires once, in firing order; units sharing a
- * place in the order (same type on both sides) fire simultaneously. Damage of a
- * group is spread over the living enemy groups in proportion to their remaining
- * hit points (hull + shield). Weapon and shield research add 4 % per level (level 25 doubles a value).
+ * place in the order (same type on both sides) fire simultaneously. A group aims at
+ * the target groups of its priorities in turn (TargetGroup: fighters hunt invasion
+ * ships and bombers, every class fights the others before its own); within a target
+ * group the damage is spread by remaining hit points (hull + shield), and what is
+ * left after destroying it goes on to the next. Weapon and shield research add 4 % per level (level 25 doubles a value).
  * Brecher deal triple damage to turrets. In a raid without bombers, transport
  * ships can't be hit.
  *
@@ -64,26 +66,40 @@ final class Battle
         return new BattleResult($this->groups, $protectTransports);
     }
 
+    /**
+     * The shooter's damage goes to the first target group of its priorities with living enemies
+     * (TargetGroup), spread by hit points; once that group is destroyed, the rest goes on to the next.
+     */
     private function distribute(BattleGroup $shooter, float $damage, bool $protectTransports): void
     {
-        if ($damage <= 0) {
-            return;
-        }
-        $targets = array_values(array_filter(
-            $this->groups,
-            static fn (BattleGroup $g): bool => $g->side !== $shooter->side && $g->hp > 0
-                && !($protectTransports && BattleGroup::DEFENDER === $g->side && $g->type->isTransport()),
-        ));
-        $total = array_sum(array_map(static fn (BattleGroup $g): float => $g->hp, $targets));
-        if ($total <= 0) {
-            return;
-        }
-        foreach ($targets as $target) {
-            $share = $damage * $target->hp / $total;
-            if (ShipType::Brecher === $shooter->type && $target->type->isStationary()) {
-                $share *= self::BREAKER_VS_TURRET;
+        foreach (TargetGroup::prioritiesOf($shooter->type) as $priority) {
+            if ($damage <= 1e-9) {
+                return;
             }
-            $target->hp = max(0.0, $target->hp - $share);
+            $targets = array_values(array_filter(
+                $this->groups,
+                static fn (BattleGroup $g): bool => $g->side !== $shooter->side && $g->hp > 0 && TargetGroup::of($g->type) === $priority
+                    && !($protectTransports && BattleGroup::DEFENDER === $g->side && $g->type->isTransport()),
+            ));
+            $total = array_sum(array_map(static fn (BattleGroup $g): float => $g->hp, $targets));
+            if ($total <= 0) {
+                continue;
+            }
+            // Brecher hit turrets three times as hard: the same damage destroys three times the hit points.
+            $factor = ShipType::Brecher === $shooter->type && TargetGroup::Turrets === $priority ? self::BREAKER_VS_TURRET : 1.0;
+            $needed = $total / $factor;
+            if ($damage >= $needed) {
+                foreach ($targets as $target) {
+                    $target->hp = 0.0;
+                }
+                $damage -= $needed;
+                continue;
+            }
+            foreach ($targets as $target) {
+                $target->hp = max(0.0, $target->hp - $damage * $factor * $target->hp / $total);
+            }
+
+            return;
         }
     }
 }

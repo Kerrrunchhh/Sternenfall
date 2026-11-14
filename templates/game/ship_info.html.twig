@@ -19,6 +19,9 @@
                 <span class="level">{{ defense ? ('Auf'|trans) : ('Im Hangar von'|trans) }} {{ planet.name }}: {{ stationed|num }}</span>
             </div>
             <p class="building-desc">{{ type.description|trans }}</p>
+            {% if priorities is not empty %}
+                <p class="small target-priorities" id="target-priorities" title="{{ 'Geschossen wird auf die erste Gruppe, die noch Gegner hat; ist sie zerstört, geht der restliche Schaden an die nächste.'|trans }}">{{ '🎯 Zielt zuerst auf: {groups}'|trans({'{groups}': priorities|map(g => g.label|trans)|join(' → ')}) }}</p>
+            {% endif %}
 
             <h2 class="section-title">{{ 'Werte mit deiner Forschung'|trans }}</h2>
             <dl class="stats">

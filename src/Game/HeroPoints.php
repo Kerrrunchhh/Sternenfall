@@ -18,7 +18,8 @@ use function Symfony\Component\Translation\t;
  * without new crimes they recover by RECOVERY_PER_DAY up to START.
  *
  * Criminal guardians lose their double speed. Traders and guardians don't attack settlers and
- * traders who aren't criminal (except in a war) – unless they are criminal themselves.
+ * traders who aren't criminal (except in a war) – unless they are criminal themselves; players
+ * of the same life form may always attack each other.
  */
 final class HeroPoints
 {
@@ -128,12 +129,14 @@ final class HeroPoints
     /** Why the attacker may not attack the victim, or null. */
     public static function attackRefusal(User $attacker, User $victim, bool $atWar): ?TranslatableInterface
     {
+        // Players of the same life form may always attack each other.
         if ($attacker->isCriminal() || $atWar || $victim->isSystem() || $victim->isCriminal()
+            || $attacker->getLifeForm() === $victim->getLifeForm()
             || !\in_array($attacker->getLifeForm(), [LifeForm::Trader, LifeForm::Guardian], true)
             || !\in_array($victim->getLifeForm(), [LifeForm::Settler, LifeForm::Trader], true)) {
             return null;
         }
 
-        return t('Als {lifeForm} greifst du keine Siedler und Händler an, die nicht kriminell sind – außer im Krieg. {player} ist {victimLifeForm}.', ['{lifeForm}' => t($attacker->getLifeForm()->label()), '{player}' => $victim->getUsername(), '{victimLifeForm}' => t($victim->getLifeForm()->label())]);
+        return t('Als {lifeForm} greifst du keine Siedler und Händler an, die nicht kriminell sind – außer im Krieg oder wenn sie deiner Lebensform angehören. {player} ist {victimLifeForm}.', ['{lifeForm}' => t($attacker->getLifeForm()->label()), '{player}' => $victim->getUsername(), '{victimLifeForm}' => t($victim->getLifeForm()->label())]);
     }
 }

@@ -26,6 +26,8 @@ class ShipInfoController extends AbstractGameController
             'seconds' => $this->economy->shipSeconds($type, $planet, \DateTimeImmutable::createFromInterface($this->clock->now())),
             'missing' => $this->economy->missingShipRequirements($type, $planet),
             'stationed' => $planet->getShipCount($type),
+            // Whom it shoots first (units that fight).
+            'priorities' => $type->isCombatShip() || $type->isStationary() ? \App\Game\TargetGroup::prioritiesOf($type) : [],
         ]);
     }
 }
