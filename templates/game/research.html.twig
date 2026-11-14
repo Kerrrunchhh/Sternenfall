@@ -12,9 +12,9 @@
             <div>{{ ui.countdown(player.researchFinishesAt, now) }}</div>
             <form method="post" action="{{ path('app_research_cancel') }}">
                 <input type="hidden" name="_token" value="{{ csrf_token('research') }}">
-                <button class="btn btn-danger btn-small" type="submit"
-                        data-confirm="{{ 'Forschung an {label} (Stufe {researchTargetLevel}) wirklich abbrechen? Die Kosten werden erstattet, der Fortschritt geht verloren.'|trans({'{label}': player.researchType.label|trans, '{researchTargetLevel}': player.researchTargetLevel}) }}"
-                        data-confirm-label="{{ 'Forschung abbrechen'|trans }}">{{ 'Abbrechen'|trans }}</button>
+                <button class="btn btn-danger btn-small" type="submit" id="research-cancel"
+                        {% if player.researchProgress(now) >= constant('App\\Game\\QueueTimeline::CONFIRM_CANCEL_FROM') %}data-confirm="{{ 'Forschung an {label} (Stufe {researchTargetLevel}) wirklich abbrechen? Die Kosten werden erstattet, der Fortschritt geht verloren.'|trans({'{label}': player.researchType.label|trans, '{researchTargetLevel}': player.researchTargetLevel}) }}"
+                        data-confirm-label="{{ 'Forschung abbrechen'|trans }}"{% endif %}>{{ 'Abbrechen'|trans }}</button>
             </form>
         </div>
     {% endif %}

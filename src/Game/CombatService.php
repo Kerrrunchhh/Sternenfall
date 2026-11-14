@@ -96,6 +96,7 @@ final readonly class CombatService
             $outcome = [$this->leaveDebris($g, $s, $p, $result)];
             $this->showDebris($result->participants(), $g, $s, $p);
 
+            $beforeBombing = $target->getPopulation();
             if ($result->attackerWon()) {
                 $outcome = [...$outcome, ...$this->plunder($attackers, $target, $result, $now)];
                 $headline = [] === $joiners ? t('Der Angreifer hat gewonnen.') : t('Der Verband hat gewonnen.');
@@ -106,6 +107,9 @@ final readonly class CombatService
             if ([] !== $joiners) {
                 $headline = new Lines([$headline, t('Verbandsangriff mit {count} Flotten ({value}).', ['{count}' => \count($attackers), '{value}' => implode(', ', array_unique(array_map(static fn (Fleet $f): string => $f->getOwner()->getUsername(), $attackers)))])], ' ');
             }
+
+            // Bombed civilians and destroyed crews: hero or crime points for the attackers.
+            $outcome = [...$outcome, ...HeroPoints::apply(HeroPoints::forBattle($result, max(0, $beforeBombing - $target->getPopulation()), $defender))];
 
             // A fusion loses its bottom planet when the surviving attackers hit harder than its shield.
             $population = $target->getPopulation();
@@ -187,6 +191,8 @@ final readonly class CombatService
         }
         $outcome = [$this->leaveDebris($g, $s, $p, $result)];
         $this->showDebris($result->participants(), $g, $s, $p);
+        // Intercepting an attack defends: it can only earn hero points. A raid is an attack.
+        $outcome = [...$outcome, ...HeroPoints::apply(HeroPoints::forBattle($result, defensive: !$raid))];
         if (\count($preys) > 1) {
             $outcome[] = t('{value} flogen gemeinsam: {value2}.', ['{value}' => $raid ? t('Im Konvoi') : t('Im Verband'), '{value2}' => new Lines(array_map(static fn (Fleet $f): TranslatableInterface => t('{label} ({player})', ['{label}' => $f->getLabel(), '{player}' => $f->getOwner()->getUsername()]), $preys), ', ')]);
         }

@@ -63,8 +63,13 @@ class PlanetUpdaterTest extends TestCase
         $planet->setBuildingLevel(BuildingType::Storage, 1);
         self::assertSame(15000.0, $this->economy->protectedAmount($planet));
 
+        // Linear: the same step for every level, as before at levels 1 and 10.
         $planet->setBuildingLevel(BuildingType::Storage, 2);
-        self::assertSame(22500.0, $this->economy->protectedAmount($planet));
+        self::assertSame(77405.0, $this->economy->protectedAmount($planet));
+        $planet->setBuildingLevel(BuildingType::Storage, 10);
+        self::assertSame(576650.0, $this->economy->protectedAmount($planet));
+        $planet->setBuildingLevel(BuildingType::Storage, 20);
+        self::assertSame(1200705.0, $this->economy->protectedAmount($planet));
     }
 
     public function testFinishedConstructionIsAppliedAndLaterProductionUsesNewLevel(): void
@@ -289,7 +294,29 @@ class PlanetUpdaterTest extends TestCase
         self::assertSame(100.0, $this->economy->bunkerCapacity($planet));
 
         $planet->setBuildingLevel(BuildingType::Bunker, 2);
-        self::assertSame(160.0, $this->economy->bunkerCapacity($planet));
+        self::assertSame(852.0, $this->economy->bunkerCapacity($planet));
+        $planet->setBuildingLevel(BuildingType::Bunker, 10);
+        self::assertSame(6871.0, $this->economy->bunkerCapacity($planet));
+    }
+
+    public function testBioCellsAndMinesGrowLinearly(): void
+    {
+        $planet = $this->planet();
+        $capacity = function (int $level) use ($planet): float {
+            $planet->setBuildingLevel(BuildingType::BioCell, $level);
+
+            return $this->economy->populationCapacity($planet);
+        };
+        self::assertSame([0.0, 250.0, 1290.0, 9610.0, 20010.0], [$capacity(0), $capacity(1), $capacity(2), $capacity(10), $capacity(20)]);
+        self::assertSame($capacity(20) - $capacity(19), $capacity(3) - $capacity(2), 'every level adds the same');
+
+        $production = static fn (int $level): float => \App\Game\Economy::linear($level, \App\Game\Economy::PRODUCTION_LEVEL_1, \App\Game\Economy::PRODUCTION_AT_ANCHOR, \App\Game\Economy::PRODUCTION_ANCHOR);
+        self::assertEqualsWithDelta(1.12, $production(1), 1e-9);
+        self::assertEqualsWithDelta(16 * 1.12 ** 16, $production(16), 0.001, 'the highest mines when it became linear keep their production');
+        foreach (range(2, 16) as $level) {
+            self::assertGreaterThanOrEqual($level * 1.12 ** $level, $production($level), "level $level: nobody below 16 loses production");
+        }
+        self::assertLessThan(20 * 1.12 ** 20, $production(20), 'above it grows slower than before');
     }
 
     public function testRequirements(): void

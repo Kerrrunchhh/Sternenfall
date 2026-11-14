@@ -325,6 +325,12 @@ final readonly class FleetService
     }
 
     /** Alliance mates and partners of a bond or non-aggression pact are no targets. */
+    /** Traders and guardians spare settlers and traders who aren't criminal (see HeroPoints). */
+    private function lifeFormRefusal(User $attacker, User $victim): ?TranslatableInterface
+    {
+        return HeroPoints::attackRefusal($attacker, $victim, $this->diplomacy?->atWar($attacker, $victim) ?? false);
+    }
+
     private function mayAttack(User $attacker, User $victim): bool
     {
         if ($victim->isSystem() && TradeGuild::NAME === $victim->getUsername()) {
@@ -1510,6 +1516,7 @@ final readonly class FleetService
                 $player->isAllyOf($target->getOwner()) => 'Mitglieder deiner Allianz kannst du nicht angreifen.',
                 null !== $this->vacationProtects($target) => $this->vacationProtects($target),
                 !$this->mayAttack($player, $target->getOwner()) => t('Mit der Allianz von {player} habt ihr ein {value} – Angriffe sind ausgeschlossen.', ['{player}' => $target->getOwner()->getUsername(), '{value}' => $this->diplomacy?->kindBetween($player, $target->getOwner())?->label() ?? 'Abkommen']),
+                null !== $this->lifeFormRefusal($player, $target->getOwner()) => $this->lifeFormRefusal($player, $target->getOwner()),
                 default => null,
             },
             FleetMission::Salvage => ($ships[ShipType::Salvager->value] ?? 0) < 1 ? 'Zum Bergen wird ein Bergungsschiff benötigt.' : null,
@@ -1738,7 +1745,7 @@ final readonly class FleetService
                     $this->inbox->send($player, t('Angriff auf {where} abgebrochen', ['{where}' => $where]), t('Das Ziel ist kein gegnerischer Planet mehr (eigener Planet, Allianz, Bündnis oder Nichtangriffspakt). {name} kehrt zurück.', ['{name}' => $name]));
                     break;
                 }
-                if (null !== $reason = $this->attackBans?->refusal() ?? $this->vacationProtects($target, $fleet->getDepartAt()) ?? NewbieProtection::refusal(FleetMission::Attack, $player, $target)) {
+                if (null !== $reason = $this->attackBans?->refusal() ?? $this->vacationProtects($target, $fleet->getDepartAt()) ?? NewbieProtection::refusal(FleetMission::Attack, $player, $target) ?? $this->lifeFormRefusal($player, $target->getOwner())) {
                     $this->inbox->send($player, t('Angriff auf {where} abgebrochen', ['{where}' => $where]), t('{reason} {name} kehrt zurück.', ['{reason}' => $reason, '{name}' => $name]));
                     break;
                 }

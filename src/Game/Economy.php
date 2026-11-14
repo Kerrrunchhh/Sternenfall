@@ -88,14 +88,62 @@ final readonly class Economy
 
     public const float FUSION_PRODUCTION_FACTOR = 1.5;
 
+    /**
+     * Production of a mine (farm, pump, electrolysis) in multiples of its base: as before at
+     * levels 1 (1,12) and 16 (16 · 1,12^16 – the highest mines when it became linear, so nobody
+     * lost production), the same step for every level.
+     */
+    public const float PRODUCTION_LEVEL_1 = 1.12;
+    public const int PRODUCTION_ANCHOR = 16;
+    public const float PRODUCTION_AT_ANCHOR = 98.0863;
+
+    /**
+     * What buildings give grows linearly – the same for every level – so newcomers can catch up;
+     * only the costs keep growing exponentially. 0 at level 0, $first at level 1, $atAnchor at $anchor.
+     */
+    public static function linear(int $level, float $first, float $atAnchor, int $anchor = 10): float
+    {
+        return $level <= 0 ? 0.0 : $first + ($level - 1) * ($atAnchor - $first) / ($anchor - 1);
+    }
+
+    /**
+     * What a building gives at a level, for the buildings that give a number: inhabitants
+     * (bio cell), protected inhabitants (bunker), protected amount of each resource (storage),
+     * resources per hour before game speed, planet type, life form and fusion (mines etc.).
+     */
+    public static function levelEffect(BuildingType $type, int $level): ?float
+    {
+        return match (true) {
+            BuildingType::BioCell === $type => floor(self::linear($level, 250, 9610)),
+            BuildingType::Bunker === $type => floor(self::linear($level, 100, 6871)),
+            BuildingType::Storage === $type => floor(self::linear($level, 15000, 576650)),
+            null !== $type->produces() => $type->productionBase() * self::linear($level, self::PRODUCTION_LEVEL_1, self::PRODUCTION_AT_ANCHOR, self::PRODUCTION_ANCHOR),
+            default => null,
+        };
+    }
+
+    /**
+     * What the building gives on this planet at a level: for mines etc. with game speed,
+     * planet type, life form and fusion (not the temporary starter bonus).
+     */
+    public function levelEffectOn(Planet $planet, BuildingType $type, int $level): ?float
+    {
+        $effect = self::levelEffect($type, $level);
+        $resource = $type->produces();
+        if (null === $effect || null === $resource) {
+            return $effect;
+        }
+
+        return $effect * $this->speed * $planet->getOwner()->getLifeForm()->productionFactor() * ($planet->isFused() ? self::FUSION_PRODUCTION_FACTOR : 1.0) * $planet->getType()->productionFactor($resource);
+    }
+
     public function productionPerHour(Planet $planet): Resources
     {
         $buildingOutput = [];
         foreach (BuildingType::cases() as $type) {
             if (null !== $resource = $type->produces()) {
                 $level = $planet->getBuildingLevel($type);
-                $buildingOutput[$resource->value] = ($buildingOutput[$resource->value] ?? 0)
-                    + $type->productionBase() * $level * 1.12 ** $level;
+                $buildingOutput[$resource->value] = ($buildingOutput[$resource->value] ?? 0) + (self::levelEffect($type, $level) ?? 0.0);
             }
         }
 
@@ -113,7 +161,7 @@ final readonly class Economy
     {
         $level = $planet->getBuildingLevel(BuildingType::BioCell);
 
-        return 0 === $level ? 0.0 : floor(250 * 1.5 ** ($level - 1));
+        return self::levelEffect(BuildingType::BioCell, $level) ?? 0.0;
     }
 
     /** Inhabitants added per hour while food and water are available and capacity is left. */
@@ -228,7 +276,7 @@ final readonly class Economy
     {
         $level = $planet->getBuildingLevel(BuildingType::Bunker);
 
-        return 0 === $level ? 0.0 : floor(100 * 1.6 ** ($level - 1));
+        return self::levelEffect(BuildingType::Bunker, $level) ?? 0.0;
     }
 
     /**
@@ -240,7 +288,7 @@ final readonly class Economy
     {
         $level = $planet->getBuildingLevel(BuildingType::Storage);
 
-        return 0 === $level ? 0.0 : floor(10000 * 1.5 ** $level);
+        return self::levelEffect(BuildingType::Storage, $level) ?? 0.0;
     }
 
     /** Surcharge for a building upgrade queued behind one that is already waiting. */
@@ -383,7 +431,7 @@ final readonly class Economy
     {
         $spec = $type->spec();
 
-        return (int) round($spec->speed * (1 + Battle::RESEARCH_BONUS * $player->getResearchLevel($spec->drive)) * $player->getLifeForm()->speedFactor());
+        return (int) round($spec->speed * (1 + Battle::RESEARCH_BONUS * $player->getResearchLevel($spec->drive)) * $player->speedFactor());
     }
 
     private function fastestRegularSpeed(User $player): int

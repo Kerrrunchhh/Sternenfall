@@ -184,6 +184,19 @@ class FusionCombatTest extends TestCase
         self::assertSame($this->defender, $home->getOwner(), 'only the fall of the home planet frees the others');
     }
 
+    public function testBombingCiviliansOfAnInnocentCostsHeroPoints(): void
+    {
+        $planet = new Planet($this->defender, 'Kolonie', 1, 1, 5, $this->now);
+        $planet->setPopulation(5000);
+
+        $this->attack($planet, ['leviathan' => 1, 'heavy_bomber' => 2], lucky: true);
+
+        self::assertSame(4900.0, $planet->getPopulation(), '2 bombers × 50 inhabitants');
+        self::assertEqualsWithDelta(990, $this->attacker->getHeroPoints(), 0.001, '100 dead = 10 crime points');
+        self::assertSame(1000.0, $this->defender->getHeroPoints(), 'defending costs nothing');
+        self::assertStringContainsString('angreifer −10 (jetzt 990)', $this->report());
+    }
+
     public function testPlayersSeenWithinThirtyDaysOrOnVacationAreNotInactive(): void
     {
         $this->defender->markSeen($this->now->modify('-29 days'));

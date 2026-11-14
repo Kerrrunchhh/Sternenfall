@@ -155,6 +155,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(options: ['default' => 0])]
     private float $combatExperience = 0;
 
+    /** Below 0 the player is criminal (see App\Game\HeroPoints). */
+    #[ORM\Column(options: ['default' => 1000])]
+    private float $heroPoints = \App\Game\HeroPoints::START;
+
+    /** Last time crime points were added: from then on hero points recover (HeroPoints::RECOVERY_PER_DAY). */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $lastCrimeAt = null;
+
     #[ORM\ManyToOne(inversedBy: 'members')]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Alliance $alliance = null;
@@ -185,6 +193,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $researchFinishesAt = null;
+
+    /** Full duration of the running research (null for research started before this was kept). */
+    #[ORM\Column(nullable: true)]
+    private ?int $researchSeconds = null;
 
     /**
      * Slot ("g:s:p") of the planet the running research was started on. It keeps running
@@ -623,6 +635,41 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->combatExperience += max(0.0, $experience);
     }
 
+    /** Hero points now: the stored ones plus what recovered since the last crime (never above START). */
+    public function getHeroPoints(?\DateTimeImmutable $now = null): float
+    {
+        if (null === $this->lastCrimeAt || $this->heroPoints >= \App\Game\HeroPoints::START) {
+            return $this->heroPoints;
+        }
+        $days = max(0, (($now ?? \Symfony\Component\Clock\now())->getTimestamp() - $this->lastCrimeAt->getTimestamp()) / 86400);
+
+        return min(\App\Game\HeroPoints::START, $this->heroPoints + $days * \App\Game\HeroPoints::RECOVERY_PER_DAY);
+    }
+
+    /** Hero points (positive) or crime points (negative); crime points restart the recovery. */
+    public function addHeroPoints(float $points, ?\DateTimeImmutable $now = null): void
+    {
+        $now ??= \Symfony\Component\Clock\now();
+        $this->heroPoints = $this->getHeroPoints($now) + $points;
+        if ($points < 0) {
+            $this->lastCrimeAt = $now;
+        } elseif (null !== $this->lastCrimeAt) {
+            // Keep recovering from now on, without counting the time before twice.
+            $this->lastCrimeAt = $now;
+        }
+    }
+
+    public function isCriminal(?\DateTimeImmutable $now = null): bool
+    {
+        return $this->getHeroPoints($now) < 0;
+    }
+
+    /** Ship speed of the life form – criminal guardians lose their double speed. */
+    public function speedFactor(): float
+    {
+        return LifeForm::Guardian === $this->lifeForm && $this->isCriminal() ? 1.0 : $this->lifeForm->speedFactor();
+    }
+
     /** Credit income of the population: the alliance takes its tax into its treasury. */
     public function earnCredits(float $amount): void
     {
@@ -674,11 +721,26 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return null !== $this->researchType;
     }
 
-    public function startResearch(ResearchType $type, int $targetLevel, \DateTimeImmutable $finishesAt, ?Planet $planet = null): void
+    /** How far the research is, 0 to 1; unknown duration (older research) counts as far along. */
+    public function getResearchProgress(\DateTimeImmutable $now): float
+    {
+        if (null === $this->researchFinishesAt) {
+            return 0.0;
+        }
+        if (null === $this->researchSeconds || $this->researchSeconds <= 0) {
+            return 1.0;
+        }
+        $left = $this->researchFinishesAt->getTimestamp() - $now->getTimestamp();
+
+        return max(0.0, min(1.0, 1 - $left / $this->researchSeconds));
+    }
+
+    public function startResearch(ResearchType $type, int $targetLevel, \DateTimeImmutable $finishesAt, ?Planet $planet = null, ?int $seconds = null): void
     {
         $this->researchType = $type;
         $this->researchTargetLevel = $targetLevel;
         $this->researchFinishesAt = $finishesAt;
+        $this->researchSeconds = $seconds;
         $this->researchMailSent = false;
         $this->researchSlot = null === $planet ? null : \sprintf('%d:%d:%d', $planet->getGalaxy(), $planet->getSystem(), $planet->getPosition());
     }
@@ -704,6 +766,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->researchType = null;
         $this->researchTargetLevel = null;
         $this->researchFinishesAt = null;
+        $this->researchSeconds = null;
         $this->researchSlot = null;
     }
 

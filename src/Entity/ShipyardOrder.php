@@ -178,6 +178,18 @@ class ShipyardOrder implements QueueItem
         return null !== $this->startedAt;
     }
 
+    /** How far the whole order is, 0 to 1: units built plus the one in the works. */
+    public function progress(\DateTimeImmutable $now): float
+    {
+        $total = $this->quantity * $this->unitSeconds;
+        if ($total <= 0) {
+            return 0.0;
+        }
+        $current = null === $this->startedAt ? $this->progressSeconds : min($this->unitSeconds, $now->getTimestamp() - $this->startedAt->getTimestamp());
+
+        return max(0.0, min(1.0, (($this->quantity - $this->remaining) * $this->unitSeconds + $current) / $total));
+    }
+
     /** When the next ship of this order will be finished (null if not started). */
     public function getNextShipAt(): ?\DateTimeImmutable
     {

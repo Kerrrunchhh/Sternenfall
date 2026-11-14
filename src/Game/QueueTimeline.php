@@ -16,16 +16,20 @@ use function Symfony\Component\Translation\t;
  */
 final readonly class QueueTimeline
 {
+    /** From this progress on, cancelling an order (or the research) asks first. */
+    public const float CONFIRM_CANCEL_FROM = 0.1;
+
     public function __construct(
         private Economy $economy,
         private ClockInterface $clock,
     ) {
     }
 
-    /** @return list<array{id: int|null, label: \Symfony\Contracts\Translation\TranslatableInterface, detail: string|\Symfony\Contracts\Translation\TranslatableInterface, seconds: int, finishesAt: \DateTimeImmutable, active: bool}> */
+    /** @return list<array{id: int|null, label: \Symfony\Contracts\Translation\TranslatableInterface, detail: string|\Symfony\Contracts\Translation\TranslatableInterface, seconds: int, finishesAt: \DateTimeImmutable, active: bool, progress: float}> */
     public function entries(Planet $planet, QueueKind $kind): array
     {
-        $cursor = \DateTimeImmutable::createFromInterface($this->clock->now());
+        $now = \DateTimeImmutable::createFromInterface($this->clock->now());
+        $cursor = $now;
         $entries = [];
 
         if (QueueKind::Buildings === $kind) {
@@ -39,6 +43,7 @@ final readonly class QueueTimeline
                     'seconds' => $seconds,
                     'finishesAt' => $finishesAt,
                     'active' => $order->isStarted(),
+                    'progress' => $order->progress($now),
                 ];
                 $cursor = $finishesAt;
             }
@@ -53,6 +58,7 @@ final readonly class QueueTimeline
                     'seconds' => $seconds,
                     'finishesAt' => $finishesAt,
                     'active' => $order->isStarted(),
+                    'progress' => $order->progress($now),
                 ];
                 $cursor = $finishesAt;
             }

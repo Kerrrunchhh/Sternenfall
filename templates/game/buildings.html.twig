@@ -19,6 +19,11 @@
                     <span class="level">{{ 'Stufe {level}'|trans({'{level}': b.level}) }}{% if b.planned > b.level %} <span class="muted">{{ '→ {planned} geplant'|trans({'{planned}': b.planned}) }}</span>{% endif %}</span>
                 </div>
                 <p class="building-desc">{{ b.type.description|trans }}</p>
+                {% if b.next_effect is not null %}
+                    {# The same step every level (linear); only the costs keep rising. #}
+                    {% set unit = b.type.value == 'bio_cell' ? 'Einwohner' : (b.type.value == 'bunker' ? 'Einwohner geschützt' : (b.type.value == 'storage' ? 'je Rohstoff geschützt' : 'pro Stunde')) %}
+                    <p class="small building-effect" id="effect-{{ b.type.value }}">{{ 'Jetzt {now} → Stufe {level}: {next} {unit}'|trans({'{now}': b.effect|num, '{level}': b.planned + 1, '{next}': b.next_effect|num, '{unit}': unit|trans}) }}</p>
+                {% endif %}
                 <div class="building-foot">
                     <div class="cost">
                         {{ '{cost} <span class="duration">Dauer {seconds}</span>'|trans({'{cost}': ui.cost(b.cost, planet), '{seconds}': b.seconds|format_duration|e})|raw }}

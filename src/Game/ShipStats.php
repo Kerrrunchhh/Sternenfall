@@ -52,11 +52,13 @@ final readonly class ShipStats
 
         $notes = self::researchNotes($spec->drive, $player, 'Tempo');
         $lifeForm = $player->getLifeForm();
-        if (1.0 !== $lifeForm->speedFactor()) {
-            $notes[] = t('Lebensform {lifeForm}: Tempo ×{factor}', ['{lifeForm}' => t($lifeForm->label()), '{factor}' => new Num($lifeForm->speedFactor(), 1)]);
+        if (1.0 !== $player->speedFactor()) {
+            $notes[] = t('Lebensform {lifeForm}: Tempo ×{factor}', ['{lifeForm}' => t($lifeForm->label()), '{factor}' => new Num($player->speedFactor(), 1)]);
+        } elseif (1.0 !== $lifeForm->speedFactor()) {
+            $notes[] = t('Kriminell: kein Tempovorteil der Lebensform {lifeForm}', ['{lifeForm}' => t($lifeForm->label())]);
         }
         $speed = $this->economy->shipSpeed($type, $player);
-        $researched = (int) round($spec->speed * self::factor($spec->drive, $player) * $lifeForm->speedFactor());
+        $researched = (int) round($spec->speed * self::factor($spec->drive, $player) * $player->speedFactor());
         if ($speed > $researched) {
             $notes[] = ShipType::Scout === $type
                 ? t('Immer 10 % schneller als der Fusionator')

@@ -93,7 +93,7 @@ final readonly class PlanetService
             }
             $this->pay($planet, $this->economy->researchCost($type, $targetLevel));
             $seconds = $this->economy->researchSeconds($type, $targetLevel, $planet, $now);
-            $player->startResearch($type, $targetLevel, $now->modify("+{$seconds} seconds"), $planet);
+            $player->startResearch($type, $targetLevel, $now->modify("+{$seconds} seconds"), $planet, $seconds);
         });
     }
 

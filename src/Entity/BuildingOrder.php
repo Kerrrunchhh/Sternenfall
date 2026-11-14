@@ -150,4 +150,15 @@ class BuildingOrder implements QueueItem
     {
         return $this->startedAt?->modify("+{$this->seconds} seconds");
     }
+
+    /** How far the construction is, 0 to 1 (paused orders keep their progress). */
+    public function progress(\DateTimeImmutable $now): float
+    {
+        if (null === $this->seconds || $this->seconds <= 0) {
+            return 0.0;
+        }
+        $done = null === $this->startedAt ? $this->progressSeconds : $now->getTimestamp() - $this->startedAt->getTimestamp();
+
+        return max(0.0, min(1.0, $done / $this->seconds));
+    }
 }

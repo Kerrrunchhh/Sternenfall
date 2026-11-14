@@ -41,7 +41,24 @@ class GuideController extends AbstractGameController
             'starter_bonus_hours' => Economy::STARTER_BONUS_HOURS,
             'newbie_protected' => NewbieProtection::isProtected($planet->getOwner()),
             'resources_per_credit' => TransportRequests::RESOURCES_PER_CREDIT,
+            'level_table' => self::levelTable(),
         ]);
+    }
+
+    /**
+     * What the counting buildings give at levels 1–20 (base values, without bonuses).
+     *
+     * @return array{buildings: list<BuildingType>, rows: array<int, list<float>>}
+     */
+    public static function levelTable(int $maxLevel = 20): array
+    {
+        $buildings = array_values(array_filter(BuildingType::cases(), static fn (BuildingType $t): bool => null !== Economy::levelEffect($t, 1)));
+        $rows = [];
+        foreach (range(1, $maxLevel) as $level) {
+            $rows[$level] = array_map(static fn (BuildingType $t): float => (float) Economy::levelEffect($t, $level), $buildings);
+        }
+
+        return ['buildings' => $buildings, 'rows' => $rows];
     }
 
     /** @param list<Requirement> $requirements */

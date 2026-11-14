@@ -23,6 +23,14 @@
                 {{ '<span title="Wie weit die Planeten ausgebaut sind: jede Gebäudestufe zählt mit dem Punktesatz des Gebäudes"><strong>{player_points}</strong> Punkte</span> <span title="Nur aus Schlachten: zerstörte Schildpunkte gegnerischer Einheiten (Verteidigungstürme zählen halb), aufgeteilt nach der Bauzeit der eigenen Einheiten"><strong>{combatExperience}</strong> Kampferfahrung</span>'|trans({'{player_points}': player_points(profile)|num|e, '{combatExperience}': profile.combatExperience|num|e})|raw }}
                 {% if not own %}{{ ui.presence(profile) }}{% endif %}
             </p>
+            {% if not profile.system %}
+                {# Hero points: below 0 the player is criminal (App\Game\HeroPoints). #}
+                {% if profile.criminal %}
+                    <p class="criminal-note" id="profile-criminal">{{ '🚨 Kriminell ({points} Heldenpunkte): Jeder darf {player} angreifen, und wer gegen ihn kämpft, bekommt Heldenpunkte. Ohne neue Untaten kommen 10 Heldenpunkte pro Tag zurück.'|trans({'{points}': profile.heroPoints|num, '{player}': profile.username}) }}</p>
+                {% else %}
+                    <p class="small muted" id="profile-hero-points" title="{{ 'Jeder startet mit 1000. Bomben auf Zivilisten und zerstörte Schiffe von Spielern, die keine Piraten oder Kriminellen sind, kosten Heldenpunkte (1 je 10 Tote, höchstens 100 pro Kampf) – unter 0 ist man kriminell. Kampf gegen Piraten und Kriminelle bringt welche, und ohne neue Untaten kommen 10 pro Tag zurück (bis 1000).'|trans }}">{{ '🎖 {points} Heldenpunkte'|trans({'{points}': profile.heroPoints|num}) }}</p>
+                {% endif %}
+            {% endif %}
             {% if newbie_protected(profile) %}
                 <p class="small newbie-protected">{{ own
                     ? '🛡 Du stehst unter Noobschutz: Niemand darf dich angreifen, bei dir stationieren oder dir Rohstoffe schicken – bis du einen zweiten Planeten oder ein Flottenkontrollzentrum hast.'|trans
