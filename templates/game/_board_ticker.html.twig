@@ -1,0 +1,46 @@
+{#
+  The ticker a player chose to show on the overview and below the alliance's black board –
+  e.g. to keep in touch with a former alliance. Needs: joined_tickers, board_ticker,
+  board_ticker_posts, back ('alliance' or 'overview': where to return after sending);
+  the overview leaves the box out for players in no ticker.
+#}
+{% import 'game/_macros.html.twig' as ui %}
+{% if joined_tickers is not empty or back != 'overview' %}
+<section class="panel" id="ticker">
+    <h2>{{ board_ticker ? '📡 Ticker: {name}'|trans({'{name}': board_ticker.name}) : '📡 Ticker'|trans }}</h2>
+    {% if joined_tickers is empty %}
+        <p class="muted small">{{ 'Hier kannst du einen deiner Ticker anzeigen – zum Beispiel, um mit deiner alten Allianz in Kontakt zu bleiben. Du bist noch in keinem Ticker.'|trans }} <a href="{{ path('app_tickers') }}">{{ 'Zu den Tickern'|trans }}</a></p>
+    {% else %}
+        <form method="post" action="{{ path('app_ticker_board') }}" class="inline-action">
+            <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
+            <input type="hidden" name="back" value="{{ back }}">
+            <label>{{ 'Hier anzeigen:'|trans }}
+                <select name="ticker" aria-label="{{ 'Ticker auf der Übersicht und unter dem schwarzen Brett'|trans }}">
+                    <option value="0">{{ '– keinen –'|trans }}</option>
+                    {% for t in joined_tickers %}<option value="{{ t.id }}" {{ board_ticker and board_ticker.id == t.id ? 'selected' }}>{{ t.name }}</option>{% endfor %}
+                </select>
+            </label>
+            <button class="btn btn-small btn-secondary" type="submit" id="board-ticker-save">{{ 'Übernehmen'|trans }}</button>
+        </form>
+        {% if board_ticker %}
+            <form method="post" action="{{ path('app_ticker_post', {id: board_ticker.id}) }}" class="board-form ticker-form">
+                <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
+                <input type="hidden" name="back" value="{{ back }}">
+                <textarea name="body" rows="2" maxlength="{{ constant('App\\Entity\\TickerPost::MAX_BODY') }}" required aria-label="{{ 'Neuer Beitrag'|trans }}" placeholder="{{ 'Nachricht an alle im Ticker …'|trans }}"></textarea>
+                <button class="btn btn-small" type="submit" id="board-ticker-send">{{ 'Senden'|trans }}</button>
+            </form>
+            <div class="board-feed ticker-feed">
+                {% for p in board_ticker_posts %}
+                    <div class="board-post">
+                        <div class="muted small board-meta"><span>{% if p.author %}{{ ui.player(p.author) }}{% else %}{{ 'gelöschter Spieler'|trans }}{% endif %} · {{ p.createdAt|date('d.m.Y H:i') }}</span></div>
+                        <div class="message-body">{{ p.body|link_coordinates }}</div>
+                    </div>
+                {% else %}
+                    <p class="muted">{{ 'Noch keine Beiträge.'|trans }}</p>
+                {% endfor %}
+            </div>
+            <p class="small"><a href="{{ path('app_ticker', {id: board_ticker.id}) }}">{{ 'Ganzen Ticker öffnen'|trans }}</a></p>
+        {% endif %}
+    {% endif %}
+</section>
+{% endif %}

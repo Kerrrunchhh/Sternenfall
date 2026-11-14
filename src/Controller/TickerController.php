@@ -96,7 +96,37 @@ class TickerController extends AbstractGameController
             $this->addFlash('error', $e->translatable());
         }
 
-        return $this->redirectToRoute('app_ticker', ['id' => $ticker->getId()]);
+        // Written from the overview or below the alliance's black board: back there.
+        return $this->backToBoardTicker($request) ?? $this->redirectToRoute('app_ticker', ['id' => $ticker->getId()]);
+    }
+
+    #[Route('/ticker/brett', name: 'app_ticker_board', methods: ['POST'])]
+    #[IsCsrfTokenValid('ticker', tokenKey: '_token')]
+    public function board(Request $request, \Doctrine\ORM\EntityManagerInterface $em): Response
+    {
+        $this->currentPlanet();
+        $player = $this->player();
+        $id = $request->request->getInt('ticker');
+        $ticker = 0 === $id ? null : $em->find(Ticker::class, $id);
+        if (0 !== $id && (null === $ticker || !$ticker->isMember($player))) {
+            $this->addFlash('error', t('In diesem Ticker bist du nicht Mitglied.'));
+        } else {
+            $player->setBoardTicker($ticker);
+            $em->flush();
+            $this->addFlash('success', null === $ticker ? t('Auf der Übersicht und unter dem schwarzen Brett wird kein Ticker mehr angezeigt.') : t('Der Ticker „{name}“ wird jetzt auf der Übersicht und unter dem schwarzen Brett angezeigt.', ['{name}' => $ticker->getName()]));
+        }
+
+        return $this->backToBoardTicker($request) ?? $this->redirectToRoute('app_overview', ['_fragment' => 'ticker']);
+    }
+
+    /** Back to the page showing the chosen ticker (overview or alliance), if the form came from there. */
+    private function backToBoardTicker(Request $request): ?Response
+    {
+        return match ($request->request->getString('back')) {
+            'alliance' => $this->redirectToRoute('app_alliance', ['_fragment' => 'ticker']),
+            'overview' => $this->redirectToRoute('app_overview', ['_fragment' => 'ticker']),
+            default => null,
+        };
     }
 
     #[Route('/ticker/post/{id}/delete', name: 'app_ticker_post_delete', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]

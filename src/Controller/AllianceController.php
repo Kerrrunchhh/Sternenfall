@@ -52,6 +52,8 @@ class AllianceController extends AbstractGameController
             'requests' => $rank->canManage() ? $this->repository->findRequests($alliance) : [],
             'assignable_ranks' => AllianceRank::assignable(),
             'election' => $this->alliances->election($alliance, $player),
+            // A ticker of the player's choice below the black board.
+            ...$this->boardTickerData($player),
         ]);
     }
 

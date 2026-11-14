@@ -184,6 +184,8 @@
         {% endif %}
     </section>
 
+    {{ include('game/_board_ticker.html.twig', {back: 'alliance'}) }}
+
     <form method="post" action="{{ path('app_alliance_leave') }}">
         <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
         <button class="btn btn-small btn-secondary" type="submit" data-confirm="{{ '{type} verlassen? Alle Flottenfreigaben enden.'|trans({'{type}': alliance.type|trans}) }}" data-confirm-label="{{ 'Verlassen'|trans }}">{{ '{type} verlassen'|trans({'{type}': alliance.type|trans}) }}</button>

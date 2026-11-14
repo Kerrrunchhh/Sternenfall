@@ -170,6 +170,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(nullable: true, enumType: AllianceRank::class)]
     private ?AllianceRank $allianceRank = null;
 
+    /** Ticker the player shows below the alliance's black board (e.g. to keep in touch with a former alliance). */
+    #[ORM\ManyToOne(targetEntity: Ticker::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?Ticker $boardTicker = null;
+
     /** File name of the profile picture (see ImageStore), if any. */
     #[ORM\Column(length: 40, nullable: true)]
     private ?string $avatar = null;
@@ -657,6 +662,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             // Keep recovering from now on, without counting the time before twice.
             $this->lastCrimeAt = $now;
         }
+    }
+
+    /** The chosen ticker – only while the player still belongs to it. */
+    public function getBoardTicker(): ?Ticker
+    {
+        return true === $this->boardTicker?->isMember($this) ? $this->boardTicker : null;
+    }
+
+    public function setBoardTicker(?Ticker $ticker): void
+    {
+        $this->boardTicker = $ticker;
     }
 
     public function isCriminal(?\DateTimeImmutable $now = null): bool

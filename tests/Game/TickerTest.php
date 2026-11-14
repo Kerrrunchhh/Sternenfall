@@ -48,6 +48,22 @@ final class TickerTest extends TestCase
         self::assertSame('Hallo', $this->service->post($ticker, $this->users['Bert'], ' Hallo ')->getBody());
     }
 
+    public function testTheTickerBelowTheBlackBoardIsShownOnlyWhileThePlayerBelongsToIt(): void
+    {
+        $ticker = $this->service->open($this->users['Anna'], 'Alte Allianz');
+        $this->service->invite($ticker, $this->users['Anna'], 'Bert');
+        $bert = $this->users['Bert'];
+
+        $bert->setBoardTicker($ticker);
+        self::assertNull($bert->getBoardTicker(), 'only invited, not yet a member');
+
+        $this->service->accept($ticker->membership($bert), $bert);
+        self::assertSame($ticker, $bert->getBoardTicker());
+
+        $this->service->leave($ticker->membership($bert), $bert);
+        self::assertNull($bert->getBoardTicker(), 'left the ticker: it disappears from below the board');
+    }
+
     public function testOnlyTheOwnerInvitesRemovesAndDeletesPosts(): void
     {
         $ticker = $this->tickerWithBert();

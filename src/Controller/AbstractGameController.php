@@ -68,6 +68,29 @@ abstract class AbstractGameController extends AbstractController
 
     private \Doctrine\ORM\EntityManagerInterface $entityManager;
 
+    private \App\Repository\TickerPostRepository $tickerPosts;
+
+    #[Required]
+    public function setTickerPosts(\App\Repository\TickerPostRepository $tickerPosts): void
+    {
+        $this->tickerPosts = $tickerPosts;
+    }
+
+    /** Newest posts of the ticker a player shows on the overview and below the black board. */
+    public const int BOARD_TICKER_POSTS = 10;
+
+    /** @return array{joined_tickers: list<\App\Entity\Ticker>, board_ticker: ?\App\Entity\Ticker, board_ticker_posts: list<\App\Entity\TickerPost>} */
+    protected function boardTickerData(User $player): array
+    {
+        $ticker = $player->getBoardTicker();
+
+        return [
+            'joined_tickers' => $this->tickers->findJoined($player),
+            'board_ticker' => $ticker,
+            'board_ticker_posts' => null === $ticker ? [] : $this->tickerPosts->findLatest($ticker, self::BOARD_TICKER_POSTS),
+        ];
+    }
+
     #[Required]
     public function setColonizer(\App\Game\Colonizer $colonizer, \Doctrine\ORM\EntityManagerInterface $entityManager): void
     {

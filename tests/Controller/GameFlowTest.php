@@ -101,6 +101,42 @@ class GameFlowTest extends WebTestCase
         self::assertResponseRedirects('/overview');
     }
 
+    public function testAPlayerShowsATickerBelowTheBlackBoardAndWritesInIt(): void
+    {
+        $this->register('Pilotin');
+        $this->client->request('GET', '/ticker');
+        $this->client->submitForm('ticker-open', ['name' => 'Alte Allianz']);
+        $this->client->request('GET', '/alliance');
+        $this->client->submitForm('alliance-found', ['name' => 'Sternenbund', 'tag' => 'STB']);
+
+        $crawler = $this->client->request('GET', '/alliance');
+        $ticker = static::getContainer()->get(\App\Repository\TickerRepository::class)->findJoined($this->user('Pilotin'))[0];
+        $this->client->submit($crawler->filter('#board-ticker-save')->form(['ticker' => (string) $ticker->getId()]));
+        self::assertResponseRedirects();
+        self::assertSame($ticker->getId(), $this->user('Pilotin')->getBoardTicker()?->getId());
+
+        $crawler = $this->client->request('GET', '/alliance');
+        $this->client->submit($crawler->filter('#board-ticker-send')->form(['body' => 'Hallo ihr Alten!']));
+        self::assertResponseRedirects('/alliance#ticker');
+        $crawler = $this->client->followRedirect();
+        self::assertSelectorTextContains('#ticker', 'Hallo ihr Alten!');
+
+        // The same ticker on the overview; sending there returns to the overview.
+        $crawler = $this->client->request('GET', '/overview');
+        self::assertSelectorTextContains('#ticker', 'Hallo ihr Alten!');
+        $this->client->submit($crawler->filter('#board-ticker-send')->form(['body' => 'Grüße von der Übersicht']));
+        self::assertResponseRedirects('/overview#ticker');
+    }
+
+    public function testTheOverviewLeavesTheTickerBoxOutForPlayersInNoTicker(): void
+    {
+        $this->register('Pilotin');
+
+        $this->client->request('GET', '/overview');
+
+        self::assertSelectorNotExists('#ticker');
+    }
+
     public function testPlayersGetTheTimeZoneOfTheirDeviceAndCanChangeIt(): void
     {
         $this->client->request('GET', '/register');

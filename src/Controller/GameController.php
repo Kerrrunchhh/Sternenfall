@@ -60,6 +60,7 @@ class GameController extends AbstractGameController
                 'target' => $planets->findAt((int) $f->getTargetGalaxy(), (int) $f->getTargetSystem(), (int) $f->getTargetPosition()),
             ], array_values(array_filter($incoming, static fn (Fleet $f): bool => FleetMission::Attack === $f->getMission()))),
             'incoming_intel' => $espionage->fleetIntel($player, $incoming),
+            ...$this->boardTickerData($player),
             'building_queue' => $timeline->entries($planet, QueueKind::Buildings),
             'shipyard_queue' => $timeline->entries($planet, QueueKind::Shipyard),
             'defense_queue' => $timeline->entries($planet, QueueKind::Defense),

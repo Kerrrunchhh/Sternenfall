@@ -79,6 +79,7 @@
         <h2>{{ 'Schnellkontakte'|trans }} <a class="small" href="{{ path('app_mail') }}">{{ 'Post →'|trans }}</a></h2>
         {{ include('game/_contacts.html.twig', {back: 'app_overview'}) }}
     </section>
+    {{ include('game/_board_ticker.html.twig', {back: 'overview'}) }}
 
     {% if incoming is not empty or own_movements is not empty %}
         <section class="panel movements">
