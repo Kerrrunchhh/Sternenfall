@@ -27,7 +27,7 @@ class BattleTest extends TestCase
         self::assertSame([], $result->survivors(BattleGroup::DEFENDER, 'hangar'));
     }
 
-    public function testFiringOrderMattersInASingleRound(): void
+    public function testFiringOrderMattersInARound(): void
     {
         // Pfeile (order 1) shoot before Lanzen (order 4): enough Pfeile kill the Lanzen before they fire.
         $battle = new Battle();
@@ -42,7 +42,7 @@ class BattleTest extends TestCase
         self::assertFalse($result->attackerWon());
     }
 
-    public function testOneRoundCanEndUndecided(): void
+    public function testABattleCanEndUndecidedAfterTheLastRound(): void
     {
         $battle = new Battle();
         $battle->add(BattleGroup::ATTACKER, new User('a'), ['pfeil' => 10]);
@@ -50,10 +50,58 @@ class BattleTest extends TestCase
 
         $result = $battle->fight();
 
-        // Same order: both fire simultaneously, 500 damage each vs 4100 hp: few losses, no winner.
+        // Same order: both fire simultaneously, 500 damage a round each against 100 shield and
+        // 4 000 hull: after three rounds both still have Pfeile – no winner.
         self::assertFalse($result->attackerWon());
         self::assertGreaterThan(0, $result->survivingCount(BattleGroup::ATTACKER, ShipType::Pfeil));
         self::assertGreaterThan(0, $result->survivingCount(BattleGroup::DEFENDER, ShipType::Pfeil));
+    }
+
+    public function testShipsFightWithTheirAttackWhenAttackingAndTheirDefenseWhenDefending(): void
+    {
+        // A Bastion: attack 300, defense 700.
+        $battle = new Battle();
+        $battle->add(BattleGroup::ATTACKER, new User('a'), ['bastion' => 1]);
+        $battle->add(BattleGroup::DEFENDER, new User('d'), ['bastion' => 1], 'hangar');
+        [$attacker, $defender] = $battle->fight()->groups;
+
+        self::assertSame(300.0, $attacker->attackPerUnit());
+        self::assertSame(700.0, $defender->attackPerUnit());
+        self::assertSame(1080, ShipType::HeavyBomber->spec()->attack, 'bombers are built to attack …');
+        self::assertSame(540, ShipType::HeavyBomber->spec()->defense(), '… and weak at home');
+        self::assertSame(ShipType::Lanze->spec()->attack, ShipType::Lanze->spec()->defense(), 'all-rounders are the same both ways');
+    }
+
+    public function testShieldsAreFullAgainEveryRoundOnlyLostHullStaysLost(): void
+    {
+        // 10 Pfeile deal 500 a round – less than the 600 shield of a Bastion: its hull never gets a scratch.
+        $battle = new Battle();
+        $battle->add(BattleGroup::ATTACKER, new User('a'), ['pfeil' => 10]);
+        $battle->add(BattleGroup::DEFENDER, new User('d'), ['bastion' => 1], 'hangar');
+        $bastion = $battle->fight()->groups[1];
+
+        self::assertSame(5000.0, $bastion->hull);
+
+        // 20 Pfeile deal 1 000 a round: 400 through the shield each round, the hull wears down.
+        $battle = new Battle();
+        $battle->add(BattleGroup::ATTACKER, new User('a'), ['pfeil' => 20]);
+        $battle->add(BattleGroup::DEFENDER, new User('d'), ['bastion' => 1], 'hangar');
+        $result = $battle->fight();
+
+        self::assertLessThan(5000.0, $result->groups[1]->hull);
+        self::assertGreaterThan(1, max(array_column($result->replay()['steps'], 'round')));
+    }
+
+    public function testTheBattleEndsAsSoonAsASideIsWipedOut(): void
+    {
+        $battle = new Battle();
+        $battle->add(BattleGroup::ATTACKER, new User('a'), ['leviathan' => 5]);
+        $battle->add(BattleGroup::DEFENDER, new User('d'), ['pfeil' => 3], 'hangar');
+
+        $result = $battle->fight();
+
+        self::assertTrue($result->attackerWon());
+        self::assertSame([1], array_values(array_unique(array_column($result->replay()['steps'], 'round'))), 'over after the first round');
     }
 
     public function testWeaponResearchIncreasesDamage(): void
@@ -65,9 +113,10 @@ class BattleTest extends TestCase
         $losses = [];
         foreach ([$weak, $strong] as $attacker) {
             $battle = new Battle();
-            $battle->add(BattleGroup::ATTACKER, $attacker, ['pfeil' => 20]);
-            $battle->add(BattleGroup::DEFENDER, new User('d'), ['freighter' => 10], 'hangar');
-            $losses[] = 10 - $battle->fight()->survivingCount(BattleGroup::DEFENDER, ShipType::Freighter);
+            $battle->add(BattleGroup::ATTACKER, $attacker, ['pfeil' => 60]);
+            // Enough freighters that neither wipes them out in three rounds.
+            $battle->add(BattleGroup::DEFENDER, new User('d'), ['freighter' => 100], 'hangar');
+            $losses[] = 100 - $battle->fight()->survivingCount(BattleGroup::DEFENDER, ShipType::Freighter);
         }
 
         self::assertGreaterThan($losses[0], $losses[1]);
@@ -96,9 +145,9 @@ class BattleTest extends TestCase
 
         $result = $battle->fight();
 
-        // 60 Pfeile together deal 3 000 damage: about 3 of the 10 Falken (775 hp each) fall.
+        // 60 Pfeile together deal 3 000 damage a round: Falken fall over the rounds.
         // Both fleets come out separately and both players share the experience.
-        self::assertSame(7, $result->survivingCount(BattleGroup::DEFENDER, ShipType::Falke));
+        self::assertLessThan(10, $result->survivingCount(BattleGroup::DEFENDER, ShipType::Falke));
         self::assertNotSame([], $result->survivors(BattleGroup::ATTACKER, 'attacker'));
         self::assertNotSame([], $result->survivors(BattleGroup::ATTACKER, 'joiner:1'));
         $users = array_map(static fn (array $e): string => $e['user']->getUsername(), $result->experience());

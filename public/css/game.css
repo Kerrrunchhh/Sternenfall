@@ -849,3 +849,30 @@ tr.suspicious-strong td { background: rgba(255, 138, 128, .08); }
 .system-time { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
 .system-time input[type=range] { flex: 1; min-width: 8rem; }
 .system-info { min-height: 2.5em; }
+
+/* Battle report: replay and what each unit did. */
+.replay-stage { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; margin: .75rem 0; }
+.replay-side h3 { margin: 0 0 .4rem; font-size: .95rem; }
+.replay-side ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .35rem; }
+.replay-group { display: grid; grid-template-columns: 1fr auto; gap: 0 .5rem; padding: .35rem .5rem; border: 1px solid rgba(255,255,255,.12); border-radius: 6px; background: rgba(255,255,255,.03); transition: opacity .3s, box-shadow .3s; }
+.replay-group .replay-owner { grid-column: 1; }
+.replay-group .replay-count { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-variant-numeric: tabular-nums; }
+.replay-group.own { border-color: rgba(102, 187, 106, .6); }
+.replay-group.firing { box-shadow: 0 0 0 2px #ffd54f, 0 0 12px rgba(255, 213, 79, .5); }
+.replay-group.hit { box-shadow: 0 0 0 2px #ef5350; }
+.replay-group.gone { opacity: .35; text-decoration: line-through; }
+.replay-beams { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.beam { stroke-linecap: round; opacity: .8; }
+.beam-attacker { stroke: #ff7043; }
+.beam-defender { stroke: #4fc3f7; }
+.arrow-head.arrow-attacker { fill: #ff7043; }
+.arrow-head.arrow-defender { fill: #4fc3f7; }
+.replay-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+.replay-caption p { margin: .25rem 0; }
+.summary-table tr.own td { background: rgba(102, 187, 106, .12); }
+.damage-bar { display: inline-block; width: calc(var(--share) * 1.2); max-width: 120px; height: .6rem; background: #ff7043; border-radius: 3px; vertical-align: middle; }
+@media (max-width: 600px) { .replay-stage { gap: 1rem; } .replay-group { font-size: .85rem; } }
+.battle-experience .own-experience { color: #66bb6a; font-weight: 600; }
+.summary-table td:nth-child(5) { padding-left: .9rem; white-space: nowrap; }
+.example-tabs { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.example-tabs a { padding: .4rem .65rem; font-size: .9rem; white-space: nowrap; }

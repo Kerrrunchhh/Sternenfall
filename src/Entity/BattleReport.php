@@ -48,6 +48,10 @@ class BattleReport
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $losses = null;
 
+    /** Course of the battle for the graphic replay (BattleResult::replay); null for older reports. */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $replay = null;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $annulledAt = null;
 
@@ -119,6 +123,18 @@ class BattleReport
     }
 
     /** @param array<int, array{name: string, ships: array<string, int>}> $losses */
+    /** @param array<string, mixed>|null $replay */
+    public function setReplay(?array $replay): void
+    {
+        $this->replay = $replay;
+    }
+
+    /** @return array<string, mixed>|null */
+    public function getReplay(): ?array
+    {
+        return $this->replay;
+    }
+
     public function setLosses(array $losses): void
     {
         $this->losses = $losses ?: null;

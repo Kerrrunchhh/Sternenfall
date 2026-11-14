@@ -30,8 +30,11 @@ final readonly class BattleReports
     }
 
     /** Saves the report (persisted, flushed by the caller) and returns its link path. */
-    /** @param array<int, array{name: string, ships: array<string, int>}> $losses what each participant lost (for refunds) */
-    public function publish(TranslatableInterface $subject, TranslatableInterface $body, array $losses = []): string
+    /**
+     * @param array<int, array{name: string, ships: array<string, int>}> $losses what each participant lost (for refunds)
+     * @param array<string, mixed>|null                                  $replay the course of the battle (BattleResult::replay)
+     */
+    public function publish(TranslatableInterface $subject, TranslatableInterface $body, array $losses = [], ?array $replay = null): string
     {
         $now = \DateTimeImmutable::createFromInterface($this->clock->now());
         // Old reports go when new ones come.
@@ -47,6 +50,7 @@ final readonly class BattleReports
         $default = $this->locales->default();
         $report = new BattleReport(bin2hex(random_bytes(12)), $subject->trans($this->translator, $default), $body->trans($this->translator, $default), $now, $translations);
         $report->setLosses($losses);
+        $report->setReplay($replay);
         $this->em->persist($report);
 
         return $this->urls->generate('app_battle_report', ['hash' => $report->getHash()]);

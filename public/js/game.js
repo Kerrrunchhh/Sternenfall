@@ -79,6 +79,137 @@ const orbit = (() => {
     return { slots, angle, distance };
 })();
 
+// Battle report: replay of the course of the battle, step by step in firing order.
+(() => {
+    const stage = document.querySelector('[data-battle-replay]');
+    if (!stage) return;
+    const data = JSON.parse(stage.dataset.battleReplay);
+    const fmt = new Intl.NumberFormat(LOCALE_TAG, { maximumFractionDigits: 0 });
+    const beams = stage.querySelector('[data-replay-beams]');
+    const caption = document.querySelector('[data-replay-caption]');
+    const position = document.querySelector('[data-replay-position]');
+    const playButton = document.querySelector('[data-replay="play"]');
+    const span = (className, text) => {
+        const element = document.createElement('span');
+        element.className = className;
+        element.textContent = text;
+        return element;
+    };
+    const items = data.groups.map((group) => {
+        const li = document.createElement('li');
+        li.className = 'replay-group' + (group.own ? ' own' : '');
+        const count = span('replay-count', '');
+        li.append(span('replay-label', group.label), span('replay-owner muted small', group.owner), count);
+        stage.querySelector(`[data-side="${group.side}"]`).append(li);
+        return { group, li, count };
+    });
+    const name = (index) => `${data.groups[index].label} (${data.groups[index].owner})`;
+    let shown = 0; // steps applied
+    let timer = null;
+
+    const draw = () => {
+        // Units still alive after the steps shown so far – and before the step just shown.
+        const lostAfter = (steps) => {
+            const lost = data.groups.map(() => 0);
+            data.steps.slice(0, steps).forEach((step) => step.shots.forEach((shot) => shot.hits.forEach((hit) => { lost[hit.group] += hit.destroyed; })));
+            return lost;
+        };
+        const lost = lostAfter(shown);
+        const lostBefore = lostAfter(Math.max(0, shown - 1));
+        items.forEach(({ group, li, count }, index) => {
+            const alive = group.count - lost[index];
+            count.textContent = `${fmt.format(alive)} / ${fmt.format(group.count)}`;
+            // Destroyed in this step: still there, struck through; from the next step on: gone.
+            li.classList.toggle('gone', alive <= 0);
+            li.hidden = shown > 0 && group.count - lostBefore[index] <= 0;
+            li.classList.remove('firing', 'hit');
+        });
+        beams.replaceChildren();
+        const step = shown > 0 ? data.steps[shown - 1] : null;
+        if (position) {
+            position.textContent = step
+                ? t('Runde {round} · Schritt {step} von {steps}', { round: step.round ?? 1, step: shown, steps: data.steps.length })
+                : t('Schritt {step} von {steps}', { step: shown, steps: data.steps.length });
+        }
+        if (!step) {
+            caption.textContent = t('Vor dem ersten Schuss.');
+            return;
+        }
+        // The step just fired: shooters glow, arrows go from them to their targets.
+        const box = stage.getBoundingClientRect();
+        // Attackers stand left, defenders right: an arrow leaves the shooter's inner edge and ends at the target's.
+        const edge = (element, side) => {
+            const r = element.getBoundingClientRect();
+            return [(side === 'attacker' ? r.right : r.left) - box.left, r.top - box.top + r.height / 2];
+        };
+        beams.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`);
+        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        ['attacker', 'defender'].forEach((side) => {
+            const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+            Object.entries({ id: `arrow-${side}`, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 12, markerHeight: 12, markerUnits: 'userSpaceOnUse', orient: 'auto-start-reverse' })
+                .forEach(([key, value]) => marker.setAttribute(key, value));
+            const head = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            head.setAttribute('d', 'M0,0 L10,5 L0,10 z');
+            head.setAttribute('class', `arrow-head arrow-${side}`);
+            marker.append(head);
+            defs.append(marker);
+        });
+        beams.append(defs);
+        const total = Math.max(1, ...step.shots.flatMap((shot) => shot.hits.map((hit) => hit.damage)));
+        const lines = [];
+        step.shots.forEach((shot) => {
+            items[shot.group].li.classList.add('firing');
+            const side = data.groups[shot.group].side;
+            const [x1, y1] = edge(items[shot.group].li, side);
+            shot.hits.forEach((hit) => {
+                items[hit.group].li.classList.add('hit');
+                const [x2, y2] = edge(items[hit.group].li, data.groups[hit.group].side);
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                Object.entries({ x1, y1, x2, y2, 'stroke-width': (1 + 4 * hit.damage / total).toFixed(1), class: `beam beam-${side}`, 'marker-end': `url(#arrow-${side})` })
+                    .forEach(([key, value]) => line.setAttribute(key, value));
+                beams.append(line);
+            });
+            const targets = shot.hits.map((hit) => (hit.destroyed > 0
+                ? t('{target}: {damage} Schaden, {destroyed} zerstört', { target: name(hit.group), damage: fmt.format(hit.damage), destroyed: fmt.format(hit.destroyed) })
+                : t('{target}: {damage} Schaden', { target: name(hit.group), damage: fmt.format(hit.damage) })));
+            lines.push(targets.length
+                ? t('{shooter} ({units}) schießt auf {targets}', { shooter: name(shot.group), units: fmt.format(shot.units), targets: targets.join(' · ') })
+                : t('{shooter} ({units}) findet kein Ziel mehr', { shooter: name(shot.group), units: fmt.format(shot.units) }));
+        });
+        caption.replaceChildren(...lines.map((text) => {
+            const p = document.createElement('p');
+            p.textContent = text;
+            return p;
+        }));
+    };
+    const stop = () => {
+        clearInterval(timer);
+        timer = null;
+        playButton.textContent = t('▶ Abspielen');
+    };
+    const go = (to) => {
+        shown = Math.max(0, Math.min(data.steps.length, to));
+        draw();
+    };
+    document.querySelectorAll('[data-replay]').forEach((button) => button.addEventListener('click', () => {
+        const action = button.dataset.replay;
+        if (action === 'play') {
+            if (timer) { stop(); return; }
+            if (shown >= data.steps.length) go(0);
+            playButton.textContent = t('⏸ Anhalten');
+            timer = setInterval(() => {
+                if (shown >= data.steps.length) { stop(); return; }
+                go(shown + 1);
+            }, 1400);
+            return;
+        }
+        stop();
+        go({ first: 0, prev: shown - 1, next: shown + 1, last: data.steps.length }[action]);
+    }));
+    window.addEventListener('resize', draw);
+    draw();
+})();
+
 // Live resource counters and construction countdowns.
 (() => {
     const started = Date.now();

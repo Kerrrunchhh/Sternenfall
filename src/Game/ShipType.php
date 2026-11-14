@@ -129,6 +129,12 @@ enum ShipType: string
         };
     }
 
+    /** How hard the unit hits that target group (TargetGroup::BONUS for its speciality). */
+    public function damageFactorAgainst(TargetGroup $target): float
+    {
+        return TargetGroup::damageFactor($this, $target);
+    }
+
     /** @return list<TargetGroup> whom the unit shoots first (empty for units that don't fight) */
     public function targetPriorities(): array
     {
@@ -230,32 +236,32 @@ enum ShipType: string
         $solid = ResearchType::SolidDrive;
 
         return match ($this) {
-            self::Pfeil => new ShipSpec($r(3000, 1000), 2, 50, 10, 400, 12000, 0, 20, $ion,
-                [$yard(1), $tech($ion, 1), $tech(ResearchType::ImpulseLaser, 1)]),
-            self::Falke => new ShipSpec($r(5000, 2500), 4, 120, 25, 750, 14000, 0, 40, $ion,
-                [$yard(2), $tech($ion, 2), $tech(ResearchType::ImpulseLaser, 3), $tech(ResearchType::RotationShield, 1)]),
+            self::Pfeil => new ShipSpec($r(3000, 1000), 2, 40, 10, 400, 12000, 0, 20, $ion,
+                [$yard(1), $tech($ion, 1), $tech(ResearchType::ImpulseLaser, 1)], defense: 60),
+            self::Falke => new ShipSpec($r(5000, 2500), 4, 95, 25, 750, 14000, 0, 40, $ion,
+                [$yard(2), $tech($ion, 2), $tech(ResearchType::ImpulseLaser, 3), $tech(ResearchType::RotationShield, 1)], defense: 145),
             self::Lanze => new ShipSpec($r(8000, 5000, 500), 8, 250, 60, 1300, 11000, 0, 75, $ion,
                 [$yard(3), $tech($ion, 3), $tech(ResearchType::HeavyLaser, 1), $tech(ResearchType::RotationShield, 2)]),
-            self::Korsar => new ShipSpec($r(15000, 10000, 1000), 20, 450, 120, 2500, 10000, 0, 150, $ion,
-                [$yard(4), $tech($ion, 4), $tech(ResearchType::HeavyLaser, 3), $tech(ResearchType::PhaseShield, 1)]),
-            self::Bastion => new ShipSpec($r(25000, 25000, 2500), 40, 500, 600, 5000, 9000, 0, 250, $plasma,
-                [$yard(5), $tech($plasma, 1), $tech(ResearchType::ElectronCannon, 1), $tech(ResearchType::PhaseShield, 3)]),
+            self::Korsar => new ShipSpec($r(15000, 10000, 1000), 20, 540, 120, 2500, 10000, 0, 150, $ion,
+                [$yard(4), $tech($ion, 4), $tech(ResearchType::HeavyLaser, 3), $tech(ResearchType::PhaseShield, 1)], defense: 360),
+            self::Bastion => new ShipSpec($r(25000, 25000, 2500), 40, 300, 600, 5000, 9000, 0, 250, $plasma,
+                [$yard(5), $tech($plasma, 1), $tech(ResearchType::ElectronCannon, 1), $tech(ResearchType::PhaseShield, 3)], defense: 700),
             self::Mantikor => new ShipSpec($r(30000, 30000, 4000), 50, 1100, 250, 4500, 9500, 0, 300, $plasma,
                 [$yard(6), $tech($plasma, 2), $tech(ResearchType::ElectronCannon, 3), $tech(ResearchType::PhaseShield, 3)]),
-            self::Hammerhai => new ShipSpec($r(50000, 40000, 8000), 100, 1500, 600, 9000, 8000, 0, 500, $plasma,
-                [$yard(7), $tech($plasma, 4), $tech(ResearchType::ElectronCannon, 5), $tech(ResearchType::QuantumShield, 1)]),
+            self::Hammerhai => new ShipSpec($r(50000, 40000, 8000), 100, 1200, 600, 9000, 8000, 0, 500, $plasma,
+                [$yard(7), $tech($plasma, 4), $tech(ResearchType::ElectronCannon, 5), $tech(ResearchType::QuantumShield, 1)], defense: 1800),
             self::Inferno => new ShipSpec($r(60000, 70000, 12000), 150, 3000, 500, 8000, 8500, 0, 650, $plasma,
                 [$yard(8), $tech($plasma, 5), $tech(ResearchType::TachyonLauncher, 1), $tech(ResearchType::QuantumShield, 2)]),
             self::Monarch => new ShipSpec($r(150000, 120000, 30000), 250, 6000, 2500, 20000, 7000, 0, 1200, $warp,
                 [$yard(10), $tech($warp, 1), $tech(ResearchType::TachyonLauncher, 4), $tech(ResearchType::QuantumShield, 4)]),
             self::Koloss => new ShipSpec($r(250000, 200000, 50000), 350, 12000, 3000, 30000, 3500, 0, 2000, $warp,
                 [$yard(11), $tech($warp, 2), $tech(ResearchType::PlasmaLauncher, 1), $tech(ResearchType::GravitonShield, 1)]),
-            self::Brecher => new ShipSpec($r(200000, 250000, 50000), 300, 9000, 4000, 25000, 5000, 0, 1800, $warp,
-                [$yard(11), $tech($warp, 3), $tech(ResearchType::PlasmaLauncher, 2), $tech(ResearchType::QuantumShield, 5)]),
+            self::Brecher => new ShipSpec($r(200000, 250000, 50000), 300, 11700, 4000, 25000, 5000, 0, 1800, $warp,
+                [$yard(11), $tech($warp, 3), $tech(ResearchType::PlasmaLauncher, 2), $tech(ResearchType::QuantumShield, 5)], defense: 6300),
             self::Leviathan => new ShipSpec($r(1000000, 800000, 250000), 500, 40000, 15000, 100000, 4000, 0, 5000, $warp,
                 [$yard(12), $tech($warp, 5), $tech(ResearchType::PlasmaLauncher, 4), $tech(ResearchType::GravitonShield, 3)]),
-            self::HeavyBomber => new ShipSpec($r(40000, 35000, 10000), 60, 900, 300, 6000, 5000, 0, 700, $plasma,
-                [$yard(6), $tech($plasma, 3), $tech(ResearchType::ElectronCannon, 4), $tech(ResearchType::PhaseShield, 4)]),
+            self::HeavyBomber => new ShipSpec($r(40000, 35000, 10000), 60, 1080, 300, 6000, 5000, 0, 700, $plasma,
+                [$yard(6), $tech($plasma, 3), $tech(ResearchType::ElectronCannon, 4), $tech(ResearchType::PhaseShield, 4)], defense: 540),
             self::Scout => new ShipSpec($r(100, 50), 1, 0, 0, 100, 1200000, 0, 1, ResearchType::Espionage,
                 [$yard(1), $tech($solid, 1), $tech(ResearchType::Espionage, 1)]),
             self::Freighter => new ShipSpec($r(2000, 1000), 3, 5, 10, 400, 6000, 5000, 10, $solid,
@@ -266,7 +272,7 @@ enum ShipType: string
                 [$yard(3), $tech($ion, 2), $tech(ResearchType::RotationShield, 2)]),
             self::ColonyShip => new ShipSpec($r(10000, 20000, 10000), 100, 0, 100, 3000, 2500, 0, 1000, $ion,
                 [$yard(4), $tech($ion, 3), $tech(ResearchType::InvasionTech, 1)]),
-            self::InvasionShip => new ShipSpec($r(30000, 40000, 15000), 500, 0, 200, 7000, 3000, 0, 1500, $plasma,
+            self::InvasionShip => new ShipSpec($r(30000, 40000, 15000), 500, 0, 200, 3000, 3000, 0, 1500, $plasma,
                 [$yard(6), $tech($plasma, 2), $tech(ResearchType::InvasionTech, 4)]),
             self::Fusionator => new ShipSpec($r(500000, 1000000, 500000), 1000, 0, 5000, 50000, 40000, 0, 10000, $warp,
                 [$yard(10), $tech($warp, 3), $tech(ResearchType::FusionTech, 1)]),

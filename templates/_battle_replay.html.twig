@@ -1,0 +1,55 @@
+{#
+  Graphic replay of a battle and what each unit did. Needs: replay (BattleReportController::replayView).
+#}
+{# Graphic replay of the course of the battle (BattleResult::replay), step by step in firing order. #}
+<article class="panel battle-replay" id="ablauf">
+    <h2>{{ '🎬 Ablauf der Schlacht'|trans }}</h2>
+    <p class="muted small">{{ 'Gekämpft wird in bis zu {rounds} Runden. In jeder Runde schießen die Einheiten nacheinander in ihrer Schussreihenfolge, gleiche Einheiten beider Seiten gleichzeitig. Treffer gehen zuerst auf den Schild, erst der Rest auf die Hülle; zu Beginn jeder Runde sind die Schilde wieder voll, verlorene Hülle bleibt verloren. Spiel den Kampf ab oder geh Schritt für Schritt durch.'|trans({'{rounds}': constant('App\\Game\\Battle::ROUNDS')}) }}{% if replay.viewer %} {{ 'Deine Einheiten sind hervorgehoben.'|trans }}{% endif %}</p>
+    <div class="replay-stage" data-battle-replay="{{ {groups: replay.groups, steps: replay.steps}|json_encode }}">
+        <div class="replay-side"><h3>{{ 'Angreifer'|trans }}</h3><ul data-side="attacker"></ul></div>
+        <div class="replay-side"><h3>{{ 'Verteidiger'|trans }}</h3><ul data-side="defender"></ul></div>
+        <svg class="replay-beams" data-replay-beams aria-hidden="true"></svg>
+    </div>
+    <div class="replay-controls">
+        <button type="button" class="btn btn-small btn-secondary" data-replay="first" aria-label="{{ 'Zum Anfang'|trans }}">⏮</button>
+        <button type="button" class="btn btn-small btn-secondary" data-replay="prev" aria-label="{{ 'Schritt zurück'|trans }}">◀</button>
+        <button type="button" class="btn btn-small" data-replay="play" id="replay-play">{{ '▶ Abspielen'|trans }}</button>
+        <button type="button" class="btn btn-small btn-secondary" data-replay="next" aria-label="{{ 'Schritt vor'|trans }}">▶</button>
+        <button type="button" class="btn btn-small btn-secondary" data-replay="last" aria-label="{{ 'Zum Ende'|trans }}">⏭</button>
+        <output class="small muted" data-replay-position></output>
+    </div>
+    <div class="small replay-caption" data-replay-caption aria-live="polite"></div>
+</article>
+
+<article class="panel battle-summary" id="bilanz">
+    <h2>{{ '📊 Was die Einheiten ausgerichtet haben'|trans }}</h2>
+    {% set top = max(1, replay.summary|map(r => r.damage)|reduce((a, b) => max(a, b), 0)) %}
+    {% for side, title in {attacker: 'Angreifer', defender: 'Verteidiger'} %}
+        {% set rows = replay.summary|filter(r => r.side == side) %}
+        {% if rows is not empty %}
+            <h3>{{ title|trans }}</h3>
+            <div class="table-scroll">
+                <table class="table summary-table">
+                    <thead><tr><th>{{ 'Spieler'|trans }}</th><th>{{ 'Einheit'|trans }}</th><th class="num">{{ 'Anzahl'|trans }}</th><th class="num">{{ 'Verloren'|trans }}</th><th>{{ 'Schaden verursacht'|trans }}</th><th class="num">{{ 'Zerstört'|trans }}</th></tr></thead>
+                    <tbody>
+                        {% for r in rows %}
+                            <tr class="{{ r.own ? 'own' }}">
+                                <td>{{ r.owner }}</td>
+                                <td>{{ r.label }}</td>
+                                <td class="num">{{ r.count|num }}</td>
+                                <td class="num">{{ (r.count - r.alive)|num }}</td>
+                                <td><span class="damage-bar" style="--share: {{ (100 * r.damage / top)|round(1) }}%"></span> {{ r.damage|num }}</td>
+                                <td class="num">{{ r.destroyed|num }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% set gained = (replay.experience ?? [])|filter(e => e.side == side and e.experience >= 0.5) %}
+            {% if gained is not empty %}
+                <p class="small battle-experience">{{ '⭐ Kampferfahrung:'|trans }} {% for e in gained %}<span class="{{ e.own ? 'own-experience' }}">{{ e.owner }} +{{ e.experience|num }}</span>{{ not loop.last ? ' · ' }}{% endfor %}</p>
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+    <p class="muted small">{{ 'Schaden verursacht: abgezogene Hülle und Schild beim Gegner. Zerstört: gegnerische Einheiten, denen diese Einheit den letzten Treffer gab. Kampferfahrung: die zerstörten Schildpunkte des Gegners, aufgeteilt nach der Größe der Flotten.'|trans }}</p>
+</article>

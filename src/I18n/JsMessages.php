@@ -16,6 +16,15 @@ final class JsMessages
     public static function all(): array
     {
         return [
+            t('Schritt {step} von {steps}'),
+            t('Runde {round} · Schritt {step} von {steps}'),
+            t('Vor dem ersten Schuss.'),
+            t('{target}: {damage} Schaden, {destroyed} zerstört'),
+            t('{target}: {damage} Schaden'),
+            t('{shooter} ({units}) schießt auf {targets}'),
+            t('{shooter} ({units}) findet kein Ziel mehr'),
+            t('▶ Abspielen'),
+            t('⏸ Anhalten'),
             t('Platz {position}: frei'),
             t('Platz {position}: {name} ({owner})'),
             t('Das ist dein gewählter Planet.'),

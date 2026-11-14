@@ -40,10 +40,11 @@
                     </div>
                     <p class="building-desc">{{ s.type.description|trans }}</p>
                     {% if s.type.targetPriorities is not empty %}
-                        <p class="small target-priorities" title="{{ 'Geschossen wird auf die erste Gruppe, die noch Gegner hat; ist sie zerstört, geht der restliche Schaden an die nächste.'|trans }}">{{ '🎯 Zielt zuerst auf: {groups}'|trans({'{groups}': s.type.targetPriorities|map(g => g.label|trans)|join(' → ')}) }}</p>
+                        <p class="small target-priorities" title="{{ 'Geschossen wird auf die erste Gruppe, die noch Gegner hat; ist sie zerstört, geht der restliche Schaden an die nächste.'|trans }}">{{ '🎯 Zielt zuerst auf: {groups}'|trans({'{groups}': s.type.targetPriorities|map(g => g.label|trans ~ (s.type.damageFactorAgainst(g) > 1 ? ' (×' ~ s.type.damageFactorAgainst(g)|num ~ ')' : ''))|join(' → ')}) }}</p>
                     {% endif %}
                     <dl class="stats">
-                        {{ ui.ship_stat(('Angriff'|trans), s.stats.attack) }}
+                        {% if not s.type.stationary %}{{ ui.ship_stat(('Angriff'|trans), s.stats.attack) }}{% endif %}
+                        {{ ui.ship_stat(('Verteidigung'|trans), s.stats.defense) }}
                         {{ ui.ship_stat(('Schild'|trans), s.stats.shield) }}
                         <div><dt>{{ 'Hülle'|trans }}</dt><dd>{{ s.spec.hull|num }}</dd></div>
                         {% if not defense %}

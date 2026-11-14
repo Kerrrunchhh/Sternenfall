@@ -23,6 +23,12 @@ final readonly class ShipStats
         return $type->spec()->attack * self::factor($type->weaponResearch(), $player);
     }
 
+    /** Fighting value when defending (weapon research counts as for the attack). */
+    public static function defense(ShipType $type, User $player): float
+    {
+        return $type->spec()->defense() * self::factor($type->weaponResearch(), $player);
+    }
+
     public static function shield(ShipType $type, User $player): float
     {
         return $type->spec()->shield * self::factor($type->shieldResearch(), $player);
@@ -31,17 +37,21 @@ final readonly class ShipStats
     /**
      * Base and researched value of every value research changes, with what changes it.
      *
-     * @return array<'attack'|'shield'|'speed', array{base: int, value: int, notes: list<\Symfony\Contracts\Translation\TranslatableInterface>}>
+     * @return array<'attack'|'defense'|'shield'|'speed', array{base: int, value: int, notes: list<\Symfony\Contracts\Translation\TranslatableInterface>}>
      */
     public function describe(ShipType $type, User $player): array
     {
         $spec = $type->spec();
         $stats = [
             'attack' => ['base' => $spec->attack, 'value' => (int) round(self::attack($type, $player)), 'notes' => self::researchNotes($type->weaponResearch(), $player, 'Angriff')],
+            'defense' => ['base' => $spec->defense(), 'value' => (int) round(self::defense($type, $player)), 'notes' => self::researchNotes($type->weaponResearch(), $player, 'Verteidigung')],
             'shield' => ['base' => $spec->shield, 'value' => (int) round(self::shield($type, $player)), 'notes' => self::researchNotes($type->shieldResearch(), $player, 'Schild')],
         ];
         if ($spec->attack <= 0) {
             $stats['attack']['notes'] = [];
+        }
+        if ($spec->defense() <= 0) {
+            $stats['defense']['notes'] = [];
         }
         if ($spec->shield <= 0) {
             $stats['shield']['notes'] = [];

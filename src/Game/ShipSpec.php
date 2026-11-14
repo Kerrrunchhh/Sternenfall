@@ -14,6 +14,7 @@ final readonly class ShipSpec
         public Resources $cost,
         /** Inhabitants needed to man one ship. */
         public int $crew,
+        /** Fighting value when attacking (or intercepting, or raiding). */
         public int $attack,
         public int $shield,
         public int $hull,
@@ -24,6 +25,14 @@ final readonly class ShipSpec
         public int $fuel,
         public ResearchType $drive,
         public array $requirements,
+        /** Fighting value when defending (a planet, or a fleet that is intercepted); null: the same as $attack. */
+        public ?int $defense = null,
     ) {
+    }
+
+    /** Fighting value when defending: when attacking (or intercepting, or raiding) $attack counts. */
+    public function defense(): int
+    {
+        return $this->defense ?? $this->attack;
     }
 }

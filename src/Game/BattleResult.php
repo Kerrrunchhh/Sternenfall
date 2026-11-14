@@ -12,10 +12,58 @@ use function Symfony\Component\Translation\t;
 final readonly class BattleResult
 {
     /** @param list<BattleGroup> $groups */
+    /**
+     * @param array{steps?: list<array{order: int, shots: list<array{group: int, units: int, hits: list<array{group: int, damage: float, destroyed: int}>}>}>} $log course of the battle (see Battle::fight)
+     */
     public function __construct(
         public array $groups,
         public bool $transportsSpared,
+        public array $log = [],
     ) {
+    }
+
+    /**
+     * Everything the battle report needs to replay the battle and sum up what each unit did.
+     *
+     * @return array{groups: list<array{side: string, owner: string, ownerId: ?int, type: string, count: int, alive: int, damage: float, destroyed: int}>, steps: list<array<string, mixed>>, experience: list<array{side: string, owner: string, ownerId: ?int, experience: float}>}
+     */
+    public function replay(): array
+    {
+        $dealt = [];
+        $destroyed = [];
+        foreach ($this->log['steps'] ?? [] as $step) {
+            foreach ($step['shots'] as $shot) {
+                foreach ($shot['hits'] as $hit) {
+                    $dealt[$shot['group']] = ($dealt[$shot['group']] ?? 0) + $hit['damage'];
+                    $destroyed[$shot['group']] = ($destroyed[$shot['group']] ?? 0) + $hit['destroyed'];
+                }
+            }
+        }
+        $groups = [];
+        foreach ($this->groups as $index => $group) {
+            $groups[] = [
+                'side' => $group->side,
+                'owner' => $group->owner->getUsername(),
+                'ownerId' => $group->owner->getId(),
+                'type' => $group->type->value,
+                'count' => $group->count,
+                'alive' => $group->alive(),
+                'damage' => round($dealt[$index] ?? 0.0, 1),
+                'destroyed' => $destroyed[$index] ?? 0,
+            ];
+        }
+
+        // Combat experience of every player, with the side he fought on.
+        $sides = [];
+        foreach ($this->groups as $group) {
+            $sides[spl_object_id($group->owner)] = $group->side;
+        }
+        $experience = [];
+        foreach ($this->experience() as ['user' => $user, 'experience' => $points]) {
+            $experience[] = ['side' => $sides[spl_object_id($user)] ?? BattleGroup::ATTACKER, 'owner' => $user->getUsername(), 'ownerId' => $user->getId(), 'experience' => round($points, 1)];
+        }
+
+        return ['groups' => $groups, 'steps' => $this->log['steps'] ?? [], 'experience' => $experience];
     }
 
     /** @return list<BattleGroup> */

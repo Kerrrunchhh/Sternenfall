@@ -2,7 +2,7 @@
 
 {% block title %}{{ report ? report.subjectIn(app.request.locale) : 'Kampfbericht nicht gefunden'|trans }} – {{ game_name }}{% endblock %}
 
-{% block javascripts %}<script src="{{ asset('js/game.js') }}" defer></script>{% endblock %}
+{% block javascripts %}<script>window.I18N = {{ js_i18n()|json_encode|raw }}; window.LOCALE = {{ app.request.locale|json_encode|raw }};</script><script src="{{ asset('js/game.js') }}" defer></script>{% endblock %}
 
 {% block body %}
     <main class="public-report">
@@ -20,6 +20,7 @@
                 </p>
                 <pre class="message-body">{{ report.bodyIn(app.request.locale) }}</pre>
             </article>
+            {% if replay %}{{ include('_battle_replay.html.twig') }}{% endif %}
             {% if refund_players is not null %}
                 {% set losses = report.losses %}
                 <article class="panel admin-refund">

@@ -1,0 +1,38 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'Beispiel-Kampfbericht – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
+
+{% block javascripts %}<script>window.I18N = {{ js_i18n()|json_encode|raw }}; window.LOCALE = {{ app.request.locale|json_encode|raw }};</script><script src="{{ asset('js/game.js') }}" defer></script>{% endblock %}
+
+{% block body %}
+    <main class="public-report">
+        <a href="{{ path(app.user ? 'app_overview' : 'app_home') }}" class="public-report-logo"><img src="{{ asset('pictures/brand/logo.webp') }}" alt="{{ game_name }}" width="223" height="131"></a>
+        <nav class="tabs example-tabs" aria-label="{{ 'Beispiele'|trans }}">
+            <a href="{{ path('app_battle_example', {example: 'kolonie'}) }}" class="{{ example == 'kolonie' ? 'active' }}" {{ example == 'kolonie' ? 'aria-current="page"' }}>{{ 'Kolonie'|trans }}</a>
+            <a href="{{ path('app_battle_example', {example: 'verband'}) }}" class="{{ example == 'verband' ? 'active' }}" {{ example == 'verband' ? 'aria-current="page"' }}>{{ 'Verbandsangriff'|trans }}</a>
+            <a href="{{ path('app_battle_example', {example: 'angriff'}) }}" class="{{ example == 'angriff' ? 'active' }}" {{ example == 'angriff' ? 'aria-current="page"' }}>{{ 'Angriff gegen Angriff'|trans }}</a>
+            <a href="{{ path('app_battle_example', {example: 'verteidigung'}) }}" class="{{ example == 'verteidigung' ? 'active' }}" {{ example == 'verteidigung' ? 'aria-current="page"' }}>{{ 'Angriff gegen Verteidigung'|trans }}</a>
+        </nav>
+        <article class="panel battle-report">
+            {% if example == 'angriff' %}
+                <h1>{{ '🎬 Beispiel: Angriffsflotte gegen Angriffsflotte'|trans }}</h1>
+                <p>{{ 'Kommandantin Vega greift mit einer reinen Angriffsflotte an: Korsaren, Schwere Bomber, Brecher und Lanzen. Freibeuter Krask hat genau dieselbe Flotte daheim stehen. Doch wer angreift, kämpft mit dem Angriffswert, wer verteidigt, mit dem Verteidigungswert – und Angriffsschiffe sind daheim schwach. Alle Namen sind erfunden.'|trans }}</p>
+                <p class="muted small">{{ 'Achte darauf, wie Krasks Korsaren und Lanzen fallen, während Vega gut die Hälfte behält – mit genau gleichen Flotten. Wer eine Angriffsflotte baut, sollte sie also nicht ungeschützt daheim stehen lassen. Vergleiche mit dem nächsten Beispiel: dieselbe Flotte gegen eine Verteidigung.'|trans }}</p>
+            {% elseif example == 'verteidigung' %}
+                <h1>{{ '🎬 Beispiel: Angriffsflotte gegen Verteidigung'|trans }}</h1>
+                <p>{{ 'Dieselbe Angriffsflotte von Kommandantin Vega trifft diesmal auf Gouverneur Halden, der genauso viel Bauzeit in seine Verteidigung gesteckt hat: Bastionen, Hammerhaie, Falken, Pfeile und Lasergeschütze. Diese Schiffe sind für die Verteidigung gebaut und kämpfen daheim mit ihrem hohen Verteidigungswert. Alle Namen sind erfunden.'|trans }}</p>
+                <p class="muted small">{{ 'Achte darauf, wie die Bastionen kaum zu knacken sind und die Jäger zuerst die Bomber jagen. Vega verliert den Großteil ihrer Flotte – gleich viel Bauzeit, aber die Verteidigung ist im Vorteil.'|trans }}</p>
+            {% elseif example == 'verband' %}
+                <h1>{{ '🎬 Beispiel: Verbandsangriff mit mehreren Spielern'|trans }}</h1>
+                <p>{{ 'Kommandantin Vega und Kapitän Orsk greifen gemeinsam an: Vega mit Falken, Mantikoren und Schweren Bombern, Orsk mit Lanzen, Hammerhaien und drei Invasionsschiffen. Gouverneur Halden verteidigt seinen Planeten mit Pfeilen, Lasergeschützen, Korsaren und Frachtern – und die Flotte seiner Allianzkollegin Admiralin Teska wartet zufällig gerade bei ihm: Infernos, Lanzen und Falken. Alle Namen sind erfunden; Vegas Einheiten sind als „deine“ hervorgehoben.'|trans }}</p>
+                <p class="muted small">{{ 'Achte darauf, wie Teskas Falken zusammen mit Haldens Pfeilen die Invasionsschiffe jagen, und wie die Kampferfahrung unter den Spielern jeder Seite aufgeteilt wird – nach der Größe ihrer Flotten.'|trans }}</p>
+            {% else %}
+                <h1>{{ '🎬 Beispiel: Angriff auf eine Kolonie'|trans }}</h1>
+                <p>{{ 'So sieht ein Kampfbericht jetzt aus. Kommandantin Vega greift mit Jägern, Lanzen, Mantikoren, Schweren Bombern und zwei Invasionsschiffen die Kolonie von Gouverneur Halden an, die von Pfeilen, Lasergeschützen, Korsaren und Hammerhaien verteidigt wird. Beide sind erfunden – hier sind die Angreifer als „deine“ Einheiten hervorgehoben, wie in deinen eigenen Berichten.'|trans }}</p>
+                <p class="muted small">{{ 'Achte darauf, wie die Pfeile und Lasergeschütze des Verteidigers zuerst die Invasionsschiffe jagen – Jäger mit dreifachem Schaden – und sie abschießen, bevor sie selbst fallen. Die Lanzen der Angreiferin nehmen sich dafür zuerst die Pfeile vor.'|trans }}</p>
+            {% endif %}
+        </article>
+        {{ include('_battle_replay.html.twig') }}
+        <p class="muted small landing-links">{% if app.user %}<a href="{{ path('app_overview') }}">{{ 'Zurück ins Spiel'|trans }}</a>{% else %}<a href="{{ path('app_home') }}">{{ 'Zur Startseite'|trans }}</a>{% endif %}</p>
+    </main>
+{% endblock %}

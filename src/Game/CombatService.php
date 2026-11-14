@@ -507,7 +507,7 @@ final readonly class CombatService
         // One neutral, shareable copy of the report, linked at the end of every copy.
         $share = null;
         if (null !== $this->reports) {
-            $link = $this->reports->publish($subject, $body(null), $result?->losses() ?? []);
+            $link = $this->reports->publish($subject, $body(null), $result?->losses() ?? [], $result?->replay());
             $share = t("\nKampfbericht teilen ({value} Tage gültig, ohne Anmeldung lesbar): {link}", ['{value}' => BattleReport::DAYS_AVAILABLE, '{link}' => $link]);
         }
         // Every attacker and defender gets the report from his own point of view.
