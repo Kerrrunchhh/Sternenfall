@@ -79,8 +79,6 @@
         <h2>{{ 'Schnellkontakte'|trans }} <a class="small" href="{{ path('app_mail') }}">{{ 'Post →'|trans }}</a></h2>
         {{ include('game/_contacts.html.twig', {back: 'app_overview'}) }}
     </section>
-    {{ include('game/_board_ticker.html.twig', {back: 'overview'}) }}
-
     {% if incoming is not empty or own_movements is not empty %}
         <section class="panel movements">
             <h2>{{ 'Flottenbewegungen'|trans }}</h2>
@@ -124,6 +122,7 @@
             </table>
         </section>
     {% endif %}
+    {{ include('game/_board_ticker.html.twig', {back: 'overview'}) }}
 
     {# Building, shipyard and defense queues plus research, below the fleet movements. #}
     {% if building_queue is not empty or shipyard_queue is not empty or defense_queue is not empty %}
