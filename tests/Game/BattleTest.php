@@ -275,5 +275,17 @@ class BattleTest extends TestCase
         $pickup->depart(\App\Game\FleetMission::Pickup, 1, 2, 3, new \DateTimeImmutable(), 60);
         self::assertTrue(\App\Game\Radar::emits($pickup), 'pickups fly openly, even empty on the way out');
         self::assertTrue(\App\Game\Radar::isRaidable($pickup), 'and can be raided on the way out');
+
+        // The owner's radar lists only attacking and resource-carrying fleets.
+        self::assertFalse(\App\Game\Radar::showsOwn($pickup), 'an empty pickup is no transport');
+        self::assertFalse(\App\Game\Radar::showsOwn($transport), 'empty on the way back');
+        self::assertFalse(\App\Game\Radar::showsOwn($attack), 'attack over');
+        self::assertFalse(\App\Game\Radar::showsOwn($spy));
+        $attack2 = new \App\Entity\Fleet($owner, 'Angriff', 1, 1, 1, ['pfeil' => 5]);
+        $attack2->depart(\App\Game\FleetMission::Attack, 1, 2, 3, new \DateTimeImmutable(), 60);
+        self::assertTrue(\App\Game\Radar::showsOwn($attack2));
+        $loaded = new \App\Entity\Fleet($owner, 'Karawane', 1, 1, 1, ['freighter' => 1], new \App\Game\Resources(iron: 100));
+        $loaded->depart(\App\Game\FleetMission::Transport, 1, 2, 3, new \DateTimeImmutable(), 60);
+        self::assertTrue(\App\Game\Radar::showsOwn($loaded));
     }
 }

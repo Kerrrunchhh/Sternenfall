@@ -65,6 +65,13 @@ final readonly class Radar
         return (FleetMission::Attack === $fleet->getMission() && !$fleet->isReturning()) || $fleet->getCargo()->total() >= 1;
     }
 
+    /** Own fleets the radar lists for their owner: attacking ones and those carrying resources. */
+    public static function showsOwn(Fleet $fleet): bool
+    {
+        return self::emits($fleet)
+            && ((FleetMission::Attack === $fleet->getMission() && !$fleet->isReturning()) || $fleet->getCargo()->total() >= 1);
+    }
+
     /**
      * Pirates may raid fleets carrying resources, trade fleets flying back from a
      * transport and pickups both ways, even empty: there is no loot then, but a bomber

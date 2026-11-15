@@ -8,7 +8,7 @@
     <p class="muted">
         {{ 'Wartende Flotten sind unsichtbar. Sichtbar werden Flotten, die angreifen oder Rohstoffe transportieren – wenn ihr nächstes Ziel in deinem Radarbereich liegt.'|trans }}
         {% if radar_range is null %}
-            <strong>{{ 'Du hast noch kein Radar erforscht.'|trans }}</strong>
+            <strong>{{ 'Du hast noch kein Radar erforscht – bis dahin zeigt das Radar keine Flotten an, auch deine eigenen nicht.'|trans }}</strong>
         {% else %}
             {{ 'Dein Radar (Stufe {radar_level}) deckt die Systeme deiner Planeten {davon} ab.'|trans({'{radar_level}': radar_level, '{davon}': radar_range > 0 ? ('und je'|trans ~ ' ') ~ radar_range ~ (' ' ~ 'System(e) links und rechts davon'|trans)}) }}
         {% endif %}
@@ -32,7 +32,7 @@
 
     {% if own_visible is not empty %}
         <section class="panel">
-            <h2>{{ 'Deine sichtbaren Flotten <small class="muted">– andere sehen sie mit Radar</small>'|trans|raw }}</h2>
+            <h2>{{ 'Deine angreifenden und transportierenden Flotten <small class="muted">– andere sehen sie mit Radar</small>'|trans|raw }}</h2>
             <table class="table">
                 {% for f in own_visible %}
                     <tr>

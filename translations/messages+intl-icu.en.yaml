@@ -2695,3 +2695,5 @@
 "Beworben": "Applied"
 "Deine Bewerbung vom {date}:": "Your application of {date}:"
 "Du hast dich am {date} bei „{name}“ beworben. Solange die Bewerbung läuft, kannst du dich nirgends sonst bewerben.": "You applied to “{name}” on {date}. While the application is pending you cannot apply anywhere else."
+"Deine angreifenden und transportierenden Flotten <small class=\"muted\">– andere sehen sie mit Radar</small>": "Your attacking and transporting fleets <small class=\"muted\">– others see them with radar</small>"
+"Du hast noch kein Radar erforscht – bis dahin zeigt das Radar keine Flotten an, auch deine eigenen nicht.": "You have not researched radar yet – until then the radar shows no fleets, not even your own."
