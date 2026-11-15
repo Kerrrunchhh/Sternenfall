@@ -55,8 +55,9 @@ class RadarController extends AbstractGameController
 
         return $this->renderGame('game/radar.html.twig', $planet, [
             'contacts' => $contacts,
-            // Own attacking and resource-carrying fleets. Without radar research the radar shows nothing, not even those.
-            'own_visible' => null === Radar::range($level) ? [] : array_values(array_filter($fleets->findByOwner($player), static fn (Fleet $f): bool => Radar::showsOwn($f))),
+            // Own attacking and resource-carrying fleets – like foreign ones only while their next stop is
+            // within the own radar range (without radar research: none at all).
+            'own_visible' => array_values(array_filter($fleets->findByOwner($player), static fn (Fleet $f): bool => $radar->showsOwnInRange($player, $f))),
             'own_fleets' => $own,
             'radar_level' => $level,
             'radar_range' => Radar::range($level),

@@ -2804,3 +2804,4 @@
 "Im Baubot ist noch nichts eingestellt.": "Nothing is set in the build bot yet."
 "Baubot": "Build bot"
 "Handelsgilde: {total} Rohstoffe → {coordinates}": "Trade guild: {total} resources → {coordinates}"
+"Deine angreifenden und transportierenden Flotten <small class=\"muted\">– in deiner Radarreichweite; andere sehen sie mit ihrem Radar</small>": "Your attacking and transporting fleets <small class=\"muted\">– within your radar range; others see them with their radar</small>"

@@ -32,7 +32,7 @@
 
     {% if own_visible is not empty %}
         <section class="panel">
-            <h2>{{ 'Deine angreifenden und transportierenden Flotten <small class="muted">– andere sehen sie mit Radar</small>'|trans|raw }}</h2>
+            <h2>{{ 'Deine angreifenden und transportierenden Flotten <small class="muted">– in deiner Radarreichweite; andere sehen sie mit ihrem Radar</small>'|trans|raw }}</h2>
             <table class="table">
                 {% for f in own_visible %}
                     <tr>

@@ -137,6 +137,23 @@ class EspionageTest extends TestCase
         self::assertFalse(Radar::emits($fleet), 'even with cargo on board');
     }
 
+    public function testOwnFleetsShowOnTheRadarOnlyWithinTheOwnRange(): void
+    {
+        $player = new User('kommandant');
+        $player->addPlanet(new Planet($player, 'Heim', 1, 100, 5, $this->now));
+        $radar = new Radar($this->createStub(FleetRepository::class), $this->createStub(\App\Repository\PlanetRepository::class), $this->espionage);
+        $near = new Fleet($player, 'Nah', 1, 100, 5, ['pfeil' => 10]);
+        $near->depart(FleetMission::Attack, 1, 101, 3, $this->now, 600);
+        $far = new Fleet($player, 'Fern', 1, 100, 5, ['pfeil' => 10]);
+        $far->depart(FleetMission::Attack, 1, 140, 3, $this->now, 600);
+
+        self::assertFalse($radar->showsOwnInRange($player, $near), 'no radar research: nothing');
+
+        $player->setResearchLevel(ResearchType::Radar, 5); // own system and one to each side
+        self::assertTrue($radar->showsOwnInRange($player, $near));
+        self::assertFalse($radar->showsOwnInRange($player, $far), 'beyond the own radar');
+    }
+
     public function testAnAttackOnTheOwnPlanetIsOnTheRadarOnlyWithRadarResearchButAlwaysKnown(): void
     {
         $victim = new User('opfer');

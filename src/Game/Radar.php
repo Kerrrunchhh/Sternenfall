@@ -99,6 +99,14 @@ final readonly class Radar
      * Whether the fleet is on the player's radar – that depends on his radar research only,
      * also for attacks on his own planets (those he learns of on the overview, see knows()).
      */
+    /** Own attacking or resource-carrying fleet whose next stop lies within the own radar range. */
+    public function showsOwnInRange(User $player, Fleet $fleet): bool
+    {
+        [$galaxy, $system] = self::nextStop($fleet);
+
+        return self::showsOwn($fleet) && $this->covers($player, $galaxy, $system);
+    }
+
     public function sees(User $player, Fleet $fleet): bool
     {
         if ($fleet->getOwner()->isSameAs($player)) {
