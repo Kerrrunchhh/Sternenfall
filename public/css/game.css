@@ -909,3 +909,5 @@ tr.suspicious-strong td { background: rgba(255, 138, 128, .08); }
 .simulator-table input.short { width: 7rem; text-align: right; }
 .flash { white-space: pre-line; }
 
+/* Menu icons: same width, so the labels line up. */
+.nav-icon { display: inline-block; width: 1.5em; text-align: center; margin-right: .2em; }

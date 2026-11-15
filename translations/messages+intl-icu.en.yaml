@@ -2802,3 +2802,4 @@
 "Der Baubot füllt die Bauschleifen nach deinen Vorgaben – immer dann, wenn du auf einen seiner Knöpfe drückst. Die Einstellungen gelten für alle Planeten. „Jetzt befüllen“ füllt den aktuellen Planeten ({planet}), „Auf allen Planeten befüllen“ alle.": "The build bot fills the queues as you set it up – whenever you press one of its buttons. The settings apply to all planets. “Fill now” fills the current planet ({planet}), “Fill on all planets” all of them."
 "Füllt die Schleifen aller Planeten mit diesen Einstellungen.": "Fills the queues of all planets with these settings."
 "Im Baubot ist noch nichts eingestellt.": "Nothing is set in the build bot yet."
+"Baubot": "Build bot"
