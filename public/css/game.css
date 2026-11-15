@@ -891,3 +891,10 @@ tr.suspicious-strong td { background: rgba(255, 138, 128, .08); }
 .award-month { color: #d9dde3; border-color: rgba(192, 192, 192, .5); }
 .award-year { color: #ffd54f; border-color: rgba(255, 213, 79, .6); }
 .award-list .award-week, .award-list .award-month, .award-list .award-year { color: inherit; }
+
+/* Foldable boxes (data-fold): click the heading; folded boxes show only the heading. */
+.fold-head { cursor: pointer; user-select: none; }
+.fold-head::before { content: '▾'; display: inline-block; width: 1.1em; color: var(--muted); transition: transform .15s; }
+.folded > .fold-head::before { transform: rotate(-90deg); }
+.folded > .fold-head { margin-bottom: 0; }
+.folded > :not(.fold-head) { display: none !important; }

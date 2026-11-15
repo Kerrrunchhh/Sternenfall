@@ -2,11 +2,11 @@
   The ticker a player chose to show on the overview and below the alliance's black board –
   e.g. to keep in touch with a former alliance. Needs: joined_tickers, board_ticker,
   board_ticker_posts, back ('alliance' or 'overview': where to return after sending);
-  the overview leaves the box out for players in no ticker.
+  the overview leaves the box out for players in no ticker. Optional fold: key to make the box foldable.
 #}
 {% import 'game/_macros.html.twig' as ui %}
 {% if joined_tickers is not empty or back != 'overview' %}
-<section class="panel" id="ticker">
+<section class="panel" id="ticker"{% if fold is defined %} data-fold="{{ fold }}"{% endif %}>
     <h2>{{ board_ticker ? '📡 Ticker: {name}'|trans({'{name}': board_ticker.name}) : '📡 Ticker'|trans }}</h2>
     {% if joined_tickers is empty %}
         <p class="muted small">{{ 'Hier kannst du einen deiner Ticker anzeigen – zum Beispiel, um mit deiner alten Allianz in Kontakt zu bleiben. Du bist noch in keinem Ticker.'|trans }} <a href="{{ path('app_tickers') }}">{{ 'Zu den Tickern'|trans }}</a></p>

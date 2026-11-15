@@ -357,6 +357,40 @@ const orbit = (() => {
         });
     });
 
+    // Boxes marked with data-fold fold up when their heading is clicked; the state is remembered (per browser).
+    document.querySelectorAll('[data-fold]').forEach((box) => {
+        const head = box.querySelector(':scope > h2');
+        if (!head) {
+            return;
+        }
+        const key = 'sternenfall.fold.' + box.dataset.fold;
+        const set = (folded) => {
+            box.classList.toggle('folded', folded);
+            head.setAttribute('aria-expanded', folded ? 'false' : 'true');
+        };
+        head.classList.add('fold-head');
+        head.setAttribute('role', 'button');
+        head.tabIndex = 0;
+        let folded = false;
+        try { folded = localStorage.getItem(key) === '1'; } catch (e) { /* ignore */ }
+        set(folded);
+        const toggle = (event) => {
+            if (event.target.closest('a, button, input, select, form')) {
+                return; // links inside the heading keep working
+            }
+            const now = !box.classList.contains('folded');
+            set(now);
+            try { localStorage.setItem(key, now ? '1' : '0'); } catch (e) { /* ignore */ }
+        };
+        head.addEventListener('click', toggle);
+        head.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                toggle(event);
+            }
+        });
+    });
+
     // Simple tabs: buttons [data-tab-target] show the matching [data-tab-panel]; the choice is remembered.
     document.querySelectorAll('[data-tabs]').forEach((nav) => {
         const key = 'sternenfall.tab.' + nav.dataset.tabs;

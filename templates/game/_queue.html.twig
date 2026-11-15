@@ -1,9 +1,10 @@
 {#
   A sortable queue (drag & drop, or the arrow buttons without a mouse).
-  Parameters: queue_planet, kind (QueueKind), entries (from QueueTimeline), back (route to return to)
+  Parameters: queue_planet, kind (QueueKind), entries (from QueueTimeline), back (route to return to),
+  fold (optional: key to make the box foldable, state remembered per browser)
 #}
 {% import 'game/_macros.html.twig' as ui %}
-<section class="panel queue">
+<section class="panel queue"{% if fold is defined %} data-fold="{{ fold }}"{% endif %}>
     <h2>
         {{ '{label}-Bauschleife <small class="muted">{entries}{maxLength}</small>'|trans({'{label}': kind.label|trans|e, '{entries}': entries|length|e, '{maxLength}': (kind.maxLength ? '/' ~ kind.maxLength)|e})|raw }}
     </h2>

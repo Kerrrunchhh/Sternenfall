@@ -75,12 +75,12 @@
     {% if planet.integrating(now) %}
         <p class="panel warning">{{ '{name} wurde invadiert und geht am {integratedAt} vollständig in deinen Besitz über.'|trans({'{name}': planet.name, '{integratedAt}': planet.integratedAt|date('d.m.Y H:i')}) }}</p>
     {% endif %}
-    <section class="panel quick-contacts">
+    <section class="panel quick-contacts" data-fold="overview-contacts">
         <h2>{{ 'Schnellkontakte'|trans }} <a class="small" href="{{ path('app_mail') }}">{{ 'Post →'|trans }}</a></h2>
         {{ include('game/_contacts.html.twig', {back: 'app_overview'}) }}
     </section>
     {% if incoming is not empty or own_movements is not empty %}
-        <section class="panel movements">
+        <section class="panel movements" data-fold="overview-movements">
             <h2>{{ 'Flottenbewegungen'|trans }}</h2>
             {# One line per movement: what, where, countdown, arrival time, action. #}
             <table class="table movement-table">
@@ -123,24 +123,27 @@
         </section>
     {% endif %}
     {% if player.researching %}
-        <div class="panel construction">
-            <div>{{ '<strong>Forschung:</strong> {label} (Stufe {researchTargetLevel})'|trans({'{label}': player.researchType.label|trans|e, '{researchTargetLevel}': player.researchTargetLevel|e})|raw }}</div>
-            <div>{{ ui.countdown(player.researchFinishesAt, now) }}</div>
-        </div>
+        <section class="panel" data-fold="overview-research">
+            <h2>{{ 'Forschung'|trans }}</h2>
+            <div class="construction">
+                <div>{{ '{label} (Stufe {researchTargetLevel})'|trans({'{label}': player.researchType.label|trans, '{researchTargetLevel}': player.researchTargetLevel}) }}</div>
+                <div>{{ ui.countdown(player.researchFinishesAt, now) }}</div>
+            </div>
+        </section>
     {% endif %}
-    {{ include('game/_board_ticker.html.twig', {back: 'overview'}) }}
+    {{ include('game/_board_ticker.html.twig', {back: 'overview', fold: 'overview-ticker'}) }}
 
     {# Building, shipyard and defense queues, below the ticker. #}
     {% if building_queue is not empty or shipyard_queue is not empty or defense_queue is not empty %}
         <div class="grid">
-            {% if building_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Buildings, entries: building_queue, back: 'app_overview'}) }}{% endif %}
-            {% if shipyard_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Shipyard, entries: shipyard_queue, back: 'app_overview'}) }}{% endif %}
-            {% if defense_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Defense, entries: defense_queue, back: 'app_overview'}) }}{% endif %}
+            {% if building_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Buildings, entries: building_queue, back: 'app_overview', fold: 'overview-queue-buildings'}) }}{% endif %}
+            {% if shipyard_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Shipyard, entries: shipyard_queue, back: 'app_overview', fold: 'overview-queue-shipyard'}) }}{% endif %}
+            {% if defense_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Defense, entries: defense_queue, back: 'app_overview', fold: 'overview-queue-defense'}) }}{% endif %}
         </div>
     {% endif %}
 
     <div class="grid">
-        <section class="panel">
+        <section class="panel" data-fold="overview-resources">
             <h2>{{ 'Rohstoffe pro Stunde'|trans }}</h2>
             <table class="table">
                 <tr class="table-head"><td></td><td class="num">{{ 'Produktion'|trans }}</td><td class="num">{{ 'Verbrauch'|trans }}</td><td class="num">{{ 'Bilanz'|trans }}</td></tr>
@@ -168,7 +171,7 @@
                 {% endif %}
             {% endfor %}
         </section>
-        <section class="panel">
+        <section class="panel" data-fold="overview-population">
             <h2>{{ 'Bevölkerung'|trans }}</h2>
             <table class="table">
                 <tr><td>{{ 'Einwohner'|trans }}</td><td class="num">{{ planet.population|num }}</td></tr>
@@ -182,7 +185,7 @@
                 <p class="hint">{{ '{value} Einwohner wären bei einem Bombardement ungeschützt.'|trans({'{value}': (planet.population - bunker_capacity)|num}) }}</p>
             {% endif %}
         </section>
-        <section class="panel">
+        <section class="panel" data-fold="overview-planet">
             <h2>{{ 'Planet'|trans }}</h2>
             <table class="table">
                 <tr><td>{{ 'Koordinaten'|trans }}</td><td class="num">{{ planet.coordinates }}</td></tr>
@@ -191,7 +194,7 @@
                 <tr><td>{{ 'Vor Plünderung geschützt'|trans }}</td><td class="num">{% if protected > 0 %}{{ '{protected} je Rohstoff'|trans({'{protected}': protected|num}) }}{% else %}<a href="{{ path('app_buildings') }}">{{ 'nichts – baue einen Lagerkomplex'|trans }}</a>{% endif %}</td></tr>
             </table>
         </section>
-        <section class="panel">
+        <section class="panel" data-fold="overview-hangar">
             <h2>{{ 'Hangar'|trans }}</h2>
             {% if hangar is empty %}
                 <p class="muted">{{ 'Keine Schiffe stationiert.'|trans }}{% if planet.buildingLevel(enum('App\\Game\\BuildingType').Shipyard) > 0 %} <a href="{{ path('app_shipyard') }}">{{ 'Zur Werft'|trans }}</a>{% endif %}</p>
