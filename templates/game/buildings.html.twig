@@ -19,6 +19,7 @@
                     <span class="level">{{ 'Stufe {level}'|trans({'{level}': b.level}) }}{% if b.planned > b.level %} <span class="muted">{{ '→ {planned} geplant'|trans({'{planned}': b.planned}) }}</span>{% endif %}</span>
                 </div>
                 <p class="building-desc">{{ b.type.description|trans }}</p>
+                <p class="small muted building-points" id="points-{{ b.type.value }}">{{ (b.type.pointsPerLevel == 1 ? '🏅 +1 Punkt je Stufe · zählt jetzt {points}' : '🏅 +{rate} Punkte je Stufe · zählt jetzt {points}')|trans({'{rate}': b.type.pointsPerLevel, '{points}': (b.level * b.type.pointsPerLevel)|num}) }}</p>
                 {% if b.next_effect is not null %}
                     {# The same step every level (linear); only the costs keep rising. #}
                     {% set unit = b.type.value == 'bio_cell' ? 'Einwohner' : (b.type.value == 'bunker' ? 'Einwohner geschützt' : (b.type.value == 'storage' ? 'je Rohstoff geschützt' : 'pro Stunde')) %}
