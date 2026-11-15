@@ -1451,7 +1451,7 @@
 "Sonde von {name} [{coords}] fliegt der Flotte von {player} entgegen, Treffpunkt [{galaxy}:{system}:{position}] um {value}.": "Probe from {name} [{coords}] flies towards the fleet of {player}, meeting point [{galaxy}:{system}:{position}] at {value}."
 "Sonde von {name} [{coords}] gestartet nach [{galaxy}:{system}:{position}], Ankunft {value}.": "Probe launched from {name} [{coords}] to [{galaxy}:{system}:{position}], arrival {value}."
 "Spaltet Wasser in Wasserstoff, den Treibstoff deiner Flotten.": "Splits water into hydrogen, the fuel of your fleets."
-"Spannt einen Schutzschild um den Planeten (20.000 je Stufe, bei Fusionen werden die Stufen addiert). Ist die Angriffskraft der Angreifer, die den Kampf überstehen, größer als der Schild, wird der unterste Planet einer Fusion abgesprengt.": "Spans a protective shield around the planet (20,000 per level, with fusions the levels add up). If the attack power of the attackers surviving the battle is greater than the shield, the bottom planet of a fusion is broken off."
+"Spannt einen Schutzschild um den Planeten (2.000 je Stufe, bei Fusionen werden die Stufen addiert). Ist die Angriffskraft der Angreifer, die den Kampf überstehen, größer als der Schild, wird der unterste Planet einer Fusion abgesprengt.": "Spans a protective shield around the planet (2,000 per level, with fusions the levels add up). If the attack power of the attackers surviving the battle is greater than the shield, the bottom planet of a fusion is broken off."
 "Speichern": "Save"
 "Spezialisiert darauf, planetare Geschütztürme zu knacken.": "Specialized in cracking planetary gun turrets."
 "Spieler": "Players"

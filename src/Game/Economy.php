@@ -249,7 +249,7 @@ final readonly class Economy
 
     /** Inhabitants that are safe from bombardment. */
     /** Planetary shield per level of the shield generator (levels add up in a fusion). */
-    public const int SHIELD_PER_LEVEL = 20_000;
+    public const int SHIELD_PER_LEVEL = 2_000;
 
     public function planetShield(Planet $planet): int
     {

@@ -54,7 +54,7 @@ enum BuildingType: string
             self::Storage => 'Gesicherte Lagerhallen: Rohstoffe bis zu dieser Menge sind vor Plünderung durch Angreifer geschützt.',
             self::ResearchLab => 'Erforscht neue Technologien. Jede Stufe verkürzt die Forschungszeit und schaltet weitere Technologien frei.',
             self::Shipyard => 'Baut Raumschiffe. Jede Stufe verkürzt die Bauzeit und schaltet größere Schiffsklassen frei.',
-            self::ShieldGenerator => 'Spannt einen Schutzschild um den Planeten (20.000 je Stufe, bei Fusionen werden die Stufen addiert). Ist die Angriffskraft der Angreifer, die den Kampf überstehen, größer als der Schild, wird der unterste Planet einer Fusion abgesprengt.',
+            self::ShieldGenerator => 'Spannt einen Schutzschild um den Planeten (2.000 je Stufe, bei Fusionen werden die Stufen addiert). Ist die Angriffskraft der Angreifer, die den Kampf überstehen, größer als der Schild, wird der unterste Planet einer Fusion abgesprengt.',
             self::FleetControl => 'Steuert deine Flotten: Nur von einem Planeten mit Flottenkontrollzentrum aus kannst du Flotten bilden, schicken und befehligen. Jede Stufe auf irgendeinem deiner Planeten erlaubt eine Flotte mehr.',
         };
     }

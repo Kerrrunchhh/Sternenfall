@@ -63,8 +63,8 @@ class FusionCombatTest extends TestCase
 
     public function testShieldHoldsAgainstWeakerAttack(): void
     {
-        $fusion = $this->fusion(4, shieldLevels: 3); // 60.000 shield
-        $this->attack($fusion, ['leviathan' => 1]); // 40.000 attack
+        $fusion = $this->fusion(4, shieldLevels: 4); // 8.000 shield
+        $this->attack($fusion, ['monarch' => 1]); // 6.000 attack
 
         self::assertSame(4, $fusion->getFusionSize());
         self::assertStringContainsString('Schild der Fusion hält', $this->report());
@@ -72,7 +72,7 @@ class FusionCombatTest extends TestCase
 
     public function testAttackThroughTheShieldBreaksOffTheBottomPlanet(): void
     {
-        $fusion = $this->fusion(4, shieldLevels: 1); // 20.000 shield
+        $fusion = $this->fusion(4, shieldLevels: 1); // 2.000 shield
         $this->attack($fusion, ['leviathan' => 1]);
 
         self::assertSame(3, $fusion->getFusionSize());
