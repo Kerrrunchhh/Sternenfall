@@ -1,0 +1,72 @@
+{% extends 'game/_layout.html.twig' %}
+
+{% block title %}{{ 'Kampfbilanz – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
+
+{% macro units(map, labels) %}{% for type, count in map %}{{ count|num }} × {{ labels[type]|trans }}{{ not loop.last ? ', ' }}{% else %}<span class="muted">–</span>{% endfor %}{% endmacro %}
+{% macro goods(resources) %}{% set any = false %}{% for good, amount in resources.toArray %}{% if amount >= 1 %}{% if any %}, {% endif %}{{ good|good_label|trans }} {{ amount|num }}{% set any = true %}{% endif %}{% endfor %}{% if not any %}<span class="muted">–</span>{% endif %}{% endmacro %}
+
+{% block content %}
+    <h1>{{ 'Kampfbilanz'|trans }}</h1>
+    <p class="muted">{{ 'Für einen Krieg oder einen langen Raid: Füge die Links mehrerer Kampfberichte ein (z. B. aus den Nachrichten kopiert, in beliebiger Form). Die Bilanz zeigt, was Angreifer und Verteidiger an Schiffen, Türmen und geplünderten Rohstoffen verloren haben, wer dabei war und wie viel Kampferfahrung jeder bekommen hat. Kampfberichte sind {days} Tage lang abrufbar.'|trans({'{days}': constant('App\\Entity\\BattleReport::DAYS_AVAILABLE')}) }}</p>
+
+    <form method="post" action="{{ path('app_battle_summary_run') }}" class="mail-form">
+        <label for="summary-links" class="small muted">{{ 'Links zu Kampfberichten (bis zu {max}):'|trans({'{max}': constant('App\\Game\\BattleSummary::MAX_REPORTS')}) }}</label>
+        <textarea id="summary-links" name="links" rows="6" required placeholder="https://starfallnewhorizons.com/kampfbericht/…">{{ links }}</textarea>
+        <button class="btn" type="submit" id="summary-run">{{ '📊 Zusammenfassen'|trans }}</button>
+    </form>
+
+    {% if missing is not empty %}
+        <p class="panel warning">{{ (missing|length == 1 ? '1 Kampfbericht gibt es nicht (mehr) – abgelaufen oder falscher Link.' : '{count} Kampfberichte gibt es nicht (mehr) – abgelaufen oder falscher Link.')|trans({'{count}': missing|length}) }}</p>
+    {% endif %}
+
+    {% if summary %}
+        {% set first = summary.counted|first %}
+        {% set last = summary.counted|last %}
+        <section class="panel" id="summary-reports">
+            <h2>{{ (summary.counted|length == 1 ? '1 Kampf' : '{count} Kämpfe')|trans({'{count}': summary.counted|length}) }}
+                {% if first %}<small class="muted">{{ '{from} bis {to}'|trans({'{from}': first.createdAt|date('d.m.Y H:i'), '{to}': last.createdAt|date('d.m.Y H:i')}) }}</small>{% endif %}</h2>
+            <details>
+                <summary>{{ 'Berichte anzeigen'|trans }}</summary>
+                <ul class="small">
+                    {% for r in summary.counted %}<li><a href="{{ path('app_battle_report', {hash: r.hash}) }}">{{ r.subjectIn(app.request.locale) }}</a> <span class="muted">{{ r.createdAt|date('d.m.Y H:i') }}</span></li>{% endfor %}
+                    {% for r in summary.annulled %}<li><s>{{ r.subjectIn(app.request.locale) }}</s> <span class="muted">{{ 'annulliert – nicht mitgezählt'|trans }}</span></li>{% endfor %}
+                </ul>
+            </details>
+            {% if summary.withoutLoot > 0 %}
+                <p class="muted small">{{ (summary.withoutLoot == 1 ? '1 Bericht stammt von vor dem 15.11.2026 und enthält die Beute noch nicht – sie fehlt in der Summe.' : '{count} Berichte stammen von vor dem 15.11.2026 und enthalten die Beute noch nicht – sie fehlt in der Summe.')|trans({'{count}': summary.withoutLoot}) }}</p>
+            {% endif %}
+        </section>
+
+        <div class="grid">
+            {% for side, title in {(attacker): 'Angreifer'|trans, (defender): 'Verteidiger'|trans} %}
+                {% set s = summary.sides[side] %}
+                <section class="panel" id="summary-{{ side }}">
+                    <h2>{{ title }}</h2>
+                    <table class="table">
+                        <tr><td>{{ 'Schiffe verloren'|trans }}</td><td>{{ _self.units(s.ships, ship_labels) }}</td></tr>
+                        <tr><td>{{ 'Türme verloren'|trans }}</td><td>{{ _self.units(s.turrets, ship_labels) }}</td></tr>
+                        <tr><td>{{ side == attacker ? 'Rohstoffe erbeutet'|trans : 'Rohstoffe geplündert (verloren)'|trans }}</td><td>{{ _self.goods(summary.sides[attacker].loot) }}</td></tr>
+                        <tr><td>{{ 'Kampferfahrung'|trans }}</td><td class="num">{{ s.experience|num }}</td></tr>
+                    </table>
+                </section>
+            {% endfor %}
+        </div>
+
+        <section class="panel" id="summary-players">
+            <h2>{{ 'Teilnehmer'|trans }}</h2>
+            <table class="table">
+                <tr class="table-head"><td>{{ 'Spieler'|trans }}</td><td>{{ 'Seite'|trans }}</td><td class="num">{{ 'Kämpfe'|trans }}</td><td class="num">{{ 'Kampferfahrung'|trans }}</td><td>{{ 'Verloren'|trans }}</td><td>{{ 'Beute'|trans }}</td></tr>
+                {% for p in summary.players %}
+                    <tr>
+                        <td><strong>{{ p.name }}</strong></td>
+                        <td class="small">{{ p.sides|keys|map(side => side == attacker ? 'Angreifer'|trans : 'Verteidiger'|trans)|join(', ') }}</td>
+                        <td class="num">{{ p.battles|num }}</td>
+                        <td class="num">{{ p.experience|num }}</td>
+                        <td class="small">{{ _self.units(p.ships|merge(p.turrets), ship_labels) }}</td>
+                        <td class="small">{{ _self.goods(p.loot) }}</td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </section>
+    {% endif %}
+{% endblock %}

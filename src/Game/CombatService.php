@@ -97,8 +97,10 @@ final readonly class CombatService
             $this->showDebris($result->participants(), $g, $s, $p);
 
             $beforeBombing = $target->getPopulation();
+            // What each attacker carried off, stored with the shared report (battle summaries add it up).
+            $loot = [];
             if ($result->attackerWon()) {
-                $outcome = [...$outcome, ...$this->plunder($attackers, $target, $result, $now)];
+                $outcome = [...$outcome, ...$this->plunder($attackers, $target, $result, $now, $loot)];
                 $headline = [] === $joiners ? t('Der Angreifer hat gewonnen.') : t('Der Verband hat gewonnen.');
             } else {
                 $alive = [] !== array_filter($attackers, static fn (Fleet $f): bool => $f->hasShips());
@@ -132,7 +134,7 @@ final readonly class CombatService
 
             $subject = t('Kampfbericht {name} [{coords}]', ['{name}' => $target->getName(), '{coords}' => $target->getCoordinates()]);
             $body = static fn (?User $viewer): TranslatableInterface => new Lines([$headline, '', $result->report($viewer), '', ...array_filter($outcome), ...$experience]);
-            $this->notify([...array_map(static fn (Fleet $f): User => $f->getOwner(), $attackers), $defender, ...array_map(static fn (Fleet $f): User => $f->getOwner(), $guards), ...$result->participants()], $subject, $body, $result);
+            $this->notify([...array_map(static fn (Fleet $f): User => $f->getOwner(), $attackers), $defender, ...array_map(static fn (Fleet $f): User => $f->getOwner(), $guards), ...$result->participants()], $subject, $body, $result, $loot);
         });
     }
 
@@ -198,6 +200,7 @@ final readonly class CombatService
         }
 
         $cargo = array_reduce($preys, static fn (Resources $sum, Fleet $f): Resources => $sum->add($f->getCargo()), new Resources());
+        $taken = [];
         if ($raid && $result->transportsSpared) {
             $outcome[] = t('Ohne Bomber blieben die Transportschiffe samt Ladung verschont. Sie kehren zu ihrem Abflugort zurück.');
             foreach ($preys as $prey) {
@@ -218,6 +221,7 @@ final readonly class CombatService
             }
             $where = $this->depositAtStart($hunter, $loot);
             $outcome[] = t('Erbeutet: {loot} – {where}.', ['{loot}' => $this->describe($loot), '{where}' => $where]);
+            $taken = [self::lootEntry($hunter->getOwner(), $loot)];
         }
 
         foreach ($preys as $prey) {
@@ -233,7 +237,7 @@ final readonly class CombatService
             ? ($raid ? t('Überfall erfolgreich.') : t('Abfangkampf erfolgreich.'))
             : ($raid ? t('Überfall ohne Entscheidung.') : t('Abfangkampf ohne Entscheidung.'));
         $body = static fn (?User $viewer): TranslatableInterface => new Lines([$headline, '', $result->report($viewer), '', ...array_filter($outcome), ...$experience]);
-        $this->notify([$hunter->getOwner(), ...array_map(static fn (Fleet $f): User => $f->getOwner(), $preys), ...$result->participants()], $subject, $body, $result);
+        $this->notify([$hunter->getOwner(), ...array_map(static fn (Fleet $f): User => $f->getOwner(), $preys), ...$result->participants()], $subject, $body, $result, $taken);
     }
 
     /**
@@ -241,8 +245,11 @@ final readonly class CombatService
      *
      * @return list<TranslatableInterface> report lines
      */
-    /** @param list<Fleet> $attackers */
-    private function plunder(array $attackers, Planet $target, BattleResult $result, \DateTimeImmutable $now): array
+    /**
+     * @param list<Fleet>                                                         $attackers
+     * @param list<array{owner: string, ownerId: ?int, resources: array<string, float>}> $takenBy what each attacker took (filled in)
+     */
+    private function plunder(array $attackers, Planet $target, BattleResult $result, \DateTimeImmutable $now, array &$takenBy = []): array
     {
         $lines = [];
 
@@ -265,6 +272,7 @@ final readonly class CombatService
             $part = $loot->multiply($space[$i] / $free)->floor();
             $where = $this->depositAtStart($fleet, $part);
             $taken = $taken->add($part);
+            $takenBy[] = self::lootEntry($fleet->getOwner(), $part);
             if (\count($attackers) > 1) {
                 $lines[] = t('Beute von {player}: {value} – {where}.', ['{player}' => $fleet->getOwner()->getUsername(), '{value}' => $this->describe($part), '{where}' => $where]);
             } else {
@@ -430,6 +438,12 @@ final readonly class CombatService
         return t('Trümmerfeld: {iron} Eisen, {titanium} Titan treiben im Orbit.', ['{iron}' => new Num($wreckage->iron), '{titanium}' => new Num($wreckage->titanium)]);
     }
 
+    /** @return array{owner: string, ownerId: ?int, resources: array<string, float>} */
+    private static function lootEntry(User $owner, Resources $resources): array
+    {
+        return ['owner' => $owner->getUsername(), 'ownerId' => $owner->getId(), 'resources' => $resources->toArray()];
+    }
+
     /** Cargo space for plunder: only trade ships carry it. */
     /**
      * Salvage ships never carry anything: loot and debris land at once in the storage of the
@@ -501,13 +515,19 @@ final readonly class CombatService
      *
      * @param list<User>                $recipients
      * @param \Closure(?User): TranslatableInterface $body the report as seen by a recipient (null: neutral)
+     * @param list<array{owner: string, ownerId: ?int, resources: array<string, float>}> $loot plunder per attacker, stored with the shared report
      */
-    private function notify(array $recipients, TranslatableInterface $subject, \Closure $body, ?BattleResult $result = null): void
+    private function notify(array $recipients, TranslatableInterface $subject, \Closure $body, ?BattleResult $result = null, array $loot = []): void
     {
         // One neutral, shareable copy of the report, linked at the end of every copy.
         $share = null;
         if (null !== $this->reports) {
-            $link = $this->reports->publish($subject, $body(null), $result?->losses() ?? [], $result?->replay());
+            $replay = $result?->replay();
+            if (null !== $replay) {
+                // Plunder per attacker (an empty list: nothing taken), for battle summaries.
+                $replay['loot'] = $loot;
+            }
+            $link = $this->reports->publish($subject, $body(null), $result?->losses() ?? [], $replay);
             $share = t("\nKampfbericht teilen ({value} Tage gültig, ohne Anmeldung lesbar): {link}", ['{value}' => BattleReport::DAYS_AVAILABLE, '{link}' => $link]);
         }
         // Every attacker and defender gets the report from his own point of view.

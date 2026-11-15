@@ -595,6 +595,26 @@ class GameFlowTest extends WebTestCase
         self::assertSame('Halden', $crawler->filter('input[name="attackerName"]')->attr('value'));
     }
 
+    public function testTheBattleSummaryAddsUpPastedReportLinks(): void
+    {
+        $this->register('Chronistin');
+        $reports = static::getContainer()->get(\App\Game\BattleReports::class);
+        $battle = new \App\Game\Battle();
+        $battle->add('attacker', $this->user('Chronistin'), ['lanze' => 20], 'attacker');
+        $battle->add('defender', new \App\Entity\User('Halden'), ['pfeil' => 10], 'hangar');
+        $replay = $battle->fight()->replay() + ['loot' => []];
+        $link = $reports->publish(\Symfony\Component\Translation\t('Kampfbericht'), \Symfony\Component\Translation\t('Kampfbericht'), [], $replay);
+        static::getContainer()->get(EntityManagerInterface::class)->flush();
+
+        $this->client->request('GET', '/kampfbilanz');
+        $this->client->submitForm('summary-run', ['links' => 'Hier: http://localhost'.$link]);
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('#summary-reports', '1 Kampf');
+        self::assertSelectorTextContains('#summary-defender', '10 × Pfeil');
+        self::assertSelectorTextContains('#summary-players', 'Chronistin');
+    }
+
     private function allianceToken(): string
     {
         $crawler = $this->client->request('GET', '/alliance');
