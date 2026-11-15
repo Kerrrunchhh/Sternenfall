@@ -139,6 +139,23 @@ final readonly class TickerService
         return $post;
     }
 
+    /** Only the author changes his post, as long as he still belongs to the ticker. */
+    public function editPost(TickerPost $post, User $author, string $body): void
+    {
+        if (!$post->isWrittenBy($author) || !$post->getTicker()->isMember($author)) {
+            throw new GameException(t('Nur eigene Beiträge kannst du bearbeiten.'));
+        }
+        $body = trim($body);
+        if ('' === $body) {
+            throw new GameException(t('Der Beitrag ist leer.'));
+        }
+        if (mb_strlen($body) > TickerPost::MAX_BODY) {
+            throw new GameException(t('Ein Beitrag darf höchstens {value} Zeichen lang sein.', ['{value}' => TickerPost::MAX_BODY]));
+        }
+        $post->edit($body, $this->now());
+        $this->em->flush();
+    }
+
     public function deletePost(TickerPost $post, User $owner): void
     {
         $this->assertOwner($post->getTicker(), $owner);

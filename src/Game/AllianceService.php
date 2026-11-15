@@ -380,6 +380,20 @@ final readonly class AllianceService
         $this->em->flush();
     }
 
+    /** Only the author changes his post, as long as he still sees the board of that alliance. */
+    public function editPost(User $actor, AlliancePost $post, string $body): void
+    {
+        $body = trim($body);
+        if (!$post->isWrittenBy($actor) || $actor->getAlliance()?->getId() !== $post->getAlliance()->getId() || !$actor->getAllianceRank()?->canSeeBoard()) {
+            throw new GameException(t('Nur eigene Beiträge kannst du bearbeiten.'));
+        }
+        if ('' === $body || mb_strlen($body) > AlliancePost::MAX_LENGTH) {
+            throw new GameException(t('Ein Beitrag muss 1 bis {value} Zeichen lang sein.', ['{value}' => AlliancePost::MAX_LENGTH]));
+        }
+        $post->edit($body, $this->now());
+        $this->em->flush();
+    }
+
     public function deletePost(User $actor, AlliancePost $post): void
     {
         $sameAlliance = $actor->getAlliance()?->getId() === $post->getAlliance()->getId();

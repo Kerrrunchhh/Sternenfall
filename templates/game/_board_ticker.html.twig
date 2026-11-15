@@ -31,9 +31,19 @@
             </form>
             <div class="board-feed ticker-feed">
                 {% for p in board_ticker_posts %}
-                    <div class="board-post">
-                        <div class="muted small board-meta"><span>{% if p.author %}{{ ui.player(p.author) }}{% else %}{{ 'gelöschter Spieler'|trans }}{% endif %} · {{ p.createdAt|date('d.m.Y H:i') }}</span></div>
+                    <div class="board-post" id="post-{{ p.id }}">
+                        <div class="muted small board-meta"><span>{% if p.author %}{{ ui.player(p.author) }}{% else %}{{ 'gelöschter Spieler'|trans }}{% endif %} · {{ p.createdAt|date('d.m.Y H:i') }}{% if p.editedAt %} · {{ 'bearbeitet {editedAt}'|trans({'{editedAt}': p.editedAt|date('d.m.Y H:i')}) }}{% endif %}</span>
+                            {# The owner of the ticker may delete any post in it. #}
+                            {% if board_ticker.isOwnedBy(player) %}
+                                <form method="post" action="{{ path('app_ticker_post_delete', {id: p.id}) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
+                                    <input type="hidden" name="back" value="{{ back }}">
+                                    <button class="btn btn-small btn-danger" type="submit" data-confirm="{{ 'Beitrag löschen?'|trans }}" data-confirm-label="{{ 'Löschen'|trans }}" title="{{ 'Beitrag löschen'|trans }}">✕</button>
+                                </form>
+                            {% endif %}
+                        </div>
                         <div class="message-body">{{ p.body|link_coordinates }}</div>
+                        {% if p.writtenBy(player) %}{{ include('game/_post_edit.html.twig', {action: path('app_ticker_post_edit', {id: p.id}), token: 'ticker', body: p.body, maxlength: constant('App\\Entity\\TickerPost::MAX_BODY'), back: back}) }}{% endif %}
                     </div>
                 {% else %}
                     <p class="muted">{{ 'Noch keine Beiträge.'|trans }}</p>

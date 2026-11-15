@@ -31,6 +31,12 @@
                     <p class="small muted" id="profile-hero-points" title="{{ 'Jeder startet mit 1000. Bomben auf Zivilisten und zerstörte Schiffe von Spielern, die keine Piraten oder Kriminellen sind, kosten Heldenpunkte (1 je 10 Tote, höchstens 100 pro Kampf) – unter 0 ist man kriminell. Kampf gegen Piraten und Kriminelle bringt welche, und ohne neue Untaten kommen 10 pro Tag zurück (bis 1000).'|trans }}">{{ '🎖 {points} Heldenpunkte'|trans({'{points}': profile.heroPoints|num}) }}</p>
                 {% endif %}
             {% endif %}
+            {% if awards is not empty %}
+                {# Bronze, silver, golden arrows for the most combat experience of a week, month, year. #}
+                <p class="player-awards" id="profile-awards">
+                    {% for a in awards %}<span class="award award-{{ a.period.value }}" title="{{ a.period.description|trans }} ({{ a.experience|num }})">{{ a.period.icon }} {{ a.period.label|trans }} {{ a.periodName|trans }}</span>{% endfor %}
+                </p>
+            {% endif %}
             {% if newbie_protected(profile) %}
                 <p class="small newbie-protected">{{ own
                     ? '🛡 Du stehst unter Noobschutz: Niemand darf dich angreifen, bei dir stationieren oder dir Rohstoffe schicken – bis du einen zweiten Planeten oder ein Flottenkontrollzentrum hast.'|trans

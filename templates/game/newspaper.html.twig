@@ -6,6 +6,19 @@
     <h1>{{ 'Galaktische Zeitung'|trans }}</h1>
     <p class="muted small">{{ 'Alle Kampfberichte des Universums – sie erscheinen hier {delay} Stunden nach der Schlacht und bleiben {days} Tage im Archiv.'|trans({'{delay}': delay, '{days}': days}) }} {{ (total == 1 ? '{count} Bericht.' : '{count} Berichte.')|trans({'{count}': total|num}) }}</p>
 
+    {% if awards is not empty %}
+        {# The latest arrows for the most combat experience of a week, month or year. #}
+        <section class="panel awards-board" id="auszeichnungen">
+            <h2>{{ '🏹 Ehrentafel'|trans }}</h2>
+            <p class="muted small">{{ 'Wer in einer Woche, einem Monat oder einem Jahr die meiste Kampferfahrung sammelt, bekommt den Bronzenen, Silbernen oder Goldenen Pfeil.'|trans }}</p>
+            <ul class="award-list">
+                {% for a in awards %}
+                    <li class="award award-{{ a.period.value }}">{{ a.period.icon }} <strong>{{ a.period.label|trans }}</strong> {{ a.periodName|trans }}: <a href="{{ path('app_player', {id: a.user.id}) }}">{{ a.user.username }}</a> <span class="muted small">{{ '{experience} Kampferfahrung'|trans({'{experience}': a.experience|num}) }}</span></li>
+                {% endfor %}
+            </ul>
+        </section>
+    {% endif %}
+
     {% for r in reports %}
         <details class="panel message newspaper-item">
             <summary>

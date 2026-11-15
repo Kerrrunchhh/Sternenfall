@@ -166,9 +166,9 @@
                 <button class="btn btn-small" type="submit" id="alliance-post">{{ 'Anheften'|trans }}</button>
             </form>
             {% for p in posts %}
-                <article class="board-post">
+                <article class="board-post" id="post-{{ p.id }}">
                     <div class="muted small">
-                        {{ p.author ? p.author.username : ('ehemaliges Mitglied'|trans) }} · {{ p.createdAt|date('d.m.Y H:i') }}
+                        {{ p.author ? p.author.username : ('ehemaliges Mitglied'|trans) }} · {{ p.createdAt|date('d.m.Y H:i') }}{% if p.editedAt %} · {{ 'bearbeitet {editedAt}'|trans({'{editedAt}': p.editedAt|date('d.m.Y H:i')}) }}{% endif %}
                         {% if rank.canManage or (p.author and p.author.id == player.id) %}
                             <form method="post" action="{{ path('app_alliance_post_delete', {id: p.id}) }}" class="inline">
                                 <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
@@ -177,6 +177,7 @@
                         {% endif %}
                     </div>
                     <div class="message-body">{{ p.body|link_coordinates }}</div>
+                    {% if p.writtenBy(player) %}{{ include('game/_post_edit.html.twig', {action: path('app_alliance_post_edit', {id: p.id}), token: 'alliance', body: p.body, maxlength: constant('App\\Entity\\AlliancePost::MAX_LENGTH')}) }}{% endif %}
                 </article>
             {% else %}
                 <p class="muted">{{ 'Noch keine Beiträge.'|trans }}</p>

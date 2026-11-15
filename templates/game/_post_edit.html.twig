@@ -1,0 +1,13 @@
+{#
+  "bearbeiten" for the author of a post on the black board or in a ticker.
+  Needs: action (form URL), token (CSRF id), body, maxlength; optional: back (where to return).
+#}
+<details class="post-edit">
+    <summary class="link-button small">{{ 'bearbeiten'|trans }}</summary>
+    <form method="post" action="{{ action }}" class="board-form">
+        <input type="hidden" name="_token" value="{{ csrf_token(token) }}">
+        {% if back is defined and back %}<input type="hidden" name="back" value="{{ back }}">{% endif %}
+        <textarea name="body" rows="3" maxlength="{{ maxlength }}" required aria-label="{{ 'Beitrag bearbeiten'|trans }}">{{ body }}</textarea>
+        <button class="btn btn-small" type="submit">{{ 'Änderung speichern'|trans }}</button>
+    </form>
+</details>

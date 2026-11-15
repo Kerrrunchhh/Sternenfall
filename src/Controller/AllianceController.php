@@ -239,6 +239,16 @@ class AllianceController extends AbstractGameController
         return $this->backTo($request, 'app_alliance');
     }
 
+    #[Route('/alliance/board/{id}/edit', name: 'app_alliance_post_edit', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    #[IsCsrfTokenValid('alliance', tokenKey: '_token')]
+    public function editPost(AlliancePost $post, Request $request): Response
+    {
+        $this->currentPlanet();
+        $this->attempt(fn () => $this->alliances->editPost($this->player(), $post, $request->request->getString('body')), t('Beitrag geändert.'));
+
+        return $this->redirectToRoute('app_alliance', ['_fragment' => 'post-'.$post->getId()]);
+    }
+
     #[Route('/alliance/board/{id}/delete', name: 'app_alliance_post_delete', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('alliance', tokenKey: '_token')]
     public function deletePost(AlliancePost $post): Response

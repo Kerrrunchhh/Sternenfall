@@ -877,3 +877,17 @@ tr.suspicious-strong td { background: rgba(255, 138, 128, .08); }
 .example-tabs { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
 .example-tabs a { padding: .4rem .65rem; font-size: .9rem; white-space: nowrap; }
 .guide-list { margin: .5rem 0 .75rem; padding-left: 1.2rem; display: grid; gap: .35rem; }
+/* Black board and tickers: authors edit their posts in place. */
+.post-edit summary { display: inline; cursor: pointer; list-style: none; color: var(--accent); font-size: .8rem; }
+.post-edit summary::-webkit-details-marker { display: none; }
+.post-edit[open] summary { color: var(--muted); }
+.post-edit form { margin-top: .35rem; }
+
+/* Bronze, silver and golden arrows (newspaper, profile). */
+.award-list { list-style: none; margin: .5rem 0 0; padding: 0; display: grid; gap: .35rem; }
+.player-awards { display: flex; flex-wrap: wrap; gap: .4rem; margin: .4rem 0; }
+.player-awards .award { font-size: .85rem; padding: .15rem .55rem; border-radius: 999px; border: 1px solid; }
+.award-week { color: #d7a17a; border-color: rgba(205, 127, 50, .5); }
+.award-month { color: #d9dde3; border-color: rgba(192, 192, 192, .5); }
+.award-year { color: #ffd54f; border-color: rgba(255, 213, 79, .6); }
+.award-list .award-week, .award-list .award-month, .award-list .award-year { color: inherit; }

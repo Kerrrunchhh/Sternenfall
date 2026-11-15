@@ -15,7 +15,7 @@ class NewspaperController extends AbstractGameController
     private const int PER_PAGE = 20;
 
     #[Route('/zeitung', name: 'app_newspaper', methods: ['GET'])]
-    public function index(Request $request, BattleReportRepository $reports): Response
+    public function index(Request $request, BattleReportRepository $reports, \App\Game\Awards $awards): Response
     {
         $planet = $this->currentPlanet();
         $now = \DateTimeImmutable::createFromInterface($this->clock->now());
@@ -33,6 +33,7 @@ class NewspaperController extends AbstractGameController
             'total' => $total,
             'delay' => self::DELAY_HOURS,
             'days' => BattleReport::DAYS_AVAILABLE,
+            'awards' => $awards->recent(),
         ]);
     }
 }

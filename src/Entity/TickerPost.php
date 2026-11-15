@@ -31,6 +31,10 @@ class TickerPost
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
+    /** When the author last changed the text (null: never). */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $editedAt = null;
+
     public function __construct(Ticker $ticker, User $author, string $body, \DateTimeImmutable $createdAt)
     {
         $this->ticker = $ticker;
@@ -62,5 +66,22 @@ class TickerPost
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    public function getEditedAt(): ?\DateTimeImmutable
+    {
+        return $this->editedAt;
+    }
+
+    /** The author changes his text (checked by the service). */
+    public function edit(string $body, \DateTimeImmutable $at): void
+    {
+        $this->body = mb_substr($body, 0, self::MAX_BODY);
+        $this->editedAt = $at;
+    }
+
+    public function isWrittenBy(User $user): bool
+    {
+        return null !== $this->author && $this->author->isSameAs($user);
     }
 }

@@ -101,6 +101,23 @@ class GameFlowTest extends WebTestCase
         self::assertResponseRedirects('/overview');
     }
 
+    public function testTheBestFighterOfTheWeekGetsTheBronzeArrowInTheNewspaperAndHisProfile(): void
+    {
+        self::mockTime('2026-11-12 12:00:00');
+        $this->register('Kriegerin');
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $em->persist(new \App\Entity\ExperienceGain($this->user('Kriegerin'), 1234, new \DateTimeImmutable('2026-11-12 12:00:00')));
+        $em->flush();
+
+        self::mockTime('2026-11-17 12:00:00'); // the week 09.–16.11. is over
+        $crawler = $this->client->request('GET', '/zeitung');
+
+        self::assertSelectorTextContains('#auszeichnungen', 'Bronzener Pfeil');
+        self::assertSelectorTextContains('#auszeichnungen', 'Kriegerin');
+        $this->client->request('GET', '/player/'.$this->user('Kriegerin')->getId());
+        self::assertSelectorTextContains('#profile-awards', 'Bronzener Pfeil KW 46/2026');
+    }
+
     public function testAPlayerShowsATickerBelowTheBlackBoardAndWritesInIt(): void
     {
         $this->register('Pilotin');
@@ -126,6 +143,14 @@ class GameFlowTest extends WebTestCase
         self::assertSelectorTextContains('#ticker', 'Hallo ihr Alten!');
         $this->client->submit($crawler->filter('#board-ticker-send')->form(['body' => 'Grüße von der Übersicht']));
         self::assertResponseRedirects('/overview#ticker');
+
+        // Own posts can be edited afterwards; they are then marked as edited.
+        $crawler = $this->client->request('GET', '/overview');
+        $this->client->submit($crawler->filter('#ticker .post-edit form')->first()->form(['body' => 'Grüße, nachträglich geändert']));
+        self::assertResponseRedirects('/overview#ticker');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('#ticker', 'Grüße, nachträglich geändert');
+        self::assertSelectorTextContains('#ticker', 'bearbeitet');
     }
 
     public function testTheOverviewLeavesTheTickerBoxOutForPlayersInNoTicker(): void

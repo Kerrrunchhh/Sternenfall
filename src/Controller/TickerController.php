@@ -129,15 +129,25 @@ class TickerController extends AbstractGameController
         };
     }
 
+    #[Route('/ticker/post/{id}/edit', name: 'app_ticker_post_edit', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    #[IsCsrfTokenValid('ticker', tokenKey: '_token')]
+    public function editPost(TickerPost $post, Request $request): Response
+    {
+        $this->currentPlanet();
+        $this->attempt(fn () => $this->service->editPost($post, $this->player(), $request->request->getString('body')), t('Beitrag geändert.'));
+
+        return $this->backToBoardTicker($request) ?? $this->redirectToRoute('app_ticker', ['id' => $post->getTicker()->getId(), '_fragment' => 'post-'.$post->getId()]);
+    }
+
     #[Route('/ticker/post/{id}/delete', name: 'app_ticker_post_delete', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('ticker', tokenKey: '_token')]
-    public function deletePost(TickerPost $post): Response
+    public function deletePost(TickerPost $post, Request $request): Response
     {
         $this->currentPlanet();
         $ticker = $post->getTicker();
         $this->attempt(fn () => $this->service->deletePost($post, $this->player()), t('Beitrag gelöscht.'));
 
-        return $this->redirectToRoute('app_ticker', ['id' => $ticker->getId()]);
+        return $this->backToBoardTicker($request) ?? $this->redirectToRoute('app_ticker', ['id' => $ticker->getId()]);
     }
 
     #[Route('/ticker/{id}/invite', name: 'app_ticker_invite', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
