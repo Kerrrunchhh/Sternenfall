@@ -110,8 +110,8 @@ class LifeFormTest extends TestCase
 
         (new PlanetUpdater($this->economy))->update($planet, $this->start->modify('+2 hours'));
 
-        // 250 inhabitants × 1 credit per hour × 2 hours
-        self::assertEqualsWithDelta(500, $player->getCredits(), 0.001);
+        // 250 inhabitants × 0.25 credits per hour × 2 hours
+        self::assertEqualsWithDelta(125, $player->getCredits(), 0.001);
     }
 
     private function player(LifeForm $form): User

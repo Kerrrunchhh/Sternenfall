@@ -16,7 +16,7 @@ use function Symfony\Component\Translation\t;
 final readonly class Economy
 {
     /** Credits each inhabitant earns per hour (before game speed). */
-    public const float CREDITS_PER_INHABITANT = 1.0;
+    public const float CREDITS_PER_INHABITANT = 0.25;
     /** Credit price of a ship: one credit per this many resource units of its base cost. */
     public const int RESOURCES_PER_CREDIT = 20;
 
