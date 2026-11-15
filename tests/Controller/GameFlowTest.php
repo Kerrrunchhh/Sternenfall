@@ -547,6 +547,26 @@ class GameFlowTest extends WebTestCase
         self::assertNull($repository->findApplicationOf($this->user('Bewerberin')), 'withdrawn');
     }
 
+    public function testThePlayerChoosesWhichSectionsTheOverviewShows(): void
+    {
+        $this->register('Ordnerin');
+        $this->client->request('GET', '/overview');
+        self::assertSelectorExists('.quick-contacts');
+
+        $crawler = $this->client->request('GET', '/konto');
+        $form = $crawler->filter('#overview-save')->form();
+        foreach ($form['sections'] as $box) {
+            'hangar' === $box->availableOptionValues()[0] ? $box->tick() : $box->untick();
+        }
+        $this->client->submit($form);
+        self::assertResponseRedirects('/konto#startseite');
+
+        $this->client->request('GET', '/overview');
+        self::assertSelectorNotExists('.quick-contacts');
+        self::assertSelectorExists('[data-fold="overview-hangar"]');
+        self::assertSelectorNotExists('[data-fold="overview-resources"]');
+    }
+
     private function allianceToken(): string
     {
         $crawler = $this->client->request('GET', '/alliance');

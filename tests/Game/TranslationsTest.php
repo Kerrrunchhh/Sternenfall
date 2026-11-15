@@ -17,7 +17,7 @@ final class TranslationsTest extends TestCase
     private const string CATALOG = __DIR__.'/../../translations/messages+intl-icu.en.yaml';
 
     /** Texts that are spelled the same in English. */
-    private const array SAME_IN_ENGLISH = ['Bunker', 'Transport', 'Radar', 'Bastion', 'Fusionator', 'Inferno', 'Leviathan', 'Monarch', 'Fusion'];
+    private const array SAME_IN_ENGLISH = ['Bunker', 'Transport', 'Radar', 'Bastion', 'Fusionator', 'Inferno', 'Leviathan', 'Monarch', 'Fusion', 'Planet', 'Hangar'];
 
     /** @return array<string, string> */
     private static function catalog(): array

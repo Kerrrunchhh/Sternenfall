@@ -51,6 +51,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $mailTopics = null;
 
+    /** @var list<string> overview boxes the player hid (App\Game\OverviewSection values); new boxes show by default */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $hiddenOverviewSections = null;
+
     /** At most this many attack warnings per minute (0 = no limit). */
     #[ORM\Column(options: ['default' => 3])]
     private int $attackMailsPerMinute = 3;
@@ -463,6 +467,23 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         // Deactivated players and players whose deletion is pending get no notifications.
         return !$this->isDeactivated() && null === $this->deleteAt && $this->isEmailVerified() && \in_array($topic, $this->getMailTopics(), true);
+    }
+
+    /** Whether the overview shows this box (string for Twig: player.showsOnOverview('hangar')). */
+    public function showsOnOverview(\App\Game\OverviewSection|string $section): bool
+    {
+        $key = $section instanceof \App\Game\OverviewSection ? $section->value : $section;
+
+        return !\in_array($key, $this->hiddenOverviewSections ?? [], true);
+    }
+
+    /** @param list<\App\Game\OverviewSection> $shown the boxes to show; all others are hidden */
+    public function showOnOverview(array $shown): void
+    {
+        $this->hiddenOverviewSections = array_values(array_map(
+            static fn (\App\Game\OverviewSection $s): string => $s->value,
+            array_filter(\App\Game\OverviewSection::cases(), static fn (\App\Game\OverviewSection $s): bool => !\in_array($s, $shown, true)),
+        ));
     }
 
     public function getAttackMailsPerMinute(): int

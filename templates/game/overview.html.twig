@@ -75,6 +75,7 @@
     {% if planet.integrating(now) %}
         <p class="panel warning">{{ '{name} wurde invadiert und geht am {integratedAt} vollständig in deinen Besitz über.'|trans({'{name}': planet.name, '{integratedAt}': planet.integratedAt|date('d.m.Y H:i')}) }}</p>
     {% endif %}
+    {% if player.showsOnOverview('contacts') %}
     <section class="panel quick-contacts" data-fold="overview-contacts">
         <h2>{{ 'Schnellkontakte'|trans }}
             {%- set online = contacts|filter(c => presence(c) and presence(c).online)|length %}
@@ -82,6 +83,8 @@
             <a class="small" href="{{ path('app_mail') }}">{{ 'Post →'|trans }}</a></h2>
         {{ include('game/_contacts.html.twig', {back: 'app_overview'}) }}
     </section>
+    {% endif %}
+    {% if player.showsOnOverview('movements') %}
     {% if incoming is not empty or own_movements is not empty %}
         <section class="panel movements" data-fold="overview-movements">
             {% set moving = incoming|length + attacks|length + own_movements|length %}
@@ -129,6 +132,8 @@
             </table>
         </section>
     {% endif %}
+    {% endif %}
+    {% if player.showsOnOverview('transport_requests') %}
     {% if transport_running is not empty or transport_open > 0 %}
         <section class="panel" data-fold="overview-transport">
             <h2>{{ 'Transportgesuche'|trans }}
@@ -151,6 +156,8 @@
             {% endif %}
         </section>
     {% endif %}
+    {% endif %}
+    {% if player.showsOnOverview('research') %}
     {% if player.researching %}
         <section class="panel" data-fold="overview-research">
             <h2>{{ 'Forschung'|trans }}
@@ -161,9 +168,13 @@
             </div>
         </section>
     {% endif %}
+    {% endif %}
+    {% if player.showsOnOverview('ticker') %}
     {{ include('game/_board_ticker.html.twig', {back: 'overview', fold: 'overview-ticker'}) }}
+    {% endif %}
 
     {# Building, shipyard and defense queues, below the ticker. #}
+    {% if player.showsOnOverview('queues') %}
     {% if building_queue is not empty or shipyard_queue is not empty or defense_queue is not empty %}
         <div class="grid">
             {% if building_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Buildings, entries: building_queue, back: 'app_overview', fold: 'overview-queue-buildings'}) }}{% endif %}
@@ -171,8 +182,10 @@
             {% if defense_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Defense, entries: defense_queue, back: 'app_overview', fold: 'overview-queue-defense'}) }}{% endif %}
         </div>
     {% endif %}
+    {% endif %}
 
     <div class="grid">
+        {% if player.showsOnOverview('resources') %}
         <section class="panel" data-fold="overview-resources">
             {% set short = enum_cases('App\\Game\\ResourceType')|filter(t => net.get(t) < 0) %}
             <h2>{{ 'Rohstoffe pro Stunde'|trans }}
@@ -203,6 +216,8 @@
                 {% endif %}
             {% endfor %}
         </section>
+        {% endif %}
+        {% if player.showsOnOverview('population') %}
         <section class="panel" data-fold="overview-population">
             <h2>{{ 'Bevölkerung'|trans }}
                 <small class="fold-summary muted">{{ '{population} von {capacity} Einwohnern'|trans({'{population}': planet.population|num, '{capacity}': population_capacity|num}) }}</small></h2>
@@ -218,6 +233,8 @@
                 <p class="hint">{{ '{value} Einwohner wären bei einem Bombardement ungeschützt.'|trans({'{value}': (planet.population - bunker_capacity)|num}) }}</p>
             {% endif %}
         </section>
+        {% endif %}
+        {% if player.showsOnOverview('planet') %}
         <section class="panel" data-fold="overview-planet">
             <h2>{{ 'Planet'|trans }}
                 <small class="fold-summary muted">{{ planet.type.icon }} {{ planet.type.label|trans }} · {{ '{points} Punkte'|trans({'{points}': planet_points(planet)|num}) }}</small></h2>
@@ -228,6 +245,8 @@
                 <tr><td>{{ 'Vor Plünderung geschützt'|trans }}</td><td class="num">{% if protected > 0 %}{{ '{protected} je Rohstoff'|trans({'{protected}': protected|num}) }}{% else %}<a href="{{ path('app_buildings') }}">{{ 'nichts – baue einen Lagerkomplex'|trans }}</a>{% endif %}</td></tr>
             </table>
         </section>
+        {% endif %}
+        {% if player.showsOnOverview('hangar') %}
         <section class="panel" data-fold="overview-hangar">
             {% set hangar_ships = hangar|reduce((sum, e) => sum + e.count, 0) %}
             <h2>{{ 'Hangar'|trans }}
@@ -242,5 +261,6 @@
                 </table>
             {% endif %}
         </section>
+        {% endif %}
     </div>
 {% endblock %}

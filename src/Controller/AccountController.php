@@ -6,6 +6,7 @@ use App\I18n\DisplayZone;
 use App\I18n\When;
 use App\I18n\Lines;
 use App\Game\GameException;
+use App\Game\OverviewSection;
 use App\Game\VacationService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -14,7 +15,7 @@ use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 
 use function Symfony\Component\Translation\t;
 
-/** Account settings: vacation, time zone, e-mail notifications, deleting the account. */
+/** Account settings: vacation, time zone, overview boxes, e-mail notifications, deleting the account. */
 class AccountController extends AbstractGameController
 {
     #[Route('/konto', name: 'app_account', methods: ['GET'])]
@@ -25,7 +26,21 @@ class AccountController extends AbstractGameController
             'vacation_max' => VacationService::MAX_DAYS,
             'topics' => \App\Game\GameMailer::TOPICS,
             'timezones' => self::timezones(new \DateTimeImmutable()),
+            'overview_sections' => OverviewSection::cases(),
         ]);
+    }
+
+    #[Route('/konto/startseite', name: 'app_account_overview', methods: ['POST'])]
+    #[IsCsrfTokenValid('account', tokenKey: '_token')]
+    public function overview(Request $request, \Doctrine\ORM\EntityManagerInterface $em): Response
+    {
+        $this->currentPlanet();
+        $chosen = $request->request->all('sections');
+        $this->player()->showOnOverview(array_values(array_filter(OverviewSection::cases(), static fn (OverviewSection $s): bool => \in_array($s->value, $chosen, true))));
+        $em->flush();
+        $this->addFlash('success', t('Einstellungen gespeichert.'));
+
+        return $this->redirectToRoute('app_account', ['_fragment' => 'startseite']);
     }
 
     #[Route('/konto/zeitzone', name: 'app_account_timezone', methods: ['POST'])]

@@ -36,6 +36,20 @@
         <p class="small muted">{{ 'Jetzt bei dir: {time}'|trans({'{time}': 'now'|date('d.m.Y H:i')}) }}</p>
     </section>
 
+    <section class="panel" id="startseite">
+        <h2>{{ '🏠 Übersicht'|trans }}</h2>
+        <p class="muted small">{{ 'Welche Bereiche die Übersicht zeigt. Die Warnung bei Angriffen auf deine Planeten erscheint immer.'|trans }}</p>
+        <form method="post" action="{{ path('app_account_overview') }}" class="mail-form">
+            <input type="hidden" name="_token" value="{{ csrf_token('account') }}">
+            <fieldset class="topic-list">
+                {% for section in overview_sections %}
+                    <label class="radio"><input type="checkbox" name="sections[]" value="{{ section.value }}" {{ player.showsOnOverview(section) ? 'checked' }}> {{ section.label|trans }}</label>
+                {% endfor %}
+            </fieldset>
+            <button class="btn btn-small" type="submit" id="overview-save">{{ 'Speichern'|trans }}</button>
+        </form>
+    </section>
+
     <section class="panel" id="email">
         <h2>{{ '✉ E-Mail-Benachrichtigungen'|trans }}</h2>
         <form method="post" action="{{ path('app_account_email') }}" class="mail-form">
