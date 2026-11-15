@@ -63,7 +63,9 @@ class GameController extends AbstractGameController
             ], array_values(array_filter($incoming, static fn (Fleet $f): bool => FleetMission::Attack === $f->getMission()))),
             'incoming_intel' => $espionage->fleetIntel($player, $incoming),
             // Transport requests: own running ones (asked for or delivering) and, for traders, how many wait for a trader.
-            'transport_running' => $transportRequests->findRunningOf($player),
+            'transport_running' => $running = $transportRequests->findRunningOf($player),
+            // The trade guild delivers without a real fleet: shown among the fleet movements with its arrival.
+            'guild_deliveries' => self::guildDeliveries($running, $player),
             'transport_open' => LifeForm::Trader === $player->getLifeForm() ? $transportRequests->countOpenForOthers($player) : 0,
             ...$this->boardTickerData($player),
             'building_queue' => $timeline->entries($planet, QueueKind::Buildings),
@@ -153,5 +155,20 @@ class GameController extends AbstractGameController
         }
 
         return $this->backTo($request, 'app_overview');
+    }
+
+    /**
+     * Trade guild deliveries on their way to the player, soonest first.
+     *
+     * @param list<\App\Entity\TransportRequest> $running
+     *
+     * @return list<\App\Entity\TransportRequest>
+     */
+    private static function guildDeliveries(array $running, \App\Entity\User $player): array
+    {
+        $deliveries = array_values(array_filter($running, static fn (\App\Entity\TransportRequest $r): bool => null !== $r->getGuildDeliveryAt() && \App\Entity\TransportRequest::ASSIGNED === $r->getStatus() && $r->getRequester()->isSameAs($player)));
+        usort($deliveries, static fn (\App\Entity\TransportRequest $a, \App\Entity\TransportRequest $b): int => $a->getGuildDeliveryAt() <=> $b->getGuildDeliveryAt());
+
+        return $deliveries;
     }
 }

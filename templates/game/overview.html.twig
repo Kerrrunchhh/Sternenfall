@@ -85,11 +85,11 @@
     </section>
     {% endif %}
     {% if player.showsOnOverview('movements') %}
-    {% if incoming is not empty or own_movements is not empty %}
+    {% if incoming is not empty or own_movements is not empty or guild_deliveries is not empty %}
         <section class="panel movements" data-fold="overview-movements">
-            {% set moving = incoming|length + attacks|length + own_movements|length %}
+            {% set moving = incoming|length + attacks|length + own_movements|length + guild_deliveries|length %}
             {% set hostile = attacks|length %}
-            {% set next = (incoming|map(f => f.arriveAt)|merge(attacks|map(a => a.fleet.arriveAt))|merge(own_movements|map(f => f.nextEventAt)))|sort|first %}
+            {% set next = (incoming|map(f => f.arriveAt)|merge(attacks|map(a => a.fleet.arriveAt))|merge(own_movements|map(f => f.nextEventAt))|merge(guild_deliveries|map(r => r.guildDeliveryAt)))|sort|first %}
             <h2>{{ 'Flottenbewegungen'|trans }}
                 <small class="fold-summary muted">{{ (moving == 1 ? '1 Flotte unterwegs' : '{count} Flotten unterwegs')|trans({'{count}': moving}) }}{% if hostile > 0 %} · <strong class="negative">{{ (hostile == 1 ? '1 Angriff' : '{count} Angriffe')|trans({'{count}': hostile}) }}</strong>{% endif %} · {{ 'nächste in'|trans }} {{ ui.countdown(next, now) }}</small></h2>
             {# One line per movement: what, where, countdown, arrival time, action. #}
@@ -129,6 +129,14 @@
                         </td>
                     </tr>
                 {% endfor %}
+                {% for r in guild_deliveries %}
+                    <tr>
+                        <td class="movement-what">{{ 'Handelsgilde: {total} Rohstoffe → {coordinates}'|trans({'{total}': r.goods.total|num|e, '{coordinates}': ui.coords(r.coordinates)})|raw }}</td>
+                        <td class="num movement-time" title="{{ 'Ankunft'|trans }}">{{ ui.countdown(r.guildDeliveryAt, now) }}</td>
+                        <td class="num small muted movement-time">{{ ui.at(r.guildDeliveryAt, now) }}</td>
+                        <td></td>
+                    </tr>
+                {% endfor %}
             </table>
         </section>
     {% endif %}
@@ -146,7 +154,7 @@
                         <div class="muted small">
                             {{ r.status == 'open' ? ('offen'|trans) : ('wird geliefert'|trans) }}
                             {% if r.requester.id == player.id %}{% if r.trader %} {{ '· Händler {trader}'|trans({'{trader}': ui.player(r.trader)})|raw }}{% endif %}{% else %} {{ '· du lieferst an {requester}'|trans({'{requester}': ui.player(r.requester)})|raw }}{% endif %}
-                            {% if r.fleet and r.fleet.moving %} · {{ 'Ankunft in'|trans }} {{ ui.countdown(r.fleet.nextEventAt, now) }}{% endif %}
+                            {% if r.fleet and r.fleet.moving %} · {{ 'Ankunft in'|trans }} {{ ui.countdown(r.fleet.nextEventAt, now) }}{% elseif r.guildDeliveryAt and r.status == 'assigned' %} · {{ 'Ankunft in'|trans }} {{ ui.countdown(r.guildDeliveryAt, now) }}{% endif %}
                         </div>
                     </div>
                 </div>

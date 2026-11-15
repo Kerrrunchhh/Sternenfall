@@ -2803,3 +2803,4 @@
 "Füllt die Schleifen aller Planeten mit diesen Einstellungen.": "Fills the queues of all planets with these settings."
 "Im Baubot ist noch nichts eingestellt.": "Nothing is set in the build bot yet."
 "Baubot": "Build bot"
+"Handelsgilde: {total} Rohstoffe → {coordinates}": "Trade guild: {total} resources → {coordinates}"
