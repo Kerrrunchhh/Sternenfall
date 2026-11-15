@@ -137,21 +137,57 @@ class EspionageTest extends TestCase
         self::assertFalse(Radar::emits($fleet), 'even with cargo on board');
     }
 
-    public function testOwnFleetsShowOnTheRadarOnlyWithinTheOwnRange(): void
+    public function testAFleetIsOnTheRadarOnlyWhileItIsWithinRange(): void
     {
+        // Like DHL02: from the central exchange in system 250 to the own planet in system 277, 27 systems in 27 hours.
         $player = new User('kommandant');
-        $player->addPlanet(new Planet($player, 'Heim', 1, 100, 5, $this->now));
-        $radar = new Radar($this->createStub(FleetRepository::class), $this->createStub(\App\Repository\PlanetRepository::class), $this->espionage);
-        $near = new Fleet($player, 'Nah', 1, 100, 5, ['pfeil' => 10]);
-        $near->depart(FleetMission::Attack, 1, 101, 3, $this->now, 600);
-        $far = new Fleet($player, 'Fern', 1, 100, 5, ['pfeil' => 10]);
-        $far->depart(FleetMission::Attack, 1, 140, 3, $this->now, 600);
+        $player->addPlanet(new Planet($player, 'Giedi Prime', 3, 277, 3, $this->now));
+        $fleet = new Fleet($player, 'DHL02', 3, 250, 1, ['large_freighter' => 1], new \App\Game\Resources(titanium: 25000));
+        $fleet->depart(FleetMission::TransportStation, 3, 277, 3, $this->now, 27 * 3600);
+        $clock = new \Symfony\Component\Clock\MockClock($this->now);
+        $radar = new Radar($this->createStub(FleetRepository::class), $this->createStub(\App\Repository\PlanetRepository::class), $this->espionage, $clock);
+        $watcher = new User('nachbar');
+        $watcher->addPlanet(new Planet($watcher, 'Nachbar', 3, 277, 9, $this->now));
 
-        self::assertFalse($radar->showsOwnInRange($player, $near), 'no radar research: nothing');
+        self::assertSame([3, 250], $radar->position($fleet));
+        self::assertFalse($radar->showsOwnInRange($player, $fleet), 'no radar research: nothing');
+        $player->setResearchLevel(ResearchType::Radar, 1);
+        $watcher->setResearchLevel(ResearchType::Radar, 1);
+        self::assertFalse($radar->showsOwnInRange($player, $fleet), 'just left system 250: far away');
+        self::assertFalse($radar->sees($watcher, $fleet), 'the same for everybody else');
 
-        $player->setResearchLevel(ResearchType::Radar, 5); // own system and one to each side
-        self::assertTrue($radar->showsOwnInRange($player, $near));
-        self::assertFalse($radar->showsOwnInRange($player, $far), 'beyond the own radar');
+        $clock->modify('+26 hours');
+        self::assertSame([3, 276], $radar->position($fleet));
+        self::assertFalse($radar->showsOwnInRange($player, $fleet), 'radar 1 covers only the own system');
+
+        $clock->modify('+31 minutes');
+        self::assertSame([3, 277], $radar->position($fleet), 'past the middle between 276 and 277');
+        self::assertTrue($radar->showsOwnInRange($player, $fleet));
+        self::assertTrue($radar->sees($watcher, $fleet));
+
+        $player->setResearchLevel(ResearchType::Radar, 5); // one system to each side
+        $clock->modify('-1 hour');
+        self::assertTrue($radar->showsOwnInRange($player, $fleet), 'radar 5 sees it already in 276');
+    }
+
+    public function testWhereAFleetIsOnItsWayBackAndAcrossGalaxies(): void
+    {
+        $fleet = new Fleet(new User('o'), 'Pendler', 1, 100, 1, ['freighter' => 1]);
+        $fleet->depart(FleetMission::Transport, 1, 110, 1, $this->now, 10 * 3600);
+
+        self::assertSame([1, 105], Radar::positionAt($fleet, $this->now->modify('+5 hours')));
+        $fleet->startReturn();
+        self::assertSame([1, 108], Radar::positionAt($fleet, $this->now->modify('+12 hours')), 'two hours on the way back from 110');
+
+        $recalled = new Fleet(new User('o'), 'Umkehr', 1, 100, 1, ['freighter' => 1]);
+        $recalled->depart(FleetMission::Transport, 1, 110, 1, $this->now, 10 * 3600);
+        $recalled->recall($this->now->modify('+4 hours')); // turns at system 104, back at 8 hours
+        self::assertSame([1, 102], Radar::positionAt($recalled, $this->now->modify('+6 hours')));
+
+        $jump = new Fleet(new User('o'), 'Sprung', 1, 100, 1, ['freighter' => 1]);
+        $jump->depart(FleetMission::Transport, 2, 7, 1, $this->now, 10 * 3600);
+        self::assertSame([1, 100], Radar::positionAt($jump, $this->now->modify('+4 hours')));
+        self::assertSame([2, 7], Radar::positionAt($jump, $this->now->modify('+6 hours')));
     }
 
     public function testAnAttackOnTheOwnPlanetIsOnTheRadarOnlyWithRadarResearchButAlwaysKnown(): void

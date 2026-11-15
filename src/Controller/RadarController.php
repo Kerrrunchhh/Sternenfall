@@ -38,7 +38,8 @@ class RadarController extends AbstractGameController
         $contacts = [];
         foreach ($visible as $fleet) {
             $attacking = FleetMission::Attack === $fleet->getMission() && !$fleet->isReturning();
-            [$g, $s] = Radar::nextStop($fleet);
+            // Seen by the planets whose radar reaches where the fleet is now.
+            [$g, $s] = $radar->position($fleet);
             $contacts[] = [
                 'fleet' => $fleet,
                 'stop' => implode(':', Radar::nextStop($fleet)),
