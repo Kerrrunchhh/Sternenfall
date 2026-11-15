@@ -14,6 +14,8 @@ use App\Repository\PlanetRepository;
 use App\Game\FleetMission;
 use App\Repository\ContactRepository;
 use App\Repository\TradePostRepository;
+use App\Repository\TransportRequestRepository;
+use App\Game\LifeForm;
 use App\Game\QueueKind;
 use App\Game\QueueTimeline;
 use Symfony\Component\HttpFoundation\Request;
@@ -28,7 +30,7 @@ use function Symfony\Component\Translation\t;
 class GameController extends AbstractGameController
 {
     #[Route('/overview', name: 'app_overview', methods: ['GET'])]
-    public function overview(QueueTimeline $timeline, FleetRepository $fleets, Radar $radar, Espionage $espionage, TradePostRepository $tradePosts, ContactService $contacts, ContactRepository $contactRequests, PlanetRepository $planets): Response
+    public function overview(QueueTimeline $timeline, FleetRepository $fleets, Radar $radar, Espionage $espionage, TradePostRepository $tradePosts, ContactService $contacts, ContactRepository $contactRequests, PlanetRepository $planets, TransportRequestRepository $transportRequests): Response
     {
         $planet = $this->currentPlanet();
         $player = $this->player();
@@ -60,6 +62,9 @@ class GameController extends AbstractGameController
                 'target' => $planets->findAt((int) $f->getTargetGalaxy(), (int) $f->getTargetSystem(), (int) $f->getTargetPosition()),
             ], array_values(array_filter($incoming, static fn (Fleet $f): bool => FleetMission::Attack === $f->getMission()))),
             'incoming_intel' => $espionage->fleetIntel($player, $incoming),
+            // Transport requests: own running ones (asked for or delivering) and, for traders, how many wait for a trader.
+            'transport_running' => $transportRequests->findRunningOf($player),
+            'transport_open' => LifeForm::Trader === $player->getLifeForm() ? $transportRequests->countOpenForOthers($player) : 0,
             ...$this->boardTickerData($player),
             'building_queue' => $timeline->entries($planet, QueueKind::Buildings),
             'shipyard_queue' => $timeline->entries($planet, QueueKind::Shipyard),

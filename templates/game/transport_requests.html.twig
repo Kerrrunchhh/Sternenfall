@@ -59,7 +59,7 @@
                     <div>
                         {{ '{planetName} {coordinates} · {total} Rohstoffe · {offer} Credits'|trans({'{planetName}': r.planetName|e, '{coordinates}': ui.coords(r.coordinates), '{total}': r.goods.total|num|e, '{offer}': r.offer|num|e})|raw }}
                         <div class="muted small">
-                            {{ {open: 'offen', assigned: ('wird geliefert'|trans), done: 'geliefert', cancelled: ('zurückgezogen'|trans)}[r.status] }}
+                            {{ {open: ('offen'|trans), assigned: ('wird geliefert'|trans), done: ('geliefert'|trans), cancelled: ('zurückgezogen'|trans)}[r.status] }}
                             {% if r.requester.id == player.id %}{% if r.trader %} {{ '· Händler {trader}'|trans({'{trader}': ui.player(r.trader)})|raw }}{% endif %}{% else %} {{ '· du lieferst an {requester}'|trans({'{requester}': ui.player(r.requester)})|raw }}{% endif %}
                             · {{ r.createdAt|date('d.m.Y H:i') }}
                         </div>

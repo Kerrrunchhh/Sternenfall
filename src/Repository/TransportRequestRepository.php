@@ -31,6 +31,28 @@ class TransportRequestRepository extends ServiceEntityRepository
             ->orderBy('r.createdAt', 'DESC')->setMaxResults(100)->getQuery()->getResult();
     }
 
+    /** @return list<TransportRequest> requests the player asked for or delivers that are still running (open or on their way) */
+    public function findRunningOf(User $user): array
+    {
+        return $this->createQueryBuilder('r')
+            ->where('(r.requester = :u OR r.trader = :u) AND r.status IN (:running)')
+            ->setParameter('u', $user)
+            ->setParameter('running', [TransportRequest::OPEN, TransportRequest::ASSIGNED])
+            ->orderBy('r.createdAt', 'ASC')->getQuery()->getResult();
+    }
+
+    /** Open requests of other players – what a trader could deliver. */
+    public function countOpenForOthers(User $user): int
+    {
+        return (int) $this->createQueryBuilder('r')
+            ->select('COUNT(r.id)')
+            ->where('r.status = :open AND r.requester <> :u')
+            ->setParameter('open', TransportRequest::OPEN)
+            ->setParameter('u', $user)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
     /** Requests of a player still running: open or on their way. */
     public function countActive(User $user): int
     {

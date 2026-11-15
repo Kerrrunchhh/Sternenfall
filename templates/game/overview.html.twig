@@ -84,9 +84,9 @@
     </section>
     {% if incoming is not empty or own_movements is not empty %}
         <section class="panel movements" data-fold="overview-movements">
-            {% set moving = incoming|length + own_movements|length %}
-            {% set hostile = incoming|filter(f => f.mission.value == 'attack')|length %}
-            {% set next = (incoming|map(f => f.arriveAt)|merge(own_movements|map(f => f.nextEventAt)))|sort|first %}
+            {% set moving = incoming|length + attacks|length + own_movements|length %}
+            {% set hostile = attacks|length %}
+            {% set next = (incoming|map(f => f.arriveAt)|merge(attacks|map(a => a.fleet.arriveAt))|merge(own_movements|map(f => f.nextEventAt)))|sort|first %}
             <h2>{{ 'Flottenbewegungen'|trans }}
                 <small class="fold-summary muted">{{ (moving == 1 ? '1 Flotte unterwegs' : '{count} Flotten unterwegs')|trans({'{count}': moving}) }}{% if hostile > 0 %} · <strong class="negative">{{ (hostile == 1 ? '1 Angriff' : '{count} Angriffe')|trans({'{count}': hostile}) }}</strong>{% endif %} · {{ 'nächste in'|trans }} {{ ui.countdown(next, now) }}</small></h2>
             {# One line per movement: what, where, countdown, arrival time, action. #}
@@ -127,6 +127,28 @@
                     </tr>
                 {% endfor %}
             </table>
+        </section>
+    {% endif %}
+    {% if transport_running is not empty or transport_open > 0 %}
+        <section class="panel" data-fold="overview-transport">
+            <h2>{{ 'Transportgesuche'|trans }}
+                <small class="fold-summary muted">{% if transport_running is not empty %}{{ (transport_running|length == 1 ? '1 läuft' : '{count} laufen')|trans({'{count}': transport_running|length}) }}{% endif %}{% if transport_running is not empty and transport_open > 0 %} · {% endif %}{% if transport_open > 0 %}<strong>{{ (transport_open == 1 ? '1 offenes Gesuch für Händler' : '{count} offene Gesuche für Händler')|trans({'{count}': transport_open}) }}</strong>{% endif %}</small>
+                <a class="small" href="{{ path('app_transport_requests') }}">{{ 'Alle Gesuche →'|trans }}</a></h2>
+            {% for r in transport_running %}
+                <div class="proposal">
+                    <div>
+                        {{ '{planetName} {coordinates} · {total} Rohstoffe · {offer} Credits'|trans({'{planetName}': r.planetName|e, '{coordinates}': ui.coords(r.coordinates), '{total}': r.goods.total|num|e, '{offer}': r.offer|num|e})|raw }}
+                        <div class="muted small">
+                            {{ r.status == 'open' ? ('offen'|trans) : ('wird geliefert'|trans) }}
+                            {% if r.requester.id == player.id %}{% if r.trader %} {{ '· Händler {trader}'|trans({'{trader}': ui.player(r.trader)})|raw }}{% endif %}{% else %} {{ '· du lieferst an {requester}'|trans({'{requester}': ui.player(r.requester)})|raw }}{% endif %}
+                            {% if r.fleet and r.fleet.moving %} · {{ 'Ankunft in'|trans }} {{ ui.countdown(r.fleet.nextEventAt, now) }}{% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+            {% if transport_open > 0 %}
+                <p class="small"><a href="{{ path('app_transport_requests') }}">{{ (transport_open == 1 ? '1 offenes Gesuch wartet auf einen Händler – beliefern →' : '{count} offene Gesuche warten auf einen Händler – beliefern →')|trans({'{count}': transport_open}) }}</a></p>
+            {% endif %}
         </section>
     {% endif %}
     {% if player.researching %}
