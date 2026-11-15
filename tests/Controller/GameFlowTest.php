@@ -496,6 +496,62 @@ class GameFlowTest extends WebTestCase
         self::assertEqualsWithDelta($before - 71, $player->getCredits(), 0.001, '705 resources cost 71 credits');
     }
 
+    public function testAnApplicationNeedsALetterGoesToOneAllianceAtATimeAndShowsItsStatus(): void
+    {
+        foreach (['Nordlicht' => ['Nordbund', 'NRD'], 'Suedwind' => ['Suedbund', 'SUD']] as $founder => [$name, $tag]) {
+            $this->register($founder);
+            $this->client->request('GET', '/alliance');
+            $this->client->submitForm('alliance-found', ['name' => $name, 'tag' => $tag]);
+            $this->client->request('GET', '/logout');
+        }
+        $repository = static::getContainer()->get(\App\Repository\AllianceRepository::class);
+        $north = $repository->findOneBy(['tag' => 'NRD'])->getId();
+        $south = $repository->findOneBy(['tag' => 'SUD'])->getId();
+        $this->register('Bewerberin');
+
+        $crawler = $this->client->request('GET', '/alliances/'.$north);
+        $this->client->submit($crawler->filter('#alliance-apply')->form(['message' => '   ']));
+        self::assertNull($repository->findApplicationOf($this->user('Bewerberin')), 'no application without a letter');
+
+        $crawler = $this->client->request('GET', '/alliances/'.$north);
+        $this->client->submit($crawler->filter('#alliance-apply')->form(['message' => 'Ich baue gern Schiffe.']));
+        self::assertResponseRedirects('/alliance#bewerbung');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('#bewerbung', 'Nordbund');
+        self::assertSelectorTextContains('#application-status', 'offen');
+        self::assertSelectorTextContains('#bewerbung', 'Ich baue gern Schiffe.');
+
+        $this->client->request('GET', '/alliances/'.$south);
+        self::assertSelectorNotExists('#alliance-apply');
+        self::assertSelectorTextContains('.apply-box', 'Nordbund');
+        $this->client->request('POST', '/alliance/'.$south.'/apply', ['_token' => $this->allianceToken(), 'message' => 'Dann eben ihr.']);
+        self::assertSame('Nordbund', $repository->findApplicationOf($this->user('Bewerberin'))->getAlliance()->getName(), 'only one application at a time');
+
+        // The founder reads the letter and declines.
+        $this->client->loginUser($this->user('Nordlicht'));
+        $crawler = $this->client->request('GET', '/alliance');
+        self::assertStringContainsString('Ich baue gern Schiffe.', $crawler->text());
+        $this->client->submit($crawler->filter('form[action$="/decline"] button')->form());
+
+        $this->client->loginUser($this->user('Bewerberin'));
+        $this->client->request('GET', '/alliance');
+        self::assertSelectorTextContains('#application-status', 'abgelehnt');
+        $crawler = $this->client->request('GET', '/alliances/'.$south);
+        $this->client->submit($crawler->filter('#alliance-apply')->form(['message' => 'Dann eben ihr.']));
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('#bewerbung', 'Suedbund');
+
+        $this->client->submitForm('application-withdraw');
+        self::assertNull($repository->findApplicationOf($this->user('Bewerberin')), 'withdrawn');
+    }
+
+    private function allianceToken(): string
+    {
+        $crawler = $this->client->request('GET', '/alliance');
+
+        return $crawler->filter('input[name="_token"]')->first()->attr('value');
+    }
+
     private function register(string $username): void
     {
         $this->client->request('GET', '/register');

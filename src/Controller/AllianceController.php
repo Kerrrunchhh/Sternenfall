@@ -40,6 +40,7 @@ class AllianceController extends AbstractGameController
             return $this->renderGame('game/alliance_none.html.twig', $planet, [
                 'alliances' => $this->repository->findAllByName(),
                 'invitations' => $this->repository->findInvitationsFor($player),
+                'application' => $this->repository->findApplicationOf($player),
             ]);
         }
 
@@ -72,19 +73,29 @@ class AllianceController extends AbstractGameController
 
     #[Route('/alliance/{id}/apply', name: 'app_alliance_apply', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('alliance', tokenKey: '_token')]
-    public function apply(Alliance $alliance): Response
+    public function apply(Alliance $alliance, Request $request): Response
     {
         $this->currentPlanet();
         // Applying to an alliance that invited the player admits them at once.
         $invited = true === $this->repository->findRequest($alliance, $this->player())?->isInvitation();
         $this->attempt(
-            fn () => $this->alliances->apply($this->player(), $alliance),
+            fn () => $this->alliances->apply($this->player(), $alliance, $request->request->getString('message')),
             $invited ? t('Du bist „{name}“ beigetreten.', ['{name}' => $alliance->getName()]) : t('Deine Bewerbung bei „{name}“ wurde abgeschickt.', ['{name}' => $alliance->getName()]),
         );
 
         return $invited && $this->player()->getAlliance()
             ? $this->redirectToRoute('app_alliance')
-            : $this->redirectToRoute('app_alliance_public', ['id' => $alliance->getId()]);
+            : $this->redirectToRoute('app_alliance', ['_fragment' => 'bewerbung']);
+    }
+
+    #[Route('/alliance/application/withdraw', name: 'app_alliance_withdraw', methods: ['POST'])]
+    #[IsCsrfTokenValid('alliance', tokenKey: '_token')]
+    public function withdrawApplication(): Response
+    {
+        $this->currentPlanet();
+        $this->attempt(fn () => $this->alliances->withdrawApplication($this->player()), t('Bewerbung entfernt.'));
+
+        return $this->redirectToRoute('app_alliance');
     }
 
     #[Route('/alliance/request/{id}/{answer}', name: 'app_alliance_answer', requirements: ['id' => Requirement::DIGITS, 'answer' => 'accept|decline'], methods: ['POST'])]
@@ -184,6 +195,7 @@ class AllianceController extends AbstractGameController
         return $this->renderGame('game/alliance_public.html.twig', $planet, [
             'alliance' => $alliance,
             'request' => $this->repository->findRequest($alliance, $this->player()),
+            'application' => $this->repository->findApplicationOf($this->player()),
         ]);
     }
 

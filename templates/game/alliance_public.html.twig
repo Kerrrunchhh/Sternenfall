@@ -22,21 +22,35 @@
             <div class="apply-box">
                 {% if player.alliance and player.alliance.id == alliance.id %}
                     <a class="btn btn-small btn-secondary" href="{{ path('app_alliance') }}">{{ 'Zur Allianzverwaltung'|trans }}</a>
-                {% elseif request and not request.invitation %}
+                {% elseif request and not request.invitation and request.open %}
                     <button class="btn btn-small" type="button" disabled>{{ 'Bewerbung abgeschickt'|trans }}</button>
-                    <span class="muted small">{{ 'am {createdAt} – die Führung entscheidet darüber.'|trans({'{createdAt}': request.createdAt|date('d.m.Y H:i')}) }}</span>
+                    <span class="muted small">{{ 'am {createdAt} – die Führung entscheidet darüber.'|trans({'{createdAt}': request.createdAt|date('d.m.Y H:i')}) }} <a href="{{ path('app_alliance', {_fragment: 'bewerbung'}) }}">{{ 'Status deiner Bewerbung'|trans }}</a></span>
                 {% elseif not alliance.admits(player) %}
                     <button class="btn btn-small" type="button" disabled>{{ 'Bewerben'|trans }}</button>
                     <span class="muted small">{{ 'In {Allianz} sind nur {label}.'|trans({'{Allianz}': alliance.type == 'Allianz' ? ('dieser Allianz'|trans) : (alliance.type == 'Orden' ? ('diesem Orden'|trans) : (alliance.type == 'Syndikat' ? ('diesem Syndikat'|trans) : ('dieser Handelsgilde'|trans))), '{label}': alliance.lifeForm.label|trans}) }}</span>
                 {% elseif player.alliance %}
                     <button class="btn btn-small" type="button" disabled>{{ 'Bewerben'|trans }}</button>
                     <span class="muted small">{{ 'Du bist bereits Mitglied von [{tag}]. Um dich hier zu bewerben, musst du dort erst austreten.'|trans({'{tag}': player.alliance.tag}) }}</span>
-                {% else %}
+                {% elseif request and request.invitation %}
                     <form method="post" action="{{ path('app_alliance_apply', {id: alliance.id}) }}">
                         <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
-                        <button class="btn" type="submit">{{ request ? ('Einladung annehmen und beitreten'|trans) : ('Bewerben'|trans) }}</button>
+                        <button class="btn" type="submit">{{ 'Einladung annehmen und beitreten'|trans }}</button>
                     </form>
-                    <span class="muted small">{{ request ? ('Du wurdest eingeladen.'|trans) : ('Die Führung von'|trans ~ ' ') ~ alliance.name ~ (' ' ~ 'entscheidet über deine Bewerbung.'|trans) }}</span>
+                    <span class="muted small">{{ 'Du wurdest eingeladen.'|trans }}</span>
+                {% elseif application and application.open %}
+                    <button class="btn btn-small" type="button" disabled>{{ 'Bewerben'|trans }}</button>
+                    <span class="muted small">{{ 'Du hast dich schon bei „{name}“ beworben. Zieh diese Bewerbung zurück, um dich woanders zu bewerben.'|trans({'{name}': application.alliance.name}) }} <a href="{{ path('app_alliance', {_fragment: 'bewerbung'}) }}">{{ 'Status deiner Bewerbung'|trans }}</a></span>
+                {% else %}
+                    {% if request and request.declinedAt %}
+                        <p class="muted small">{{ 'Deine letzte Bewerbung hier wurde am {date} abgelehnt. Du kannst dich erneut bewerben.'|trans({'{date}': request.declinedAt|date('d.m.Y H:i')}) }}</p>
+                    {% endif %}
+                    <form method="post" action="{{ path('app_alliance_apply', {id: alliance.id}) }}" class="fleet-form" id="apply-form">
+                        <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
+                        <label for="apply-message">{{ 'Bewerbungstext (Pflicht, höchstens {value} Zeichen)'|trans({'{value}': constant('App\\Entity\\AllianceRequest::MAX_MESSAGE')}) }}</label>
+                        <textarea id="apply-message" name="message" rows="5" maxlength="{{ constant('App\\Entity\\AllianceRequest::MAX_MESSAGE') }}" required placeholder="{{ 'Stell dich kurz vor: Warum möchtest du beitreten?'|trans }}"></textarea>
+                        <button class="btn" type="submit" id="alliance-apply">{{ 'Bewerbung abschicken'|trans }}</button>
+                    </form>
+                    <span class="muted small">{{ 'Die Führung von'|trans ~ ' ' ~ alliance.name ~ ' ' ~ 'entscheidet über deine Bewerbung.'|trans }} {{ 'Du kannst dich immer nur bei einer Allianz gleichzeitig bewerben.'|trans }}</span>
                 {% endif %}
             </div>
             {% if alliance.externalText %}

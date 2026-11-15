@@ -25,12 +25,22 @@ class AllianceRequest
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private User $user;
 
+    public const int MAX_MESSAGE = 1000;
+
     /** true: invited by the alliance, false: the player applied. */
     #[ORM\Column]
     private bool $invitation;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
+
+    /** The applicant's letter (applications only; required since applications need one). */
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $message = null;
+
+    /** When the alliance turned the application down; the applicant still sees it until he dismisses it. */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $declinedAt = null;
 
     public function __construct(Alliance $alliance, User $user, bool $invitation, \DateTimeImmutable $createdAt)
     {
@@ -63,5 +73,34 @@ class AllianceRequest
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    public function getMessage(): ?string
+    {
+        return $this->message;
+    }
+
+    public function getDeclinedAt(): ?\DateTimeImmutable
+    {
+        return $this->declinedAt;
+    }
+
+    /** Still waiting for an answer. */
+    public function isOpen(): bool
+    {
+        return null === $this->declinedAt;
+    }
+
+    /** A (new) application with its letter; a declined one starts over. */
+    public function applyWith(string $message, \DateTimeImmutable $at): void
+    {
+        $this->message = mb_substr($message, 0, self::MAX_MESSAGE);
+        $this->createdAt = $at;
+        $this->declinedAt = null;
+    }
+
+    public function decline(\DateTimeImmutable $at): void
+    {
+        $this->declinedAt = $at;
     }
 }

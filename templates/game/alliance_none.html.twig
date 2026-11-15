@@ -6,6 +6,30 @@
     <h1>{{ 'Allianz'|trans }}</h1>
     <p class="muted">{{ 'Du bist in keiner Allianz. Typ einer Gründung von dir ({label}): <strong>{allianceType}</strong>. Mitglieder können jede Lebensform haben.'|trans({'{label}': player.lifeForm.label|trans|e, '{allianceType}': player.lifeForm.allianceType|e})|raw }}</p>
 
+    {% if application %}
+        <section class="panel construction" id="bewerbung">
+            <div style="flex: 1">
+                <h2>{{ 'Deine Bewerbung'|trans }}</h2>
+                <p>
+                    <a href="{{ path('app_alliance_public', {id: application.alliance.id}) }}"><strong>{{ application.alliance.name }}</strong> [{{ application.alliance.tag }}]</a>
+                    · {{ 'abgeschickt am {date}'|trans({'{date}': application.createdAt|date('d.m.Y H:i')}) }}
+                </p>
+                {% if application.open %}
+                    <p id="application-status"><strong>{{ 'Status: offen'|trans }}</strong> <span class="muted small">{{ 'Die Führung hat noch nicht entschieden. Solange kannst du dich nirgends sonst bewerben.'|trans }}</span></p>
+                {% else %}
+                    <p id="application-status"><strong>{{ 'Status: abgelehnt am {date}'|trans({'{date}': application.declinedAt|date('d.m.Y H:i')}) }}</strong> <span class="muted small">{{ 'Du kannst dich jetzt bei einer anderen Allianz bewerben.'|trans }}</span></p>
+                {% endif %}
+                {% if application.message %}
+                    <div class="message-body">{{ application.message }}</div>
+                {% endif %}
+                <form method="post" action="{{ path('app_alliance_withdraw') }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
+                    <button class="btn btn-small btn-secondary" type="submit" id="application-withdraw">{{ application.open ? ('Bewerbung zurückziehen'|trans) : ('Ausblenden'|trans) }}</button>
+                </form>
+            </div>
+        </section>
+    {% endif %}
+
     {% if invitations is not empty %}
         <section class="panel construction">
             <div style="flex: 1">
@@ -47,10 +71,11 @@
                         <tr>
                             <td><a href="{{ path('app_alliance_public', {id: a.id}) }}"><strong>{{ a.name }}</strong> [{{ a.tag }}]</a><br><span class="muted small">{{ (a.members|length == 1 ? '{type} · {count} Mitglied' : '{type} · {count} Mitglieder')|trans({'{type}': a.type|trans, '{count}': a.members|length}) }}</span></td>
                             <td class="num">
-                                <form method="post" action="{{ path('app_alliance_apply', {id: a.id}) }}">
-                                    <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
-                                    <button class="btn btn-small btn-secondary" type="submit">{{ 'Bewerben'|trans }}</button>
-                                </form>
+                                {% if application and application.open %}
+                                    {% if application.alliance.id == a.id %}<span class="muted small">{{ 'beworben'|trans }}</span>{% endif %}
+                                {% else %}
+                                    <a class="btn btn-small btn-secondary" href="{{ path('app_alliance_public', {id: a.id}) }}#apply-form">{{ 'Bewerben'|trans }}</a>
+                                {% endif %}
                             </td>
                         </tr>
                     {% endfor %}

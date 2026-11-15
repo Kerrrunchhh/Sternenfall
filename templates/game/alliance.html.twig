@@ -87,7 +87,8 @@
                     <table class="table">
                         {% for r in requests %}
                             <tr>
-                                <td>{{ r.user.username }} <span class="muted small">{{ r.invitation ? 'eingeladen' : ('bewirbt sich'|trans) }}</span></td>
+                                <td>{{ r.user.username }} <span class="muted small">{{ r.invitation ? ('eingeladen'|trans) : ('bewirbt sich am {date}'|trans({'{date}': r.createdAt|date('d.m.Y H:i')})) }}</span>
+                                    {% if not r.invitation and r.message %}<div class="message-body small">{{ r.message }}</div>{% endif %}</td>
                                 <td class="num inline-action">
                                     {% if not r.invitation %}
                                         <form method="post" action="{{ path('app_alliance_answer', {id: r.id, answer: 'accept'}) }}">

@@ -31,10 +31,16 @@ class AllianceRepository extends ServiceEntityRepository
         return $this->getEntityManager()->getRepository(AllianceRequest::class)->findBy(['user' => $user, 'invitation' => true], ['createdAt' => 'DESC']);
     }
 
-    /** @return list<AllianceRequest> open invitations and applications of an alliance */
+    /** @return list<AllianceRequest> open invitations and applications of an alliance (declined ones are done) */
     public function findRequests(Alliance $alliance): array
     {
-        return $this->getEntityManager()->getRepository(AllianceRequest::class)->findBy(['alliance' => $alliance], ['createdAt' => 'DESC']);
+        return $this->getEntityManager()->getRepository(AllianceRequest::class)->findBy(['alliance' => $alliance, 'declinedAt' => null], ['createdAt' => 'DESC']);
+    }
+
+    /** The player's application (open or declined), if any – a player applies to one alliance at a time. */
+    public function findApplicationOf(User $user): ?AllianceRequest
+    {
+        return $this->getEntityManager()->getRepository(AllianceRequest::class)->findOneBy(['user' => $user, 'invitation' => false], ['createdAt' => 'DESC']);
     }
 
     public function findRequest(Alliance $alliance, User $user): ?AllianceRequest

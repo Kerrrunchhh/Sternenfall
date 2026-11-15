@@ -96,9 +96,10 @@ final readonly class AllianceService
         });
     }
 
-    public function apply(User $user, Alliance $alliance): void
+    /** Applies with a letter (required) – to one alliance at a time. An invitation of that alliance admits at once. */
+    public function apply(User $user, Alliance $alliance, string $message = ''): void
     {
-        $this->locked(function () use ($user, $alliance): void {
+        $this->locked(function () use ($user, $alliance, $message): void {
             $this->em->refresh($user);
             if (null !== $user->getAlliance()) {
                 throw new GameException(t('Du bist bereits in einer Allianz.'));
@@ -110,14 +111,28 @@ final readonly class AllianceService
 
                 return;
             }
-            if (null !== $existing) {
-                throw new GameException(t('Du hast dich dort bereits beworben.'));
+            $message = trim($message);
+            if ('' === $message || mb_strlen($message) > AllianceRequest::MAX_MESSAGE) {
+                throw new GameException(t('Schreib ein paar Worte zu deiner Bewerbung (höchstens {value} Zeichen).', ['{value}' => AllianceRequest::MAX_MESSAGE]));
+            }
+            $application = $this->alliances->findApplicationOf($user);
+            if (null !== $application && $application->isOpen()) {
+                throw new GameException($application->getAlliance()->getId() === $alliance->getId()
+                    ? t('Du hast dich dort bereits beworben.')
+                    : t('Du hast dich schon bei „{name}“ beworben. Zieh diese Bewerbung zurück, um dich woanders zu bewerben.', ['{name}' => $application->getAlliance()->getName()]));
+            }
+            // A declined application (here or elsewhere) makes room for the new one.
+            if (null !== $application) {
+                $this->em->remove($application);
+                $this->em->flush();
             }
 
-            $this->em->persist(new AllianceRequest($alliance, $user, false, $this->now()));
+            $request = new AllianceRequest($alliance, $user, false, $this->now());
+            $request->applyWith($message, $this->now());
+            $this->em->persist($request);
             foreach ($alliance->getMembers() as $member) {
                 if ($member->getAllianceRank()?->canManage()) {
-                    $this->inbox->send($member, t('Neue Bewerbung von {player}', ['{player}' => $user->getUsername()]), t('{player} möchte „{name}“ beitreten. Du kannst die Bewerbung auf der Allianzseite annehmen oder ablehnen.', ['{player}' => $user->getUsername(), '{name}' => $alliance->getName()]));
+                    $this->inbox->send($member, t('Neue Bewerbung von {player}', ['{player}' => $user->getUsername()]), new Lines([t('{player} möchte „{name}“ beitreten. Du kannst die Bewerbung auf der Allianzseite annehmen oder ablehnen.', ['{player}' => $user->getUsername(), '{name}' => $alliance->getName()]), '', $message]));
                 }
             }
             $this->em->flush();
@@ -137,7 +152,23 @@ final readonly class AllianceService
     {
         $this->locked(function () use ($actor, $request): void {
             $this->assertMayAnswer($actor, $request);
-            $this->em->remove($request);
+            if ($request->isInvitation()) {
+                $this->em->remove($request);
+            } else {
+                // The applicant sees the answer under "Allianz" and gets a message.
+                $request->decline($this->now());
+                $this->inbox->send($request->getUser(), t('Bewerbung abgelehnt: {name}', ['{name}' => $request->getAlliance()->getName()]), t('„{name}“ [{tag}] hat deine Bewerbung abgelehnt. Du kannst dich jetzt bei einer anderen Allianz bewerben.', ['{name}' => $request->getAlliance()->getName(), '{tag}' => $request->getAlliance()->getTag()]));
+            }
+            $this->em->flush();
+        });
+    }
+
+    /** The applicant withdraws his open application or dismisses a declined one. */
+    public function withdrawApplication(User $user): void
+    {
+        $this->locked(function () use ($user): void {
+            $application = $this->alliances->findApplicationOf($user) ?? throw new GameException(t('Du hast keine Bewerbung laufen.'));
+            $this->em->remove($application);
             $this->em->flush();
         });
     }
@@ -540,7 +571,7 @@ final readonly class AllianceService
         $allowed = $request->isInvitation()
             ? $request->getUser()->isSameAs($actor)
             : $actor->getAlliance()?->getId() === $request->getAlliance()->getId() && $actor->getAllianceRank()?->canManage();
-        if (!$allowed) {
+        if (!$allowed || !$request->isOpen()) {
             throw new GameException(t('Darauf kannst du nicht antworten.'));
         }
     }
