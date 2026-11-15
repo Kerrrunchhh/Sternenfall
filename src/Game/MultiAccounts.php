@@ -70,7 +70,7 @@ final readonly class MultiAccounts
         foreach ($rows as $row) {
             $a = $this->users->find((int) $row['a']);
             $b = $this->users->find((int) $row['b']);
-            if (null === $a || null === $b) {
+            if (null === $a || null === $b || self::isGone($a) || self::isGone($b)) {
                 continue;
             }
             $gifts = (float) $this->em->createQuery('SELECT COALESCE(SUM(g.amount), 0) FROM '.ResourceGift::class.' g WHERE ((g.sender = :a AND g.receiver = :b) OR (g.sender = :b AND g.receiver = :a)) AND g.createdAt >= :since')
@@ -94,12 +94,18 @@ final readonly class MultiAccounts
         foreach ($rows as $row) {
             $s = $this->users->find((int) $row['s']);
             $r = $this->users->find((int) $row['r']);
-            if (null !== $s && null !== $r) {
+            if (null !== $s && null !== $r && !self::isGone($s) && !self::isGone($r)) {
                 $out[] = ['sender' => $s, 'receiver' => $r, 'amount' => (float) $row['total'], 'count' => (int) $row['n']];
             }
         }
 
         return $out;
+    }
+
+    /** Deactivated accounts and those whose deletion is pending are left out: they no longer play. */
+    public static function isGone(User $user): bool
+    {
+        return $user->isDeactivated() || null !== $user->getDeleteAt();
     }
 
     private function now(): \DateTimeImmutable
