@@ -1,0 +1,18 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}{{ 'Multi-Verdacht – Admin – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
+
+{% block content %}
+    <p><a href="{{ path('app_admin_multis') }}">← {{ '🛡 Multis'|trans }}</a></p>
+    <h1>{{ '👥 {player} anschreiben'|trans({'{player}': target.username}) }}</h1>
+    <p class="muted">{{ 'Gemeinsamkeit mit {other}. Der Spieler sieht die Nachricht als „Support-Team“ – ohne deinen Namen und ohne den anderen Account. Er antwortet unter Hilfe & Meldungen; der Verlauf steht danach bei den Meldungen.'|trans({'{other}': other.username}) }}</p>
+    <form method="post" action="{{ path('app_admin_multi_send', {player: target.id, other: other.id}) }}" class="mail-form panel">
+        <input type="hidden" name="_token" value="{{ csrf_token('admin') }}">
+        <label>{{ 'Betreff'|trans }} <input type="text" name="subject" value="{{ subject }}" maxlength="{{ constant('App\\Entity\\Ticket::MAX_SUBJECT') }}" required></label>
+        <label>{{ 'Nachricht (in der Sprache des Spielers: {locale})'|trans({'{locale}': target.locale}) }}
+            <textarea name="body" rows="14" required maxlength="{{ constant('App\\Entity\\Ticket::MAX_BODY') }}">{{ body }}</textarea>
+        </label>
+        <button class="btn" type="submit" id="multi-send">{{ '✉ Als Support-Team senden'|trans }}</button>
+    </form>
+{% endblock %}

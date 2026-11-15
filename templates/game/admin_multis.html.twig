@@ -13,7 +13,7 @@
             <p class="muted">{{ 'Keine Auffälligkeiten.'|trans }}</p>
         {% else %}
             <table class="table">
-                <thead><tr><th>{{ 'Account A'|trans }}</th><th>{{ 'Account B'|trans }}</th><th class="num">{{ 'Gleiches Gerät'|trans }}</th><th class="num">{{ 'Gemeinsame IPs'|trans }}</th><th class="num">{{ 'Lieferungen (30 Tage)'|trans }}</th><th class="multi-last">{{ 'Zuletzt'|trans }}</th></tr></thead>
+                <thead><tr><th>{{ 'Account A'|trans }}</th><th>{{ 'Account B'|trans }}</th><th class="num">{{ 'Gleiches Gerät'|trans }}</th><th class="num">{{ 'Gemeinsame IPs'|trans }}</th><th class="num">{{ 'Lieferungen (30 Tage)'|trans }}</th><th class="multi-last">{{ 'Zuletzt'|trans }}</th><th>{{ 'Anschreiben'|trans }}</th></tr></thead>
                 <tbody>
                 {% for pair in pairs %}
                     <tr class="{{ pair.devices > 0 ? 'suspicious-strong' : '' }}">
@@ -23,6 +23,18 @@
                         <td class="num">{{ pair.ips }}</td>
                         <td class="num">{{ pair.gifts > 0 ? pair.gifts|num : '–' }}</td>
                         <td class="small multi-last">{{ pair.last|date('d.m.Y H:i') }}</td>
+                        <td class="small">
+                            {% for who, other in {a: pair.b, b: pair.a} %}
+                                {% set p = pair[who] %}
+                                {% set ticket = asked[p.id] ?? null %}
+                                {% if ticket %}
+                                    <a href="{{ path('app_admin_ticket', {id: ticket.id}) }}" title="{{ 'Schon angeschrieben am {date} – Verlauf öffnen'|trans({'{date}': ticket.createdAt|date('d.m.Y')}) }}">👥 {{ p.username }}: {{ ticket.status.label|trans }}</a>
+                                {% else %}
+                                    <a href="{{ path('app_admin_multi_ask', {player: p.id, other: other.id}) }}" id="multi-ask-{{ p.id }}-{{ other.id }}">✉ {{ p.username }}</a>
+                                {% endif %}
+                                {% if not loop.last %}<br>{% endif %}
+                            {% endfor %}
+                        </td>
                     </tr>
                 {% endfor %}
                 </tbody>

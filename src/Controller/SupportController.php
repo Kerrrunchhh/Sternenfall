@@ -29,7 +29,7 @@ class SupportController extends AbstractGameController
     {
         return $this->renderGame('game/support.html.twig', $this->currentPlanet(), [
             'tickets' => $this->tickets->findByAuthor($this->player()),
-            'kinds' => TicketKind::cases(),
+            'kinds' => TicketKind::forPlayers(),
             'kind' => TicketKind::tryFrom($request->query->getString('kind')) ?? TicketKind::Suggestion,
             'reported' => $request->query->getString('report'),
         ]);

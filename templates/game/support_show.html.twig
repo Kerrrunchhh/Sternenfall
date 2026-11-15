@@ -8,8 +8,15 @@
     <article class="panel">
         <h1>{{ ticket.kind.icon }} {{ ticket.subject }}</h1>
         <p class="muted small">
-            {{ '{label} · von'|trans({'{label}': ticket.kind.label|trans}) }} {% if ticket.author %}{{ ui.player(ticket.author) }}{% else %}{{ 'gelöschter Spieler'|trans }}{% endif %}
-            {% if ticket.reported %} {{ '· gemeldet: {reported}'|trans({'{reported}': ui.player(ticket.reported)})|raw }}{% endif %}
+            {% if ticket.kind.fromTeam and not admin_view %}
+                {{ '{label} · vom Support-Team'|trans({'{label}': ticket.kind.label|trans}) }}
+            {% elseif ticket.kind.fromTeam %}
+                {{ '{label} · an'|trans({'{label}': ticket.kind.label|trans}) }} {% if ticket.author %}{{ ui.player(ticket.author) }}{% else %}{{ 'gelöschter Spieler'|trans }}{% endif %}
+                {% if ticket.reported %} {{ '· Gemeinsamkeit mit {reported}'|trans({'{reported}': ui.player(ticket.reported)})|raw }}{% endif %}
+            {% else %}
+                {{ '{label} · von'|trans({'{label}': ticket.kind.label|trans}) }} {% if ticket.author %}{{ ui.player(ticket.author) }}{% else %}{{ 'gelöschter Spieler'|trans }}{% endif %}
+                {% if ticket.reported %} {{ '· gemeldet: {reported}'|trans({'{reported}': ui.player(ticket.reported)})|raw }}{% endif %}
+            {% endif %}
             · {{ ticket.createdAt|date('d.m.Y H:i') }} · <span class="ticket-status ticket-{{ ticket.status.value }}">{{ ticket.status.label|trans }}</span>
         </p>
         <pre class="message-body">{{ ticket.body|link_coordinates }}</pre>
@@ -17,7 +24,9 @@
 
     {% for c in ticket.comments %}
         <div class="panel ticket-comment {{ c.fromAdmin ? 'from-admin' }}">
-            <div class="muted small">{{ c.fromAdmin ? '🛡 Admin' : ('Spieler'|trans) }}{% if c.author %} {{ c.author.username }}{% endif %} · {{ c.createdAt|date('d.m.Y H:i') }}</div>
+            {# Towards the player, the team of a multi check stays anonymous. #}
+            {% set anonymous = c.fromAdmin and ticket.kind.fromTeam and not admin_view %}
+            <div class="muted small">{{ anonymous ? ('🛡 Support-Team'|trans) : (c.fromAdmin ? '🛡 Admin' : ('Spieler'|trans)) }}{% if c.author and not anonymous %} {{ c.author.username }}{% endif %} · {{ c.createdAt|date('d.m.Y H:i') }}</div>
             <pre class="message-body">{{ c.body|link_coordinates }}</pre>
         </div>
     {% endfor %}
@@ -38,7 +47,7 @@
                 <button class="btn" type="submit" id="admin-answer">{{ 'Senden / Status setzen'|trans }}</button>
             </form>
         </section>
-        {% if ticket.kind.value != 'report' %}
+        {% if ticket.kind.value not in ['report', 'multi_check'] %}
             <section class="panel">
                 <h2>{{ 'An den Entwickler weiterleiten'|trans }}</h2>
                 <form method="post" action="{{ path('app_admin_ticket_forward', {id: ticket.id}) }}" class="mail-form">
@@ -48,7 +57,7 @@
                     <p class="muted small">{{ 'Ist DEVELOPER_EMAIL eingetragen, bekommt der Entwickler die Meldung per E-Mail.'|trans }}</p>
                 </form>
             </section>
-        {% elseif ticket.reported %}
+        {% elseif ticket.kind.value == 'report' and ticket.reported %}
             <section class="panel">
                 <h2>{{ 'Strafe für {username}'|trans({'{username}': ticket.reported.username}) }}</h2>
                 <form method="post" action="{{ path('app_admin_ticket_penalty', {id: ticket.id}) }}" class="inline-action penalty-form">

@@ -42,6 +42,9 @@ final readonly class SupportService
         if ('' === $subject || '' === $body) {
             throw new GameException(t('Bitte gib einen Betreff und eine Beschreibung an.'));
         }
+        if (!\in_array($kind, TicketKind::forPlayers(), true)) {
+            throw new GameException(t('Diese Art von Meldung kannst du nicht schicken.'));
+        }
         $reported = null;
         if (TicketKind::Report === $kind) {
             $reported = $this->users->findOneBy(['username' => trim($reportedName)]);
@@ -57,6 +60,33 @@ final readonly class SupportService
         foreach ($this->admins() as $admin) {
             $this->inbox->send($admin, t('Neue Meldung: {icon} {kind}', ['{icon}' => $kind->icon(), '{kind}' => t($kind->label())]), t('{player} hat eine Meldung geschickt: „{subject}“. Bearbeiten im Adminbereich unter Meldungen.', ['{player}' => $author->getUsername(), '{subject}' => $ticket->getSubject()]));
         }
+        $this->em->flush();
+
+        return $ticket;
+    }
+
+    /**
+     * A moderator asks a player about a possible multi account. The player sees the message from
+     * "the support team" (no name, not the other account) and can explain himself in the dialog.
+     *
+     * @param User|null $other the account it shares an IP or device with (kept for the team only)
+     */
+    public function askAboutMulti(User $player, ?User $other, string $subject, string $body): Ticket
+    {
+        $subject = mb_substr(trim($subject), 0, Ticket::MAX_SUBJECT);
+        $body = trim($body);
+        if ('' === $subject || '' === $body) {
+            throw new GameException(t('Bitte gib einen Betreff und eine Beschreibung an.'));
+        }
+        $ticket = new Ticket(TicketKind::MultiCheck, $player, $other, $subject, $body, $this->now());
+        // Waiting for the player's answer.
+        $ticket->setStatus(TicketStatus::Question, $this->now());
+        $this->em->persist($ticket);
+        $this->inbox->send($player, t('Nachricht vom Support-Team: {subject}', ['{subject}' => $subject]), new Lines([
+            t('Das Support-Team hat eine Frage zu deinem Account. Bitte antworte unter Hilfe & Meldungen.'),
+            '',
+            $body,
+        ]));
         $this->em->flush();
 
         return $ticket;
@@ -148,6 +178,15 @@ final readonly class SupportService
     private function notifyAuthor(Ticket $ticket, string $body): void
     {
         if (null === $author = $ticket->getAuthor()) {
+            return;
+        }
+        if ($ticket->getKind()->isFromTeam()) {
+            // Anonymous: the support team writes, nobody by name.
+            $this->inbox->send($author, t('Nachricht vom Support-Team: {subject}', ['{subject}' => $ticket->getSubject()]), new Lines([
+                '' === trim($body) ? t('Der Status ist jetzt „{label}“.', ['{label}' => t($ticket->getStatus()->label())]) : trim($body),
+                t("\nDu findest den Verlauf unter Hilfe & Meldungen."),
+            ]));
+
             return;
         }
         $this->inbox->send($author, t('{label} „{subject}“: {label2}', ['{label}' => t($ticket->getKind()->label()), '{subject}' => $ticket->getSubject(), '{label2}' => t($ticket->getStatus()->label())]), new Lines([t('Deine Meldung hat jetzt den Status „{label}“.', ['{label}' => t($ticket->getStatus()->label())]), '' === trim($body) ? null : "\n".trim($body), t("\nDu findest sie unter Hilfe & Meldungen.")]));
