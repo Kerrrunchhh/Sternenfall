@@ -66,13 +66,25 @@
             {% if alliances is empty %}
                 <p class="muted">{{ 'Es gibt noch keine.'|trans }}</p>
             {% else %}
+                {% set pending = application and application.open ? application : null %}
+                {% if pending %}
+                    <p class="muted small" id="application-lock">{{ 'Du hast dich am {date} bei „{name}“ beworben. Solange die Bewerbung läuft, kannst du dich nirgends sonst bewerben.'|trans({'{date}': pending.createdAt|date('d.m.Y H:i'), '{name}': pending.alliance.name}) }} <a href="#bewerbung">{{ 'Status deiner Bewerbung'|trans }}</a></p>
+                {% endif %}
                 <table class="table">
                     {% for a in alliances %}
+                        {% set applied = pending and pending.alliance.id == a.id %}
                         <tr>
-                            <td><a href="{{ path('app_alliance_public', {id: a.id}) }}"><strong>{{ a.name }}</strong> [{{ a.tag }}]</a><br><span class="muted small">{{ (a.members|length == 1 ? '{type} · {count} Mitglied' : '{type} · {count} Mitglieder')|trans({'{type}': a.type|trans, '{count}': a.members|length}) }}</span></td>
+                            <td><a href="{{ path('app_alliance_public', {id: a.id}) }}"><strong>{{ a.name }}</strong> [{{ a.tag }}]</a><br><span class="muted small">{{ (a.members|length == 1 ? '{type} · {count} Mitglied' : '{type} · {count} Mitglieder')|trans({'{type}': a.type|trans, '{count}': a.members|length}) }}</span>
+                                {% if applied %}
+                                    <br><span class="small"><strong>{{ 'Deine Bewerbung vom {date}:'|trans({'{date}': pending.createdAt|date('d.m.Y H:i')}) }}</strong></span>
+                                    <div class="message-body small">{{ pending.message }}</div>
+                                {% endif %}
+                            </td>
                             <td class="num">
-                                {% if application and application.open %}
-                                    {% if application.alliance.id == a.id %}<span class="muted small">{{ 'beworben'|trans }}</span>{% endif %}
+                                {% if applied %}
+                                    <button class="btn btn-small" type="button" disabled>{{ 'Beworben'|trans }}</button>
+                                {% elseif pending %}
+                                    <button class="btn btn-small btn-secondary" type="button" disabled title="{{ 'Du hast dich schon bei „{name}“ beworben. Zieh diese Bewerbung zurück, um dich woanders zu bewerben.'|trans({'{name}': pending.alliance.name}) }}">{{ 'Bewerben'|trans }}</button>
                                 {% else %}
                                     <a class="btn btn-small btn-secondary" href="{{ path('app_alliance_public', {id: a.id}) }}#apply-form">{{ 'Bewerben'|trans }}</a>
                                 {% endif %}

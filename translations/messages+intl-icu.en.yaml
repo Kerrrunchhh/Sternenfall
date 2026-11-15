@@ -2692,3 +2692,6 @@
 "Stell dich kurz vor: Warum möchtest du beitreten?": "Introduce yourself briefly: why do you want to join?"
 "Bewerbung abschicken": "Send application"
 "Du kannst dich immer nur bei einer Allianz gleichzeitig bewerben.": "You can only apply to one alliance at a time."
+"Beworben": "Applied"
+"Deine Bewerbung vom {date}:": "Your application of {date}:"
+"Du hast dich am {date} bei „{name}“ beworben. Solange die Bewerbung läuft, kannst du dich nirgends sonst bewerben.": "You applied to “{name}” on {date}. While the application is pending you cannot apply anywhere else."

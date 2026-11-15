@@ -520,6 +520,8 @@ class GameFlowTest extends WebTestCase
         self::assertSelectorTextContains('#bewerbung', 'Nordbund');
         self::assertSelectorTextContains('#application-status', 'offen');
         self::assertSelectorTextContains('#bewerbung', 'Ich baue gern Schiffe.');
+        self::assertSelectorTextContains('#application-lock', 'Nordbund');
+        self::assertSelectorNotExists('a.btn[href$="#apply-form"]', 'every apply button is disabled');
 
         $this->client->request('GET', '/alliances/'.$south);
         self::assertSelectorNotExists('#alliance-apply');
