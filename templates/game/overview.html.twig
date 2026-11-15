@@ -122,20 +122,20 @@
             </table>
         </section>
     {% endif %}
+    {% if player.researching %}
+        <div class="panel construction">
+            <div>{{ '<strong>Forschung:</strong> {label} (Stufe {researchTargetLevel})'|trans({'{label}': player.researchType.label|trans|e, '{researchTargetLevel}': player.researchTargetLevel|e})|raw }}</div>
+            <div>{{ ui.countdown(player.researchFinishesAt, now) }}</div>
+        </div>
+    {% endif %}
     {{ include('game/_board_ticker.html.twig', {back: 'overview'}) }}
 
-    {# Building, shipyard and defense queues plus research, below the fleet movements. #}
+    {# Building, shipyard and defense queues, below the ticker. #}
     {% if building_queue is not empty or shipyard_queue is not empty or defense_queue is not empty %}
         <div class="grid">
             {% if building_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Buildings, entries: building_queue, back: 'app_overview'}) }}{% endif %}
             {% if shipyard_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Shipyard, entries: shipyard_queue, back: 'app_overview'}) }}{% endif %}
             {% if defense_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Defense, entries: defense_queue, back: 'app_overview'}) }}{% endif %}
-        </div>
-    {% endif %}
-    {% if player.researching %}
-        <div class="panel construction">
-            <div>{{ '<strong>Forschung:</strong> {label} (Stufe {researchTargetLevel})'|trans({'{label}': player.researchType.label|trans|e, '{researchTargetLevel}': player.researchTargetLevel|e})|raw }}</div>
-            <div>{{ ui.countdown(player.researchFinishesAt, now) }}</div>
         </div>
     {% endif %}
 
