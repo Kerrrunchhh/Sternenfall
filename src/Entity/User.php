@@ -55,6 +55,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $hiddenOverviewSections = null;
 
+    /** @var array<string, mixed>|null what the build bot queues on every planet (App\Game\BuildBot\BuildBotSettings) */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $buildBot = null;
+
     /** At most this many attack warnings per minute (0 = no limit). */
     #[ORM\Column(options: ['default' => 3])]
     private int $attackMailsPerMinute = 3;
@@ -484,6 +488,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             static fn (\App\Game\OverviewSection $s): string => $s->value,
             array_filter(\App\Game\OverviewSection::cases(), static fn (\App\Game\OverviewSection $s): bool => !\in_array($s, $shown, true)),
         ));
+    }
+
+    public function getBuildBot(): \App\Game\BuildBot\BuildBotSettings
+    {
+        return \App\Game\BuildBot\BuildBotSettings::fromArray($this->buildBot);
+    }
+
+    public function setBuildBot(\App\Game\BuildBot\BuildBotSettings $settings): void
+    {
+        $this->buildBot = $settings->toArray();
     }
 
     public function getAttackMailsPerMinute(): int

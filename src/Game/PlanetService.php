@@ -49,29 +49,66 @@ final readonly class PlanetService
     /** Adds a building upgrade to the planet's building queue; it is paid immediately. */
     public function build(Planet $planet, BuildingType $type): void
     {
-        $this->locked($planet, function (Planet $planet, \DateTimeImmutable $now) use ($type): void {
-            $queue = $planet->getBuildingQueue();
-            if (\count($queue) >= QueueKind::Buildings->maxLength()) {
-                throw new GameException(t('Die Bauschleife ist voll: ein Gebäude im Bau und eines in Wartestellung.'));
-            }
+        $this->locked($planet, fn (Planet $planet, \DateTimeImmutable $now) => $this->placeBuilding($planet, $type, $now));
+    }
 
-            // Requirements may be fulfilled by upgrades that are already queued.
-            $missing = $this->economy->missingRequirements($type->requirements(), $planet, planned: true);
-            if ([] !== $missing) {
-                throw new GameException(t('Voraussetzungen fehlen: {missing}.', ['{missing}' => new Lines($missing, ', ')]));
-            }
+    private function placeBuilding(Planet $planet, BuildingType $type, \DateTimeImmutable $now): void
+    {
+        $queue = $planet->getBuildingQueue();
+        if (\count($queue) >= QueueKind::Buildings->maxLength()) {
+            throw new GameException(t('Die Bauschleife ist voll: ein Gebäude im Bau und eines in Wartestellung.'));
+        }
 
-            $targetLevel = $planet->getPlannedBuildingLevel($type) + 1;
-            // The second upgrade in the queue costs a surcharge; it stays with the order.
-            $cost = $this->economy->queuedBuildCost($type, $targetLevel, \count($queue));
-            $this->pay($planet, $cost);
+        // Requirements may be fulfilled by upgrades that are already queued.
+        $missing = $this->economy->missingRequirements($type->requirements(), $planet, planned: true);
+        if ([] !== $missing) {
+            throw new GameException(t('Voraussetzungen fehlen: {missing}.', ['{missing}' => new Lines($missing, ', ')]));
+        }
 
-            $order = new BuildingOrder($planet, $type, $targetLevel, $cost, $this->nextPosition($queue));
-            $planet->addBuildingOrder($order);
-            if ([] === $queue) {
-                $this->updater->startBuilding($planet, $order, $now);
+        $targetLevel = $planet->getPlannedBuildingLevel($type) + 1;
+        // The second upgrade in the queue costs a surcharge; it stays with the order.
+        $cost = $this->economy->queuedBuildCost($type, $targetLevel, \count($queue));
+        $this->pay($planet, $cost);
+
+        $order = new BuildingOrder($planet, $type, $targetLevel, $cost, $this->nextPosition($queue));
+        $planet->addBuildingOrder($order);
+        if ([] === $queue) {
+            $this->updater->startBuilding($planet, $order, $now);
+        }
+    }
+
+    /**
+     * Build bot: fills the building queue with the player's goals (BuildBotSettings), in order,
+     * then the default building. Stops when the queue is full or the next one can't be paid.
+     *
+     * @return list<array{building: BuildingType, level: int}> what was queued
+     */
+    public function fillBuildingQueue(Planet $planet): array
+    {
+        $placed = [];
+        $this->locked($planet, function (Planet $planet, \DateTimeImmutable $now) use (&$placed): void {
+            $settings = $planet->getOwner()->getBuildBot();
+            while (\count($planet->getBuildingQueue()) < QueueKind::Buildings->maxLength()) {
+                $next = $settings->nextBuilding(
+                    static fn (BuildingType $b): int => $planet->getPlannedBuildingLevel($b),
+                    fn (BuildingType $b): bool => [] === $this->economy->missingRequirements($b->requirements(), $planet, planned: true),
+                );
+                if (null === $next) {
+                    break;
+                }
+                try {
+                    $this->placeBuilding($planet, $next, $now);
+                } catch (GameException $e) {
+                    if ([] === $placed) {
+                        throw $e;
+                    }
+                    break;
+                }
+                $placed[] = ['building' => $next, 'level' => $planet->getPlannedBuildingLevel($next)];
             }
         });
+
+        return $placed;
     }
 
     public function research(Planet $planet, ResearchType $type): void
@@ -195,65 +232,110 @@ final readonly class PlanetService
     public function orderShips(Planet $planet, ShipType $type, int $quantity, int $percent = 100): void
     {
         Economy::assertBuildPercent($percent);
-        $this->locked($planet, function (Planet $planet, \DateTimeImmutable $now) use ($type, $quantity, $percent): void {
-            $limit = self::maxOrderQuantity($type);
-            if ($quantity < 1 || $quantity > $limit) {
-                throw new GameException(t('Bitte gib eine Anzahl zwischen 1 und {limit} an.', ['{limit}' => new Num($limit)]));
-            }
+        $this->locked($planet, fn (Planet $planet, \DateTimeImmutable $now) => $this->placeShipOrder($planet, $type, $quantity, $percent, $now));
+    }
 
-            $missing = $this->economy->missingShipRequirements($type, $planet);
-            if ([] !== $missing) {
-                throw new GameException(t('Voraussetzungen fehlen: {missing}.', ['{missing}' => new Lines($missing, ', ')]));
+    /**
+     * Build bot: puts as many units of the chosen type into the shipyard or defense queue as
+     * resources, credits and crew allow – optionally after clearing that queue (all refunded).
+     *
+     * @return int how many were ordered (0: not even one affordable)
+     */
+    public function fillShipQueue(Planet $planet, QueueKind $kind): int
+    {
+        $ordered = 0;
+        $this->locked($planet, function (Planet $planet, \DateTimeImmutable $now) use ($kind, &$ordered): void {
+            ['ship' => $type, 'percent' => $percent, 'clear' => $clear] = $planet->getOwner()->getBuildBot()->queue($kind);
+            if (null === $type) {
+                throw new GameException(t('Für diese Bauschleife ist im Baubot nichts eingestellt.'));
             }
-
-            $crew = $type->spec()->crew * $quantity;
-            if ($crew > floor($planet->getPopulation())) {
-                throw new GameException(t('Nicht genügend Bevölkerung für die Besatzung ({crew} benötigt).', ['{crew}' => $crew]));
+            if ($clear) {
+                foreach ($planet->getQueue($kind) as $order) {
+                    $this->refund($planet, $order);
+                }
             }
-
-            $player = $planet->getOwner();
-            $unitCost = $this->economy->shipOrderCost($type, $player, $percent);
-            $unitCredits = $this->economy->shipOrderCredits($type, $player, $percent);
-            if ($unitCredits * $quantity > $player->getCredits()) {
-                throw new GameException(t('Nicht genügend Credits ({quantity} benötigt).', ['{quantity}' => new Num($unitCredits * $quantity)]));
+            // Not even one unit affordable: nothing is ordered (a cleared queue stays cleared, all refunded).
+            $quantity = $this->affordable($planet, $type, $percent);
+            if ($quantity > 0) {
+                $this->placeShipOrder($planet, $type, $quantity, $percent, $now);
             }
-            $this->pay($planet, $unitCost->multiply($quantity));
-            $player->addCredits(-$unitCredits * $quantity);
-            $planet->setPopulation($planet->getPopulation() - $crew);
-
-            $queue = $planet->getQueue(QueueKind::forShip($type));
-            $queueIsIdle = [] === $queue;
-            $planet->addShipyardOrder(new ShipyardOrder(
-                $planet,
-                $type,
-                $quantity,
-                $this->economy->shipOrderSeconds($type, $planet, $percent, $now),
-                $queueIsIdle ? $now : null,
-                $unitCost,
-                $unitCredits,
-                $this->nextPosition($queue),
-                $percent,
-            ));
+            $this->startHead($planet, $kind, $now);
+            $ordered = $quantity;
         });
+
+        return $ordered;
+    }
+
+    /** How many units of a type the planet can pay right now: resources, credits, crew and the order limit. */
+    private function affordable(Planet $planet, ShipType $type, int $percent): int
+    {
+        $player = $planet->getOwner();
+        $quantity = self::maxOrderQuantity($type);
+        $cost = $this->economy->shipOrderCost($type, $player, $percent);
+        foreach (ResourceType::cases() as $resource) {
+            if ($cost->get($resource) > 0) {
+                $quantity = min($quantity, (int) floor($planet->getResources()->get($resource) / $cost->get($resource)));
+            }
+        }
+        $credits = $this->economy->shipOrderCredits($type, $player, $percent);
+        if ($credits > 0) {
+            $quantity = min($quantity, (int) floor($player->getCredits() / $credits));
+        }
+        $crew = $type->spec()->crew;
+        if ($crew > 0) {
+            $quantity = min($quantity, (int) floor(floor($planet->getPopulation()) / $crew));
+        }
+
+        return max(0, $quantity);
+    }
+
+    private function placeShipOrder(Planet $planet, ShipType $type, int $quantity, int $percent, \DateTimeImmutable $now): void
+    {
+        $limit = self::maxOrderQuantity($type);
+        if ($quantity < 1 || $quantity > $limit) {
+            throw new GameException(t('Bitte gib eine Anzahl zwischen 1 und {limit} an.', ['{limit}' => new Num($limit)]));
+        }
+
+        $missing = $this->economy->missingShipRequirements($type, $planet);
+        if ([] !== $missing) {
+            throw new GameException(t('Voraussetzungen fehlen: {missing}.', ['{missing}' => new Lines($missing, ', ')]));
+        }
+
+        $crew = $type->spec()->crew * $quantity;
+        if ($crew > floor($planet->getPopulation())) {
+            throw new GameException(t('Nicht genügend Bevölkerung für die Besatzung ({crew} benötigt).', ['{crew}' => $crew]));
+        }
+
+        $player = $planet->getOwner();
+        $unitCost = $this->economy->shipOrderCost($type, $player, $percent);
+        $unitCredits = $this->economy->shipOrderCredits($type, $player, $percent);
+        if ($unitCredits * $quantity > $player->getCredits()) {
+            throw new GameException(t('Nicht genügend Credits ({quantity} benötigt).', ['{quantity}' => new Num($unitCredits * $quantity)]));
+        }
+        $this->pay($planet, $unitCost->multiply($quantity));
+        $player->addCredits(-$unitCredits * $quantity);
+        $planet->setPopulation($planet->getPopulation() - $crew);
+
+        $queue = $planet->getQueue(QueueKind::forShip($type));
+        $queueIsIdle = [] === $queue;
+        $planet->addShipyardOrder(new ShipyardOrder(
+            $planet,
+            $type,
+            $quantity,
+            $this->economy->shipOrderSeconds($type, $planet, $percent, $now),
+            $queueIsIdle ? $now : null,
+            $unitCost,
+            $unitCredits,
+            $this->nextPosition($queue),
+            $percent,
+        ));
     }
 
     /** Removes an entry from a queue and refunds what was paid for it. */
     public function cancelOrder(Planet $planet, QueueKind $kind, int $orderId): void
     {
         $this->locked($planet, function (Planet $planet, \DateTimeImmutable $now) use ($kind, $orderId): void {
-            $order = $this->findOrder($planet, $kind, $orderId);
-
-            if ($order instanceof BuildingOrder) {
-                $planet->setResources($planet->getResources()->add($order->getCost()));
-                $planet->removeBuildingOrder($order);
-            } else {
-                $remaining = $order->getRemaining();
-                $planet->setResources($planet->getResources()->add($order->getUnitCost()->multiply($remaining)));
-                $planet->getOwner()->addCredits($order->getUnitCredits() * $remaining);
-                $planet->setPopulation($planet->getPopulation() + $order->getShipType()->spec()->crew * $remaining);
-                $planet->removeShipyardOrder($order);
-            }
-
+            $this->refund($planet, $this->findOrder($planet, $kind, $orderId));
             $this->startHead($planet, $kind, $now);
         });
     }
@@ -309,6 +391,22 @@ final readonly class PlanetService
     }
 
     /** Makes sure the first entry of a queue is being worked on. */
+    /** Takes an order out of its queue and gives back what was paid for it (what is not built yet). */
+    private function refund(Planet $planet, BuildingOrder|ShipyardOrder $order): void
+    {
+        if ($order instanceof BuildingOrder) {
+            $planet->setResources($planet->getResources()->add($order->getCost()));
+            $planet->removeBuildingOrder($order);
+
+            return;
+        }
+        $remaining = $order->getRemaining();
+        $planet->setResources($planet->getResources()->add($order->getUnitCost()->multiply($remaining)));
+        $planet->getOwner()->addCredits($order->getUnitCredits() * $remaining);
+        $planet->setPopulation($planet->getPopulation() + $order->getShipType()->spec()->crew * $remaining);
+        $planet->removeShipyardOrder($order);
+    }
+
     private function startHead(Planet $planet, QueueKind $kind, \DateTimeImmutable $now): void
     {
         if (QueueKind::Buildings === $kind) {

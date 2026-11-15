@@ -9,6 +9,8 @@
 parameters:
     # New players build and produce twice as fast during their first 24 hours (App\Game\Economy).
     game.starter_bonus: true
+    # The build bot only for extended accounts (App\Controller\BuildBotController); for now everyone may use it.
+    game.build_bot_extended_only: false
 
 services:
     # default configuration for services in *this* file

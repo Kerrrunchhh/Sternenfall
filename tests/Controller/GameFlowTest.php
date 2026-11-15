@@ -615,6 +615,20 @@ class GameFlowTest extends WebTestCase
         self::assertSelectorTextContains('#summary-players', 'Chronistin');
     }
 
+    public function testTheBuildBotFillsTheBuildingQueue(): void
+    {
+        $this->register('Bauherrin');
+        $crawler = $this->client->request('GET', '/baubot');
+        self::assertSelectorNotExists('.warning', 'everyone may use the bot for now');
+
+        $this->client->submit($crawler->filter('#bot-fill-buildings')->form(['goals[0][building]' => 'iron_mine', 'goals[0][level]' => '3']));
+        $this->client->followRedirect();
+
+        self::assertSelectorTextContains('.flash-success', 'Eisenmine Stufe');
+        self::assertNotEmpty($this->planet('Bauherrin')->getBuildingQueue());
+        self::assertSame('iron_mine', $this->user('Bauherrin')->getBuildBot()->goals[0]['building']->value, 'the settings were saved');
+    }
+
     private function allianceToken(): string
     {
         $crawler = $this->client->request('GET', '/alliance');

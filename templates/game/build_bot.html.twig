@@ -1,0 +1,72 @@
+{% extends 'game/_layout.html.twig' %}
+
+{% block title %}{{ 'Baubot – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
+
+{% macro ship_queue(kind, title, types, settings, percents) %}
+    {% set q = settings.queue(kind) %}
+    <section class="panel" id="bot-{{ kind.value }}">
+        <h2>{{ title }}</h2>
+        <label>{{ 'Einheit'|trans }}
+            <select name="queues[{{ kind.value }}][ship]">
+                <option value="">{{ '– keine –'|trans }}</option>
+                {% for t in types %}<option value="{{ t.value }}" {{ q.ship and q.ship.value == t.value ? 'selected' }}>{{ t.label|trans }}</option>{% endfor %}
+            </select>
+        </label>
+        <label>{{ 'Baurate'|trans }}
+            <select name="queues[{{ kind.value }}][percent]">
+                {% for p in percents %}<option value="{{ p }}" {{ q.percent == p ? 'selected' }}>{{ p }} %</option>{% endfor %}
+            </select>
+        </label>
+        <label class="checkbox"><input type="checkbox" name="queues[{{ kind.value }}][clear]" value="1" {{ q.clear ? 'checked' }}> {{ 'Schleife vorher leeren (alles wird erstattet, angefangene Arbeit geht verloren)'|trans }}</label>
+        <p class="muted small">{{ 'Der Baubot bestellt so viele, wie Rohstoffe, Credits und Besatzung hergeben.'|trans }}</p>
+        <button class="btn btn-small" type="submit" name="do" value="fill_{{ kind.value }}" id="bot-fill-{{ kind.value }}">{{ '🤖 Jetzt befüllen'|trans }}</button>
+    </section>
+{% endmacro %}
+
+{% block content %}
+    <h1>{{ '🤖 Baubot'|trans }}</h1>
+    <p class="muted">{{ 'Der Baubot füllt die Bauschleifen nach deinen Vorgaben – immer dann, wenn du auf einen seiner Knöpfe drückst. Die Einstellungen gelten für alle Planeten. „Jetzt befüllen“ füllt den aktuellen Planeten ({planet}), „Auf allen Planeten befüllen“ alle.'|trans({'{planet}': planet.name ~ ' [' ~ planet.coordinates ~ ']'}) }}</p>
+
+    {% if not may_use %}
+        <p class="panel warning">{{ 'Der Baubot gehört zum erweiterten Account.'|trans }} <a href="{{ path('app_extended') }}">{{ 'Mehr zum erweiterten Account →'|trans }}</a></p>
+    {% endif %}
+
+    <form method="post" action="{{ path('app_build_bot_run') }}">
+        <input type="hidden" name="_token" value="{{ csrf_token('build_bot') }}">
+        <section class="panel" id="bot-buildings">
+            <h2>{{ 'Gebäude'|trans }}</h2>
+            <p class="muted small">{{ 'Der Baubot nimmt das erste Gebäude, das seine Zielstufe noch nicht erreicht hat (Aufträge in der Schleife zählen mit), dann das nächste. Haben alle drei ihre Stufe, baut er das Standardgebäude weiter aus.'|trans }}</p>
+            <table class="table">
+                {% for i in goal_slots %}
+                    {% set goal = settings.goals[i] ?? null %}
+                    <tr>
+                        <td>{{ '{n}.'|trans({'{n}': i + 1}) }}</td>
+                        <td><select name="goals[{{ i }}][building]" aria-label="{{ 'Gebäude {n}'|trans({'{n}': i + 1}) }}">
+                            <option value="">{{ '– keins –'|trans }}</option>
+                            {% for b in buildings %}<option value="{{ b.value }}" {{ goal and goal.building == b ? 'selected' }}>{{ b.label|trans }} ({{ 'Stufe {level}'|trans({'{level}': planet.buildingLevel(b)}) }})</option>{% endfor %}
+                        </select></td>
+                        <td class="inline-action">{{ 'bis Stufe'|trans }} <input type="number" name="goals[{{ i }}][level]" min="1" max="999" value="{{ goal ? goal.level : '' }}" class="short" aria-label="{{ 'Zielstufe {n}'|trans({'{n}': i + 1}) }}"></td>
+                    </tr>
+                {% endfor %}
+                <tr>
+                    <td>{{ 'Danach'|trans }}</td>
+                    <td colspan="2"><select name="default" aria-label="{{ 'Standardgebäude'|trans }}">
+                        <option value="">{{ '– keins –'|trans }}</option>
+                        {% for b in buildings %}<option value="{{ b.value }}" {{ settings.default == b ? 'selected' }}>{{ b.label|trans }} ({{ 'Stufe {level}'|trans({'{level}': planet.buildingLevel(b)}) }})</option>{% endfor %}
+                    </select> <span class="muted small">{{ 'immer weiter ausbauen'|trans }}</span></td>
+                </tr>
+            </table>
+            <button class="btn btn-small" type="submit" name="do" value="fill_buildings" id="bot-fill-buildings">{{ '🤖 Jetzt befüllen'|trans }}</button>
+        </section>
+
+        <div class="grid">
+            {{ _self.ship_queue(shipyard, 'Werft'|trans, shipyard_types, settings, percents) }}
+            {{ _self.ship_queue(defense, 'Planetenverteidigung'|trans, defense_types, settings, percents) }}
+        </div>
+
+        <p class="inline-action">
+            <button class="btn btn-secondary" type="submit" name="do" value="save" id="bot-save">{{ 'Speichern'|trans }}</button>
+            <button class="btn" type="submit" name="do" value="fill_all" id="bot-fill-all" title="{{ 'Füllt die Schleifen aller Planeten mit diesen Einstellungen.'|trans }}">{{ '🤖 Auf allen Planeten befüllen'|trans }}</button>
+        </p>
+    </form>
+{% endblock %}
