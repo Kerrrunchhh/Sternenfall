@@ -567,6 +567,34 @@ class GameFlowTest extends WebTestCase
         self::assertSelectorNotExists('[data-fold="overview-resources"]');
     }
 
+    public function testTheBattleSimulatorReadsASpyReportAndFights(): void
+    {
+        $this->register('Strategin');
+        $crawler = $this->client->request('GET', '/kampfsimulator');
+        self::assertResponseIsSuccessful();
+
+        $this->client->submit($crawler->filter('#sim-read-defender')->form([
+            'defender[report]' => "Planet Heimat [1:2:3] von Halden\nForschung:\n  Impulslaser: Stufe 3\nStationierte Schiffe und Türme:\n  Pfeil: 40\n  Lasergeschütz: 10",
+        ]));
+        self::assertResponseIsSuccessful();
+        $crawler = $this->client->getCrawler();
+        self::assertSame('40', $crawler->filter('input[name="defender[ships][pfeil]"]')->attr('value'));
+        self::assertSame('3', $crawler->filter('input[name="defender[research][impulse_laser]"]')->attr('value'));
+
+        $this->client->submit($crawler->filter('#sim-run')->form(['attacker[ships][lanze]' => '50']));
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('#sim-result');
+        self::assertSelectorExists('#ablauf');
+
+        // Swapped for an interception: the defender's ships attack, its turrets stay behind.
+        $this->client->submit($this->client->getCrawler()->filter('#sim-swap')->form());
+        $crawler = $this->client->getCrawler();
+        self::assertSame('40', $crawler->filter('input[name="attacker[ships][pfeil]"]')->attr('value'));
+        self::assertSame('3', $crawler->filter('input[name="attacker[research][impulse_laser]"]')->attr('value'));
+        self::assertSame('50', $crawler->filter('input[name="defender[ships][lanze]"]')->attr('value'));
+        self::assertSame('Halden', $crawler->filter('input[name="attackerName"]')->attr('value'));
+    }
+
     private function allianceToken(): string
     {
         $crawler = $this->client->request('GET', '/alliance');

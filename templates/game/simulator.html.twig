@@ -1,0 +1,61 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}{{ 'Kampfsimulator – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
+
+{% macro side(key, title, data, types, research_types) %}
+    <section class="panel simulator-side" id="sim-{{ key }}">
+        <h2>{{ title }}{% if data.owner %} <small class="muted">{{ data.owner }}</small>{% endif %}</h2>
+        <input type="hidden" name="{{ key }}Name" value="{{ data.owner }}">
+        <label for="sim-{{ key }}-report" class="small muted">{{ 'Spionagebericht oder Schiffsliste einfügen (z. B. aus dem Hangar oder der Flottenübersicht kopiert):'|trans }}</label>
+        <textarea id="sim-{{ key }}-report" name="{{ key }}[report]" rows="4" placeholder="{{ 'z. B. Pfeil: 40 oder 20 × Falke, 5 × Lanze'|trans }}"></textarea>
+        <button class="btn btn-small btn-secondary" type="submit" name="do" value="read_{{ key }}" formnovalidate id="sim-read-{{ key }}">{{ 'Einlesen'|trans }}</button>
+
+        <h3>{{ 'Kampfforschung'|trans }}</h3>
+        <table class="table simulator-table">
+            {% for r in research_types %}
+                <tr><td>{{ r.label|trans }} <span class="muted small">{{ r.category|trans }}</span></td>
+                    <td class="num"><input type="number" name="{{ key }}[research][{{ r.value }}]" value="{{ data.research[r.value] ?? 0 }}" min="0" max="{{ constant('App\\Game\\Simulator\\BattleSimulator::MAX_LEVEL') }}" class="short" aria-label="{{ r.label|trans }}"></td></tr>
+            {% endfor %}
+        </table>
+
+        <h3>{{ key == 'attacker' ? 'Schiffe'|trans : 'Schiffe und Türme'|trans }}</h3>
+        <table class="table simulator-table">
+            {% for type in types %}
+                <tr class="{{ (data.ships[type.value] ?? 0) > 0 ? 'own' }}"><td>{{ type.label|trans }}</td>
+                    <td class="num"><input type="text" inputmode="numeric" name="{{ key }}[ships][{{ type.value }}]" value="{{ (data.ships[type.value] ?? 0) > 0 ? data.ships[type.value] : '' }}" placeholder="0" class="short" aria-label="{{ type.label|trans }}"></td></tr>
+            {% endfor %}
+        </table>
+    </section>
+{% endmacro %}
+
+{% block content %}
+    <h1>{{ 'Kampfsimulator'|trans }}</h1>
+    <p class="muted">{{ 'Rechnet einen Angriff auf einen Planeten genau wie im Spiel durch – ohne dass etwas passiert. Füge für den Verteidiger einen Spionagebericht ein: Schiffe, Türme und die Forschung des Planetenbesitzers werden übernommen, auch Flotten anderer Spieler auf dem Planeten. Für den Angreifer ist deine eigene Forschung eingetragen; du kannst auch dort einen Bericht oder eine kopierte Schiffsliste einlesen. Alle Werte lassen sich ändern.'|trans }}</p>
+
+    <form method="post" action="{{ path('app_simulator_run') }}" class="simulator-form">
+        <div class="grid">
+            {{ _self.side('attacker', 'Angreifer'|trans, attacker, attacker_types, research_types) }}
+            {{ _self.side('defender', 'Verteidiger'|trans, defender, defender_types, research_types) }}
+        </div>
+        <p class="inline-action">
+            <button class="btn" type="submit" name="do" value="simulate" id="sim-run">{{ '⚔ Simulieren'|trans }}</button>
+            <button class="btn btn-secondary" type="submit" name="do" value="swap" formnovalidate id="sim-swap" title="{{ 'Angreifer und Verteidiger tauschen – z. B. um das Abfangen einer angreifenden Flotte zu simulieren. Türme bleiben zurück.'|trans }}">{{ '⇄ Seiten tauschen'|trans }}</button>
+        </p>
+    </form>
+
+    {% if result %}
+        <section class="panel" id="sim-result">
+            <h2>{{ 'Ergebnis'|trans }}</h2>
+            <p><strong>{{ result.attacker_won ? ('Der Angreifer gewinnt – auf dem Planeten bleibt nichts übrig.'|trans) : ('Der Angreifer gewinnt nicht – auf dem Planeten bleibt noch etwas stehen.'|trans) }}</strong></p>
+            <table class="table">
+                <tr class="table-head"><td></td><td class="num">{{ 'Eisen verloren'|trans }}</td><td class="num">{{ 'Titan verloren'|trans }}</td></tr>
+                <tr><td>{{ 'Angreifer'|trans }}</td><td class="num">{{ result.attacker_lost.iron|num }}</td><td class="num">{{ result.attacker_lost.titanium|num }}</td></tr>
+                <tr><td>{{ 'Verteidiger'|trans }}</td><td class="num">{{ result.defender_lost.iron|num }}</td><td class="num">{{ result.defender_lost.titanium|num }}</td></tr>
+            </table>
+            <p class="muted small">{{ 'Ein Kampf ist berechenbar: dieselben Werte ergeben immer dasselbe Ergebnis. Im Spiel kann es trotzdem anders kommen, wenn sich bis zur Ankunft etwas ändert.'|trans }}</p>
+        </section>
+        {% set replay = result.replay %}
+        {{ include('_battle_replay.html.twig') }}
+    {% endif %}
+{% endblock %}

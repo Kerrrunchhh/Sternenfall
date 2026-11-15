@@ -903,3 +903,7 @@ tr.suspicious-strong td { background: rgba(255, 138, 128, .08); }
 
 /* Multi check: keep the date clear of the number column before it (a "–" there looked like a minus). */
 .multi-last { padding-left: 2rem; }
+
+/* Battle simulator */
+.simulator-side textarea { width: 100%; }
+.simulator-table input.short { width: 7rem; text-align: right; }

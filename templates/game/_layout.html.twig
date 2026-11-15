@@ -121,6 +121,7 @@
             <a href="{{ path('app_fleet') }}" class="{{ route == 'app_fleet' ? 'active' }}">{{ 'Flotten'|trans }}</a>
             <a href="{{ path('app_galaxy') }}" class="{{ route == 'app_galaxy' ? 'active' }}">{{ 'Galaxie'|trans }}</a>
             <a href="{{ path('app_radar') }}" class="{{ route == 'app_radar' ? 'active' }}">{{ 'Radar'|trans }}</a>
+            <a href="{{ path('app_simulator') }}" class="{{ route starts with 'app_simulator' ? 'active' }}">{{ 'Kampfsimulator'|trans }}</a>
             <a href="{{ path('app_bookmarks') }}" class="{{ route == 'app_bookmarks' ? 'active' }}">{{ 'Koordinaten'|trans }}</a>
             <a href="{{ path('app_trade') }}" class="{{ route in ['app_trade', 'app_trade_fusionators', 'app_trade_post'] ? 'active' }}">{{ 'Handel'|trans }}</a>
             <a href="{{ path('app_news') }}" class="{{ route starts with 'app_news' ? 'active' }}">
