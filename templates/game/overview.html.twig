@@ -76,12 +76,19 @@
         <p class="panel warning">{{ '{name} wurde invadiert und geht am {integratedAt} vollständig in deinen Besitz über.'|trans({'{name}': planet.name, '{integratedAt}': planet.integratedAt|date('d.m.Y H:i')}) }}</p>
     {% endif %}
     <section class="panel quick-contacts" data-fold="overview-contacts">
-        <h2>{{ 'Schnellkontakte'|trans }} <a class="small" href="{{ path('app_mail') }}">{{ 'Post →'|trans }}</a></h2>
+        <h2>{{ 'Schnellkontakte'|trans }}
+            {%- set online = contacts|filter(c => presence(c) and presence(c).online)|length %}
+            <small class="fold-summary muted">{{ (contacts|length == 1 ? '1 Kontakt' : '{count} Kontakte')|trans({'{count}': contacts|length}) }}{% if online > 0 %} · {{ '{count} online'|trans({'{count}': online}) }}{% endif %}{% if unread_mail > 0 %} · <strong>{{ (unread_mail == 1 ? '1 neue Nachricht' : '{count} neue Nachrichten')|trans({'{count}': unread_mail}) }}</strong>{% endif %}{% if contact_requests > 0 %} · <strong>{{ (contact_requests == 1 ? '1 Anfrage' : '{count} Anfragen')|trans({'{count}': contact_requests}) }}</strong>{% endif %}</small>
+            <a class="small" href="{{ path('app_mail') }}">{{ 'Post →'|trans }}</a></h2>
         {{ include('game/_contacts.html.twig', {back: 'app_overview'}) }}
     </section>
     {% if incoming is not empty or own_movements is not empty %}
         <section class="panel movements" data-fold="overview-movements">
-            <h2>{{ 'Flottenbewegungen'|trans }}</h2>
+            {% set moving = incoming|length + own_movements|length %}
+            {% set hostile = incoming|filter(f => f.mission.value == 'attack')|length %}
+            {% set next = (incoming|map(f => f.arriveAt)|merge(own_movements|map(f => f.nextEventAt)))|sort|first %}
+            <h2>{{ 'Flottenbewegungen'|trans }}
+                <small class="fold-summary muted">{{ (moving == 1 ? '1 Flotte unterwegs' : '{count} Flotten unterwegs')|trans({'{count}': moving}) }}{% if hostile > 0 %} · <strong class="negative">{{ (hostile == 1 ? '1 Angriff' : '{count} Angriffe')|trans({'{count}': hostile}) }}</strong>{% endif %} · {{ 'nächste in'|trans }} {{ ui.countdown(next, now) }}</small></h2>
             {# One line per movement: what, where, countdown, arrival time, action. #}
             <table class="table movement-table">
                 {% for f in incoming %}
@@ -124,7 +131,8 @@
     {% endif %}
     {% if player.researching %}
         <section class="panel" data-fold="overview-research">
-            <h2>{{ 'Forschung'|trans }}</h2>
+            <h2>{{ 'Forschung'|trans }}
+                <small class="fold-summary muted">{{ '{label} (Stufe {researchTargetLevel})'|trans({'{label}': player.researchType.label|trans, '{researchTargetLevel}': player.researchTargetLevel}) }} · {{ ui.countdown(player.researchFinishesAt, now) }}</small></h2>
             <div class="construction">
                 <div>{{ '{label} (Stufe {researchTargetLevel})'|trans({'{label}': player.researchType.label|trans, '{researchTargetLevel}': player.researchTargetLevel}) }}</div>
                 <div>{{ ui.countdown(player.researchFinishesAt, now) }}</div>
@@ -144,7 +152,9 @@
 
     <div class="grid">
         <section class="panel" data-fold="overview-resources">
-            <h2>{{ 'Rohstoffe pro Stunde'|trans }}</h2>
+            {% set short = enum_cases('App\\Game\\ResourceType')|filter(t => net.get(t) < 0) %}
+            <h2>{{ 'Rohstoffe pro Stunde'|trans }}
+                <small class="fold-summary muted">{% if short is empty %}{{ 'alle Bilanzen positiv'|trans }}{% else %}<strong class="negative">{{ 'im Minus: {labels}'|trans({'{labels}': short|map(t => t.label|trans)|join(', ')}) }}</strong>{% endif %}</small></h2>
             <table class="table">
                 <tr class="table-head"><td></td><td class="num">{{ 'Produktion'|trans }}</td><td class="num">{{ 'Verbrauch'|trans }}</td><td class="num">{{ 'Bilanz'|trans }}</td></tr>
                 {% for type in enum_cases('App\\Game\\ResourceType') %}
@@ -172,7 +182,8 @@
             {% endfor %}
         </section>
         <section class="panel" data-fold="overview-population">
-            <h2>{{ 'Bevölkerung'|trans }}</h2>
+            <h2>{{ 'Bevölkerung'|trans }}
+                <small class="fold-summary muted">{{ '{population} von {capacity} Einwohnern'|trans({'{population}': planet.population|num, '{capacity}': population_capacity|num}) }}</small></h2>
             <table class="table">
                 <tr><td>{{ 'Einwohner'|trans }}</td><td class="num">{{ planet.population|num }}</td></tr>
                 <tr><td>{{ 'Platz in Biozellen'|trans }}</td><td class="num">{{ population_capacity|num }}</td></tr>
@@ -186,7 +197,8 @@
             {% endif %}
         </section>
         <section class="panel" data-fold="overview-planet">
-            <h2>{{ 'Planet'|trans }}</h2>
+            <h2>{{ 'Planet'|trans }}
+                <small class="fold-summary muted">{{ planet.type.icon }} {{ planet.type.label|trans }} · {{ '{points} Punkte'|trans({'{points}': planet_points(planet)|num}) }}</small></h2>
             <table class="table">
                 <tr><td>{{ 'Koordinaten'|trans }}</td><td class="num">{{ planet.coordinates }}</td></tr>
                 <tr><td title="{{ 'Jede Gebäudestufe zählt mit dem Punktesatz des Gebäudes'|trans }}">{{ 'Punkte'|trans }}</td><td class="num">{{ planet_points(planet)|num }}</td></tr>
@@ -195,7 +207,9 @@
             </table>
         </section>
         <section class="panel" data-fold="overview-hangar">
-            <h2>{{ 'Hangar'|trans }}</h2>
+            {% set hangar_ships = hangar|reduce((sum, e) => sum + e.count, 0) %}
+            <h2>{{ 'Hangar'|trans }}
+                <small class="fold-summary muted">{{ (hangar_ships == 1 ? '1 Schiff' : '{count} Schiffe')|trans({'{count}': hangar_ships|num}) }}</small></h2>
             {% if hangar is empty %}
                 <p class="muted">{{ 'Keine Schiffe stationiert.'|trans }}{% if planet.buildingLevel(enum('App\\Game\\BuildingType').Shipyard) > 0 %} <a href="{{ path('app_shipyard') }}">{{ 'Zur Werft'|trans }}</a>{% endif %}</p>
             {% else %}

@@ -898,3 +898,5 @@ tr.suspicious-strong td { background: rgba(255, 138, 128, .08); }
 .folded > .fold-head::before { transform: rotate(-90deg); }
 .folded > .fold-head { margin-bottom: 0; }
 .folded > :not(.fold-head) { display: none !important; }
+.fold-summary { display: none; font-weight: normal; margin-left: .5rem; }
+.folded .fold-summary { display: inline; }
