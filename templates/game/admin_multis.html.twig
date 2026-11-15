@@ -13,7 +13,7 @@
             <p class="muted">{{ 'Keine Auffälligkeiten.'|trans }}</p>
         {% else %}
             <table class="table">
-                <thead><tr><th>{{ 'Account A'|trans }}</th><th>{{ 'Account B'|trans }}</th><th class="num">{{ 'Gleiches Gerät'|trans }}</th><th class="num">{{ 'Gemeinsame IPs'|trans }}</th><th class="num">{{ 'Lieferungen (30 Tage)'|trans }}</th><th>{{ 'Zuletzt'|trans }}</th></tr></thead>
+                <thead><tr><th>{{ 'Account A'|trans }}</th><th>{{ 'Account B'|trans }}</th><th class="num">{{ 'Gleiches Gerät'|trans }}</th><th class="num">{{ 'Gemeinsame IPs'|trans }}</th><th class="num">{{ 'Lieferungen (30 Tage)'|trans }}</th><th class="multi-last">{{ 'Zuletzt'|trans }}</th></tr></thead>
                 <tbody>
                 {% for pair in pairs %}
                     <tr class="{{ pair.devices > 0 ? 'suspicious-strong' : '' }}">
@@ -22,7 +22,7 @@
                         <td class="num">{{ pair.devices > 0 ? '⚠ ' ~ pair.devices : '–' }}</td>
                         <td class="num">{{ pair.ips }}</td>
                         <td class="num">{{ pair.gifts > 0 ? pair.gifts|num : '–' }}</td>
-                        <td class="small">{{ pair.last|date('d.m.Y H:i') }}</td>
+                        <td class="small multi-last">{{ pair.last|date('d.m.Y H:i') }}</td>
                     </tr>
                 {% endfor %}
                 </tbody>

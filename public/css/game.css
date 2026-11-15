@@ -900,3 +900,6 @@ tr.suspicious-strong td { background: rgba(255, 138, 128, .08); }
 .folded > :not(.fold-head) { display: none !important; }
 .fold-summary { display: none; font-weight: normal; margin-left: .5rem; }
 .folded .fold-summary { display: inline; }
+
+/* Multi check: keep the date clear of the number column before it (a "–" there looked like a minus). */
+.multi-last { padding-left: 2rem; }
