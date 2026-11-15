@@ -89,14 +89,17 @@ final readonly class Highscores
     /** @return list<User> all players with their planets in one query */
     private function allPlayers(): array
     {
-        return $this->em->createQueryBuilder()
+        $players = $this->em->createQueryBuilder()
             ->select('u', 'p', 'a')
             ->from(User::class, 'u')
             ->leftJoin('u.planets', 'p')
             ->leftJoin('u.alliance', 'a')
-            ->where('u.system = false AND u.deactivatedAt IS NULL')
+            ->where('u.system = false AND u.deactivatedAt IS NULL AND u.deleteAt IS NULL')
             ->getQuery()
             ->getResult();
+
+        // Deactivated players and those whose deletion is pending are not ranked.
+        return array_values(array_filter($players, static fn (User $u): bool => !$u->isDeactivated() && null === $u->getDeleteAt()));
     }
 
     /**

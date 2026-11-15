@@ -59,7 +59,7 @@ final readonly class Awards
     /** The player with the most combat experience in [start, end), if anybody gained some. */
     public function leader(\DateTimeImmutable $start, \DateTimeImmutable $end): ?array
     {
-        $rows = $this->em->createQuery('SELECT IDENTITY(g.user) AS id, SUM(g.amount) AS total FROM '.ExperienceGain::class.' g JOIN g.user u WHERE g.gainedAt >= :start AND g.gainedAt < :end AND u.system = false AND u.deactivatedAt IS NULL GROUP BY g.user ORDER BY total DESC')
+        $rows = $this->em->createQuery('SELECT IDENTITY(g.user) AS id, SUM(g.amount) AS total FROM '.ExperienceGain::class.' g JOIN g.user u WHERE g.gainedAt >= :start AND g.gainedAt < :end AND u.system = false AND u.deactivatedAt IS NULL AND u.deleteAt IS NULL GROUP BY g.user ORDER BY total DESC')
             ->setParameter('start', $start)
             ->setParameter('end', $end)
             ->setMaxResults(1)

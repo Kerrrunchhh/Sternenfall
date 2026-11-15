@@ -52,6 +52,15 @@ final class HighscoresTest extends TestCase
         self::assertSame([1, 2], array_column($scores->players(Highscores::BY_POINTS, LifeForm::Guardian), 'rank'));
     }
 
+    public function testPlayersLeavingTheGameAreNotRanked(): void
+    {
+        $this->users[1]->requestDeletion(new \DateTimeImmutable('+48 hours'), false); // Bert deletes his account
+        $this->users[3]->deactivate(new \DateTimeImmutable()); // Dora was deactivated
+
+        self::assertSame(['Anna', 'Carla'], $this->names($this->highscores()->players(Highscores::BY_POINTS)));
+        self::assertSame([1, 2], array_column($this->highscores()->players(Highscores::BY_POINTS), 'rank'), 'the ranks close up');
+    }
+
     public function testPlayersAndAlliancesSortByCredits(): void
     {
         foreach ([300, 100, 0, 5000] as $i => $credits) {
