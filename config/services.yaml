@@ -11,6 +11,8 @@ parameters:
     game.starter_bonus: true
     # The build bot only for extended accounts (App\Controller\BuildBotController); for now everyone may use it.
     game.build_bot_extended_only: false
+    # Mails per calendar month in the mail service's plan (Brevo Starter: 5000) – shown on the admin game page.
+    game.mail_monthly_limit: 5000
 
 services:
     # default configuration for services in *this* file

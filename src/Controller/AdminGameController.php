@@ -26,11 +26,11 @@ class AdminGameController extends AbstractGameController
         private readonly BattleReportRepository $reports,
         private readonly BattleReportRefunds $refunds,
         private readonly \App\Repository\MailStatRepository $mailStats,
+        /** Mails per calendar month in the mail service's plan (config/services.yaml). */
+        #[\Symfony\Component\DependencyInjection\Attribute\Autowire(param: 'game.mail_monthly_limit')]
+        private readonly int $mailMonthlyLimit = 5000,
     ) {
     }
-
-    /** Mails per day of the mail service in MAILER_DSN (Brevo's free plan: 300). */
-    public const int MAIL_DAILY_LIMIT = 300;
 
     #[Route('/admin/spiel', name: 'app_admin_game', methods: ['GET'])]
     public function index(): Response
@@ -43,7 +43,9 @@ class AdminGameController extends AbstractGameController
             // Mails sent: the last 24 hours (that is how Gmail counts) and per day.
             'mail_24h' => $this->mailStats->totalsSince(new \DateTimeImmutable('-24 hours', new \DateTimeZone('UTC'))),
             'mail_days' => $this->mailStats->perDay(14),
-            'mail_limit' => self::MAIL_DAILY_LIMIT,
+            // The plan counts per calendar month (UTC).
+            'mail_month' => $this->mailStats->totalsSince(new \DateTimeImmutable('first day of this month 00:00', new \DateTimeZone('UTC'))),
+            'mail_limit' => $this->mailMonthlyLimit,
         ]);
     }
 
