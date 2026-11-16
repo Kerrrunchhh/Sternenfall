@@ -57,7 +57,10 @@ const orbit = (() => {
     };
     const slots = (g, s) => {
         const roll = crc32(`slots:${g}:${s}`) % 10001;
-        return 10 + Math.floor(40 * roll * roll / 100000000);
+        // The trade guild's central systems (250) keep their old size; all others use 41 steps.
+        return s === 250
+            ? 10 + Math.floor(40 * roll * roll / 100000000)
+            : 10 + Math.floor(41 * roll * roll / (10001 * 10001));
     };
     const period = (g, s, p) => {
         const n = slots(g, s);

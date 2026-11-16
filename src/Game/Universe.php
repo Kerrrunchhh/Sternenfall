@@ -30,6 +30,7 @@ final class Universe
     /**
      * Number of planet slots in a system: fixed per system, anything from 10 to 50,
      * small systems more common than large ones (about half have fewer than 20).
+     * Mirrored in public/js/game.js (orbit.slots) for the flight preview and the system view – change both together.
      */
     public static function planetsInSystem(int $galaxy, int $system): int
     {
