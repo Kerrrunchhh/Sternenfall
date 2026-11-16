@@ -992,6 +992,34 @@ const orbit = (() => {
         }
     }
 
+    // Galaxy: browse with the keyboard – ←/→ or A/D the system, ↑/↓ or W/S the galaxy (not while typing in a field).
+    const galaxyKeys = document.querySelector('[data-galaxy-keys]');
+    if (galaxyKeys) {
+        const { galaxy, system, galaxies, systems } = Object.fromEntries(Object.entries(galaxyKeys.dataset).map(([key, value]) => [key, parseInt(value, 10)]));
+        const moves = {
+            arrowleft: [0, -1], a: [0, -1],
+            arrowright: [0, 1], d: [0, 1],
+            arrowup: [-1, 0], w: [-1, 0],
+            arrowdown: [1, 0], s: [1, 0],
+        };
+        document.addEventListener('keydown', (event) => {
+            const move = moves[event.key.toLowerCase()];
+            const typing = event.target.closest('input, textarea, select, [contenteditable="true"]');
+            if (!move || typing || event.defaultPrevented || event.ctrlKey || event.altKey || event.metaKey) {
+                return;
+            }
+            const g = Math.min(galaxies, Math.max(1, galaxy + move[0]));
+            const s = Math.min(systems, Math.max(1, system + move[1]));
+            event.preventDefault();
+            if (g !== galaxy || s !== system) {
+                const url = new URL(galaxyKeys.action, window.location.href);
+                url.searchParams.set('galaxy', g);
+                url.searchParams.set('system', s);
+                window.location.href = url.toString();
+            }
+        });
+    }
+
     // Galaxy: the system view – the sun, and the planets on their orbits (see orbit above).
     const systemView = document.querySelector('[data-system-view]');
     if (systemView) {

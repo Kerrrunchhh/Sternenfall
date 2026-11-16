@@ -6,12 +6,13 @@
 {% block content %}
     <h1>{{ 'Galaxie'|trans }}</h1>
 
-    <form method="get" action="{{ path('app_galaxy') }}" class="panel galaxy-nav">
+    <form method="get" action="{{ path('app_galaxy') }}" class="panel galaxy-nav" data-galaxy-keys data-galaxy="{{ galaxy }}" data-system="{{ system }}" data-galaxies="{{ galaxies }}" data-systems="{{ systems }}">
         <a class="btn btn-small btn-secondary" href="{{ path('app_galaxy', {galaxy: galaxy, system: max(1, system - 1)}) }}">←</a>
         <label>{{ 'Galaxie'|trans }} <input type="number" name="galaxy" min="1" max="{{ galaxies }}" value="{{ galaxy }}"></label>
         <label>{{ 'System'|trans }} <input type="number" name="system" min="1" max="{{ systems }}" value="{{ system }}"></label>
         <button class="btn btn-small" type="submit">{{ 'Anzeigen'|trans }}</button>
         <a class="btn btn-small btn-secondary" href="{{ path('app_galaxy', {galaxy: galaxy, system: min(systems, system + 1)}) }}">→</a>
+        <span class="muted small galaxy-keys-hint">{{ 'Tastatur: ←/→ oder A/D wechseln das System, ↑/↓ oder W/S die Galaxie.'|trans }}</span>
     </form>
 
     {# The planets circle their sun; flights within the system depend on where they are (App\Game\Orbit). #}

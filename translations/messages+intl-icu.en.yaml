@@ -2860,3 +2860,4 @@
 "{failed} Empfänger abgelehnt (Kontingent aufgebraucht oder Zugangsdaten falsch?).": "{failed} recipients refused (quota used up or wrong credentials?)."
 "{percent} % des Monatskontingents": "{percent} % of the monthly quota"
 "Gezählt wird jeder Empfänger, auch in Blindkopie: Eine News-Mail an 80 Spieler zählt 80 – so rechnet auch der Versanddienst. Das Kontingent steht in config/services.yaml (game.mail_monthly_limit).": "Every recipient counts, blind copies too: a news mail to 80 players counts 80 – the mail service counts the same way. The quota is set in config/services.yaml (game.mail_monthly_limit)."
+"Tastatur: ←/→ oder A/D wechseln das System, ↑/↓ oder W/S die Galaxie.": "Keyboard: ←/→ or A/D change the system, ↑/↓ or W/S the galaxy."
