@@ -29,8 +29,8 @@ class AdminGameController extends AbstractGameController
     ) {
     }
 
-    /** Recipients per day a private Gmail account may send to (the account in MAILER_DSN). */
-    public const int MAIL_DAILY_LIMIT = 500;
+    /** Mails per day of the mail service in MAILER_DSN (Brevo's free plan: 300). */
+    public const int MAIL_DAILY_LIMIT = 300;
 
     #[Route('/admin/spiel', name: 'app_admin_game', methods: ['GET'])]
     public function index(): Response
