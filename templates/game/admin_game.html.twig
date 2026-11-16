@@ -33,6 +33,27 @@
         {% endif %}
     </section>
 
+    <section class="panel" id="mails">
+        <h2>{{ '✉ Versendete Mails'|trans }}</h2>
+        {% set used = mail_24h.recipients %}
+        <p class="{{ used >= mail_limit * 0.8 ? 'warning' }}">
+            {{ 'Letzte 24 Stunden: {recipients} Empfänger in {mails} Mails – Grenze von Gmail etwa {limit} Empfänger.'|trans({'{recipients}': used|num, '{mails}': mail_24h.mails|num, '{limit}': mail_limit|num}) }}
+            {% if mail_24h.failed > 0 %}<strong class="negative">{{ '{failed} Empfänger abgelehnt (Grenze erreicht oder Zugangsdaten falsch?).'|trans({'{failed}': mail_24h.failed|num}) }}</strong>{% endif %}
+        </p>
+        <div class="mail-meter" role="img" aria-label="{{ '{percent} % der Tagesgrenze'|trans({'{percent}': (100 * used / mail_limit)|round}) }}"><span style="width: {{ min(100, 100 * used / mail_limit)|round }}%"></span></div>
+        <p class="muted small">{{ 'Gezählt wird jeder Empfänger, auch in Blindkopie: Eine News-Mail an 80 Spieler zählt 80. Gmail rechnet über die letzten 24 Stunden, nicht pro Kalendertag.'|trans }}</p>
+        {% if mail_days is not empty %}
+            <table class="table">
+                <tr class="table-head"><td>{{ 'Tag (UTC)'|trans }}</td><td class="num">{{ 'Mails'|trans }}</td><td class="num">{{ 'Empfänger'|trans }}</td><td class="num">{{ 'abgelehnt'|trans }}</td></tr>
+                {% for d in mail_days %}
+                    <tr><td>{{ d.day|date('d.m.Y') }}</td><td class="num">{{ d.mails|num }}</td><td class="num">{{ d.recipients|num }}</td><td class="num {{ d.failed > 0 ? 'negative' }}">{{ d.failed|num }}</td></tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <p class="muted">{{ 'Seit dem Einbau der Zählung wurde noch keine Mail verschickt.'|trans }}</p>
+        {% endif %}
+    </section>
+
     <section class="panel">
         <h2>{{ '⚖ Kampfberichte'|trans }}</h2>
         <p class="muted small">{{ 'Die letzten Kämpfe. Im Bericht kannst du ihn annullieren und den Beteiligten Schiffe erstatten. Spieler schicken dir den Link auch über „Meldungen“.'|trans }}</p>

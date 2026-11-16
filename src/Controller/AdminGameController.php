@@ -25,8 +25,12 @@ class AdminGameController extends AbstractGameController
         private readonly AttackBanRepository $banRepository,
         private readonly BattleReportRepository $reports,
         private readonly BattleReportRefunds $refunds,
+        private readonly \App\Repository\MailStatRepository $mailStats,
     ) {
     }
+
+    /** Recipients per day a private Gmail account may send to (the account in MAILER_DSN). */
+    public const int MAIL_DAILY_LIMIT = 500;
 
     #[Route('/admin/spiel', name: 'app_admin_game', methods: ['GET'])]
     public function index(): Response
@@ -36,6 +40,10 @@ class AdminGameController extends AbstractGameController
             'bans' => $this->banRepository->findLatest(),
             'reports' => $this->reports->findBy([], ['createdAt' => 'DESC'], 50),
             'max_hours' => AttackBans::MAX_HOURS,
+            // Mails sent: the last 24 hours (that is how Gmail counts) and per day.
+            'mail_24h' => $this->mailStats->totalsSince(new \DateTimeImmutable('-24 hours', new \DateTimeZone('UTC'))),
+            'mail_days' => $this->mailStats->perDay(14),
+            'mail_limit' => self::MAIL_DAILY_LIMIT,
         ]);
     }
 
