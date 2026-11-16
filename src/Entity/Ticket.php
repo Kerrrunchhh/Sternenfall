@@ -41,6 +41,10 @@ class Ticket
     #[ORM\Column(type: Types::TEXT)]
     private string $body;
 
+    /** When the team changed the opening message of a ticket it started (null: never). */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $bodyEditedAt = null;
+
     #[ORM\Column(enumType: TicketStatus::class)]
     private TicketStatus $status = TicketStatus::Open;
 
@@ -94,6 +98,18 @@ class Ticket
     public function getBody(): string
     {
         return $this->body;
+    }
+
+    public function getBodyEditedAt(): ?\DateTimeImmutable
+    {
+        return $this->bodyEditedAt;
+    }
+
+    /** Only for tickets the team started (multi check): their opening message is the team's. */
+    public function editBody(string $body, \DateTimeImmutable $now): void
+    {
+        $this->body = mb_substr($body, 0, self::MAX_BODY);
+        $this->bodyEditedAt = $now;
     }
 
     public function getStatus(): TicketStatus

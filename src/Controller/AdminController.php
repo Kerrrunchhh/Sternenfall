@@ -46,10 +46,18 @@ class AdminController extends AbstractGameController
     #[Route('/admin/meldungen/{id}', name: 'app_admin_ticket', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
     public function show(Ticket $ticket): Response
     {
+        $editor = $this->player();
+
         return $this->renderGame('game/support_show.html.twig', $this->currentPlanet(), [
             'ticket' => $ticket,
             'admin_view' => true,
             'statuses' => TicketStatus::cases(),
+            // Team messages this team member may correct.
+            'body_editable' => SupportService::mayEdit($ticket, null, $editor),
+            'editable' => array_values(array_map(
+                static fn (\App\Entity\TicketComment $c): ?int => $c->getId(),
+                array_filter($ticket->getComments()->toArray(), static fn (\App\Entity\TicketComment $c): bool => SupportService::mayEdit($ticket, $c, $editor)),
+            )),
         ]);
     }
 
@@ -60,6 +68,21 @@ class AdminController extends AbstractGameController
         $this->currentPlanet();
         $status = TicketStatus::tryFrom($request->request->getString('status')) ?? $ticket->getStatus();
         $this->attempt(fn () => $this->support->answer($ticket, $this->player(), $request->request->getString('body'), $status), t('Gespeichert, der Spieler wurde benachrichtigt.'));
+
+        return $this->redirectToRoute('app_admin_ticket', ['id' => $ticket->getId()]);
+    }
+
+    /** Corrects a team message: an answer (comment) or, for tickets the team started, the opening message. */
+    #[Route('/admin/meldungen/{id}/bearbeiten/{comment}', name: 'app_admin_ticket_edit', requirements: ['id' => Requirement::DIGITS, 'comment' => Requirement::DIGITS], defaults: ['comment' => '0'], methods: ['POST'])]
+    #[IsCsrfTokenValid('admin', tokenKey: '_token')]
+    public function edit(Ticket $ticket, int $comment, Request $request, \Doctrine\ORM\EntityManagerInterface $em): Response
+    {
+        $this->currentPlanet();
+        $target = 0 === $comment ? null : $em->find(\App\Entity\TicketComment::class, $comment);
+        if (0 !== $comment && null === $target) {
+            throw $this->createNotFoundException();
+        }
+        $this->attempt(fn () => $this->support->editTeamMessage($ticket, $target, $this->player(), $request->request->getString('body')), t('Nachricht geändert.'));
 
         return $this->redirectToRoute('app_admin_ticket', ['id' => $ticket->getId()]);
     }

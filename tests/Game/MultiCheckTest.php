@@ -60,6 +60,47 @@ class MultiCheckTest extends TestCase
         self::assertStringNotContainsString('Moderatorin', $toPlayer[0]->getSubject().$toPlayer[0]->getBody());
     }
 
+    public function testTheTeamEditsItsOwnMessagesAdminsAllOfTheTeam(): void
+    {
+        $player = new User('spieler');
+        $moderator = new User('Moderatorin');
+        $moderator->setRoles(['ROLE_MODERATOR']);
+        $colleague = new User('Kollege');
+        $colleague->setRoles(['ROLE_MODERATOR']);
+        $admin = new User('Chefin');
+        $admin->setRoles(['ROLE_ADMIN']);
+        $support = $this->support([$moderator, $colleague, $admin]);
+        $ticket = $support->askAboutMulti($player, null, 'Frage', 'Erster Text');
+        $support->reply($ticket, $player, 'Meine Antwort');
+        $support->answer($ticket, $moderator, 'Tippfeler', TicketStatus::Question);
+        [$fromPlayer, $fromModerator] = $ticket->getComments()->toArray();
+
+        $support->editTeamMessage($ticket, $fromModerator, $moderator, 'Tippfehler');
+        self::assertSame('Tippfehler', $fromModerator->getBody());
+        self::assertNotNull($fromModerator->getEditedAt());
+
+        $support->editTeamMessage($ticket, null, $colleague, 'Neuer erster Text');
+        self::assertSame('Neuer erster Text', $ticket->getBody(), 'the opening message of a multi check: anybody of the team');
+        self::assertNotNull($ticket->getBodyEditedAt());
+
+        self::assertFalse(SupportService::mayEdit($ticket, $fromModerator, $colleague), 'not the answer of a colleague');
+        self::assertTrue(SupportService::mayEdit($ticket, $fromModerator, $admin), 'an admin may');
+        self::assertFalse(SupportService::mayEdit($ticket, $fromPlayer, $admin), 'never what the player wrote');
+        self::assertFalse(SupportService::mayEdit($ticket, $fromModerator, $player), 'players edit nothing of the team');
+        $this->expectException(GameException::class);
+        $support->editTeamMessage($ticket, $fromPlayer, $admin, 'umgeschrieben');
+    }
+
+    public function testThePlayersOwnReportStaysHisOwn(): void
+    {
+        $author = new User('melder');
+        $admin = new User('Chefin');
+        $admin->setRoles(['ROLE_ADMIN']);
+        $ticket = $this->support([$admin])->create($author, TicketKind::Suggestion, 'Idee', 'Mehr Planeten');
+
+        self::assertFalse(SupportService::mayEdit($ticket, null, $admin), 'the opening message is the player\'s');
+    }
+
     public function testPlayersCannotOpenAMultiCheckThemselves(): void
     {
         $this->expectException(GameException::class);

@@ -20,6 +20,10 @@
             · {{ ticket.createdAt|date('d.m.Y H:i') }} · <span class="ticket-status ticket-{{ ticket.status.value }}">{{ ticket.status.label|trans }}</span>
         </p>
         <pre class="message-body">{{ ticket.body|link_coordinates }}</pre>
+        {% if ticket.bodyEditedAt %}<p class="muted small">{{ 'bearbeitet {editedAt}'|trans({'{editedAt}': ticket.bodyEditedAt|date('d.m.Y H:i')}) }}</p>{% endif %}
+        {% if admin_view and body_editable|default(false) %}
+            {{ include('game/_post_edit.html.twig', {action: path('app_admin_ticket_edit', {id: ticket.id}), token: 'admin', body: ticket.body, maxlength: constant('App\\Entity\\Ticket::MAX_BODY')}) }}
+        {% endif %}
     </article>
 
     {% for c in ticket.comments %}
@@ -28,6 +32,10 @@
             {% set anonymous = c.fromAdmin and ticket.kind.fromTeam and not admin_view %}
             <div class="muted small">{{ anonymous ? ('🛡 Support-Team'|trans) : (c.fromAdmin ? '🛡 Admin' : ('Spieler'|trans)) }}{% if c.author and not anonymous %} {{ c.author.username }}{% endif %} · {{ c.createdAt|date('d.m.Y H:i') }}</div>
             <pre class="message-body">{{ c.body|link_coordinates }}</pre>
+            {% if c.editedAt %}<p class="muted small">{{ 'bearbeitet {editedAt}'|trans({'{editedAt}': c.editedAt|date('d.m.Y H:i')}) }}</p>{% endif %}
+            {% if admin_view and c.id in editable|default([]) %}
+                {{ include('game/_post_edit.html.twig', {action: path('app_admin_ticket_edit', {id: ticket.id, comment: c.id}), token: 'admin', body: c.body, maxlength: constant('App\\Entity\\Ticket::MAX_BODY')}) }}
+            {% endif %}
         </div>
     {% endfor %}
 

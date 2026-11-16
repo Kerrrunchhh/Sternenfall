@@ -4,6 +4,7 @@ namespace App\Game;
 
 use App\I18n\Lines;
 use App\Entity\Ticket;
+use App\Entity\TicketComment;
 use App\Entity\User;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -125,6 +126,40 @@ final readonly class SupportService
         $ticket->setStatus($status, $this->now());
         $this->notifyAuthor($ticket, $body);
         $this->em->flush();
+    }
+
+    /**
+     * A team member corrects a message of the team: his own answers, as an admin every team
+     * answer, and the opening message of a ticket the team started. The player is not notified.
+     */
+    public function editTeamMessage(Ticket $ticket, ?TicketComment $comment, User $editor, string $body): void
+    {
+        if (!$this->mayEdit($ticket, $comment, $editor)) {
+            throw new GameException(t('Diese Nachricht darfst du nicht bearbeiten.'));
+        }
+        $body = $this->text($body);
+        if (null === $comment) {
+            $ticket->editBody($body, $this->now());
+        } else {
+            $comment->edit($body, $this->now());
+        }
+        $this->em->flush();
+    }
+
+    /** Whether a team member may change that message (null comment: the ticket's opening message). */
+    public static function mayEdit(Ticket $ticket, ?TicketComment $comment, User $editor): bool
+    {
+        $roles = $editor->getRoles();
+        $admin = \in_array('ROLE_ADMIN', $roles, true);
+        if (!$admin && !\in_array('ROLE_MODERATOR', $roles, true)) {
+            return false;
+        }
+        if (null === $comment) {
+            return $ticket->getKind()->isFromTeam();
+        }
+
+        return $comment->getTicket() === $ticket && $comment->isFromAdmin()
+            && ($admin || (null !== $comment->getAuthor() && $comment->getAuthor()->isSameAs($editor)));
     }
 
     /** Hands a suggestion or bug report to the developer (by e-mail, if configured). */

@@ -31,6 +31,10 @@ class TicketComment
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
+    /** When a team member last changed the text (null: never). */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $editedAt = null;
+
     public function __construct(Ticket $ticket, ?User $author, string $body, bool $fromAdmin, \DateTimeImmutable $createdAt)
     {
         $this->ticket = $ticket;
@@ -38,6 +42,27 @@ class TicketComment
         $this->body = mb_substr($body, 0, Ticket::MAX_BODY);
         $this->fromAdmin = $fromAdmin;
         $this->createdAt = $createdAt;
+    }
+
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+
+    public function getTicket(): Ticket
+    {
+        return $this->ticket;
+    }
+
+    public function getEditedAt(): ?\DateTimeImmutable
+    {
+        return $this->editedAt;
+    }
+
+    public function edit(string $body, \DateTimeImmutable $now): void
+    {
+        $this->body = mb_substr($body, 0, Ticket::MAX_BODY);
+        $this->editedAt = $now;
     }
 
     public function getAuthor(): ?User
