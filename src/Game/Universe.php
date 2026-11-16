@@ -35,7 +35,13 @@ final class Universe
     {
         $spread = self::MAX_PLANETS_PER_SYSTEM - self::MIN_PLANETS_PER_SYSTEM;
         $roll = crc32("slots:$galaxy:$system") % 10001;
+        // The trade guild's central systems keep the size they were built with (until 2026-11-16 the
+        // largest size only came up for the very top roll): its fusion spans exactly those slots.
+        if (TradeGuild::SYSTEM === $system) {
+            return self::MIN_PLANETS_PER_SYSTEM + intdiv($spread * $roll ** 2, 10000 * 10000);
+        }
 
-        return self::MIN_PLANETS_PER_SYSTEM + intdiv($spread * $roll ** 2, 10000 * 10000);
+        // spread + 1 steps over the whole roll, so 50 slots are about as common as 49.
+        return self::MIN_PLANETS_PER_SYSTEM + intdiv(($spread + 1) * $roll ** 2, 10001 * 10001);
     }
 }

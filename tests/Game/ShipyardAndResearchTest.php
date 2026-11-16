@@ -211,6 +211,20 @@ class ShipyardAndResearchTest extends TestCase
         self::assertGreaterThan(\count($sizes) / 2, $small, 'small systems are more common');
         self::assertGreaterThan(10, \count(array_unique($sizes)), 'sizes should vary between systems');
         self::assertSame(Universe::planetsInSystem(2, 17), Universe::planetsInSystem(2, 17));
+        $counts = array_count_values($sizes);
+        self::assertGreaterThan($counts[49] / 2, $counts[50] ?? 0, '50 slots about as common as 49, not only for the very top roll');
+    }
+
+    public function testNoSystemShrankAndTheGuildSystemsKeptTheirSize(): void
+    {
+        // The formula before 2026-11-16: systems may only have grown since, so no colony lost its slot.
+        $before = static fn (int $g, int $s): int => 10 + intdiv(40 * (crc32("slots:$g:$s") % 10001) ** 2, 10000 * 10000);
+        for ($galaxy = 1; $galaxy <= Universe::GALAXIES; ++$galaxy) {
+            for ($system = 1; $system <= Universe::SYSTEMS_PER_GALAXY; ++$system) {
+                self::assertGreaterThanOrEqual($before($galaxy, $system), Universe::planetsInSystem($galaxy, $system));
+            }
+            self::assertSame($before($galaxy, \App\Game\TradeGuild::SYSTEM), Universe::planetsInSystem($galaxy, \App\Game\TradeGuild::SYSTEM), 'the guild fusion spans exactly these slots');
+        }
     }
 
     public function testStartResourcesCoverTheStarterBuilds(): void
