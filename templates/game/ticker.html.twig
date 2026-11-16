@@ -68,21 +68,24 @@
                 {% endfor %}
             </ul>
 
-            {% if owner %}
-                {% if ticker.invitations is not empty %}
-                    <h3 class="small muted">{{ 'Eingeladen'|trans }}</h3>
-                    <ul class="contact-list">
-                        {% for i in ticker.invitations %}
-                            <li>
-                                <span>{{ ui.player(i.user) }}</span>
+            {# Everybody in the ticker sees who is invited; only the owner may withdraw an invitation. #}
+            {% if ticker.invitations is not empty %}
+                <h3 class="small muted" id="ticker-invited">{{ 'Eingeladen <small>{count}</small> – noch nicht beigetreten'|trans({'{count}': ticker.invitations|length|e})|raw }}</h3>
+                <ul class="contact-list">
+                    {% for i in ticker.invitations %}
+                        <li>
+                            <span>{{ ui.player(i.user) }} <span class="muted small">{{ 'seit {date}'|trans({'{date}': i.invitedAt|date('d.m.Y')}) }}</span></span>
+                            {% if owner %}
                                 <form method="post" action="{{ path('app_ticker_remove', {id: i.id}) }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
                                     <button class="btn btn-small btn-secondary" type="submit">{{ 'Zurückziehen'|trans }}</button>
                                 </form>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                {% endif %}
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+            {% if owner %}
                 <form method="post" action="{{ path('app_ticker_invite', {id: ticker.id}) }}" class="inline-action">
                     <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
                     <input type="text" name="username" required placeholder="{{ 'Spielername'|trans }}" aria-label="{{ 'Spieler einladen'|trans }}">

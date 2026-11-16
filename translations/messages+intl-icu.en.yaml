@@ -2835,3 +2835,5 @@
 "Einheit {n}": "Unit {n}"
 "Keine der eingestellten Einheiten kann hier gebaut werden – die Werft oder die Forschung reicht nicht.": "None of the chosen units can be built here – the shipyard or the research isn’t enough."
 "fliegt leer zurück": "flying back empty"
+"Eingeladen <small>{count}</small> – noch nicht beigetreten": "Invited <small>{count}</small> – not joined yet"
+"seit {date}": "since {date}"
