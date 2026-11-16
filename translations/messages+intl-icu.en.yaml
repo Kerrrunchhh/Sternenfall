@@ -2830,3 +2830,7 @@
 "🛡 Support-Team": "🛡 Support team"
 "Diese Nachricht darfst du nicht bearbeiten.": "You may not edit this message."
 "Nachricht geändert.": "Message changed."
+"Bis zu drei Einheiten in Reihenfolge: Auf jedem Planeten nimmt der Baubot die erste, die dort gebaut werden kann – so passt eine Einstellung für große und kleine Werften.": "Up to three units in order: on every planet the build bot takes the first one that can be built there – so one setting fits large and small shipyards."
+"sonst": "otherwise"
+"Einheit {n}": "Unit {n}"
+"Keine der eingestellten Einheiten kann hier gebaut werden – die Werft oder die Forschung reicht nicht.": "None of the chosen units can be built here – the shipyard or the research isn’t enough."

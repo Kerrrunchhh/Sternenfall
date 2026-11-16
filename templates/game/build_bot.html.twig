@@ -6,12 +6,16 @@
     {% set q = settings.queue(kind) %}
     <section class="panel" id="bot-{{ kind.value }}">
         <h2>{{ title }}</h2>
-        <label>{{ 'Einheit'|trans }}
-            <select name="queues[{{ kind.value }}][ship]">
-                <option value="">{{ '– keine –'|trans }}</option>
-                {% for t in types %}<option value="{{ t.value }}" {{ q.ship and q.ship.value == t.value ? 'selected' }}>{{ t.label|trans }}</option>{% endfor %}
-            </select>
-        </label>
+        <p class="muted small">{{ 'Bis zu drei Einheiten in Reihenfolge: Auf jedem Planeten nimmt der Baubot die erste, die dort gebaut werden kann – so passt eine Einstellung für große und kleine Werften.'|trans }}</p>
+        {% for i in 0..(constant('App\\Game\\BuildBot\\BuildBotSettings::SHIP_CHOICES') - 1) %}
+            {% set chosen = q.ships[i] ?? null %}
+            <label>{{ i == 0 ? 'Einheit'|trans : 'sonst'|trans }}
+                <select name="queues[{{ kind.value }}][ships][{{ i }}]" aria-label="{{ 'Einheit {n}'|trans({'{n}': i + 1}) }}">
+                    <option value="">{{ '– keine –'|trans }}</option>
+                    {% for t in types %}<option value="{{ t.value }}" {{ chosen and chosen.value == t.value ? 'selected' }}>{{ t.label|trans }}</option>{% endfor %}
+                </select>
+            </label>
+        {% endfor %}
         <label>{{ 'Baurate'|trans }}
             <select name="queues[{{ kind.value }}][percent]">
                 {% for p in percents %}<option value="{{ p }}" {{ q.percent == p ? 'selected' }}>{{ p }} %</option>{% endfor %}

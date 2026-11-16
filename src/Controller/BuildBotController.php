@@ -111,12 +111,11 @@ class BuildBotController extends AbstractGameController
 
     private function fillShips(PlanetService $planets, Planet $planet, QueueKind $kind): TranslatableInterface
     {
-        $ship = $planet->getOwner()->getBuildBot()->queue($kind)['ship'];
-        $count = $planets->fillShipQueue($planet, $kind);
+        [$ship, $count] = $planets->fillShipQueue($planet, $kind);
 
         return $count > 0
-            ? t('{planet}: {count} × {ship} in Auftrag gegeben.', ['{planet}' => $planet->getName(), '{count}' => $count, '{ship}' => t((string) $ship?->label())])
-            : t('{planet}: Für keine einzige Einheit {ship} reichen Rohstoffe, Credits oder Besatzung.', ['{planet}' => $planet->getName(), '{ship}' => t((string) $ship?->label())]);
+            ? t('{planet}: {count} × {ship} in Auftrag gegeben.', ['{planet}' => $planet->getName(), '{count}' => $count, '{ship}' => t($ship->label())])
+            : t('{planet}: Für keine einzige Einheit {ship} reichen Rohstoffe, Credits oder Besatzung.', ['{planet}' => $planet->getName(), '{ship}' => t($ship->label())]);
     }
 
     /** Every planet with the same settings: buildings, shipyard, defense. */
@@ -130,7 +129,7 @@ class BuildBotController extends AbstractGameController
                 $jobs[] = fn () => $this->fillBuildings($planets, $planet);
             }
             foreach ([QueueKind::Shipyard, QueueKind::Defense] as $kind) {
-                if (null !== $settings->queue($kind)['ship']) {
+                if ([] !== $settings->queue($kind)['ships']) {
                     $jobs[] = fn () => $this->fillShips($planets, $planet, $kind);
                 }
             }

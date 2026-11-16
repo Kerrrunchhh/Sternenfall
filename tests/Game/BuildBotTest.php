@@ -71,15 +71,37 @@ class BuildBotTest extends TestCase
         // Pfeil: 3000 iron, 1000 titanium for a settler – 50,000 iron give 16.
         $service = $this->service();
 
-        self::assertSame(16, $service->fillShipQueue($planet, QueueKind::Shipyard));
+        self::assertSame([ShipType::Pfeil, 16], $service->fillShipQueue($planet, QueueKind::Shipyard), 'settings saved with a single "ship" still work');
         self::assertCount(1, $planet->getQueue(QueueKind::Shipyard));
-        self::assertSame(0, $service->fillShipQueue($planet, QueueKind::Shipyard), 'nothing left to pay with');
+        self::assertSame([ShipType::Pfeil, 0], $service->fillShipQueue($planet, QueueKind::Shipyard), 'nothing left to pay with');
 
         // Clearing first gives everything back and orders it again – at 200 % this time.
-        $planet->getOwner()->setBuildBot(BuildBotSettings::fromArray(['queues' => ['shipyard' => ['ship' => 'pfeil', 'percent' => 200, 'clear' => true]]]));
-        self::assertSame(8, $service->fillShipQueue($planet, QueueKind::Shipyard));
+        $planet->getOwner()->setBuildBot(BuildBotSettings::fromArray(['queues' => ['shipyard' => ['ships' => ['pfeil'], 'percent' => 200, 'clear' => true]]]));
+        self::assertSame([ShipType::Pfeil, 8], $service->fillShipQueue($planet, QueueKind::Shipyard));
         self::assertCount(1, $planet->getQueue(QueueKind::Shipyard));
         self::assertSame(200, $planet->getQueue(QueueKind::Shipyard)[0]->getPercent());
+    }
+
+    public function testEveryPlanetTakesTheFirstUnitItsShipyardCanBuild(): void
+    {
+        $settings = BuildBotSettings::fromArray(['queues' => ['shipyard' => ['ships' => ['koloss', '', 'korsar', 'pfeil', 'falke', 'pfeil'], 'percent' => 100]]]);
+        self::assertSame([ShipType::Koloss, ShipType::Korsar, ShipType::Pfeil], $settings->queue(QueueKind::Shipyard)['ships'], 'three at most, empty ones dropped');
+
+        // A small shipyard: no Koloss, no Korsar – the Pfeil is built.
+        $planet = $this->planet();
+        $planet->getOwner()->setBuildBot($settings);
+        [$type, $count] = $this->service()->fillShipQueue($planet, QueueKind::Shipyard);
+        self::assertSame(ShipType::Pfeil, $type);
+        self::assertGreaterThan(0, $count);
+
+        // Nothing in the list fits: a clear message, the queue stays as it is.
+        $planet->getOwner()->setBuildBot(BuildBotSettings::fromArray(['queues' => ['shipyard' => ['ships' => ['koloss'], 'clear' => true]]]));
+        try {
+            $this->service()->fillShipQueue($planet, QueueKind::Shipyard);
+            self::fail('expected a refusal');
+        } catch (\App\Game\GameException) {
+            self::assertCount(1, $planet->getQueue(QueueKind::Shipyard), 'not cleared for nothing');
+        }
     }
 
     public function testSettingsKeepOnlyWhatFits(): void
@@ -90,9 +112,9 @@ class BuildBotTest extends TestCase
         ]);
 
         self::assertSame([['building' => BuildingType::Farm, 'level' => 2]], $settings->goals, 'three slots at most (the 4th and 5th are ignored), unknown or empty ones dropped');
-        self::assertNull($settings->queue(QueueKind::Shipyard)['ship'], 'a turret belongs in the defense queue');
+        self::assertSame([], $settings->queue(QueueKind::Shipyard)['ships'], 'a turret belongs in the defense queue');
         self::assertSame(100, $settings->queue(QueueKind::Shipyard)['percent'], 'only the build rates of the game');
-        self::assertSame(['ship' => ShipType::LaserTurret, 'percent' => 150, 'clear' => true], $settings->queue(QueueKind::Defense));
+        self::assertSame(['ships' => [ShipType::LaserTurret], 'percent' => 150, 'clear' => true], $settings->queue(QueueKind::Defense));
         self::assertEquals($settings, BuildBotSettings::fromArray($settings->toArray()));
     }
 

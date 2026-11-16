@@ -236,18 +236,24 @@ final readonly class PlanetService
     }
 
     /**
-     * Build bot: puts as many units of the chosen type into the shipyard or defense queue as
-     * resources, credits and crew allow – optionally after clearing that queue (all refunded).
+     * Build bot: puts as many units as resources, credits and crew allow into the shipyard or
+     * defense queue – of the first type in the bot's list this planet can build – optionally after
+     * clearing that queue (all refunded).
      *
-     * @return int how many were ordered (0: not even one affordable)
+     * @return array{ShipType, int} the type and how many were ordered (0: not even one affordable)
      */
-    public function fillShipQueue(Planet $planet, QueueKind $kind): int
+    public function fillShipQueue(Planet $planet, QueueKind $kind): array
     {
-        $ordered = 0;
+        $ordered = [];
         $this->locked($planet, function (Planet $planet, \DateTimeImmutable $now) use ($kind, &$ordered): void {
-            ['ship' => $type, 'percent' => $percent, 'clear' => $clear] = $planet->getOwner()->getBuildBot()->queue($kind);
-            if (null === $type) {
+            $settings = $planet->getOwner()->getBuildBot();
+            ['ships' => $ships, 'percent' => $percent, 'clear' => $clear] = $settings->queue($kind);
+            if ([] === $ships) {
                 throw new GameException(t('Für diese Bauschleife ist im Baubot nichts eingestellt.'));
+            }
+            $type = $settings->shipFor($kind, fn (ShipType $s): bool => [] === $this->economy->missingShipRequirements($s, $planet));
+            if (null === $type) {
+                throw new GameException(t('Keine der eingestellten Einheiten kann hier gebaut werden – die Werft oder die Forschung reicht nicht.'));
             }
             if ($clear) {
                 foreach ($planet->getQueue($kind) as $order) {
@@ -260,7 +266,7 @@ final readonly class PlanetService
                 $this->placeShipOrder($planet, $type, $quantity, $percent, $now);
             }
             $this->startHead($planet, $kind, $now);
-            $ordered = $quantity;
+            $ordered = [$type, $quantity];
         });
 
         return $ordered;
