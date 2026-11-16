@@ -27,8 +27,14 @@ class SeoController extends AbstractController
         // Only the public pages; the game itself needs a login, shared combat reports expire.
         $allowed = array_map(fn (string $route): string => 'Allow: '.$this->generateUrl($route).('/' === $this->generateUrl($route) ? '$' : ''), array_keys(self::PAGES));
         $lines = [
+            // AdSense checks the pages it shows ads on: its crawler may look everywhere (the game itself needs a login anyway).
+            'User-agent: Mediapartners-Google',
+            'Allow: /',
+            '',
             'User-agent: *',
             ...$allowed,
+            // The language versions of the start page are in the sitemap: "/$" alone would block "/?lang=en".
+            'Allow: /?lang=',
             'Allow: /css/',
             'Allow: /js/',
             'Allow: /pictures/',
