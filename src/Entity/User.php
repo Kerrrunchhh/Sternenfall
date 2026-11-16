@@ -43,6 +43,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $emailVerifiedAt = null;
 
+    /** A new address waiting for its confirmation link; until then the confirmed one stays in use. */
+    #[ORM\Column(length: 180, nullable: true)]
+    #[Assert\Email(message: 'Bitte gib eine gültige E-Mail-Adresse ein.')]
+    private ?string $pendingEmail = null;
+
     /** When the player accepted the terms of use (AGB) at sign-up; null for players from before. */
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $termsAcceptedAt = null;
@@ -443,6 +448,61 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function verifyEmail(\DateTimeImmutable $at): void
     {
         $this->emailVerifiedAt = $at;
+    }
+
+    public function getPendingEmail(): ?string
+    {
+        return $this->pendingEmail;
+    }
+
+    /**
+     * A new address from the account settings. With a confirmed address it only waits
+     * (pendingEmail) until its link is clicked – the old one stays valid meanwhile. Without one,
+     * it replaces the address at once (still to be confirmed).
+     *
+     * @return bool whether it waits for confirmation (false: set directly, or nothing changed)
+     */
+    public function requestEmail(string $address): bool
+    {
+        $address = mb_strtolower(trim($address));
+        if ('' === $address || $address === $this->email) {
+            $this->pendingEmail = null;
+
+            return false;
+        }
+        if (!$this->isEmailVerified()) {
+            $this->setEmail($address);
+            $this->pendingEmail = null;
+
+            return false;
+        }
+        $this->pendingEmail = $address;
+
+        return true;
+    }
+
+    public function cancelEmailChange(): void
+    {
+        $this->pendingEmail = null;
+    }
+
+    /** The confirmation link for $address was clicked: a waiting address takes over, or the current one is confirmed. */
+    public function confirmEmail(string $address, \DateTimeImmutable $at): bool
+    {
+        if (null !== $this->pendingEmail && $address === $this->pendingEmail) {
+            $this->email = $this->pendingEmail;
+            $this->pendingEmail = null;
+            $this->emailVerifiedAt = $at;
+
+            return true;
+        }
+        if (null !== $this->email && $address === $this->email) {
+            $this->emailVerifiedAt = $at;
+
+            return true;
+        }
+
+        return false;
     }
 
     public function getTermsAcceptedAt(): ?\DateTimeImmutable

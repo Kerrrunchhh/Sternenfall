@@ -79,28 +79,53 @@ class AccountController extends AbstractGameController
 
     #[Route('/konto/email', name: 'app_account_email', methods: ['POST'])]
     #[IsCsrfTokenValid('account', tokenKey: '_token')]
-    public function email(Request $request, \App\Game\GameMailer $mailer, \Doctrine\ORM\EntityManagerInterface $em, \Symfony\Component\Validator\Validator\ValidatorInterface $validator): Response
+    public function email(Request $request, \App\Game\GameMailer $mailer, \Doctrine\ORM\EntityManagerInterface $em, \Symfony\Component\Validator\Validator\ValidatorInterface $validator, \App\Repository\UserRepository $users): Response
     {
         $this->currentPlanet();
         $player = $this->player();
         $player->setMailTopics(array_values(array_intersect(array_keys(\App\Game\GameMailer::TOPICS), $request->request->all('topics'))));
         $player->setAttackMailsPerMinute($request->request->getInt('attack_limit', $player->getAttackMailsPerMinute()));
-        $address = trim($request->request->getString('email'));
-        $changed = '' !== $address && $address !== $player->getEmail();
+        $address = mb_strtolower(trim($request->request->getString('email')));
+        if ('cancel_email' === $request->request->getString('do')) {
+            $player->cancelEmailChange();
+            $em->flush();
+            $this->addFlash('success', t('Änderung der E-Mail-Adresse zurückgenommen.'));
+
+            return $this->redirectToRoute('app_account', ['_fragment' => 'email']);
+        }
+        $changed = '' !== $address && $address !== $player->getEmail() && $address !== $player->getPendingEmail();
         if ($changed) {
-            $player->setEmail($address);
+            // Nobody else may use it – neither as address nor waiting for confirmation.
+            $taken = $users->findOneBy(['email' => $address]) ?? $users->findOneBy(['pendingEmail' => $address]);
+            if (null !== $taken && !$taken->isSameAs($player)) {
+                $this->addFlash('error', t('Diese E-Mail-Adresse wird schon verwendet.'));
+
+                return $this->redirectToRoute('app_account', ['_fragment' => 'email']);
+            }
+            $waits = $player->requestEmail($address);
             $errors = $validator->validate($player);
             if (\count($errors) > 0) {
                 $em->refresh($player);
                 $this->addFlash('error', $errors[0]->getMessage());
 
-                return $this->redirectToRoute('app_account');
+                return $this->redirectToRoute('app_account', ['_fragment' => 'email']);
             }
+            $em->flush();
+            $link = $mailer->sendConfirmation($player);
+            $dev = 'dev' === $this->getParameter('kernel.environment') ? '(dev: '.$link.')' : null;
+            if ($waits) {
+                $mailer->sendEmailChangeNotice($player);
+                $this->addFlash('success', new Lines([t('Gespeichert. Bitte bestätige die neue Adresse mit dem Link aus der Mail – bis dahin gehen alle Mails an deine bisherige Adresse.'), $dev], ' '));
+            } else {
+                $this->addFlash('success', new Lines([t('Gespeichert. Bitte bestätige die Adresse mit dem Link aus der Mail, erst dann bekommst du Benachrichtigungen.'), $dev], ' '));
+            }
+
+            return $this->redirectToRoute('app_account', ['_fragment' => 'email']);
         }
         $em->flush();
-        if ($changed || ('resend' === $request->request->getString('do') && $player->needsEmailConfirmation())) {
+        if ('resend' === $request->request->getString('do') && ($player->needsEmailConfirmation() || null !== $player->getPendingEmail())) {
             $link = $mailer->sendConfirmation($player);
-            $this->addFlash('success', new Lines([t('Gespeichert. Bitte bestätige die Adresse mit dem Link aus der Mail, erst dann bekommst du Benachrichtigungen.'), 'dev' === $this->getParameter('kernel.environment') ? '(dev: '.$link.')' : null], ' '));
+            $this->addFlash('success', new Lines([t('Der Bestätigungslink ist neu unterwegs.'), 'dev' === $this->getParameter('kernel.environment') ? '(dev: '.$link.')' : null], ' '));
         } else {
             $this->addFlash('success', t('Einstellungen gespeichert.'));
         }

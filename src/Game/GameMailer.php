@@ -48,11 +48,25 @@ final readonly class GameMailer
     /** Sends the confirmation link (valid for 2 days); returns it (shown in development). */
     public function sendConfirmation(User $user): string
     {
+        // A new address waiting for confirmation: the link goes there; the old address stays valid meanwhile.
+        if (null !== $pending = $user->getPendingEmail()) {
+            $url = $this->signer->sign($this->urls->generate('app_verify_email', ['id' => $user->getId(), 'email' => $pending], UrlGeneratorInterface::ABSOLUTE_URL), new \DateInterval('P2D'));
+            $this->send($user, t('Bitte bestätige deine neue E-Mail-Adresse'), t("Hallo {name},\n\ndu möchtest bei {game} diese neue E-Mail-Adresse verwenden. Bitte bestätige sie mit diesem Link (2 Tage gültig):\n\n{url}\n\nBis dahin gehen alle Mails an deine bisherige Adresse. Wenn du das nicht warst, ignoriere diese Mail einfach.", ['{name}' => $user->getUsername(), '{game}' => $this->gameName, '{url}' => $url]), null, $pending);
+            $this->logger->info('E-mail change link for {user}: {url}', ['user' => $user->getUsername(), 'url' => $url]);
+
+            return $url;
+        }
         $url = $this->signer->sign($this->urls->generate('app_verify_email', ['id' => $user->getId(), 'email' => $user->getEmail()], UrlGeneratorInterface::ABSOLUTE_URL), new \DateInterval('P2D'));
         $this->send($user, t('Bitte bestätige deine E-Mail-Adresse'), t("Hallo {name},\n\nwillkommen bei {game}! Bitte bestätige deine E-Mail-Adresse mit diesem Link (2 Tage gültig):\n\n{url}\n\nWenn du dich nicht angemeldet hast, ignoriere diese Mail einfach.", ['{name}' => $user->getUsername(), '{game}' => $this->gameName, '{url}' => $url]));
         $this->logger->info('E-mail confirmation link for {user}: {url}', ['user' => $user->getUsername(), 'url' => $url]);
 
         return $url;
+    }
+
+    /** Tells the confirmed address that a new one was entered (in case somebody else is at the account). */
+    public function sendEmailChangeNotice(User $user): void
+    {
+        $this->send($user, t('Neue E-Mail-Adresse eingetragen'), t("Hallo {name},\n\nfür dein Konto bei {game} wurde die neue E-Mail-Adresse {email} eingetragen. Sie gilt erst, wenn der Link in der Mail an diese Adresse geklickt wird – bis dahin bleibt diese Adresse gültig.\n\nWenn du das nicht warst, ändere bitte dein Passwort und nimm die Änderung im Spiel unter Konto zurück.", ['{name}' => $user->getUsername(), '{game}' => $this->gameName, '{email}' => (string) $user->getPendingEmail()]));
     }
 
     /** The link to set a new password ("Passwort vergessen", valid for one hour). */
@@ -117,9 +131,10 @@ final readonly class GameMailer
     }
 
     /** Sends a mail in the language the player chose. */
-    private function send(User $user, TranslatableInterface $subject, TranslatableInterface $text, ?TranslatableInterface $footer = null): void
+    /** @param string|null $to another address than the player's (the new one waiting for confirmation) */
+    private function send(User $user, TranslatableInterface $subject, TranslatableInterface $text, ?TranslatableInterface $footer = null, ?string $to = null): void
     {
-        $to = $user->getEmail();
+        $to ??= $user->getEmail();
         if (null === $to || $user->isDeactivated()) {
             return;
         }

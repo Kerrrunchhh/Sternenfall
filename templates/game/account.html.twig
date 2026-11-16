@@ -62,6 +62,13 @@
                 {% elseif player.emailVerified %}{{ '✓ Bestätigt.'|trans }}
                 {% else %}{{ 'Noch nicht bestätigt – erst dann kommen Mails.'|trans }} <button class="link-button" type="submit" name="do" value="resend">{{ 'Link erneut senden'|trans }}</button>{% endif %}
             </p>
+            {% if player.pendingEmail %}
+                <p class="small warning" id="email-pending">
+                    {{ 'Neue Adresse {email} wartet auf Bestätigung – bis du den Link in der Mail an sie klickst, gehen alle Mails an {old}.'|trans({'{email}': player.pendingEmail, '{old}': player.email}) }}
+                    <button class="link-button" type="submit" name="do" value="resend">{{ 'Link erneut senden'|trans }}</button> ·
+                    <button class="link-button" type="submit" name="do" value="cancel_email" formnovalidate>{{ 'Änderung zurücknehmen'|trans }}</button>
+                </p>
+            {% endif %}
             <fieldset class="topic-list">
                 <legend class="small muted">{{ 'Mails bekomme ich bei:'|trans }}</legend>
                 {% for key, label in topics %}

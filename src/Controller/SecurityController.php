@@ -55,13 +55,21 @@ class SecurityController extends AbstractController
     public function verifyEmail(Request $request, \Symfony\Component\HttpFoundation\UriSigner $signer, \App\Repository\UserRepository $users, EntityManagerInterface $em): Response
     {
         $user = ctype_digit($id = $request->query->getString('id')) ? $users->find((int) $id) : null;
-        if (!$signer->checkRequest($request) || null === $user || $user->getEmail() !== $request->query->getString('email')) {
+        $address = $request->query->getString('email');
+        $change = null !== $user && null !== $user->getPendingEmail() && $address === $user->getPendingEmail();
+        // A new address must still be free when it is confirmed.
+        $taken = $change ? $users->findOneBy(['email' => $address]) : null;
+        if (!$signer->checkRequest($request) || null === $user || (null !== $taken && !$taken->isSameAs($user)) || !$user->confirmEmail($address, new \DateTimeImmutable())) {
             $this->addFlash('error', t('Der Bestätigungslink ist ungültig oder abgelaufen. Fordere unten einen neuen an.'));
 
             return $this->redirectToRoute('app_resend_email');
         }
-        $user->verifyEmail(new \DateTimeImmutable());
         $em->flush();
+        if ($change) {
+            $this->addFlash('success', t('Danke! Deine neue E-Mail-Adresse ist bestätigt und gilt ab jetzt.'));
+
+            return $this->redirectToRoute($this->getUser() ? 'app_account' : 'app_login');
+        }
         $this->addFlash('success', t('Danke! Deine E-Mail-Adresse ist bestätigt. Melde dich jetzt an – deine Heimatwelt wartet.'));
 
         return $this->redirectToRoute('app_login');
