@@ -691,6 +691,15 @@ final readonly class FleetService
      * @return TranslatableInterface what happened (for the player)
      */
     /** @param array<string, float> $order goods to buy (mission "Handeln") */
+    /** Trading needs no flight when the fleet is already at the post: buying and selling happen on its page. */
+    private function refuseTradeInPlace(Fleet $fleet, FleetMission $mission, int $galaxy, int $system, int $position): void
+    {
+        if (FleetMission::Trade === $mission && $fleet->isAt($galaxy, $system, $position)
+            && null !== $post = $this->tradePosts->findAt($galaxy, $system, $position)) {
+            throw new GameException(t('„{name}“ wartet schon am Handelsstützpunkt {post} – kaufen und verkaufen kannst du direkt auf dessen Seite (im Universum anklicken oder auf der Übersicht „Zum Handel“).', ['{name}' => $fleet->getName(), '{post}' => $post->getName()]));
+        }
+    }
+
     public function sendFleet(Fleet $fleet, User $actor, int $galaxy, int $system, int $position, FleetMission $mission, Resources $cargo, array $order = [], float $speedPercent = 100.0, ?Fleet $lead = null, bool $shareChecked = false): TranslatableInterface
     {
         if (null !== $lead) {
@@ -749,6 +758,9 @@ final readonly class FleetService
                 if (!$lead->isControllableBy($actor)) {
                     throw new GameException(t('Weitere Flotten schickt nur, wer den Angriff führt – die anderen geben ihm ihre Flotten frei.'));
                 }
+            }
+            if (null === $lead) {
+                $this->refuseTradeInPlace($fleet, $mission, $galaxy, $system, $position);
             }
             // Already at the target of its group: hover there until the others arrive.
             if (null !== $lead && $fleet->isAt($galaxy, $system, $position)) {

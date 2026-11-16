@@ -98,4 +98,26 @@ final class TradeGuildTest extends TestCase
         self::assertStringContainsString('handel01', $text);
         self::assertStringContainsString('[3:144:1]', $text, 'says where the fleet is heading');
     }
+
+    public function testAFleetAlreadyAtTheTradePostIsNotSentThereAgain(): void
+    {
+        $now = new \DateTimeImmutable('2026-11-16 10:00:00');
+        $post = new \App\Entity\TradePost(new User(TradeGuild::NAME, $now), TradeGuild::POST_NAME, 20, TradeGuild::SYSTEM, 1, $now);
+        $posts = $this->createStub(\App\Repository\TradePostRepository::class);
+        $posts->method('findAt')->willReturnCallback(static fn (int $g, int $s, int $p): ?\App\Entity\TradePost => [20, TradeGuild::SYSTEM, 1] === [$g, $s, $p] ? $post : null);
+        $service = (new \ReflectionClass(\App\Game\FleetService::class))->newInstanceWithoutConstructor();
+        (new \ReflectionProperty(\App\Game\FleetService::class, 'tradePosts'))->setValue($service, $posts);
+        $refuse = new \ReflectionMethod(\App\Game\FleetService::class, 'refuseTradeInPlace');
+        $fleet = new \App\Entity\Fleet(new User('the_hawk', $now), 'TG1', 20, TradeGuild::SYSTEM, 1, ['large_freighter' => 1]);
+
+        try {
+            $refuse->invoke($service, $fleet, \App\Game\FleetMission::Trade, 20, TradeGuild::SYSTEM, 1);
+            self::fail('no 5-second flight to where the fleet already is');
+        } catch (\App\Game\GameException $e) {
+            self::assertStringContainsString('TG1', $e->translatable()->trans(new \Symfony\Component\Translation\IdentityTranslator()));
+        }
+        $refuse->invoke($service, $fleet, \App\Game\FleetMission::Trade, 10, TradeGuild::SYSTEM, 1);
+        $refuse->invoke($service, $fleet, \App\Game\FleetMission::Station, 20, TradeGuild::SYSTEM, 1);
+        $this->addToAssertionCount(2); // another post, or another mission: fine
+    }
 }

@@ -1182,6 +1182,11 @@ const orbit = (() => {
                 preview.textContent = t('Geschwindigkeit: 0,1 bis 100 %');
                 return;
             }
+            // Already there: nothing to fly (trading at a post happens on its page).
+            if (from.every((value, i) => value === to[i])) {
+                preview.textContent = t('Die Flotte ist schon an diesem Ziel – es gibt nichts zu fliegen. Handeln kannst du auf der Seite des Handelsstützpunkts.');
+                return;
+            }
             const seconds = Math.max(5, Math.round(3600 * distance(from, to) / (shipSpeed * percent / 100) / gameSpeed));
             const arrival = new Date(serverClock.now().getTime() + seconds * 1000);
             const sameDay = serverClock.day(arrival) === serverClock.day(serverClock.now());
