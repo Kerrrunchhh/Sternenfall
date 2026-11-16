@@ -1197,8 +1197,10 @@ const orbit = (() => {
 
     // Flight preview: duration and arrival for the chosen target and speed (same formula as the server).
     const distance = (a, b) => {
-        if (a[0] !== b[0]) return 100000 * Math.abs(a[0] - b[0]);
-        if (a[1] !== b[1]) return 20000 + 500 * Math.abs(a[1] - b[1]);
+        // The same as App\Game\Navigation::distance (keep both in step).
+        if (a[0] !== b[0] || a[1] !== b[1]) {
+            return 5000 + 1000 * Math.abs(a[1] - b[1]) + Math.floor((200 + 100 * a[2] + 200 + 100 * b[2]) / 2) + 100000 * Math.abs(a[0] - b[0]);
+        }
         if (a[2] !== b[2]) return orbit.distance(a[0], a[1], a[2], b[2], serverClock.now().getTime());
         return 5;
     };

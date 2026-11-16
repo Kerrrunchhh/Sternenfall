@@ -30,9 +30,27 @@ class NavigationTest extends TestCase
         // Within a system it depends on where the two planets are on their orbits (see OrbitTest).
         self::assertGreaterThanOrEqual(\App\Game\Orbit::TRAVEL_BASE + 400, $sameSystem);
         self::assertLessThanOrEqual(\App\Game\Orbit::TRAVEL_BASE + \App\Game\Orbit::radius(5) + \App\Game\Orbit::radius(9), $sameSystem);
-        self::assertSame(29500, $sameGalaxy);
-        self::assertSame(200000, $otherGalaxy);
+        // 5,000 base, 1,000 per system, half the orbit radii of both planets (700 each at position 5).
+        self::assertSame(5000 + 19 * 1000 + 700, $sameGalaxy);
+        self::assertSame(5000 + 700 + 2 * 100000, $otherGalaxy);
         self::assertTrue($samePlanet < $sameSystem && $sameSystem < $sameGalaxy && $sameGalaxy < $otherGalaxy);
+    }
+
+    public function testNearSystemsAreNearOuterPlanetsFartherAndAnotherGalaxyNeverShorter(): void
+    {
+        $neighbour = $this->navigation->distance(1, 100, 1, 1, 101, 1);
+        $thirty = $this->navigation->distance(1, 100, 1, 1, 130, 1);
+        self::assertSame(5000 + 1000 + 300, $neighbour, 'the next system is no longer two thirds of the way to one 30 systems on');
+        self::assertGreaterThan(4 * $neighbour, $thirty);
+
+        self::assertGreaterThan($this->navigation->distance(1, 100, 1, 1, 101, 1), $this->navigation->distance(1, 100, 1, 1, 101, 40), 'outer planets are farther out');
+
+        // Across a galaxy it is the same way plus 100,000 – never shorter than inside one.
+        $farInside = $this->navigation->distance(1, 1, 50, 1, 500, 50);
+        $otherGalaxy = $this->navigation->distance(1, 250, 1, 2, 250, 1);
+        self::assertSame($this->navigation->distance(1, 1, 50, 1, 500, 50) + 100000, $this->navigation->distance(1, 1, 50, 2, 500, 50));
+        self::assertGreaterThan($this->navigation->distance(1, 250, 1, 1, 251, 1), $otherGalaxy);
+        self::assertGreaterThan(500000, $farInside);
     }
 
     public function testSlowestShipDeterminesSpeed(): void

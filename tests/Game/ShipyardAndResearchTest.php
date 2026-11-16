@@ -134,7 +134,7 @@ class ShipyardAndResearchTest extends TestCase
         $navigation = new \App\Game\Navigation($this->economy);
 
         $seconds = $navigation->flightSeconds($navigation->distance(3, 277, 1, 16, 185, 1), $this->economy->shipSpeed(ShipType::Scout, $player));
-        self::assertEqualsWithDelta(3600, $seconds, 300, '3:277 → 16:185 with espionage 1');
+        self::assertEqualsWithDelta(3600, $seconds, 600, '3:277 → 16:185 with espionage 1: about an hour (67 minutes since the systems in between count too)');
         self::assertLessThan(5 * 60, $navigation->flightSeconds($navigation->distance(3, 277, 1, 3, 300, 1), $this->economy->shipSpeed(ShipType::Scout, $player)), 'another system: minutes');
     }
 
