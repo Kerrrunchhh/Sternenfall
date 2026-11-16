@@ -37,7 +37,7 @@
                 {% for f in own_visible %}
                     <tr>
                         <td>{{ '<strong>{label}</strong> <span class="small muted">{label2}{Rckflug} von {coordinates} nach {targetCoordinates}</span>'|trans({'{label}': f.label|trans|e, '{label2}': f.mission.flightLabel|trans|e, '{Rckflug}': (f.returning ? (' ' ~ '(Rückflug)'|trans))|e, '{coordinates}': ui.coords(f.returning ? f.targetCoordinates : f.coordinates), '{targetCoordinates}': ui.coords(f.returning ? f.coordinates : f.targetCoordinates)})|raw }}</td>
-                        <td class="small">{{ f.mission.value == 'attack' and not f.returning ? ('greift an'|trans) : 'transportiert {amount} Rohstoffe'|trans({'{amount}': f.cargo.total|num}) }}</td>
+                        <td class="small">{{ f.mission.value == 'attack' and not f.returning ? ('greift an'|trans) : (f.cargo.total < 1 ? ('fliegt leer zurück'|trans) : 'transportiert {amount} Rohstoffe'|trans({'{amount}': f.cargo.total|num})) }}</td>
                         <td class="num small">{{ '{Ankunft} in {nextEventAt}'|trans({'{Ankunft}': (f.returning ? ('Rückkehr'|trans) : ('Ankunft'|trans))|e, '{nextEventAt}': ui.countdown(f.nextEventAt, now)})|raw }}</td>
                     </tr>
                 {% endfor %}

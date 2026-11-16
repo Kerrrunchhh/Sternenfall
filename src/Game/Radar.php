@@ -119,8 +119,9 @@ final readonly class Radar
     /** Own fleets the radar lists for their owner: attacking ones and those carrying resources. */
     public static function showsOwn(Fleet $fleet): bool
     {
+        // Attacking, carrying resources – or a trade fleet on its way back, empty or not (others see it too).
         return self::emits($fleet)
-            && ((FleetMission::Attack === $fleet->getMission() && !$fleet->isReturning()) || $fleet->getCargo()->total() >= 1);
+            && ((FleetMission::Attack === $fleet->getMission() && !$fleet->isReturning()) || $fleet->getCargo()->total() >= 1 || self::isReturningTrader($fleet));
     }
 
     /**

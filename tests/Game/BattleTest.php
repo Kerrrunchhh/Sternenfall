@@ -278,7 +278,7 @@ class BattleTest extends TestCase
 
         // The owner's radar lists only attacking and resource-carrying fleets.
         self::assertFalse(\App\Game\Radar::showsOwn($pickup), 'an empty pickup is no transport');
-        self::assertFalse(\App\Game\Radar::showsOwn($transport), 'empty on the way back');
+        self::assertTrue(\App\Game\Radar::showsOwn($transport), 'a trade fleet on its way back shows even empty – others see it too');
         self::assertFalse(\App\Game\Radar::showsOwn($attack), 'attack over');
         self::assertFalse(\App\Game\Radar::showsOwn($spy));
         $attack2 = new \App\Entity\Fleet($owner, 'Angriff', 1, 1, 1, ['pfeil' => 5]);
