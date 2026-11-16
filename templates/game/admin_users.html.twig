@@ -32,6 +32,11 @@
                     <button class="btn btn-small btn-secondary" type="submit">{{ 'Setzen'|trans }}</button>
                 </form>
                 <form method="post" action="{{ path('app_admin_user', {id: u.id}) }}" class="inline-action">
+                    <input type="hidden" name="_token" value="{{ csrf_token('admin_users') }}"><input type="hidden" name="do" value="rename"><input type="hidden" name="q" value="{{ query }}">
+                    <label>{{ 'Umbenennen in'|trans }} <input type="text" name="username" required minlength="3" maxlength="30" pattern="[A-Za-z0-9_\-]+" value="{{ u.username }}" aria-label="{{ 'Neuer Spielername für {username}'|trans({'{username}': u.username}) }}"></label>
+                    <button class="btn btn-small btn-secondary" type="submit" data-confirm="{{ '{username} wirklich umbenennen? Er muss sich danach mit dem neuen Namen anmelden.'|trans({'{username}': u.username}) }}" data-confirm-label="{{ 'Umbenennen'|trans }}">{{ 'Umbenennen'|trans }}</button>
+                </form>
+                <form method="post" action="{{ path('app_admin_user', {id: u.id}) }}" class="inline-action">
                     <input type="hidden" name="_token" value="{{ csrf_token('admin_users') }}"><input type="hidden" name="do" value="vacation"><input type="hidden" name="q" value="{{ query }}">
                     <label>{{ 'Urlaub'|trans }} <input type="text" name="days" value="1" class="short" inputmode="decimal" required> {{ 'Tage'|trans }}</label>
                     <input type="text" name="reason" required maxlength="200" placeholder="{{ 'Grund (bekommt der Spieler)'|trans }}">

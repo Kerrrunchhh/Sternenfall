@@ -30,4 +30,15 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         $user->setPassword($newHashedPassword);
         $this->getEntityManager()->flush();
     }
+
+    /** The account with this name in any upper/lower case ("anna" finds "Anna"). */
+    public function findOneByNameIgnoringCase(string $name): ?User
+    {
+        return $this->createQueryBuilder('u')
+            ->where('LOWER(u.username) = LOWER(:name)')
+            ->setParameter('name', $name)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }

@@ -52,7 +52,7 @@ class AdminUserController extends AbstractGameController
 
     #[Route('/admin/benutzer/{id}', name: 'app_admin_user', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('admin_users', tokenKey: '_token')]
-    public function act(User $user, Request $request, EntityManagerInterface $em, VacationService $vacations, Inbox $inbox, AccountDeletion $deletion, AccountDeactivation $deactivation): Response
+    public function act(User $user, Request $request, EntityManagerInterface $em, VacationService $vacations, Inbox $inbox, AccountDeletion $deletion, AccountDeactivation $deactivation, \App\Game\AccountRename $rename): Response
     {
         $this->currentPlanet();
         $form = $request->request;
@@ -71,6 +71,12 @@ class AdminUserController extends AbstractGameController
                     $user->setRoles('player' === $role ? $keep : [...$keep, $role]);
                     $em->flush();
                     $this->addFlash('success', t('{player} ist jetzt {value}.', ['{player}' => $user->getUsername(), '{value}' => self::ROLES[$role]]));
+                    break;
+                case 'rename':
+                    $old = $rename->rename($user, $form->getString('username'));
+                    $this->addFlash('success', t('{old} heißt jetzt {player}.', ['{old}' => $old, '{player}' => $user->getUsername()]));
+                    // Search for the new name, so the account stays in view.
+                    $form->set('q', $user->getUsername());
                     break;
                 case 'vacation':
                     $reason = trim($form->getString('reason'));
