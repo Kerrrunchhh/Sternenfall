@@ -40,4 +40,20 @@ final class HomePlanetTest extends TestCase
 
         self::assertSame([PlanetType::Blue, PlanetType::Red, PlanetType::Water], $friendly);
     }
+
+    public function testAColonyStartsWithTheShipsSuppliesAndItsCargo(): void
+    {
+        $colonizer = new Colonizer(
+            $this->createStub(PlanetRepository::class),
+            $this->createStub(TradePostRepository::class),
+            $this->createStub(EntityManagerInterface::class),
+            new \Symfony\Component\Clock\MockClock('2026-11-16 10:00:00'),
+            new \App\Game\Economy(1.0),
+        );
+
+        $colony = $colonizer->foundColony(new \App\Entity\User('siedler'), 1, 2, 3, 100, new \App\Game\Resources(iron: 1000, hydrogen: 50));
+
+        self::assertEquals(new \App\Game\Resources(iron: 1500, titanium: 500, food: 200, water: 200, hydrogen: 50), $colony->getResources());
+        self::assertSame(1, $colony->getBuildingLevel(\App\Game\BuildingType::BioCell));
+    }
 }

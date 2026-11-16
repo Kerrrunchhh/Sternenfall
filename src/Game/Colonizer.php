@@ -78,13 +78,19 @@ final readonly class Colonizer
 
     /**
      * Founds a colony on a free slot (persisted, not flushed). The settlers need
-     * a home, so every colony starts with a bio cell.
+     * a home, so every colony starts with a bio cell – and with the ship's supplies and cargo.
      */
+    /** Every colony ship brings these supplies along (on top of its cargo), so the colony can start building at once. */
+    public static function supplies(): Resources
+    {
+        return new Resources(iron: 500, titanium: 500, food: 200, water: 200);
+    }
+
     public function foundColony(User $user, int $galaxy, int $system, int $position, float $settlers, Resources $cargo): Planet
     {
         $name = PlanetNames::random(array_map(static fn (Planet $p): string => $p->getName(), $user->getPlanets()->toArray()));
         $planet = new Planet($user, $name, $galaxy, $system, $position, \DateTimeImmutable::createFromInterface($this->clock->now()));
-        $planet->setResources($cargo);
+        $planet->setResources($cargo->add(self::supplies()));
         $planet->setBuildingLevel(BuildingType::BioCell, 1);
         $planet->setPopulation($settlers);
         $this->em->persist($planet);

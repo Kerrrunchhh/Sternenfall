@@ -1670,7 +1670,7 @@ final readonly class FleetService
                 $colony = $this->colonizer->foundColony($player, $fleet->getTargetGalaxy(), $fleet->getTargetSystem(), $fleet->getTargetPosition(), $settlers, $fleet->getCargo());
                 $fleet->removeShips(ShipType::ColonyShip, 1);
                 $fleet->setCargo(new Resources());
-                $this->inbox->send($player, t('Neue Kolonie {name} auf {where}', ['{name}' => $colony->getName(), '{where}' => $where]), t('Dein Kolonieschiff ist auf {where} gelandet. {settlers} Siedler haben dort die Kolonie {name} gegründet und die Ladung ausgeladen. Umbenennen kannst du sie in der Übersicht.', ['{where}' => $where, '{settlers}' => $settlers, '{name}' => $colony->getName()]));
+                $this->inbox->send($player, t('Neue Kolonie {name} auf {where}', ['{name}' => $colony->getName(), '{where}' => $where]), t('Dein Kolonieschiff ist auf {where} gelandet. {settlers} Siedler haben dort die Kolonie {name} gegründet und die Ladung ausgeladen – dazu die Vorräte des Schiffs: 500 Eisen, 500 Titan, 200 Nahrung und 200 Wasser. Umbenennen kannst du sie in der Übersicht.', ['{where}' => $where, '{settlers}' => $settlers, '{name}' => $colony->getName()]));
                 if (!$fleet->hasShips()) {
                     $this->fleetRepository->forget($fleet);
 
