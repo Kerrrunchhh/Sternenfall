@@ -20,6 +20,7 @@
                 <span class="muted small">{{ m.createdAt|date('d.m.Y H:i') }}</span>
             </summary>
             <pre class="message-body">{{ m.body|link_coordinates }}</pre>
+            {% if m.actionUrl %}<p><a class="btn btn-small" href="{{ m.actionUrl }}">{{ m.actionLabel }}</a></p>{% endif %}
             <form method="post" action="{{ path('app_message_delete', {id: m.id}) }}" class="message-actions">
                 <input type="hidden" name="_token" value="{{ token }}">
                 <span class="muted small">{{ 'wird am {createdAt} automatisch gelöscht'|trans({'{createdAt}': m.createdAt|date_modify('+' ~ keep_days ~ ' days')|date('d.m.Y')}) }}</span>

@@ -101,6 +101,31 @@ class MultiCheckTest extends TestCase
         self::assertFalse(SupportService::mayEdit($ticket, null, $admin), 'the opening message is the player\'s');
     }
 
+    public function testMessagesCarryAButtonToTheDialog(): void
+    {
+        $player = new User('verdaechtig');
+        $moderator = new User('Moderatorin');
+        $moderator->setRoles(['ROLE_MODERATOR']);
+        $urls = $this->createStub(\Symfony\Component\Routing\Generator\UrlGeneratorInterface::class);
+        $urls->method('generate')->willReturnCallback(static fn (string $route, array $p): string => ('app_support_show' === $route ? '/hilfe/' : '/admin/meldungen/').$p['id']);
+        $support = $this->support([$moderator], $urls);
+
+        $ticket = $support->askAboutMulti($player, null, 'Frage', 'Bitte erkläre uns das.');
+        $toPlayer = $this->messages()[0];
+        self::assertSame('/hilfe/'.$ticket->getId(), $toPlayer->getActionUrl());
+        self::assertSame('Antworten →', $toPlayer->getActionLabel());
+
+        $this->persisted = [];
+        $support->reply($ticket, $player, 'Erklärung');
+        $toTeam = $this->messages()[0];
+        self::assertSame($moderator, $toTeam->getRecipient());
+        self::assertSame('/admin/meldungen/'.$ticket->getId(), $toTeam->getActionUrl());
+
+        $this->persisted = [];
+        $support->answer($ticket, $moderator, 'Noch eine Frage?', TicketStatus::Question);
+        self::assertSame('/hilfe/'.$ticket->getId(), $this->messages()[0]->getActionUrl(), 'every follow-up question can be answered at once');
+    }
+
     public function testPlayersCannotOpenAMultiCheckThemselves(): void
     {
         $this->expectException(GameException::class);
@@ -109,11 +134,19 @@ class MultiCheckTest extends TestCase
     }
 
     /** @param list<User> $team */
-    private function support(array $team): SupportService
+    private function support(array $team, ?\Symfony\Component\Routing\Generator\UrlGeneratorInterface $urls = null): SupportService
     {
         $em = $this->createStub(EntityManagerInterface::class);
         $em->method('persist')->willReturnCallback(function (object $o): void {
             $this->persisted[] = $o;
+        });
+        // Flushing gives new tickets an id, like the database.
+        $em->method('flush')->willReturnCallback(function (): void {
+            foreach ($this->persisted as $o) {
+                if ($o instanceof Ticket && null === $o->getId()) {
+                    (new \ReflectionProperty(Ticket::class, 'id'))->setValue($o, 42);
+                }
+            }
         });
         $users = $this->createStub(UserRepository::class);
         $users->method('findAll')->willReturn($team);
@@ -122,7 +155,7 @@ class MultiCheckTest extends TestCase
         $planets = new PlanetService($em, new LockFactory(new InMemoryStore()), $clock, new PlanetUpdater(new Economy(1.0)), new Economy(1.0));
         $vacations = new VacationService($em, $planets, $this->createStub(FleetRepository::class), $users, $inbox, new LockFactory(new InMemoryStore()), $clock);
 
-        return new SupportService($em, $users, $inbox, $vacations, $this->createStub(MailerInterface::class), $clock);
+        return new SupportService($em, $users, $inbox, $vacations, $this->createStub(MailerInterface::class), $clock, $urls);
     }
 
     /** @return list<Message> */

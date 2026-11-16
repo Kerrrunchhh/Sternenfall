@@ -23,11 +23,19 @@ final readonly class Inbox
     ) {
     }
 
-    public function send(User $recipient, TranslatableInterface $subject, TranslatableInterface $body): void
+    /**
+     * @param string|null                $actionUrl   optional button below the message: a path in the game
+     * @param TranslatableInterface|null $actionLabel its text (in the recipient's language)
+     */
+    public function send(User $recipient, TranslatableInterface $subject, TranslatableInterface $body, ?string $actionUrl = null, ?TranslatableInterface $actionLabel = null): void
     {
         $locale = $recipient->getLocale();
         // Stored as text: times in it are shown in the recipient's time zone.
         [$subjectText, $bodyText] = \App\I18n\DisplayZone::with($recipient->getTimezone(), fn (): array => [$subject->trans($this->translator, $locale), $body->trans($this->translator, $locale)]);
-        $this->em->persist(new Message($recipient, $subjectText, $bodyText, \DateTimeImmutable::createFromInterface($this->clock->now())));
+        $message = new Message($recipient, $subjectText, $bodyText, \DateTimeImmutable::createFromInterface($this->clock->now()));
+        if (null !== $actionUrl && null !== $actionLabel) {
+            $message->setAction($actionUrl, $actionLabel->trans($this->translator, $locale));
+        }
+        $this->em->persist($message);
     }
 }

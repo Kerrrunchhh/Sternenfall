@@ -34,6 +34,13 @@ class Message
     #[ORM\Column]
     private bool $isRead = false;
 
+    /** Optional button below the message: where it leads (a path in the game) and its text. */
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $actionUrl = null;
+
+    #[ORM\Column(length: 80, nullable: true)]
+    private ?string $actionLabel = null;
+
     public function __construct(User $recipient, string $subject, string $body, \DateTimeImmutable $createdAt)
     {
         $this->recipient = $recipient;
@@ -65,6 +72,26 @@ class Message
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    public function getActionUrl(): ?string
+    {
+        return $this->actionUrl;
+    }
+
+    public function getActionLabel(): ?string
+    {
+        return $this->actionLabel;
+    }
+
+    /** A button below the message, e.g. "Antworten →" to a support dialog. Only paths inside the game. */
+    public function setAction(string $url, string $label): void
+    {
+        if (!str_starts_with($url, '/') || str_starts_with($url, '//')) {
+            throw new \InvalidArgumentException('Only paths inside the game.');
+        }
+        $this->actionUrl = mb_substr($url, 0, 255);
+        $this->actionLabel = mb_substr($label, 0, 80);
     }
 
     public function isRead(): bool

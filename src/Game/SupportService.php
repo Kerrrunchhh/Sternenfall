@@ -29,6 +29,7 @@ final readonly class SupportService
         private VacationService $vacations,
         private MailerInterface $mailer,
         private ClockInterface $clock,
+        private ?\Symfony\Component\Routing\Generator\UrlGeneratorInterface $urls = null,
         #[Autowire(env: 'DEVELOPER_EMAIL')]
         private string $developerEmail = '',
         #[Autowire(env: 'MAILER_FROM')]
@@ -58,8 +59,10 @@ final readonly class SupportService
         }
         $ticket = new Ticket($kind, $author, $reported, $subject, $body, $this->now());
         $this->em->persist($ticket);
+        // The id is needed for the button to the ticket.
+        $this->em->flush();
         foreach ($this->admins() as $admin) {
-            $this->inbox->send($admin, t('Neue Meldung: {icon} {kind}', ['{icon}' => $kind->icon(), '{kind}' => t($kind->label())]), t('{player} hat eine Meldung geschickt: „{subject}“. Bearbeiten im Adminbereich unter Meldungen.', ['{player}' => $author->getUsername(), '{subject}' => $ticket->getSubject()]));
+            $this->inbox->send($admin, t('Neue Meldung: {icon} {kind}', ['{icon}' => $kind->icon(), '{kind}' => t($kind->label())]), t('{player} hat eine Meldung geschickt: „{subject}“. Bearbeiten im Adminbereich unter Meldungen.', ['{player}' => $author->getUsername(), '{subject}' => $ticket->getSubject()]), ...$this->teamButton($ticket));
         }
         $this->em->flush();
 
@@ -83,11 +86,12 @@ final readonly class SupportService
         // Waiting for the player's answer.
         $ticket->setStatus(TicketStatus::Question, $this->now());
         $this->em->persist($ticket);
+        $this->em->flush();
         $this->inbox->send($player, t('Nachricht vom Support-Team: {subject}', ['{subject}' => $subject]), new Lines([
             t('Das Support-Team hat eine Frage zu deinem Account. Bitte antworte unter Hilfe & Meldungen.'),
             '',
             $body,
-        ]));
+        ]), ...$this->playerButton($ticket));
         $this->em->flush();
 
         return $ticket;
@@ -105,7 +109,7 @@ final readonly class SupportService
             $ticket->setStatus(TicketStatus::Open, $this->now());
         }
         foreach ($this->admins() as $admin) {
-            $this->inbox->send($admin, t('Antwort auf Meldung: {subject}', ['{subject}' => $ticket->getSubject()]), t('{player} hat geantwortet. Bearbeiten im Adminbereich unter Meldungen.', ['{player}' => $author->getUsername()]));
+            $this->inbox->send($admin, t('Antwort auf Meldung: {subject}', ['{subject}' => $ticket->getSubject()]), t('{player} hat geantwortet. Bearbeiten im Adminbereich unter Meldungen.', ['{player}' => $author->getUsername()]), ...$this->teamButton($ticket));
         }
         $this->em->flush();
     }
@@ -220,11 +224,27 @@ final readonly class SupportService
             $this->inbox->send($author, t('Nachricht vom Support-Team: {subject}', ['{subject}' => $ticket->getSubject()]), new Lines([
                 '' === trim($body) ? t('Der Status ist jetzt „{label}“.', ['{label}' => t($ticket->getStatus()->label())]) : trim($body),
                 t("\nDu findest den Verlauf unter Hilfe & Meldungen."),
-            ]));
+            ]), ...$this->playerButton($ticket));
 
             return;
         }
-        $this->inbox->send($author, t('{label} „{subject}“: {label2}', ['{label}' => t($ticket->getKind()->label()), '{subject}' => $ticket->getSubject(), '{label2}' => t($ticket->getStatus()->label())]), new Lines([t('Deine Meldung hat jetzt den Status „{label}“.', ['{label}' => t($ticket->getStatus()->label())]), '' === trim($body) ? null : "\n".trim($body), t("\nDu findest sie unter Hilfe & Meldungen.")]));
+        $this->inbox->send($author, t('{label} „{subject}“: {label2}', ['{label}' => t($ticket->getKind()->label()), '{subject}' => $ticket->getSubject(), '{label2}' => t($ticket->getStatus()->label())]), new Lines([t('Deine Meldung hat jetzt den Status „{label}“.', ['{label}' => t($ticket->getStatus()->label())]), '' === trim($body) ? null : "\n".trim($body), t("\nDu findest sie unter Hilfe & Meldungen.")]), ...$this->playerButton($ticket));
+    }
+
+    /**
+     * The button under a message to the player: straight to the dialog, to answer there.
+     *
+     * @return array{0?: string, 1?: \Symfony\Contracts\Translation\TranslatableInterface}
+     */
+    private function playerButton(Ticket $ticket): array
+    {
+        return null === $this->urls || null === $ticket->getId() ? [] : [$this->urls->generate('app_support_show', ['id' => $ticket->getId()]), t('Antworten →')];
+    }
+
+    /** @return array{0?: string, 1?: \Symfony\Contracts\Translation\TranslatableInterface} the button under a message to the team */
+    private function teamButton(Ticket $ticket): array
+    {
+        return null === $this->urls || null === $ticket->getId() ? [] : [$this->urls->generate('app_admin_ticket', ['id' => $ticket->getId()]), t('Meldung öffnen →')];
     }
 
     private function text(string $body): string
