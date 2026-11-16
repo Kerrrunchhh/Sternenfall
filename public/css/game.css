@@ -916,3 +916,9 @@ tr.suspicious-strong td { background: rgba(255, 138, 128, .08); }
 /* Admin: mails sent against the provider's daily limit. */
 .mail-meter { height: .5rem; background: #ffffff12; border-radius: 3px; overflow: hidden; margin: .3rem 0 .6rem; }
 .mail-meter span { display: block; height: 100%; background: var(--accent); }
+
+/* Polls */
+.poll-bar-cell { width: 40%; }
+.poll-bar { height: .55rem; background: #ffffff12; border-radius: 3px; overflow: hidden; }
+.poll-bar span { display: block; height: 100%; background: var(--accent); }
+.poll-reasons { list-style: none; padding: 0; display: grid; gap: .5rem; }

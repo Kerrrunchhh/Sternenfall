@@ -100,6 +100,14 @@ abstract class AbstractGameController extends AbstractController
         $this->entityManager = $entityManager;
     }
 
+    private \App\Repository\PollRepository $pollRepository;
+
+    #[Required]
+    public function setPollRepository(\App\Repository\PollRepository $pollRepository): void
+    {
+        $this->pollRepository = $pollRepository;
+    }
+
     #[Required]
     public function setNewsRepository(NewsRepository $newsRepository, \App\Game\AttackBans $attackBans, \App\Repository\FleetRepository $fleetRepository): void
     {
@@ -260,6 +268,8 @@ abstract class AbstractGameController extends AbstractController
             'contact_requests' => $this->contacts->countIncomingRequests($planet->getOwner()),
             'ticker_invitations' => $this->tickers->countInvitations($planet->getOwner()),
             'diplomacy_votes' => $this->diplomacy->pendingVotes($planet->getOwner()),
+            // Running polls the player has not answered yet.
+            'open_polls' => $this->pollRepository->countOpenFor($planet->getOwner(), \DateTimeImmutable::createFromInterface($this->clock->now())),
             // Own planets with an attack on its way (seen by the radar): red in the planet list.
             'attacked_planets' => $this->attackedPlanets($planet->getOwner()),
             'open_tickets' => $this->isGranted('ROLE_MODERATOR') ? $this->tickets2->countOpen() : 0,

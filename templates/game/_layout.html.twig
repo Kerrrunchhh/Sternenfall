@@ -149,6 +149,7 @@
             <a href="{{ path('app_player_search') }}" class="{{ route == 'app_player_search' ? 'active' }}"><span class="nav-icon" aria-hidden="true">🔍</span>{{ 'Spieler suchen'|trans }}</a>
             <a href="{{ path('app_highscores') }}" class="{{ route == 'app_highscores' ? 'active' }}"><span class="nav-icon" aria-hidden="true">🏆</span>{{ 'Highscores'|trans }}</a>
             <a href="{{ path('app_newspaper') }}" class="{{ route == 'app_newspaper' ? 'active' }}" title="{{ 'Alle Kampfberichte des Universums, 24 Stunden später'|trans }}"><span class="nav-icon" aria-hidden="true">📰</span>{{ 'Zeitung'|trans }}</a>
+            <a href="{{ path('app_polls') }}" class="{{ route starts with 'app_poll' ? 'active' }}"><span class="nav-icon" aria-hidden="true">🗳</span>{{ 'Umfragen'|trans }}{% if open_polls|default(0) > 0 %} <span class="badge" title="{{ 'Offene Umfragen'|trans }}">{{ open_polls }}</span>{% endif %}</a>
             <a href="{{ path('app_contracts') }}" class="{{ route == 'app_contracts' ? 'active' }}"><span class="nav-icon" aria-hidden="true">📜</span>{{ 'Aufträge'|trans }}</a>
             <a href="{{ path('app_transport_requests') }}" class="{{ route == 'app_transport_requests' ? 'active' }}"><span class="nav-icon" aria-hidden="true">📦</span>{{ 'Transportgesuche'|trans }}</a>
             <a href="{{ path('app_lifeform') }}" class="{{ route == 'app_lifeform' ? 'active' }}"><span class="nav-icon" aria-hidden="true">🧬</span>{{ 'Lebensform'|trans }}</a>

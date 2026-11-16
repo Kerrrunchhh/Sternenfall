@@ -1,0 +1,108 @@
+{% extends 'game/_layout.html.twig' %}
+
+{% block title %}{{ 'Umfragen – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
+
+{% block content %}
+    {% import 'game/_macros.html.twig' as ui %}
+    <h1>{{ '🗳 Umfragen'|trans }}</h1>
+    <p class="muted">{{ 'Hier fragt die Spielleitung nach deiner Meinung. Du stimmst einmal ab und kannst eine Begründung dazuschreiben. Das Ergebnis siehst du, sobald die Umfrage beendet ist – Begründungen ohne Namen.'|trans }}</p>
+
+    {% if is_admin %}
+        <details class="panel" id="umfrage-neu">
+            <summary><strong>{{ '🛡 Neue Umfrage an alle Spieler'|trans }}</strong></summary>
+            <form method="post" action="{{ path('app_poll_create') }}" class="mail-form">
+                <input type="hidden" name="_token" value="{{ csrf_token('poll') }}">
+                <div class="grid">
+                    <div>
+                        <label>{{ 'Frage (Deutsch)'|trans }} <textarea name="question" rows="2" required maxlength="{{ constant('App\\Entity\\Poll::MAX_QUESTION') }}"></textarea></label>
+                        <label>{{ 'Antworten (Deutsch) – eine pro Zeile, 2 bis 10'|trans }} <textarea name="options" rows="5" required></textarea></label>
+                    </div>
+                    <div>
+                        <label>{{ 'Frage (Englisch)'|trans }} <textarea name="questionEn" rows="2" required maxlength="{{ constant('App\\Entity\\Poll::MAX_QUESTION') }}" lang="en"></textarea></label>
+                        <label>{{ 'Antworten (Englisch) – gleich viele, gleiche Reihenfolge'|trans }} <textarea name="optionsEn" rows="5" required lang="en"></textarea></label>
+                    </div>
+                </div>
+                <label class="checkbox"><input type="checkbox" name="multiple" value="1"> {{ 'Mehrere Antworten ankreuzbar'|trans }}</label>
+                <label class="checkbox"><input type="checkbox" name="mail" value="1" id="poll-mail"> {{ 'Auch per E-Mail benachrichtigen (an alle, die „Neuigkeiten zum Spiel“ abonniert haben)'|trans }}</label>
+                <label class="inline-action">{{ 'Laufzeit'|trans }} <input type="number" name="days" value="3" min="0" max="30" class="short"> {{ 'Tage'|trans }} <input type="number" name="hours" value="0" min="0" max="23" class="short"> {{ 'Stunden'|trans }}</label>
+                <button class="btn" type="submit" id="poll-create" data-confirm="{{ 'Umfrage starten? Alle Spieler bekommen sofort eine Nachricht; ändern lässt sie sich danach nicht mehr.'|trans }}" data-confirm-label="{{ 'Starten'|trans }}">{{ 'Umfrage starten'|trans }}</button>
+            </form>
+        </details>
+    {% endif %}
+
+    {% for e in entries %}
+        {% set poll = e.poll %}
+        {# Everybody reads the poll in his language; votes count by answer number, so the result is shared. #}
+        {% set locale = app.request.locale %}
+        {% set options = poll.optionsIn(locale) %}
+        <article class="panel poll" id="umfrage-{{ poll.id }}">
+            <h2>{{ poll.questionIn(locale) }}</h2>
+            <p class="muted small">
+                {% if e.running %}{{ 'läuft bis {endsAt}'|trans({'{endsAt}': poll.endsAt|date('d.m.Y H:i')}) }}{% else %}{{ 'beendet am {endsAt}'|trans({'{endsAt}': poll.endsAt|date('d.m.Y H:i')}) }}{% endif %}
+                · {{ poll.multiple ? ('mehrere Antworten möglich'|trans) : ('eine Antwort'|trans) }}
+            </p>
+
+            {% if e.running and not e.mine %}
+                <form method="post" action="{{ path('app_poll_vote', {id: poll.id}) }}" class="mail-form poll-form">
+                    <input type="hidden" name="_token" value="{{ csrf_token('poll') }}">
+                    {% for i, option in options %}
+                        <label class="radio"><input type="{{ poll.multiple ? 'checkbox' : 'radio' }}" name="choices[]" value="{{ i }}" {{ poll.multiple ? '' : 'required' }}> {{ option }}</label>
+                    {% endfor %}
+                    <label>{{ 'Begründung (freiwillig)'|trans }} <textarea name="reason" rows="2" maxlength="{{ max_reason }}" placeholder="{{ 'Warum hast du so entschieden?'|trans }}"></textarea></label>
+                    <button class="btn" type="submit" id="poll-vote-{{ poll.id }}">{{ 'Abstimmen'|trans }}</button>
+                </form>
+            {% elseif e.mine %}
+                <p class="small">✓ {{ 'Deine Stimme: {choices}'|trans({'{choices}': e.mine.choices|map(c => options[c] ?? '?')|join(', ')}) }}{% if e.running %} · <span class="muted">{{ 'Das Ergebnis siehst du ab {endsAt}.'|trans({'{endsAt}': poll.endsAt|date('d.m.Y H:i')}) }}</span>{% endif %}</p>
+            {% endif %}
+
+            {% if e.result %}
+                {% set r = e.result %}
+                <h3>{{ (r.voters == 1 ? 'Ergebnis – 1 Stimme' : 'Ergebnis – {count} Stimmen')|trans({'{count}': r.voters|num}) }}{% if e.running %} <small class="muted">{{ '(nur für Admins sichtbar, solange sie läuft)'|trans }}</small>{% endif %}</h3>
+                <table class="table poll-result">
+                    {% for i, option in options %}
+                        {% set count = r.counts[i] ?? 0 %}
+                        {% set share = r.voters > 0 ? 100 * count / r.voters : 0 %}
+                        <tr>
+                            <td>{{ option }}</td>
+                            <td class="poll-bar-cell"><div class="poll-bar"><span style="width: {{ share|round }}%"></span></div></td>
+                            <td class="num">{{ count|num }} <span class="muted small">({{ share|round }} %)</span></td>
+                        </tr>
+                    {% endfor %}
+                </table>
+                {% if r.reasons is not empty %}
+                    <details>
+                        <summary>{{ (r.reasons|length == 1 ? '1 Begründung' : '{count} Begründungen')|trans({'{count}': r.reasons|length}) }}</summary>
+                        <ul class="poll-reasons">
+                            {% for reason in r.reasons %}
+                                <li>
+                                    <span class="muted small">{{ reason.choices|map(c => options[c] ?? '?')|join(', ') }}{% if is_admin %} · {% if reason.user %}{{ ui.player(reason.user) }}{% else %}{{ 'gelöschter Spieler'|trans }}{% endif %}{% endif %}</span>
+                                    <div class="message-body">{{ reason.text }}</div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </details>
+                {% endif %}
+            {% endif %}
+
+            {% if is_admin and e.votes is not empty %}
+                <details>
+                    <summary>{{ '🛡 Alle Stimmen mit Namen'|trans }}</summary>
+                    <table class="table small">
+                        {% for v in e.votes %}
+                            <tr><td>{% if v.user %}{{ ui.player(v.user) }}{% else %}{{ 'gelöschter Spieler'|trans }}{% endif %}</td><td>{{ v.choices|map(c => options[c] ?? '?')|join(', ') }}</td><td class="muted">{{ v.createdAt|date('d.m. H:i') }}</td></tr>
+                        {% endfor %}
+                    </table>
+                </details>
+            {% endif %}
+
+            {% if is_admin and e.running %}
+                <form method="post" action="{{ path('app_poll_close', {id: poll.id}) }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('poll') }}">
+                    <button class="btn btn-small btn-secondary" type="submit" data-confirm="{{ 'Umfrage jetzt beenden? Danach sehen alle das Ergebnis.'|trans }}" data-confirm-label="{{ 'Beenden'|trans }}">{{ '🛡 Jetzt beenden'|trans }}</button>
+                </form>
+            {% endif %}
+        </article>
+    {% else %}
+        <p class="panel muted">{{ 'Noch keine Umfragen.'|trans }}</p>
+    {% endfor %}
+{% endblock %}
