@@ -669,6 +669,13 @@ const orbit = (() => {
             if (help) {
                 help.textContent = action.selectedOptions[0]?.dataset.help ?? '';
             }
+            // A fleet waiting at a trade post trades on the post's page: go there instead of flying.
+            if (value === 'send:trade' && picked.length === 1 && picked[0].dataset.tradePost) {
+                if (help) {
+                    help.textContent = t('Die Flotte wartet an einem Handelsstützpunkt – weiter zum Handel …');
+                }
+                window.location.href = picked[0].dataset.tradePost;
+            }
         };
 
         const visible = (box) => !box.closest('tr').hidden;

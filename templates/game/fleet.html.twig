@@ -196,7 +196,7 @@
                         <td>
                             <input type="checkbox" name="fleets[]" value="{{ f.id }}" id="pick-{{ f.id }}" aria-label="{{ '{label} auswählen'|trans({'{label}': f.label|trans}) }}"
                                    data-from="{{ f.galaxy }}:{{ f.system }}:{{ f.position }}" data-speed="{{ e.speed }}" data-fuel="{{ e.fuel }}" data-crew="{{ e.crew }}" data-named="{{ f.named ? 1 : 0 }}"
-                                   data-capacity="{{ e.capacity }}" data-load="{{ f.cargo.total|round(0, 'floor') }}">
+                                   data-capacity="{{ e.capacity }}" data-load="{{ f.cargo.total|round(0, 'floor') }}"{% if e.post %} data-trade-post="{{ path('app_trade_post', {id: e.post.id}) }}"{% endif %}>
                         </td>
                         <td>
                             <label for="pick-{{ f.id }}"><strong>{{ f.label|trans }}</strong></label>

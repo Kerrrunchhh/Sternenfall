@@ -34,7 +34,7 @@ use function Symfony\Component\Translation\t;
 class FleetController extends AbstractGameController
 {
     #[Route('/fleet', name: 'app_fleet', methods: ['GET'])]
-    public function index(Request $request, FleetRepository $fleets, PlanetRepository $planets, Radar $radar, Navigation $navigation, BookmarkRepository $bookmarks, SquadronRepository $squadrons): Response
+    public function index(Request $request, FleetRepository $fleets, PlanetRepository $planets, Radar $radar, Navigation $navigation, BookmarkRepository $bookmarks, SquadronRepository $squadrons, \App\Repository\TradePostRepository $tradePosts): Response
     {
         $planet = $this->currentPlanet();
         $player = $planet->getOwner();
@@ -66,6 +66,8 @@ class FleetController extends AbstractGameController
                 'fleet' => $fleet,
                 'at' => $at,
                 'base' => null !== $at && $at->getOwner()->getId() === $player->getId() ? $at : null,
+                // Waiting at a trade post: "Handeln" opens the post's page instead of flying.
+                'post' => $fleet->isIdle() ? $tradePosts->findAt($fleet->getGalaxy(), $fleet->getSystem(), $fleet->getPosition()) : null,
                 'capacity' => array_sum(array_map(static fn (array $s): int => $s['type']->cargo() * $s['count'], $fleet->getShipList())),
             ];
         }
@@ -76,6 +78,7 @@ class FleetController extends AbstractGameController
             $at = $planets->findAt($fleet->getGalaxy(), $fleet->getSystem(), $fleet->getPosition());
             $shared[] = [
                 'own' => false,
+                'post' => null,
                 'hover' => [],
                 'capacity' => 0,
                 'speed' => $navigation->slowestSpeed($fleet->getShips(), $fleet->getOwner()),
@@ -357,7 +360,7 @@ class FleetController extends AbstractGameController
     #[RequiresFleetControl]
     #[Route('/fleets/bulk', name: 'app_fleets_bulk', methods: ['POST'])]
     #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
-    public function bulk(Request $request, FleetRepository $fleets, UserRepository $users, SquadronRepository $squadrons, SquadronService $squadronService): Response
+    public function bulk(Request $request, FleetRepository $fleets, UserRepository $users, SquadronRepository $squadrons, SquadronService $squadronService, \App\Repository\TradePostRepository $tradePosts): Response
     {
         $this->currentPlanet();
         $player = $this->player();
@@ -385,6 +388,12 @@ class FleetController extends AbstractGameController
             $this->addFlash('error', t('Wähle eine Aktion aus.'));
 
             return $this->redirectToRoute('app_fleet');
+        }
+        // A fleet already waiting at a trade post trades on the post's page – no flight there.
+        if ('send' === $action && FleetMission::Trade === $mission && 1 === \count($selected) && $selected[0]->isIdle()
+            && $selected[0]->isAt($form->getInt('galaxy'), $form->getInt('system'), $form->getInt('position'))
+            && null !== $post = $tradePosts->findAt($selected[0]->getGalaxy(), $selected[0]->getSystem(), $selected[0]->getPosition())) {
+            return $this->redirectToRoute('app_trade_post', ['id' => $post->getId()]);
         }
         $single = \in_array($action, ['gather', 'load', 'drop', 'split', 'rename'], true);
         if ($single && 1 !== \count($selected)) {

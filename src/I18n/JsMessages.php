@@ -60,6 +60,7 @@ final class JsMessages
             t('Verbrauch hin und zurück: {hydrogen} Wasserstoff · {food} Nahrung · {water} Wasser'),
             t('Verbrauch für den Hinflug: {hydrogen} Wasserstoff · {food} Nahrung · {water} Wasser'),
             t('Die Flotte ist schon an diesem Ziel – es gibt nichts zu fliegen. Handeln kannst du auf der Seite des Handelsstützpunkts.'),
+            t('Die Flotte wartet an einem Handelsstützpunkt – weiter zum Handel …'),
             t('Flugdauer {duration} · Ankunft heute {time} Uhr · die Flotte bleibt am Ziel'),
             t('Flugdauer {duration} · Ankunft {time} Uhr · die Flotte bleibt am Ziel'),
         ];
