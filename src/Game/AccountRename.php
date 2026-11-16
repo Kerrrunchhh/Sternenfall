@@ -11,7 +11,8 @@ use function Symfony\Component\Translation\t;
 
 /**
  * An admin renames a player's account. The new name follows the sign-up rules and must be
- * free – also in other upper/lower case – and no system account's name. The player is told.
+ * free – also in other upper/lower case – and no system account's name. The player is told
+ * in the game and by e-mail (he logs in with the new name from now on).
  */
 final readonly class AccountRename
 {
@@ -20,6 +21,7 @@ final readonly class AccountRename
         private EntityManagerInterface $em,
         private ValidatorInterface $validator,
         private Inbox $inbox,
+        private GameMailer $mailer,
     ) {
     }
 
@@ -44,8 +46,12 @@ final readonly class AccountRename
         }
 
         $user->setUsername($name);
-        $this->inbox->send($user, t('Neuer Spielername: {name}', ['{name}' => $name]), t('Die Spielleitung hat deinen Spielernamen von „{old}“ in „{name}“ geändert. Melde dich ab jetzt mit dem neuen Namen an.', ['{old}' => $old, '{name}' => $name]));
+        $subject = t('Neuer Spielername: {name}', ['{name}' => $name]);
+        $text = t('Die Spielleitung hat deinen Spielernamen von „{old}“ in „{name}“ geändert. Melde dich ab jetzt mit dem neuen Namen an.', ['{old}' => $old, '{name}' => $name]);
+        $this->inbox->send($user, $subject, $text);
         $this->em->flush();
+        // Also by e-mail, whatever he chose for notifications: without it he might not find his way back in.
+        $this->mailer->sendAlways($user, $subject, $text);
 
         return $old;
     }

@@ -19,10 +19,13 @@ class AccountRenameTest extends TestCase
 {
     /** @var list<object> */
     private array $persisted = [];
+    /** @var list<\Symfony\Component\Mime\RawMessage> */
+    private array $mails = [];
 
     public function testTheNameChangesAndThePlayerIsTold(): void
     {
         $player = new User('Alt_Name');
+        $player->setEmail('spieler@example.org');
 
         self::assertSame('Alt_Name', $this->rename([$player])->rename($player, ' Neuer-Name '));
 
@@ -30,6 +33,10 @@ class AccountRenameTest extends TestCase
         $message = array_values(array_filter($this->persisted, static fn (object $o): bool => $o instanceof Message))[0];
         self::assertStringContainsString('Alt_Name', $message->getBody());
         self::assertStringContainsString('Neuer-Name', $message->getBody());
+        self::assertCount(1, $this->mails, 'and an e-mail, whatever his notification settings');
+        self::assertInstanceOf(\Symfony\Component\Mime\Email::class, $this->mails[0]);
+        self::assertSame('spieler@example.org', $this->mails[0]->getTo()[0]->getAddress());
+        self::assertStringContainsString('Neuer-Name', (string) $this->mails[0]->getTextBody());
     }
 
     public function testATakenNameIsRefusedAlsoInOtherCase(): void
@@ -77,7 +84,13 @@ class AccountRenameTest extends TestCase
         });
         $validator = Validation::createValidatorBuilder()->enableAttributeMapping()->getValidator();
 
-        return new AccountRename($users, $em, $validator, new Inbox($em, new MockClock()));
+        $mailer = $this->createStub(\Symfony\Component\Mailer\MailerInterface::class);
+        $mailer->method('send')->willReturnCallback(function (\Symfony\Component\Mime\RawMessage $mail): void {
+            $this->mails[] = $mail;
+        });
+        $gameMailer = new \App\Game\GameMailer($mailer, new \Symfony\Component\HttpFoundation\UriSigner('secret'), $this->createStub(\Symfony\Component\Routing\Generator\UrlGeneratorInterface::class), new \Psr\Log\NullLogger(), 'noreply@example.org', 'Starfall', new IdentityTranslator());
+
+        return new AccountRename($users, $em, $validator, new Inbox($em, new MockClock()), $gameMailer);
     }
 
     private function assertRefused(AccountRename $rename, User $user, string $name, string $reason): void
