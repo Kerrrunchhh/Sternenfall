@@ -48,8 +48,8 @@ enum PlanetType: string
             self::Blue => 'Bevölkerung wächst doppelt so schnell',
             self::Red => 'Nahrungsproduktion +50 %',
             self::Water => 'Wasserproduktion +50 %',
-            self::Stone => 'Nahrungsproduktion −50 %',
-            self::Desert => 'Nahrungs- und Wasserproduktion −50 %',
+            self::Stone => 'Eisen- und Titanproduktion +25 %, Nahrungsproduktion −50 %',
+            self::Desert => 'Wasserstoffproduktion +50 %, Nahrungs- und Wasserproduktion −50 %',
         };
     }
 
@@ -61,7 +61,8 @@ enum PlanetType: string
     public function productionFactor(ResourceType $resource): float
     {
         return match ([$this, $resource]) {
-            [self::Red, ResourceType::Food], [self::Water, ResourceType::Water] => 1.5,
+            [self::Red, ResourceType::Food], [self::Water, ResourceType::Water], [self::Desert, ResourceType::Hydrogen] => 1.5,
+            [self::Stone, ResourceType::Iron], [self::Stone, ResourceType::Titanium] => 1.25,
             [self::Stone, ResourceType::Food], [self::Desert, ResourceType::Food], [self::Desert, ResourceType::Water] => 0.5,
             default => 1.0,
         };

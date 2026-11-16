@@ -126,7 +126,10 @@ final readonly class PlanetUpdater
             $bonus = $this->economy->starterFactorBetween($owner, $stepStart, $stepEnd);
             $stepStart = $stepEnd;
             $owner->earnCredits($this->economy->creditsPerHour($planet->getPopulation()) * $bonus * $step);
-            $stock = $planet->getResources()->add($production->multiply($bonus * $step));
+            // Hydrogen comes from the electrolysis, which splits water – it is added after the inhabitants drank.
+            $made = $production->multiply($bonus * $step);
+            $hydrogen = $made->hydrogen;
+            $stock = $planet->getResources()->add($made->subtract(new Resources(hydrogen: $hydrogen)));
             $population = $planet->getPopulation();
 
             // How many inhabitants the available food and water can supply during this step.
@@ -139,6 +142,9 @@ final readonly class PlanetUpdater
             }
 
             $stock = $stock->subtract($perInhabitant->multiply($fed * $step));
+            // The electrolysis uses what water is left: it makes as much hydrogen as that allows.
+            $split = min($hydrogen, max(0.0, $stock->water) / Economy::WATER_PER_HYDROGEN);
+            $stock = $stock->add(new Resources(water: -$split * Economy::WATER_PER_HYDROGEN, hydrogen: $split));
             $planet->setResources(Resources::fromCallback(static fn (ResourceType $t): float => max(0.0, $stock->get($t))));
 
             if ($fed < $population) {

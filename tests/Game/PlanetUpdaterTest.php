@@ -381,10 +381,46 @@ class PlanetUpdaterTest extends TestCase
         self::assertEqualsWithDelta(5, $production['desert']->food, 0.001);
         self::assertEqualsWithDelta(5, $production['desert']->water, 0.001);
         self::assertEqualsWithDelta(10, $production['blue']->food, 0.001);
-        self::assertEqualsWithDelta(20, $production['stone']->iron, 0.001, 'iron is never affected');
+        // Base production: 20 iron, 10 titanium; stone planets +25 %.
+        self::assertEqualsWithDelta(25, $production['stone']->iron, 0.001);
+        self::assertEqualsWithDelta(12.5, $production['stone']->titanium, 0.001);
+        self::assertEqualsWithDelta(20, $production['blue']->iron, 0.001);
 
         self::assertEqualsWithDelta(2 * $growth['red'], $growth['blue'], 0.001);
         self::assertEqualsWithDelta($growth['red'], $growth['desert'], 0.001);
+    }
+
+    public function testDesertPlanetsMakeHalfAsMuchMoreHydrogen(): void
+    {
+        $blue = $this->planet(type: PlanetType::Blue);
+        $desert = $this->planet(type: PlanetType::Desert);
+        foreach ([$blue, $desert] as $planet) {
+            $planet->setBuildingLevel(BuildingType::Electrolysis, 5);
+        }
+
+        self::assertEqualsWithDelta(1.5 * $this->economy->productionPerHour($blue)->hydrogen, $this->economy->productionPerHour($desert)->hydrogen, 0.001);
+    }
+
+    public function testTheElectrolysisUsesTwoWaterPerHydrogenAfterTheInhabitantsDrank(): void
+    {
+        $planet = $this->planet(type: PlanetType::Blue);
+        $planet->setBuildingLevel(BuildingType::Electrolysis, 5)->setPopulation(0);
+        $hydrogen = $this->economy->productionPerHour($planet)->hydrogen;
+        $waterMade = $this->economy->productionPerHour($planet)->water;
+        $planet->setResources(new Resources(water: 10_000));
+        $start = $planet->getResourcesUpdatedAt();
+
+        (new PlanetUpdater($this->economy))->update($planet, $start->modify('+1 hour'));
+
+        self::assertEqualsWithDelta($hydrogen, $planet->getResources()->hydrogen, 0.01, 'enough water: full production');
+        self::assertEqualsWithDelta(10_000 + $waterMade - 2 * $hydrogen, $planet->getResources()->water, 0.01, 'two water per hydrogen');
+
+        // Without water to spare, no hydrogen – and nobody dies of thirst for it.
+        $dry = $this->planet(type: PlanetType::Desert);
+        $dry->setBuildingLevel(BuildingType::Electrolysis, 5)->setPopulation(1000);
+        $dry->setResources(new Resources(food: 10_000));
+        (new PlanetUpdater($this->economy))->update($dry, $dry->getResourcesUpdatedAt()->modify('+1 hour'));
+        self::assertLessThan($this->economy->productionPerHour($dry)->hydrogen, $dry->getResources()->hydrogen, 'less hydrogen without water');
     }
 
     public function testSlotTypesAreFixedAndAllTypesOccur(): void

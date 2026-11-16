@@ -48,7 +48,7 @@ enum BuildingType: string
             self::TitaniumMine => 'Gewinnt Titan, das leichte und harte Metall für Schiffsrümpfe und Hightech.',
             self::WaterPump => 'Pumpt Wasser aus unterirdischen Eisvorkommen.',
             self::Farm => 'Erzeugt Nahrung in klimatisierten Hydrokulturen.',
-            self::Electrolysis => 'Spaltet Wasser in Wasserstoff, den Treibstoff deiner Flotten.',
+            self::Electrolysis => 'Spaltet Wasser in Wasserstoff, den Treibstoff deiner Flotten: 2 Wasser je Wasserstoff. Reicht das Wasser nicht, erzeugt sie entsprechend weniger – die Bevölkerung trinkt zuerst.',
             self::BioCell => 'Lebensraum für deine Bevölkerung. Jede Stufe erhöht die maximale Einwohnerzahl.',
             self::Bunker => 'Unterirdische Schutzräume, die deine Bevölkerung vor Bombardements schützen.',
             self::Storage => 'Gesicherte Lagerhallen: Rohstoffe bis zu dieser Menge sind vor Plünderung durch Angreifer geschützt.',

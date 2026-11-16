@@ -2,6 +2,8 @@
 
 namespace App\Controller;
 
+use App\Game\Resources;
+
 use App\Entity\Planet;
 use App\Entity\User;
 use App\Game\Diplomacy;
@@ -238,7 +240,9 @@ abstract class AbstractGameController extends AbstractController
         // Shown rates include the starter bonus while it lasts.
         $bonus = $this->economy->starterFactor($planet->getOwner(), $now);
         $production = $this->economy->productionPerHour($planet)->multiply($bonus);
-        $consumption = $this->economy->consumptionPerHour($planet->getPopulation());
+        // Inhabitants eat and drink; the electrolysis needs water for its hydrogen.
+        $consumption = $this->economy->consumptionPerHour($planet->getPopulation())
+            ->add(new Resources(water: $production->hydrogen * Economy::WATER_PER_HYDROGEN));
         $capacity = $this->economy->populationCapacity($planet);
 
         return [

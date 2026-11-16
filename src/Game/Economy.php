@@ -23,6 +23,8 @@ final readonly class Economy
     /** Food and water each inhabitant consumes per hour (before game speed). */
     public const float FOOD_PER_INHABITANT = 0.05;
     public const float WATER_PER_INHABITANT = 0.05;
+    /** The electrolysis splits water: this much water for every unit of hydrogen it makes. */
+    public const float WATER_PER_HYDROGEN = 2.0;
     /** Share of the bio cell capacity the population grows per hour. */
     public const float GROWTH_RATE = 0.05;
     /** Share of the population lost per hour while starving. */
