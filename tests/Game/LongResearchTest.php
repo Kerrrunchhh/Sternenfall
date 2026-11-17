@@ -26,7 +26,7 @@ class LongResearchTest extends TestCase
             $long = \in_array($type, [ResearchType::FusionTech, ResearchType::Colonization], true);
             self::assertSame($long, $type->isLongTerm(), $type->label());
         }
-        self::assertSame(50, ResearchType::FusionTech->maxLevel(), 'no system has more than 50 planets');
+        self::assertSame(49, ResearchType::FusionTech->maxLevel(), 'level 49 welds 50 planets – no system has more');
         foreach (ResearchType::cases() as $type) {
             if (ResearchType::FusionTech !== $type) {
                 self::assertNull($type->maxLevel(), $type->label().' keeps improving');

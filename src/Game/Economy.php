@@ -475,10 +475,12 @@ final readonly class Economy
         return array_sum(array_map(static fn (Planet $p): int => $p->slotCost($now), $player->getPlanets()->toArray()));
     }
 
-    /** Largest fusion allowed (and planets one fusionator welds): the fusion research level, at most 50. */
+    /** Largest fusion allowed: fusion research level + 1 planets (level 1 welds two), at most 50; 0 without it. */
     public function fusionCapacity(User $player): int
     {
-        return min(ResearchType::FUSION_MAX_LEVEL, $player->getResearchLevel(ResearchType::FusionTech));
+        $level = $player->getResearchLevel(ResearchType::FusionTech);
+
+        return 0 === $level ? 0 : min(ResearchType::FUSION_MAX_PLANETS, $level + 1);
     }
 
     /**

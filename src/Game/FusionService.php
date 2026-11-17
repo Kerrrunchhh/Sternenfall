@@ -66,7 +66,7 @@ final readonly class FusionService
             $target->isIntegrating($now) => t('{name} wurde invadiert und geht erst am {value} in deinen Besitz über.', ['{name}' => $target->getName(), '{value}' => new When($target->getIntegratedAt())]),
             $top->isIntegrating($now) => t('{name} wurde invadiert und geht erst am {value} in deinen Besitz über.', ['{name}' => $top->getName(), '{value}' => new When($top->getIntegratedAt())]),
             0 === $capacity => 'Für eine Fusion wird Fusionstechnik benötigt.',
-            $top->getFusionSize() + $target->getFusionSize() > $capacity => t('Deine Fusionstechnik (Stufe {capacity}) erlaubt Fusionen aus höchstens {capacity} Planeten – zusammen wären es {fusionSize}.', ['{capacity}' => $capacity, '{fusionSize}' => $top->getFusionSize() + $target->getFusionSize()]),
+            $top->getFusionSize() + $target->getFusionSize() > $capacity => t('Deine Fusionstechnik (Stufe {level}) erlaubt Fusionen aus höchstens {capacity} Planeten – zusammen wären es {fusionSize}.', ['{level}' => $player->getResearchLevel(ResearchType::FusionTech), '{capacity}' => $capacity, '{fusionSize}' => $top->getFusionSize() + $target->getFusionSize()]),
             default => null,
         };
 

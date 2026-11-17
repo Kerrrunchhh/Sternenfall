@@ -143,8 +143,14 @@ class ShipyardAndResearchTest extends TestCase
         $player = new User('schweisser');
         self::assertSame(0, $this->economy->fusionCapacity($player));
 
+        // Level 1 welds two planets, every level one more: 49 levels for 50 planets.
+        $player->setResearchLevel(ResearchType::FusionTech, 1);
+        self::assertSame(2, $this->economy->fusionCapacity($player));
         $player->setResearchLevel(ResearchType::FusionTech, 7);
-        self::assertSame(7, $this->economy->fusionCapacity($player));
+        self::assertSame(8, $this->economy->fusionCapacity($player));
+        $player->setResearchLevel(ResearchType::FusionTech, 49);
+        self::assertSame(50, $this->economy->fusionCapacity($player));
+        self::assertSame(49, ResearchType::FusionTech->maxLevel());
 
         $player->setResearchLevel(ResearchType::FusionTech, 80);
         self::assertSame(50, $this->economy->fusionCapacity($player));
