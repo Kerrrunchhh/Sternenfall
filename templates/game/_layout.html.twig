@@ -156,6 +156,7 @@
             <a href="{{ path('app_lifeform') }}" class="{{ route == 'app_lifeform' ? 'active' }}"><span class="nav-icon" aria-hidden="true">🧬</span>{{ 'Lebensform'|trans }}</a>
             <a href="{{ path('app_alliance') }}" class="{{ route == 'app_alliance' ? 'active' }}"><span class="nav-icon" aria-hidden="true">🤝</span>{{ player.alliance ? player.alliance.type|trans : ('Allianz'|trans) }}</a>
             <a href="{{ path('app_diplomacy') }}" class="{{ route == 'app_diplomacy' ? 'active' }}"><span class="nav-icon" aria-hidden="true">🕊️</span>{{ 'Diplomatie'|trans }}{% if diplomacy_votes > 0 %} <span class="badge" title="{{ 'Offene Abstimmungen'|trans }}">{{ diplomacy_votes }}</span>{% endif %}</a>
+            <div class="vote-badge">{{ include('game/_vote_badge.html.twig') }}</div>
             </nav>
 
             <h2 class="sidebar-title">{{ 'Schwarzes Brett'|trans }}{% if player.alliance %} <small>[{{ player.alliance.tag }}]</small>{% endif %}</h2>

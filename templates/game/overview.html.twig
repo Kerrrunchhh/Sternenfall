@@ -5,6 +5,11 @@
 
 {% block content %}
     {% if not player.isExtended(now) %}{{ include('_ad.html.twig', {slot: 'overview'}) }}{% endif %}
+    <section class="panel vote-reminder" data-vote-reminder hidden>
+        {{ include('game/_vote_badge.html.twig') }}
+        <p>{{ '<strong>Hilf Starfall zu wachsen!</strong> Stimm einmal am Tag auf BrowserGamesTop ab – jede Stimme bringt das Spiel in der Rangliste nach oben und neue Mitspieler ins Universum.'|trans|raw }}</p>
+        <button type="button" class="btn btn-small btn-secondary" data-vote-later>{{ 'Später'|trans }}</button>
+    </section>
     {% if attacks is not empty %}
         <section class="panel attack-alarm-panel" role="alert">
             <h2>{{ attacks|length > 1 ? '🚨 Angriffe auf deine Planeten'|trans : '🚨 Angriff auf deine Planeten'|trans }}</h2>

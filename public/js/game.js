@@ -344,6 +344,27 @@ const orbit = (() => {
         }
     });
 
+    // Vote reminder (overview): shown when this browser hasn't voted for a day; "Später" hides it for some hours.
+    (() => {
+        const VOTED = 'sternenfall.votedAt', LATER = 'sternenfall.voteLaterAt';
+        const get = (key) => { try { return Number(localStorage.getItem(key)) || 0; } catch (e) { return 0; } };
+        const set = (key) => { try { localStorage.setItem(key, String(Date.now())); } catch (e) { /* ignore */ } };
+        const reminder = document.querySelector('[data-vote-reminder]');
+        document.querySelectorAll('[data-vote-link]').forEach((link) => link.addEventListener('click', () => {
+            set(VOTED);
+            if (reminder) { reminder.hidden = true; }
+        }));
+        if (!reminder) {
+            return;
+        }
+        reminder.querySelector('[data-vote-later]')?.addEventListener('click', () => {
+            set(LATER);
+            reminder.hidden = true;
+        });
+        const now = Date.now();
+        reminder.hidden = now - get(VOTED) < 24 * 3600 * 1000 || now - get(LATER) < 6 * 3600 * 1000;
+    })();
+
     // Fold-out sections marked with data-remember-open keep their open/closed state (per browser).
     document.querySelectorAll('details[data-remember-open]').forEach((details) => {
         const key = 'sternenfall.open.' + details.dataset.rememberOpen;
