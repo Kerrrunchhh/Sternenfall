@@ -30,7 +30,7 @@ final class TradeGuildTest extends TestCase
         $speed = \App\Game\ShipType::LargeFreighter->spec()->speed;
         $flight = static fn (int $system): int => TradeGuild::deliverySeconds($navigation->flightSeconds($navigation->distance(4, TradeGuild::SYSTEM, 1, 4, $system, 9), $speed), 1.0);
 
-        self::assertSame(3015, $flight(249), 'next to the central exchange: under an hour (since 2026-11-16 near systems are near)');
+        self::assertSame(2790, $flight(249), 'next to the central exchange: under an hour (since 2026-11-16 near systems are near)');
         self::assertSame(4 * 3600, $flight(35), 'far away: cut to 4 hours instead of 16');
         self::assertSame(4 * 3600, $flight(500));
         self::assertSame(2 * 3600, TradeGuild::deliverySeconds(65025, 2.0), 'twice the game speed, half the time');

@@ -24,13 +24,13 @@ final readonly class Navigation
 
     /** Leaving the own system: a base plus this much per system in between. */
     public const int SYSTEM_BASE = 5000;
-    public const int PER_SYSTEM = 1000;
+    public const int PER_SYSTEM = 500;
     /** Another galaxy: this much more on top of the way across the systems. */
     public const int PER_GALAXY = 100000;
 
     /**
      * Within a system the planets circle their sun: the distance depends on the moment (see Orbit).
-     * To another system: a base, 1,000 per system in between and half the orbit radii of start and
+     * To another system: a base, 500 per system in between and half the orbit radii of start and
      * target (outer planets are farther out). Another galaxy adds 100,000 per galaxy on top, so it is
      * never shorter than the same way inside a galaxy.
      * Mirrored in public/js/game.js (flight preview) – change both together.
