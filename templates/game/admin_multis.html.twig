@@ -44,7 +44,7 @@
 
     <section class="panel">
         <h2>{{ 'Größte Lieferungen ohne Gegenleistung (7 Tage)'|trans }}</h2>
-        <p class="muted small">{{ 'Transporte an fremde Planeten, ohne bezahlte Transportgesuche und Handel. Ein kleinerer Spieler darf einem größeren höchstens {share} % seiner Wochenproduktion schicken.'|trans({'{share}': push_share}) }}</p>
+        <p class="muted small">{{ 'Transporte an fremde Planeten und Credit-Zahlungen (2 Credits zählen wie 1 Rohstoff), ohne bezahlte Transportgesuche und Handel. Ein kleinerer Spieler darf einem größeren höchstens {share} % seiner Wochenproduktion schicken.'|trans({'{share}': push_share}) }}</p>
         {% if gifts is empty %}
             <p class="muted">{{ 'Keine Lieferungen.'|trans }}</p>
         {% else %}
@@ -55,7 +55,7 @@
                     <tr>
                         <td>{{ ui.player(g.sender) }} <span class="muted small">{{ '{points} Punkte'|trans({'{points}': player_points(g.sender)|num}) }}</span></td>
                         <td>{{ ui.player(g.receiver) }} <span class="muted small">{{ '{points} Punkte'|trans({'{points}': player_points(g.receiver)|num}) }}</span></td>
-                        <td class="num">{{ g.amount|num }}</td>
+                        <td class="num">{{ g.amount|num }}{% if g.credits > 0 %}<br><span class="muted small">{{ 'davon {credits} Credits'|trans({'{credits}': g.credits|num}) }}</span>{% endif %}</td>
                         <td class="num">{{ g.count }}</td>
                     </tr>
                 {% endfor %}

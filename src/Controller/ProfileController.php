@@ -35,6 +35,21 @@ class ProfileController extends AbstractGameController
         ]);
     }
 
+    /** Pays the player credits, with a message if wanted (pushing protection as for resource gifts). */
+    #[Route('/player/{id}/zahlen', name: 'app_player_pay', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    #[\Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid('pay', tokenKey: '_token')]
+    public function pay(User $user, #[\Symfony\Component\HttpKernel\Attribute\MapRequestPayload] \App\Game\PayForm $form, \App\Game\CreditTransfer $transfer): Response
+    {
+        $planet = $this->currentPlanet();
+        $amount = $form->credits();
+        $this->attempt(
+            fn () => $transfer->pay($planet, $user, $amount, $form->message),
+            t('Du hast {player} {amount} Credits gezahlt.', ['{player}' => $user->getUsername(), '{amount}' => new \App\I18n\Num($amount)]),
+        );
+
+        return $this->redirectToRoute('app_player', ['id' => $user->getId(), '_fragment' => 'zahlen']);
+    }
+
     #[Route('/profile/planets/{id}/visibility', name: 'app_profile_planet_visibility', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('profile', tokenKey: '_token')]
     public function planetVisibility(Planet $planet, Request $request, ProfileService $profiles): Response

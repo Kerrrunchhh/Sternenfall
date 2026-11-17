@@ -65,6 +65,28 @@ final class PushingGuardTest extends TestCase
         self::assertCount(1, $persisted->getArrayCopy(), 'logged, but not limited');
     }
 
+    public function testCreditsCountAtTheirWorthInResources(): void
+    {
+        [$guard, $persisted] = $this->guard(alreadyGiven: 0);
+        $limit = floor(0.25 * $guard->weeklyProduction($this->small));
+        $credits = (int) ($limit * PushingGuard::CREDITS_PER_RESOURCE);
+
+        $guard->checkAndRecordCredits($this->small, $this->big, $credits, $this->now);
+        self::assertSame($limit, (new \ReflectionProperty(ResourceGift::class, 'amount'))->getValue($persisted[0]), 'logged at the worth in resources');
+        self::assertSame((float) $credits, (new \ReflectionProperty(ResourceGift::class, 'credits'))->getValue($persisted[0]));
+
+        try {
+            $guard->checkAndRecordCredits($this->small, $this->big, $credits + 2 * (int) PushingGuard::CREDITS_PER_RESOURCE, $this->now);
+            self::fail('more than a quarter is refused, credits too');
+        } catch (GameException $e) {
+            self::assertStringContainsString('Credits', self::text($e));
+        }
+
+        [$guard, $persisted] = $this->guard(alreadyGiven: 1e9);
+        $guard->checkAndRecordCredits($this->big, $this->small, 1_000_000, $this->now);
+        self::assertCount(1, $persisted->getArrayCopy(), 'a bigger player pays freely – logged');
+    }
+
     /** @return array{PushingGuard, \ArrayObject<int, object>} */
     private function guard(float $alreadyGiven): array
     {

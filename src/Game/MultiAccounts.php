@@ -88,14 +88,14 @@ final readonly class MultiAccounts
      */
     public function biggestGifts(int $limit = 30): array
     {
-        $rows = $this->em->createQuery('SELECT IDENTITY(g.sender) AS s, IDENTITY(g.receiver) AS r, SUM(g.amount) AS total, COUNT(g.id) AS n FROM '.ResourceGift::class.' g WHERE g.createdAt >= :since GROUP BY g.sender, g.receiver ORDER BY total DESC')
+        $rows = $this->em->createQuery('SELECT IDENTITY(g.sender) AS s, IDENTITY(g.receiver) AS r, SUM(g.amount) AS total, SUM(g.credits) AS credits, COUNT(g.id) AS n FROM '.ResourceGift::class.' g WHERE g.createdAt >= :since GROUP BY g.sender, g.receiver ORDER BY total DESC')
             ->setParameter('since', $this->now()->modify('-7 days'))->setMaxResults($limit)->getArrayResult();
         $out = [];
         foreach ($rows as $row) {
             $s = $this->users->find((int) $row['s']);
             $r = $this->users->find((int) $row['r']);
             if (null !== $s && null !== $r && !self::isLeftOut($s) && !self::isLeftOut($r)) {
-                $out[] = ['sender' => $s, 'receiver' => $r, 'amount' => (float) $row['total'], 'count' => (int) $row['n']];
+                $out[] = ['sender' => $s, 'receiver' => $r, 'amount' => (float) $row['total'], 'credits' => (float) $row['credits'], 'count' => (int) $row['n']];
             }
         }
 

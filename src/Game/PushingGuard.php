@@ -11,13 +11,16 @@ use function Symfony\Component\Translation\t;
 
 /**
  * Pushing protection: a smaller player may give a bigger one at most a quarter of his weekly
- * production within 7 days (transports without payment). Paid transport requests and trade
- * at trade posts don't count. Every gift is logged for the admins.
+ * production within 7 days (transports without payment, and credits paid to him – counted at
+ * their worth in resources). Paid transport requests and trade at trade posts don't count.
+ * Every gift is logged for the admins.
  */
 final readonly class PushingGuard
 {
     public const float SHARE_OF_WEEKLY_PRODUCTION = 0.25;
     public const int DAYS = 7;
+    /** What a credit is worth in resources: the trade guild values iron, the main resource, at 2 credits. */
+    public const float CREDITS_PER_RESOURCE = 2.0;
 
     public function __construct(
         private EntityManagerInterface $em,
@@ -43,6 +46,29 @@ final readonly class PushingGuard
             }
         }
         $this->em->persist(new ResourceGift($sender, $receiver, $amount, $now));
+    }
+
+    /** A credit payment: the same limit, counted at the credits' worth in resources; logged for the admins. */
+    public function checkAndRecordCredits(User $sender, User $receiver, int $credits, \DateTimeImmutable $now): void
+    {
+        $worth = $credits / self::CREDITS_PER_RESOURCE;
+        if ($credits < 1 || $sender->isSameAs($receiver) || $receiver->isSystem()) {
+            return;
+        }
+        if (Scoring::points($receiver) > Scoring::points($sender)) {
+            $limit = floor(self::SHARE_OF_WEEKLY_PRODUCTION * $this->weeklyProduction($sender));
+            $given = $this->givenTo($sender, $receiver, $now->modify('-'.self::DAYS.' days'));
+            if ($given + $worth > $limit) {
+                throw new GameException(t('Pushing-Schutz: {player} hat mehr Punkte als du. In 7 Tagen darfst du ihm Rohstoffe und Credits im Wert von höchstens {limit} Rohstoffen schenken (ein Viertel deiner Wochenproduktion, {rate} Credits zählen wie 1 Rohstoff). Davon hast du schon {given} verbraucht – möglich sind noch {left} Credits.', [
+                    '{player}' => $receiver->getUsername(),
+                    '{limit}' => new Num($limit),
+                    '{rate}' => new Num(self::CREDITS_PER_RESOURCE),
+                    '{given}' => new Num($given),
+                    '{left}' => new Num(max(0, floor(($limit - $given) * self::CREDITS_PER_RESOURCE))),
+                ]));
+            }
+        }
+        $this->em->persist(new ResourceGift($sender, $receiver, $worth, $now, $credits));
     }
 
     public function weeklyProduction(User $player): float

@@ -29,8 +29,13 @@ class ResourceGift
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
-    public function __construct(User $sender, User $receiver, float $amount, \DateTimeImmutable $createdAt)
+    /** Credits paid (a credit payment between players); $amount then holds their worth in resources. */
+    #[ORM\Column(options: ['default' => 0])]
+    private float $credits = 0.0;
+
+    public function __construct(User $sender, User $receiver, float $amount, \DateTimeImmutable $createdAt, float $credits = 0.0)
     {
+        $this->credits = $credits;
         $this->sender = $sender;
         $this->receiver = $receiver;
         $this->amount = $amount;
