@@ -6,12 +6,13 @@
         <span class="{{ diff > 0 ? 'trend-up' : (diff < 0 ? 'trend-down') }}">{{ diff > 0 ? '+' }}{{ diff|round|num }}</span>
     {%- endif -%}
 {% endmacro %}
+{% set week_label = economy.full_week or not economy.compared_with ? ('7 Tage'|trans) : ('seit {date}'|trans({'{date}': economy.compared_with|date('d.m.')})) %}
 
 <h2>{{ 'Schiffe im Spiel'|trans }}</h2>
-<p class="muted small">{{ 'In allen Hangars und Flotten zusammen. „7 Tage“ ist die Veränderung seit vor einer Woche.'|trans }}</p>
+<p class="muted small">{{ 'In allen Hangars und Flotten zusammen. „7 Tage“ ist die Veränderung seit vor einer Woche (solange es noch keine Woche Verlauf gibt: seit dem ersten Tag).'|trans }}</p>
 <div class="table-scroll">
     <table class="table status-table">
-        <thead><tr><th>{{ 'Typ'|trans }}</th><th class="num">{{ 'Anzahl'|trans }}</th><th class="num">{{ '7 Tage'|trans }}</th></tr></thead>
+        <thead><tr><th>{{ 'Typ'|trans }}</th><th class="num">{{ 'Anzahl'|trans }}</th><th class="num">{{ week_label }}</th></tr></thead>
         {% for group in [{title: 'Raumschiffe', stationary: false}, {title: 'Verteidigung', stationary: true}] %}
             <tbody>
                 <tr class="table-head"><td colspan="3">{{ group.title|trans }}</td></tr>
@@ -27,7 +28,7 @@
 <p class="muted small">{{ 'Was in den Lagern aller Planeten liegt (Stand der letzten Aktualisierung jedes Planeten, ohne Ladung in Flotten).'|trans }}</p>
 <div class="table-scroll">
     <table class="table status-table">
-        <thead><tr><th>{{ 'Rohstoff'|trans }}</th><th class="num">{{ 'Menge'|trans }}</th><th class="num">{{ '7 Tage'|trans }}</th></tr></thead>
+        <thead><tr><th>{{ 'Rohstoff'|trans }}</th><th class="num">{{ 'Menge'|trans }}</th><th class="num">{{ week_label }}</th></tr></thead>
         <tbody>
             {% for row in economy.resources %}
                 <tr><td>{{ row.type.label|trans }}</td><td class="num">{{ row.amount|round(0, 'floor')|num }}</td><td class="num">{{ _self.change(row.amount, row.week) }}</td></tr>

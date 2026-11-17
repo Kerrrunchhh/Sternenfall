@@ -2243,7 +2243,7 @@
 "bearbeitet {updatedAt}": "edited {updatedAt}"
 "✓ Gelesen": "✓ Read"
 "Schiffe im Spiel": "Ships in the game"
-"In allen Hangars und Flotten zusammen. „7 Tage“ ist die Veränderung seit vor einer Woche.": "In all hangars and fleets together. “7 days” is the change since a week ago."
+"In allen Hangars und Flotten zusammen. „7 Tage“ ist die Veränderung seit vor einer Woche (solange es noch keine Woche Verlauf gibt: seit dem ersten Tag).": "In all hangars and fleets together. “7 days” is the change since a week ago (while there is less than a week of history: since the first day)."
 "7 Tage": "7 days"
 "Rohstoffe auf allen Planeten": "Resources on all planets"
 "Was in den Lagern aller Planeten liegt (Stand der letzten Aktualisierung jedes Planeten, ohne Ladung in Flotten).": "What lies in the stores of all planets (as of each planet’s last update, without cargo in fleets)."

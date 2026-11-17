@@ -96,6 +96,10 @@ final readonly class GameStats
                 $week = $snapshot; // the latest one at least a week old
             }
         }
+        // Younger history: compare with the oldest day there is (not with today's own snapshot).
+        if (null === $week && [] !== $snapshots && $snapshots[0]->getDay()->format('Y-m-d') < $this->now()->format('Y-m-d')) {
+            $week = $snapshots[0];
+        }
 
         $history = ['days' => [], 'resources' => array_fill_keys(array_keys($resources), []), 'ships' => ['ships' => [], 'turrets' => []]];
         foreach ($snapshots as $snapshot) {
@@ -116,6 +120,9 @@ final readonly class GameStats
             'resources' => array_map(static fn (ResourceType $t): array => ['type' => $t, 'amount' => $resources[$t->value], 'week' => null === $week ? null : (float) ($week->getResources()[$t->value] ?? 0)], ResourceType::cases()),
             'history' => $history,
             'since' => [] === $snapshots ? null : $snapshots[0]->getDay(),
+            // Day the "week" column compares with (younger than a week while the history is short).
+            'compared_with' => $week?->getDay(),
+            'full_week' => null !== $week && $week->getDay() <= $weekAgo,
         ];
     }
 
