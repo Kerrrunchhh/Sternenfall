@@ -26,7 +26,7 @@ class LongResearchTest extends TestCase
             $long = \in_array($type, [ResearchType::FusionTech, ResearchType::Colonization], true);
             self::assertSame($long, $type->isLongTerm(), $type->label());
         }
-        self::assertSame(49, ResearchType::FusionTech->maxLevel(), 'no system has more than 50 planets');
+        self::assertSame(50, ResearchType::FusionTech->maxLevel(), 'no system has more than 50 planets');
         foreach (ResearchType::cases() as $type) {
             if (ResearchType::FusionTech !== $type) {
                 self::assertNull($type->maxLevel(), $type->label().' keeps improving');
@@ -69,7 +69,7 @@ class LongResearchTest extends TestCase
         // A well developed player: fuses as many planets as allowed, labs grow from 4 to 20.
         $total = 0;
         $durations = [];
-        foreach (range(1, 49) as $level) {
+        foreach (range(1, 50) as $level) {
             $labs = max(1, $level - 1) * (4 + 16 * $level / 50);
             $durations[$level] = $this->economy->researchSeconds(ResearchType::FusionTech, $level, $this->lab((int) round($labs)));
             $total += $durations[$level];

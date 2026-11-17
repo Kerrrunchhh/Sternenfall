@@ -138,7 +138,7 @@ class ShipyardAndResearchTest extends TestCase
         self::assertLessThan(5 * 60, $navigation->flightSeconds($navigation->distance(3, 277, 1, 3, 300, 1), $this->economy->shipSpeed(ShipType::Scout, $player)), 'another system: minutes');
     }
 
-    public function testFusionCapacityIsCappedAtFortyNine(): void
+    public function testFusionCapacityIsCappedAtFifty(): void
     {
         $player = new User('schweisser');
         self::assertSame(0, $this->economy->fusionCapacity($player));
@@ -147,7 +147,7 @@ class ShipyardAndResearchTest extends TestCase
         self::assertSame(7, $this->economy->fusionCapacity($player));
 
         $player->setResearchLevel(ResearchType::FusionTech, 80);
-        self::assertSame(49, $this->economy->fusionCapacity($player));
+        self::assertSame(50, $this->economy->fusionCapacity($player));
     }
 
     public function testCombatShipsComeFirstInFiringOrder(): void
