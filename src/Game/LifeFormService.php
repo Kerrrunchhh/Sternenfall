@@ -45,6 +45,9 @@ final readonly class LifeFormService
                 if (null !== $alliance = $player->getAlliance()) {
                     throw new GameException(t('Du bist in „{name}“ ({type}) – dort sind nur {label}. Tritt erst aus, dann kannst du die Lebensform wechseln.', ['{name}' => $alliance->getName(), '{type}' => $alliance->getType(), '{label}' => t($alliance->getLifeForm()->label())]));
                 }
+                if (null !== $refusal = HeroPoints::lifeFormChangeRefusal($player->getLifeForm(), $lifeForm, $player->getHeroPoints($now))) {
+                    throw new GameException($refusal);
+                }
                 if ($player->getNextLifeFormChangeAt() > $now) {
                     throw new GameException(t('Ein Wechsel ist erst ab {value} möglich.', ['{value}' => new When($player->getNextLifeFormChangeAt())]));
                 }

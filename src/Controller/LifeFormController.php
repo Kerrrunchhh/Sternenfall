@@ -2,9 +2,11 @@
 
 namespace App\Controller;
 
+use App\Game\HeroPoints;
 use App\Game\LifeForm;
 use App\Game\LifeFormService;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Contracts\Translation\TranslatableInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\EnumRequirement;
 use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
@@ -23,6 +25,11 @@ class LifeFormController extends AbstractGameController
             'life_forms' => LifeForm::cases(),
             'posts_lost' => $lifeForms->postsLostOnChange($planet),
             'can_change' => $player->getNextLifeFormChangeAt() <= $this->clock->now(),
+            // Hero points rule some changes out (pirates, guardians): reason per life form.
+            'refusals' => array_combine(
+                array_map(static fn (LifeForm $form): string => $form->value, LifeForm::cases()),
+                array_map(static fn (LifeForm $form): ?TranslatableInterface => $form === $player->getLifeForm() ? null : HeroPoints::lifeFormChangeRefusal($player->getLifeForm(), $form, $player->getHeroPoints($this->clock->now())), LifeForm::cases()),
+            ),
         ]);
     }
 

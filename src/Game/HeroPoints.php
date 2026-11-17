@@ -30,6 +30,27 @@ final class HeroPoints
     /** Without new crimes hero points come back by this much a day, up to START. */
     public const float RECOVERY_PER_DAY = 10;
 
+    /** Hero points a guardian needs to join and must fall below to leave. */
+    public const float GUARDIAN_POINTS = 1000;
+
+    /**
+     * Life form changes the hero points rule out: only criminals (at least 1 crime point) become
+     * pirates, a pirate only leaves when heroic again (at least 1 hero point), guardians join
+     * with GUARDIAN_POINTS and leave only below them.
+     */
+    public static function lifeFormChangeRefusal(LifeForm $from, LifeForm $to, float $points): ?TranslatableInterface
+    {
+        $have = new Num((int) $points);
+
+        return match (true) {
+            LifeForm::Guardian === $from && $points >= self::GUARDIAN_POINTS => t('Wächter bleibt, wer {required} Heldenpunkte oder mehr hat. Erst unter {required} kannst du die Wächter verlassen – du hast {points}.', ['{required}' => new Num(self::GUARDIAN_POINTS), '{points}' => $have]),
+            LifeForm::Pirate === $to && $points > -1 => t('Pirat kann nur werden, wer kriminell ist: mindestens 1 Krimipunkt (−1 Heldenpunkte oder weniger). Du hast {points} Heldenpunkte.', ['{points}' => $have]),
+            LifeForm::Pirate === $from && $points < 1 => t('Piraten können nur wechseln, wenn sie wieder heldenhaft sind: mindestens 1 Heldenpunkt. Du hast {points}.', ['{points}' => $have]),
+            LifeForm::Guardian === $to && $points < self::GUARDIAN_POINTS => t('Wächter kann nur werden, wer mindestens {required} Heldenpunkte hat. Du hast {points}.', ['{required}' => new Num(self::GUARDIAN_POINTS), '{points}' => $have]),
+            default => null,
+        };
+    }
+
     /** +1: fighting him is heroic, -1: it is a crime, 0: nobody to judge (ownerless planets). */
     public static function sign(User $victim): int
     {

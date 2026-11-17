@@ -2961,3 +2961,8 @@
 "Nur zurückfliegen": "Just fly back"
 "Die Flotte fliegt ohne Handel zu dem Planeten zurück, von dem sie hergeschickt wurde (sonst zu deinem Hauptplaneten), und bringt ihre Ladung mit. Den Rückflug zahlt der Stützpunkt.": "The fleet flies back without trading to the planet it was sent from (otherwise to your main planet) and brings its cargo along. The trade post pays for the return flight."
 "Ladung:": "Cargo:"
+"Wächter bleibt, wer {required} Heldenpunkte oder mehr hat. Erst unter {required} kannst du die Wächter verlassen – du hast {points}.": "Whoever has {required} hero points or more stays a guardian. Only below {required} can you leave the guardians – you have {points}."
+"Pirat kann nur werden, wer kriminell ist: mindestens 1 Krimipunkt (−1 Heldenpunkte oder weniger). Du hast {points} Heldenpunkte.": "Only criminals can become pirates: at least 1 crime point (−1 hero points or less). You have {points} hero points."
+"Piraten können nur wechseln, wenn sie wieder heldenhaft sind: mindestens 1 Heldenpunkt. Du hast {points}.": "Pirates can only switch once they are heroic again: at least 1 hero point. You have {points}."
+"Wächter kann nur werden, wer mindestens {required} Heldenpunkte hat. Du hast {points}.": "Only players with at least {required} hero points can become guardians. You have {points}."
+"Pirat wird nur, wer kriminell ist (mindestens 1 Krimipunkt); Piraten wechseln erst wieder mit mindestens 1 Heldenpunkt. Wächter wird nur, wer mindestens 1000 Heldenpunkte hat, und verlässt sie erst unter 1000.": "Only criminals become pirates (at least 1 crime point); pirates can only switch again with at least 1 hero point. Only players with at least 1000 hero points become guardians, and they can only leave below 1000."

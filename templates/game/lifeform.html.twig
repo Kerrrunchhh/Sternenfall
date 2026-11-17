@@ -6,6 +6,7 @@
     <h1>{{ 'Lebensform'|trans }}</h1>
     <p class="muted">
         {{ 'Deine Lebensform wählst du beim Spielstart. Frühestens 30 Tage danach bzw. nach dem letzten Wechsel kannst du sie wechseln.'|trans }}
+        {{ 'Pirat wird nur, wer kriminell ist (mindestens 1 Krimipunkt); Piraten wechseln erst wieder mit mindestens 1 Heldenpunkt. Wächter wird nur, wer mindestens 1000 Heldenpunkte hat, und verlässt sie erst unter 1000.'|trans }}
         {% if not can_change %}{{ 'Nächster möglicher Wechsel: <strong>{nextLifeFormChangeAt}</strong>.'|trans({'{nextLifeFormChangeAt}': (player.nextLifeFormChangeAt|date('d.m.Y H:i'))|e})|raw }}{% endif %}
     </p>
 
@@ -22,11 +23,12 @@
                 {% if not current %}
                     <form method="post" action="{{ path('app_lifeform_change', {lifeForm: form.value}) }}">
                         <input type="hidden" name="_token" value="{{ csrf_token('lifeform') }}">
-                        <button class="btn btn-small" type="submit" id="lifeform-{{ form.value }}" {{ can_change ? '' : 'disabled' }}
+                        <button class="btn btn-small" type="submit" id="lifeform-{{ form.value }}" {{ can_change and not refusals[form.value] ? '' : 'disabled' }}
                                 data-confirm="{{ 'Wirklich zu den {label} wechseln? Der nächste Wechsel ist erst in 30 Tagen möglich.'|trans({'{label}': form.label|trans}) ~ (posts_lost > 0 ? ' ' ~ 'Deine {count} Handelsstützpunkt(e) verkaufen danach nichts mehr.'|trans({'{count}': posts_lost}) : '') }}" data-confirm-label="{{ 'Wechseln'|trans }}">
                             {{ 'Zu {label} wechseln'|trans({'{label}': form.label|trans}) }}
                         </button>
                     </form>
+                    {% if refusals[form.value] %}<p class="small muted" id="lifeform-refusal-{{ form.value }}">{{ refusals[form.value]|trans }}</p>{% endif %}
                 {% endif %}
             </article>
         {% endfor %}

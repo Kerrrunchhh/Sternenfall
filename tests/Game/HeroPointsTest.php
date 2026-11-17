@@ -19,6 +19,35 @@ class HeroPointsTest extends TestCase
         $this->now = new \DateTimeImmutable('2026-11-14 12:00:00');
     }
 
+    public function testOnlyCriminalsBecomePiratesAndOnlyHeroesLeaveThem(): void
+    {
+        $refused = static fn (LifeForm $from, LifeForm $to, float $points): bool => null !== HeroPoints::lifeFormChangeRefusal($from, $to, $points);
+
+        self::assertTrue($refused(LifeForm::Settler, LifeForm::Pirate, 0));
+        self::assertTrue($refused(LifeForm::Settler, LifeForm::Pirate, -0.5));
+        self::assertFalse($refused(LifeForm::Settler, LifeForm::Pirate, -1));
+
+        self::assertTrue($refused(LifeForm::Pirate, LifeForm::Trader, 0.9));
+        self::assertFalse($refused(LifeForm::Pirate, LifeForm::Trader, 1));
+        self::assertTrue($refused(LifeForm::Pirate, LifeForm::Guardian, 999));
+        self::assertFalse($refused(LifeForm::Pirate, LifeForm::Guardian, 1000));
+    }
+
+    public function testGuardiansJoinWithAThousandHeroPointsAndLeaveOnlyBelow(): void
+    {
+        $refused = static fn (LifeForm $from, LifeForm $to, float $points): bool => null !== HeroPoints::lifeFormChangeRefusal($from, $to, $points);
+
+        self::assertTrue($refused(LifeForm::Settler, LifeForm::Guardian, 999.9));
+        self::assertFalse($refused(LifeForm::Trader, LifeForm::Guardian, 1000));
+
+        self::assertTrue($refused(LifeForm::Guardian, LifeForm::Settler, 1000));
+        self::assertTrue($refused(LifeForm::Guardian, LifeForm::Trader, 1500));
+        self::assertFalse($refused(LifeForm::Guardian, LifeForm::Settler, 999));
+        self::assertTrue($refused(LifeForm::Guardian, LifeForm::Pirate, 999));
+        self::assertFalse($refused(LifeForm::Guardian, LifeForm::Pirate, -1));
+        self::assertFalse($refused(LifeForm::Settler, LifeForm::Trader, 0));
+    }
+
     public function testEverybodyStartsAsAHeroAndTurnsCriminalBelowZero(): void
     {
         $player = $this->player('Pilotin');
