@@ -6,6 +6,7 @@ use App\Entity\Ticker;
 use App\Entity\TickerMember;
 use App\Entity\TickerPost;
 use App\Entity\User;
+use App\I18n\When;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -13,8 +14,10 @@ use Psr\Clock\ClockInterface;
 use function Symfony\Component\Translation\t;
 
 /**
- * Long-range tickers: anybody opens one; only the owner invites and removes players,
- * deletes posts and hands the ticker over. Invited players must accept first.
+ * Long-range tickers: anybody opens one. The owner and the admins he appoints invite, remove
+ * and mute players and delete posts; only the owner appoints admins and a deputy, describes,
+ * hands over and closes the ticker. Invited players must accept first. The deputy takes over
+ * when the owner hasn't been online for Ticker::DEPUTY_AFTER_DAYS.
  */
 final readonly class TickerService
 {
@@ -43,9 +46,12 @@ final readonly class TickerService
         return $ticker;
     }
 
+    /** Mute durations offered, in days. */
+    public const array MUTE_DAYS = [1, 3, 7, 30];
+
     public function invite(Ticker $ticker, User $owner, string $username): User
     {
-        $this->assertOwner($ticker, $owner);
+        $this->assertModerator($ticker, $owner);
         $username = trim($username);
         $user = '' === $username ? null : $this->users->findOneBy(['username' => $username]);
         if (null === $user) {
@@ -88,11 +94,11 @@ final readonly class TickerService
         $this->em->flush();
     }
 
-    /** The owner removes a member or withdraws an invitation. */
+    /** The owner or an admin removes a member or withdraws an invitation (admins: plain members only). */
     public function remove(Ticker $ticker, User $owner, TickerMember $member): void
     {
-        $this->assertOwner($ticker, $owner);
-        if ($member->getTicker() !== $ticker || $member->getUser()->isSameAs($owner)) {
+        $this->assertModerator($ticker, $owner);
+        if (!$ticker->canModerateMember($owner, $member)) {
             throw new GameException(t('Diesen Spieler kannst du nicht entfernen.'));
         }
         $ticker->removeMember($member);
@@ -125,6 +131,10 @@ final readonly class TickerService
         if (!$ticker->isMember($author)) {
             throw new GameException(t('Nur Mitglieder können in diesem Ticker schreiben.'));
         }
+        $membership = $ticker->membership($author);
+        if (null !== $membership && $membership->isMuted($this->now())) {
+            throw new GameException(t('Du bist in diesem Ticker bis {until} stummgeschaltet.', ['{until}' => new When($membership->getMutedUntil())]));
+        }
         $body = trim($body);
         if ('' === $body) {
             throw new GameException(t('Der Beitrag ist leer.'));
@@ -156,9 +166,14 @@ final readonly class TickerService
         $this->em->flush();
     }
 
+    /** Owner: any post; admins: those of plain members and their own. */
     public function deletePost(TickerPost $post, User $owner): void
     {
-        $this->assertOwner($post->getTicker(), $owner);
+        $ticker = $post->getTicker();
+        $this->assertModerator($ticker, $owner);
+        if (!$ticker->canDeletePost($owner, $post)) {
+            throw new GameException(t('Beiträge des Besitzers und anderer Admins kannst du nicht löschen.'));
+        }
         $this->em->remove($post);
         $this->em->flush();
     }
@@ -169,6 +184,92 @@ final readonly class TickerService
         $this->assertOwner($ticker, $owner);
         $this->em->remove($ticker);
         $this->em->flush();
+    }
+
+    /** Owner or admin mutes a member for some days; 0 days lifts the mute. */
+    public function mute(Ticker $ticker, User $moderator, TickerMember $member, int $days): void
+    {
+        $this->assertModerator($ticker, $moderator);
+        if (!$member->isAccepted() || !$ticker->canModerateMember($moderator, $member)) {
+            throw new GameException(t('Diesen Spieler kannst du nicht stummschalten.'));
+        }
+        if (0 === $days) {
+            $member->muteUntil(null);
+            $this->em->flush();
+
+            return;
+        }
+        if (!\in_array($days, self::MUTE_DAYS, true)) {
+            throw new GameException(t('Diese Dauer gibt es nicht.'));
+        }
+        $until = $this->now()->modify(\sprintf('+%d days', $days));
+        $member->muteUntil($until);
+        $this->inbox->send($member->getUser(), t('Im Ticker „{name}“ stummgeschaltet', ['{name}' => $ticker->getName()]), t('{player} hat dich im Langstreckenticker „{name}“ bis {until} stummgeschaltet. Lesen kannst du weiter, schreiben erst danach wieder.', ['{player}' => $moderator->getUsername(), '{name}' => $ticker->getName(), '{until}' => new When($until)]));
+        $this->em->flush();
+    }
+
+    /** The owner appoints a member as admin or takes the rights back. */
+    public function setAdmin(Ticker $ticker, User $owner, TickerMember $member, bool $admin): void
+    {
+        $this->assertOwner($ticker, $owner);
+        if ($member->getTicker() !== $ticker || !$member->isAccepted() || $ticker->isOwnedBy($member->getUser())) {
+            throw new GameException(t('Admin werden kann nur ein anderes Mitglied.'));
+        }
+        $member->setAdmin($admin);
+        if ($admin) {
+            $member->muteUntil(null);
+            $this->inbox->send($member->getUser(), t('Admin im Ticker „{name}“', ['{name}' => $ticker->getName()]), t('{player} hat dich zum Admin des Langstreckentickers „{name}“ ernannt. Du kannst jetzt Spieler einladen, entfernen und stummschalten und Beiträge löschen.', ['{player}' => $owner->getUsername(), '{name}' => $ticker->getName()]));
+        }
+        $this->em->flush();
+    }
+
+    /** The owner names a member as deputy (null: none). */
+    public function setDeputy(Ticker $ticker, User $owner, ?TickerMember $member): void
+    {
+        $this->assertOwner($ticker, $owner);
+        if (null === $member) {
+            $ticker->setDeputy(null);
+            $this->em->flush();
+
+            return;
+        }
+        if ($member->getTicker() !== $ticker || !$member->isAccepted() || $ticker->isOwnedBy($member->getUser())) {
+            throw new GameException(t('Stellvertreter kann nur ein anderes Mitglied werden.'));
+        }
+        $ticker->setDeputy($member->getUser());
+        $this->inbox->send($member->getUser(), t('Stellvertreter im Ticker „{name}“', ['{name}' => $ticker->getName()]), t('{player} hat dich zum Stellvertreter des Langstreckentickers „{name}“ ernannt. Ist {player} {days} Tage nicht online, wirst du automatisch Besitzer.', ['{player}' => $owner->getUsername(), '{name}' => $ticker->getName(), '{days}' => Ticker::DEPUTY_AFTER_DAYS]));
+        $this->em->flush();
+    }
+
+    /**
+     * The deputy takes over when the owner hasn't been online for Ticker::DEPUTY_AFTER_DAYS
+     * (checked whenever the ticker is opened). Returns whether the owner changed.
+     */
+    public function succeedIfAbandoned(Ticker $ticker): bool
+    {
+        $deputy = $ticker->getDeputy();
+        if (null === $deputy || !$ticker->isMember($deputy)) {
+            return false;
+        }
+        $owner = $ticker->getOwner();
+        $lastSeen = $owner->getLastSeenAt() ?? $ticker->getCreatedAt();
+        $limit = $this->now()->modify(\sprintf('-%d days', Ticker::DEPUTY_AFTER_DAYS));
+        if ($lastSeen > $limit) {
+            return false;
+        }
+        $ticker->handOver($deputy);
+        $this->inbox->send($deputy, t('Ticker „{name}“ übernommen', ['{name}' => $ticker->getName()]), t('{player} war {days} Tage nicht online. Als Stellvertreter bist du jetzt Besitzer des Langstreckentickers „{name}“.', ['{player}' => $owner->getUsername(), '{name}' => $ticker->getName(), '{days}' => Ticker::DEPUTY_AFTER_DAYS]));
+        $this->inbox->send($owner, t('Ticker „{name}“ abgegeben', ['{name}' => $ticker->getName()]), t('Du warst {days} Tage nicht online. Dein Stellvertreter {player} ist jetzt Besitzer des Langstreckentickers „{name}“; du bleibst Mitglied.', ['{player}' => $deputy->getUsername(), '{name}' => $ticker->getName(), '{days}' => Ticker::DEPUTY_AFTER_DAYS]));
+        $this->em->flush();
+
+        return true;
+    }
+
+    private function assertModerator(Ticker $ticker, User $user): void
+    {
+        if (!$ticker->canModerate($user)) {
+            throw new GameException(t('Das dürfen nur der Besitzer und die Admins des Tickers.'));
+        }
     }
 
     private function assertOwner(Ticker $ticker, User $user): void

@@ -34,8 +34,8 @@
                 {% for p in board_ticker_posts %}
                     <div class="board-post" id="post-{{ p.id }}">
                         <div class="muted small board-meta"><span>{% if p.author %}{{ ui.player(p.author) }}{% else %}{{ 'gelöschter Spieler'|trans }}{% endif %} · {{ p.createdAt|date('d.m.Y H:i') }}{% if p.editedAt %} · {{ 'bearbeitet {editedAt}'|trans({'{editedAt}': p.editedAt|date('d.m.Y H:i')}) }}{% endif %}</span>
-                            {# The owner of the ticker may delete any post in it. #}
-                            {% if board_ticker.isOwnedBy(player) %}
+                            {# The owner may delete any post, admins those of plain members. #}
+                            {% if board_ticker.canDeletePost(player, p) %}
                                 <form method="post" action="{{ path('app_ticker_post_delete', {id: p.id}) }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
                                     <input type="hidden" name="back" value="{{ back }}">

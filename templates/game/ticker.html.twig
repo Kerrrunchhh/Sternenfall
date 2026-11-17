@@ -20,17 +20,21 @@
 
     <div class="mail-layout">
         <section class="panel">
+            {% if membership.muted(now) %}
+                <p class="panel warning small" id="ticker-muted">{{ 'Du bist in diesem Ticker bis {until} stummgeschaltet. Lesen kannst du weiter, schreiben erst danach wieder.'|trans({'{until}': membership.mutedUntil|date('d.m.Y H:i')}) }}</p>
+            {% else %}
             <form method="post" action="{{ path('app_ticker_post', {id: ticker.id}) }}" class="board-form ticker-form">
                 <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
                 <textarea name="body" rows="3" maxlength="{{ constant('App\\Entity\\TickerPost::MAX_BODY') }}" required aria-label="{{ 'Neuer Beitrag'|trans }}" placeholder="{{ 'Nachricht an alle im Ticker …'|trans }}"></textarea>
                 <button class="btn btn-small" type="submit" id="ticker-send">{{ 'Senden'|trans }}</button>
             </form>
+            {% endif %}
             <div class="board-feed ticker-feed">
                 {% for p in posts %}
                     <div class="board-post" id="post-{{ p.id }}">
                         <div class="muted small board-meta">
                             <span>{% if p.author %}{{ ui.player(p.author) }}{% else %}{{ 'gelöschter Spieler'|trans }}{% endif %} · {{ p.createdAt|date('d.m.Y H:i') }}{% if p.editedAt %} · {{ 'bearbeitet {editedAt}'|trans({'{editedAt}': p.editedAt|date('d.m.Y H:i')}) }}{% endif %}</span>
-                            {% if owner %}
+                            {% if ticker.canDeletePost(player, p) %}
                                 <form method="post" action="{{ path('app_ticker_post_delete', {id: p.id}) }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
                                     <button class="btn btn-small btn-danger" type="submit" data-confirm="{{ 'Beitrag löschen?'|trans }}" data-confirm-label="{{ 'Löschen'|trans }}" title="{{ 'Beitrag löschen'|trans }}">✕</button>
@@ -48,15 +52,37 @@
 
         <section class="panel">
             <h2>{{ 'Mitglieder <small class="muted">{acceptedMembers}</small>'|trans({'{acceptedMembers}': ticker.acceptedMembers|length|e})|raw }}</h2>
-            <ul class="contact-list">
+            <ul class="contact-list ticker-members">
                 {% for m in ticker.acceptedMembers %}
                     <li>
-                        <span>{{ ui.player(m.user) }}{% if ticker.isOwnedBy(m.user) %} <span class="muted small" title="{{ 'Besitzer'|trans }}">👑</span>{% endif %}</span>
-                        {% if owner and not ticker.isOwnedBy(m.user) %}
+                        <span>{{ ui.player(m.user) }}
+                            {%- if ticker.isOwnedBy(m.user) %} <span class="muted small" title="{{ 'Besitzer'|trans }}">👑</span>{% endif %}
+                            {%- if m.admin %} <span class="badge" title="{{ 'Admin: lädt ein, entfernt, schaltet stumm und löscht Beiträge'|trans }}">{{ 'Admin'|trans }}</span>{% endif %}
+                            {%- if ticker.isDeputy(m.user) %} <span class="badge" title="{{ 'Wird Besitzer, wenn der Besitzer {days} Tage nicht online war'|trans({'{days}': constant('App\\Entity\\Ticker::DEPUTY_AFTER_DAYS')}) }}">{{ 'Stellvertreter'|trans }}</span>{% endif %}
+                            {%- if m.muted(now) %} <span class="muted small" title="{{ 'stumm bis {until}'|trans({'{until}': m.mutedUntil|date('d.m.Y H:i')}) }}">🔇 {{ m.mutedUntil|date('d.m.') }}</span>{% endif %}
+                        </span>
+                        {% if ticker.canModerateMember(player, m) %}
                             <span class="contact-actions">
-                                <form method="post" action="{{ path('app_ticker_hand_over', {id: m.id}) }}">
+                                {% if owner %}
+                                    <form method="post" action="{{ path('app_ticker_admin', {id: m.id}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
+                                        <input type="hidden" name="admin" value="{{ m.admin ? 0 : 1 }}">
+                                        <button class="btn btn-small btn-secondary" type="submit" id="ticker-admin-{{ m.id }}">{{ m.admin ? ('Admin entziehen'|trans) : ('Zum Admin'|trans) }}</button>
+                                    </form>
+                                    <form method="post" action="{{ path('app_ticker_hand_over', {id: m.id}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
+                                        <button class="btn btn-small btn-secondary" type="submit" data-confirm="{{ 'Ticker an {username} abgeben? Du bleibst Mitglied, verlierst aber die Besitzerrechte.'|trans({'{username}': m.user.username}) }}" data-confirm-label="{{ 'Abgeben'|trans }}">{{ 'Abgeben'|trans }}</button>
+                                    </form>
+                                {% endif %}
+                                <form method="post" action="{{ path('app_ticker_mute', {id: m.id}) }}" class="inline">
                                     <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
-                                    <button class="btn btn-small btn-secondary" type="submit" data-confirm="{{ 'Ticker an {username} abgeben? Du bleibst Mitglied, verlierst aber die Besitzerrechte.'|trans({'{username}': m.user.username}) }}" data-confirm-label="{{ 'Abgeben'|trans }}">{{ 'Abgeben'|trans }}</button>
+                                    {% if m.muted(now) %}
+                                        <input type="hidden" name="days" value="0">
+                                        <button class="btn btn-small btn-secondary" type="submit" id="ticker-unmute-{{ m.id }}">{{ 'Stumm aufheben'|trans }}</button>
+                                    {% else %}
+                                        <select name="days" aria-label="{{ 'Dauer der Stummschaltung'|trans }}">{% for d in mute_days %}<option value="{{ d }}" {{ d == 3 ? 'selected' }}>{{ (d == 1 ? '{days} Tag' : '{days} Tage')|trans({'{days}': d}) }}</option>{% endfor %}</select>
+                                        <button class="btn btn-small btn-secondary" type="submit" id="ticker-mute-{{ m.id }}">{{ '🔇 Stumm'|trans }}</button>
+                                    {% endif %}
                                 </form>
                                 <form method="post" action="{{ path('app_ticker_remove', {id: m.id}) }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
@@ -68,14 +94,28 @@
                 {% endfor %}
             </ul>
 
-            {# Everybody in the ticker sees who is invited; only the owner may withdraw an invitation. #}
+            {% if owner and ticker.acceptedMembers|length > 1 %}
+                <form method="post" action="{{ path('app_ticker_deputy', {id: ticker.id}) }}" class="inline-action" id="ticker-deputy-form">
+                    <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
+                    <label title="{{ 'Wird automatisch Besitzer, wenn du {days} Tage nicht online warst.'|trans({'{days}': constant('App\\Entity\\Ticker::DEPUTY_AFTER_DAYS')}) }}">{{ 'Stellvertreter:'|trans }}
+                        <select name="member">
+                            <option value="0">{{ '– keiner –'|trans }}</option>
+                            {% for m in ticker.acceptedMembers|filter(m => not ticker.isOwnedBy(m.user)) %}<option value="{{ m.id }}" {{ ticker.isDeputy(m.user) ? 'selected' }}>{{ m.user.username }}</option>{% endfor %}
+                        </select>
+                    </label>
+                    <button class="btn btn-small btn-secondary" type="submit" id="ticker-deputy">{{ 'Speichern'|trans }}</button>
+                </form>
+                <p class="muted small">{{ 'Der Stellvertreter wird automatisch Besitzer, wenn du {days} Tage nicht online warst. Admins laden ein, entfernen und schalten Mitglieder stumm und löschen Beiträge – nur nicht deine und die anderer Admins.'|trans({'{days}': constant('App\\Entity\\Ticker::DEPUTY_AFTER_DAYS')}) }}</p>
+            {% endif %}
+
+            {# Everybody in the ticker sees who is invited; owner and admins may withdraw an invitation. #}
             {% if ticker.invitations is not empty %}
                 <h3 class="small muted" id="ticker-invited">{{ 'Eingeladen <small>{count}</small> – noch nicht beigetreten'|trans({'{count}': ticker.invitations|length|e})|raw }}</h3>
                 <ul class="contact-list">
                     {% for i in ticker.invitations %}
                         <li>
                             <span>{{ ui.player(i.user) }} <span class="muted small">{{ 'seit {date}'|trans({'{date}': i.invitedAt|date('d.m.Y')}) }}</span></span>
-                            {% if owner %}
+                            {% if moderator %}
                                 <form method="post" action="{{ path('app_ticker_remove', {id: i.id}) }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
                                     <button class="btn btn-small btn-secondary" type="submit">{{ 'Zurückziehen'|trans }}</button>
@@ -85,12 +125,14 @@
                     {% endfor %}
                 </ul>
             {% endif %}
-            {% if owner %}
+            {% if moderator %}
                 <form method="post" action="{{ path('app_ticker_invite', {id: ticker.id}) }}" class="inline-action">
                     <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
                     <input type="text" name="username" required placeholder="{{ 'Spielername'|trans }}" aria-label="{{ 'Spieler einladen'|trans }}">
                     <button class="btn btn-small" type="submit" id="ticker-invite">{{ 'Einladen'|trans }}</button>
                 </form>
+            {% endif %}
+            {% if owner %}
                 <form method="post" action="{{ path('app_ticker_close', {id: ticker.id}) }}" class="ticker-close">
                     <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
                     <button class="btn btn-small btn-danger" type="submit" data-confirm="{{ 'Ticker „{name}“ schließen? Alle Beiträge werden gelöscht.'|trans({'{name}': ticker.name}) }}" data-confirm-label="{{ 'Schließen'|trans }}">{{ 'Ticker schließen'|trans }}</button>

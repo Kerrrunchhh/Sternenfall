@@ -92,6 +92,65 @@ final class TickerTest extends TestCase
         self::assertFalse($ticker->isMember($this->users['Anna']));
     }
 
+    public function testAdminsModerateButNotTheOwnerOrOtherAdmins(): void
+    {
+        $ticker = $this->tickerWithBert();
+        $ticker->invite($this->users['Carla'], $this->now)->accept($this->now);
+        [$anna, $bert, $carla] = [$this->users['Anna'], $this->users['Bert'], $this->users['Carla']];
+
+        $this->assertRefused(fn () => $this->service->setAdmin($ticker, $bert, $ticker->membership($carla), true), 'only the owner appoints admins');
+        $this->service->setAdmin($ticker, $anna, $ticker->membership($bert), true);
+        self::assertTrue($ticker->canModerate($bert));
+
+        $ownerPost = new TickerPost($ticker, $anna, 'Regeln', $this->now);
+        $carlaPost = new TickerPost($ticker, $carla, 'Spam', $this->now);
+        $this->assertRefused(fn () => $this->service->deletePost($ownerPost, $bert), 'not the owner\'s posts');
+        $this->service->deletePost($carlaPost, $bert);
+        $this->assertRefused(fn () => $this->service->remove($ticker, $bert, $ticker->membership($anna)), 'never the owner');
+
+        $this->service->mute($ticker, $bert, $ticker->membership($carla), 3);
+        $this->assertRefused(fn () => $this->service->post($ticker, $carla, 'Hallo'), 'muted');
+        self::assertEquals($this->now->modify('+3 days'), $ticker->membership($carla)->getMutedUntil());
+        $this->assertRefused(fn () => $this->service->mute($ticker, $bert, $ticker->membership($carla), 2), 'only the offered durations');
+
+        // Carla becomes admin too: Bert can't touch her any more, the owner can.
+        $this->service->setAdmin($ticker, $anna, $ticker->membership($carla), true);
+        self::assertNull($ticker->membership($carla)->getMutedUntil(), 'admins are not muted');
+        $this->assertRefused(fn () => $this->service->deletePost(new TickerPost($ticker, $carla, 'Admin-Hinweis', $this->now), $bert), 'not another admin\'s posts');
+        $this->assertRefused(fn () => $this->service->mute($ticker, $bert, $ticker->membership($carla), 1));
+        $this->assertRefused(fn () => $this->service->remove($ticker, $bert, $ticker->membership($carla)));
+        $this->service->mute($ticker, $anna, $ticker->membership($bert), 1);
+        $this->service->mute($ticker, $anna, $ticker->membership($bert), 0);
+        self::assertSame('Hallo', $this->service->post($ticker, $bert, 'Hallo')->getBody(), 'mute lifted');
+    }
+
+    public function testTheDeputyTakesOverAfterThirtyDaysOffline(): void
+    {
+        $ticker = $this->tickerWithBert();
+        [$anna, $bert] = [$this->users['Anna'], $this->users['Bert']];
+        $this->assertRefused(fn () => $this->service->setDeputy($ticker, $anna, $ticker->membership($anna)), 'not himself');
+        $this->service->setDeputy($ticker, $anna, $ticker->membership($bert));
+        self::assertTrue($ticker->isDeputy($bert));
+
+        $anna->markSeen($this->now->modify('-29 days'), true);
+        self::assertFalse($this->service->succeedIfAbandoned($ticker));
+        self::assertTrue($ticker->isOwnedBy($anna));
+
+        $anna->markSeen($this->now->modify('-31 days'), true);
+        self::assertTrue($this->service->succeedIfAbandoned($ticker));
+        self::assertTrue($ticker->isOwnedBy($bert));
+        self::assertNull($ticker->getDeputy(), 'the new owner is no longer deputy');
+        self::assertTrue($ticker->isMember($anna), 'the old owner stays a member');
+    }
+
+    public function testADeputyWhoLeavesIsNoDeputyAnyMore(): void
+    {
+        $ticker = $this->tickerWithBert();
+        $this->service->setDeputy($ticker, $this->users['Anna'], $ticker->membership($this->users['Bert']));
+        $this->service->leave($ticker->membership($this->users['Bert']), $this->users['Bert']);
+        self::assertNull($ticker->getDeputy());
+    }
+
     private function tickerWithBert(): Ticker
     {
         $ticker = new Ticker('Funk', $this->users['Anna'], $this->now);

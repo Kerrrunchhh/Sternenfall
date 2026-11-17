@@ -29,6 +29,14 @@ class TickerMember
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $acceptedAt = null;
 
+    /** Appointed by the owner: invites, removes and mutes members and deletes posts. */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $admin = false;
+
+    /** Muted by the owner or an admin: reads, but can't post until then. */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $mutedUntil = null;
+
     public function __construct(Ticker $ticker, User $user, \DateTimeImmutable $invitedAt)
     {
         $this->ticker = $ticker;
@@ -64,5 +72,30 @@ class TickerMember
     public function accept(\DateTimeImmutable $now): void
     {
         $this->acceptedAt = $now;
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->admin;
+    }
+
+    public function setAdmin(bool $admin): void
+    {
+        $this->admin = $admin;
+    }
+
+    public function getMutedUntil(): ?\DateTimeImmutable
+    {
+        return $this->mutedUntil;
+    }
+
+    public function isMuted(\DateTimeImmutable $now): bool
+    {
+        return null !== $this->mutedUntil && $this->mutedUntil > $now;
+    }
+
+    public function muteUntil(?\DateTimeImmutable $until): void
+    {
+        $this->mutedUntil = $until;
     }
 }

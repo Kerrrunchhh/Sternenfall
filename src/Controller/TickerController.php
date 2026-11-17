@@ -32,6 +32,9 @@ class TickerController extends AbstractGameController
     {
         $planet = $this->currentPlanet();
         $player = $this->player();
+        foreach ($this->tickers->findJoined($player) as $ticker) {
+            $this->service->succeedIfAbandoned($ticker);
+        }
 
         return $this->renderGame('game/tickers.html.twig', $planet, [
             'tickers' => $this->tickers->findJoined($player),
@@ -49,12 +52,16 @@ class TickerController extends AbstractGameController
 
             return $this->redirectToRoute('app_tickers');
         }
+        $this->service->succeedIfAbandoned($ticker);
 
         return $this->renderGame('game/ticker.html.twig', $planet, [
             'ticker' => $ticker,
             'posts' => $this->posts->findLatest($ticker),
             'owner' => $ticker->isOwnedBy($player),
+            'moderator' => $ticker->canModerate($player),
             'membership' => $ticker->membership($player),
+            'mute_days' => TickerService::MUTE_DAYS,
+            'now' => $this->clock->now(),
         ]);
     }
 
@@ -239,5 +246,52 @@ class TickerController extends AbstractGameController
         $this->addFlash('success', t('Ticker „{name}“ geschlossen.', ['{name}' => $name]));
 
         return $this->redirectToRoute('app_tickers');
+    }
+
+    /** Owner or admin: mute a member for some days ("days" = 0 lifts it). */
+    #[Route('/ticker/member/{id}/mute', name: 'app_ticker_mute', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    #[IsCsrfTokenValid('ticker', tokenKey: '_token')]
+    public function mute(TickerMember $member, Request $request): Response
+    {
+        $this->currentPlanet();
+        $days = $request->request->getInt('days');
+        $this->attempt(
+            fn () => $this->service->mute($member->getTicker(), $this->player(), $member, $days),
+            0 === $days ? t('{player} darf wieder schreiben.', ['{player}' => $member->getUser()->getUsername()]) : t('{player} ist für {days} Tage stummgeschaltet.', ['{player}' => $member->getUser()->getUsername(), '{days}' => $days]),
+        );
+
+        return $this->redirectToRoute('app_ticker', ['id' => $member->getTicker()->getId()]);
+    }
+
+    /** Owner: appoint an admin ("admin" = 1) or take the rights back. */
+    #[Route('/ticker/member/{id}/admin', name: 'app_ticker_admin', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    #[IsCsrfTokenValid('ticker', tokenKey: '_token')]
+    public function admin(TickerMember $member, Request $request): Response
+    {
+        $this->currentPlanet();
+        $admin = $request->request->getBoolean('admin');
+        $this->attempt(
+            fn () => $this->service->setAdmin($member->getTicker(), $this->player(), $member, $admin),
+            $admin ? t('{player} ist jetzt Admin.', ['{player}' => $member->getUser()->getUsername()]) : t('{player} ist kein Admin mehr.', ['{player}' => $member->getUser()->getUsername()]),
+        );
+
+        return $this->redirectToRoute('app_ticker', ['id' => $member->getTicker()->getId()]);
+    }
+
+    /** Owner: choose the deputy ("member" = membership id, 0 = none). */
+    #[Route('/ticker/{id}/deputy', name: 'app_ticker_deputy', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    #[IsCsrfTokenValid('ticker', tokenKey: '_token')]
+    public function deputy(Ticker $ticker, Request $request): Response
+    {
+        $this->currentPlanet();
+        $id = $request->request->getInt('member');
+        $member = 0 === $id ? null : $ticker->getMembers()->findFirst(static fn (int $k, TickerMember $m): bool => $m->getId() === $id);
+        if (0 !== $id && null === $member) {
+            $this->addFlash('error', t('Stellvertreter kann nur ein anderes Mitglied werden.'));
+        } else {
+            $this->attempt(fn () => $this->service->setDeputy($ticker, $this->player(), $member), null === $member ? t('Kein Stellvertreter mehr.') : t('{player} ist jetzt Stellvertreter.', ['{player}' => $member->getUser()->getUsername()]));
+        }
+
+        return $this->redirectToRoute('app_ticker', ['id' => $ticker->getId()]);
     }
 }
