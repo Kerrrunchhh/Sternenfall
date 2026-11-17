@@ -253,6 +253,23 @@ const orbit = (() => {
     }));
 
     let reloading = false;
+    // A finished countdown reloads the page – but never while the player is typing or has
+    // unsent input (a ticker post, a mail, amounts): then it waits until that is gone.
+    const hasUnsentInput = () => {
+        const active = document.activeElement;
+        if (active && active.matches('textarea, input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=checkbox]):not([type=radio]), select, [contenteditable]')) {
+            return true;
+        }
+        return [...document.querySelectorAll('textarea, input[type=text], input[type=number], input[type=search], input:not([type])')]
+            .some((field) => field.value !== field.defaultValue);
+    };
+    const reloadWhenIdle = () => {
+        if (hasUnsentInput()) {
+            setTimeout(reloadWhenIdle, 5000);
+            return;
+        }
+        location.reload();
+    };
     const tick = () => {
         const elapsed = (Date.now() - started) / 1000;
 
@@ -284,7 +301,7 @@ const orbit = (() => {
             c.el.textContent = left > 0 ? duration(left) : 'fertig';
             if (left <= 0 && !reloading) {
                 reloading = true;
-                setTimeout(() => location.reload(), 1000);
+                setTimeout(reloadWhenIdle, 1000);
             }
         }
     };
