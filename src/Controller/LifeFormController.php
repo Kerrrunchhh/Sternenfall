@@ -20,6 +20,7 @@ class LifeFormController extends AbstractGameController
     {
         $planet = $this->currentPlanet();
         $player = $planet->getOwner();
+        $points = $player->getHeroPoints($this->clock->now());
 
         return $this->renderGame('game/lifeform.html.twig', $planet, [
             'life_forms' => LifeForm::cases(),
@@ -28,7 +29,7 @@ class LifeFormController extends AbstractGameController
             // Hero points rule some changes out (pirates, guardians): reason per life form.
             'refusals' => array_combine(
                 array_map(static fn (LifeForm $form): string => $form->value, LifeForm::cases()),
-                array_map(static fn (LifeForm $form): ?TranslatableInterface => $form === $player->getLifeForm() ? null : HeroPoints::lifeFormChangeRefusal($player->getLifeForm(), $form, $player->getHeroPoints($this->clock->now())), LifeForm::cases()),
+                array_map(static fn (LifeForm $form): ?TranslatableInterface => $form === $player->getLifeForm() ? null : HeroPoints::lifeFormChangeRefusal($player->getLifeForm(), $form, $points), LifeForm::cases()),
             ),
         ]);
     }
