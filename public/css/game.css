@@ -584,6 +584,8 @@ label.checkbox { display: flex; gap: .4rem; align-items: center; color: var(--te
 
 .cargo-room-info { margin: .4rem 0 0; color: var(--muted); }
 .cargo-room-info.lacking { color: var(--bad); font-weight: 600; }
+.trade-preview { font-weight: 600; margin: .4rem 0; }
+.trade-preview.lacking { color: var(--bad); }
 .submit-hint { margin-left: .6rem; color: var(--accent-2); }
 
 /* Diplomacy */

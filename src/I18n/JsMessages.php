@@ -17,6 +17,12 @@ final class JsMessages
     {
         return [
             t('Schritt {step} von {steps}'),
+            t('Kauf: {cost} Credits'),
+            t('Verkauf: {income} Credits'),
+            t('Saldo: {balance} Credits'),
+            t('Frachtraum danach: {free} frei'),
+            t('Zu wenig Frachtraum: {missing} fehlen'),
+            t('Zu wenig Credits: {missing} fehlen'),
             t('Runde {round} · Schritt {step} von {steps}'),
             t('Vor dem ersten Schuss.'),
             t('{target}: {damage} Schaden, {destroyed} zerstört'),

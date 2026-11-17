@@ -757,8 +757,13 @@ const orbit = (() => {
                 const input = button.previousElementSibling;
                 const others = [...form.querySelectorAll('[data-buy-good]')].filter((other) => other !== input);
                 let free = parseFloat(fleet.selectedOptions[0]?.dataset.freeCargo) || 0;
-                form.querySelectorAll('[data-sell-good]').forEach((sell) => { free += number(sell); });
                 let money = credits;
+                // Selling comes first: it frees cargo space and brings credits.
+                form.querySelectorAll('[data-sell-good]').forEach((sell) => {
+                    const sold = Math.min(number(sell), sellCap(sell));
+                    free += sold;
+                    money += sold * (parseFloat(sell.dataset.sellPrice) || 0);
+                });
                 for (const other of others) {
                     if (other.dataset.cargo === '1') {
                         free -= number(other);
@@ -774,8 +779,72 @@ const orbit = (() => {
                     max = Math.min(max, money / price);
                 }
                 input.value = Math.max(0, Math.floor(max));
+                update();
             });
         });
+
+        // What the selected fleet has on board, "max" for selling it, and a live preview of
+        // credits and cargo space (selling first, like the server; the trader's credits may still cap a sale).
+        const fmt = new Intl.NumberFormat(LOCALE_TAG, { maximumFractionDigits: 0 });
+        const own = form.dataset.own === '1';
+        const preview = form.querySelector('[data-trade-preview]');
+        const loaded = () => {
+            try { return JSON.parse(fleet.selectedOptions[0]?.dataset.loaded || '{}'); } catch (e) { return {}; }
+        };
+        const sellCap = (input) => {
+            let cap = loaded()[input.dataset.sellGood] || 0;
+            if (input.dataset.sellLimit !== '') {
+                cap = Math.min(cap, parseFloat(input.dataset.sellLimit) || 0);
+            }
+            return Math.max(0, Math.floor(cap));
+        };
+        form.querySelectorAll('[data-sell-max]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const input = button.previousElementSibling;
+                input.value = sellCap(input);
+                update();
+            });
+        });
+        function update() {
+            const cargo = loaded();
+            form.querySelectorAll('[data-loaded-good]').forEach((cell) => {
+                const amount = cargo[cell.dataset.loadedGood] || 0;
+                cell.textContent = amount > 0 ? fmt.format(amount) : '–';
+            });
+            if (!preview) {
+                return;
+            }
+            let income = 0;
+            let cost = 0;
+            let free = parseFloat(fleet.selectedOptions[0]?.dataset.freeCargo) || 0;
+            form.querySelectorAll('[data-sell-good]').forEach((input) => {
+                const amount = Math.min(number(input), sellCap(input));
+                income += amount * (parseFloat(input.dataset.sellPrice) || 0);
+                free += amount;
+            });
+            form.querySelectorAll('[data-buy-good]').forEach((input) => {
+                cost += number(input) * (parseFloat(input.dataset.price) || 0);
+                if (input.dataset.cargo === '1') {
+                    free -= number(input);
+                }
+            });
+            const parts = [];
+            if (!own) {
+                parts.push(t('Kauf: {cost} Credits', { cost: fmt.format(cost) }));
+                parts.push(t('Verkauf: {income} Credits', { income: fmt.format(income) }));
+                parts.push(t('Saldo: {balance} Credits', { balance: (income - cost > 0 ? '+' : '') + fmt.format(income - cost) }));
+            }
+            parts.push(free >= 0 ? t('Frachtraum danach: {free} frei', { free: fmt.format(free) }) : t('Zu wenig Frachtraum: {missing} fehlen', { missing: fmt.format(-free) }));
+            const short = cost - income - credits;
+            if (!own && short > 0) {
+                parts.push(t('Zu wenig Credits: {missing} fehlen', { missing: fmt.format(short) }));
+            }
+            preview.textContent = parts.join(' · ');
+            preview.classList.toggle('lacking', free < 0 || (!own && short > 0));
+        }
+        fleet.addEventListener('change', update);
+        form.addEventListener('input', update);
+        update();
     });
 
     // Fleet filters: rules on name and ship counts joined by AND/OR (AND binds stronger), and
