@@ -289,6 +289,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->createdAt;
     }
 
+    /**
+     * The account really starts when the sign-up address is confirmed: from then on count the
+     * starter bonus (Economy::STARTER_BONUS_HOURS), the life form cooldown and "member since".
+     */
+    public function startPlaying(\DateTimeImmutable $now): void
+    {
+        $this->createdAt = $now;
+        $this->lifeFormSince = $now;
+    }
+
     /** @return Collection<int, Planet> */
     public function getPlanets(): Collection
     {

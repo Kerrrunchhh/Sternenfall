@@ -4,7 +4,7 @@
 
 {% block content %}
     <h2>{{ 'Fast geschafft!'|trans }}</h2>
-    <p>{{ 'Deine Heimatwelt ist bereit. Wir haben dir an <strong>{email}</strong> einen Link geschickt – bestätige damit deine Adresse, dann kannst du dich anmelden.'|trans({'{email}': email|e})|raw }}</p>
+    <p>{{ 'Wir haben dir an <strong>{email}</strong> einen Link geschickt. Sobald du damit deine Adresse bestätigst, entsteht deine Heimatwelt und dein Startbonus (24 Stunden doppeltes Tempo) beginnt – dann kannst du dich anmelden.'|trans({'{email}': email|e})|raw }}</p>
     <p class="hint">{{ 'Keine Mail bekommen? Schau im Spam-Ordner nach oder'|trans }} <a href="{{ path('app_resend_email') }}">{{ 'fordere einen neuen Link an'|trans }}</a>.</p>
     {% if dev_link %}<p class="hint">{{ 'Entwicklung (keine Mails):'|trans }} <a href="{{ dev_link }}">{{ 'Bestätigungslink'|trans }}</a></p>{% endif %}
 {% endblock %}

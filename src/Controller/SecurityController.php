@@ -52,9 +52,11 @@ class SecurityController extends AbstractController
 
     /** The link from the confirmation mail. */
     #[Route('/email/bestaetigen', name: 'app_verify_email', methods: ['GET'])]
-    public function verifyEmail(Request $request, \Symfony\Component\HttpFoundation\UriSigner $signer, \App\Repository\UserRepository $users, EntityManagerInterface $em): Response
+    public function verifyEmail(Request $request, \Symfony\Component\HttpFoundation\UriSigner $signer, \App\Repository\UserRepository $users, EntityManagerInterface $em, Colonizer $colonizer): Response
     {
         $user = ctype_digit($id = $request->query->getString('id')) ? $users->find((int) $id) : null;
+        // The sign-up confirmation of an account that never played: only now it gets its home world.
+        $signUp = null !== $user && $user->needsEmailConfirmation() && null === $user->getLastSeenAt();
         $address = $request->query->getString('email');
         $change = null !== $user && null !== $user->getPendingEmail() && $address === $user->getPendingEmail();
         // A new address must still be free when it is confirmed.
@@ -63,6 +65,13 @@ class SecurityController extends AbstractController
             $this->addFlash('error', t('Der Bestätigungslink ist ungültig oder abgelaufen. Fordere unten einen neuen an.'));
 
             return $this->redirectToRoute('app_resend_email');
+        }
+        if ($signUp) {
+            $now = new \DateTimeImmutable();
+            $user->startPlaying($now);
+            if ($user->getPlanets()->isEmpty()) {
+                $colonizer->createHomePlanet($user);
+            }
         }
         $em->flush();
         if ($change) {
@@ -155,7 +164,6 @@ class SecurityController extends AbstractController
         Request $request,
         UserPasswordHasherInterface $hasher,
         EntityManagerInterface $em,
-        Colonizer $colonizer,
         \App\Game\GameMailer $mailer,
     ): Response {
         if ($this->getUser()) {
@@ -177,8 +185,8 @@ class SecurityController extends AbstractController
             // Chosen life form from the very start (the 30-day change cooldown counts from the sign-up).
             $user->changeLifeForm($form->get('lifeForm')->getData(), $user->getCreatedAt());
             $user->acceptTerms($user->getCreatedAt());
+            // The home world and the starter bonus wait for the confirmed address (verifyEmail).
             $em->persist($user);
-            $colonizer->createHomePlanet($user);
             $em->flush();
             $link = $mailer->sendConfirmation($user);
 
