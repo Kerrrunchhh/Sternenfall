@@ -126,7 +126,8 @@
                     </p>
                     <div class="inline-action">
                         <button class="btn" type="submit" id="trade-post-trade">{{ own ? ('Ausführen'|trans) : ('Handeln'|trans) }}</button>
-                        <button class="btn btn-secondary" type="submit" name="return" value="1" id="trade-post-trade-return" title="{{ 'Danach fliegt die Flotte zu dem Planeten zurück, von dem sie hergeschickt wurde (sonst zu deinem Hauptplaneten), und lädt dort die Ware ab. Treibstoff und Proviant kommen aus ihrer Ladung.'|trans }}">{{ '{Handeln} und zurückfliegen'|trans({'{Handeln}': own ? ('Ausführen'|trans) : ('Handeln'|trans)}) }}</button>
+                        <button class="btn btn-secondary" type="submit" name="return" value="1" id="trade-post-trade-return" title="{{ 'Danach fliegt die Flotte zu dem Planeten zurück, von dem sie hergeschickt wurde (sonst zu deinem Hauptplaneten), und lädt dort die Ware ab. Den Rückflug zahlt der Stützpunkt.'|trans }}">{{ '{Handeln} und zurückfliegen'|trans({'{Handeln}': own ? ('Ausführen'|trans) : ('Handeln'|trans)}) }}</button>
+                        <button class="btn btn-secondary" type="submit" formaction="{{ path('app_trade_post_return', {id: post.id}) }}" formnovalidate id="trade-post-return" title="{{ 'Die Flotte fliegt ohne Handel zu dem Planeten zurück, von dem sie hergeschickt wurde (sonst zu deinem Hauptplaneten), und bringt ihre Ladung mit. Den Rückflug zahlt der Stützpunkt.'|trans }}">{{ 'Nur zurückfliegen'|trans }}</button>
                     </div>
                 </form>
             {% endif %}

@@ -82,26 +82,52 @@ class TradePostController extends AbstractGameController
             return $this->redirectToRoute('app_trade_post', ['id' => $post->getId()]);
         }
 
-        // "Handeln und zurückfliegen": back to the planet the fleet came from (if still own, else the
-        // main planet); fuel and provisions come from the cargo.
+        // "Handeln und zurückfliegen": the deal is done, now home.
         if ($form->has('return')) {
-            $planets = $this->player()->getPlanets();
-            $origin = $fleet->getHome();
-            $home = (null === $origin ? null : $planets->findFirst(static fn (int $key, Planet $p): bool => $p->getGalaxy() === $origin[0] && $p->getSystem() === $origin[1] && $p->covers($origin[2])))
-                ?? $planets->findFirst(static fn (int $key, Planet $p): bool => $p->isHomeworld()) ?? $planets->first();
-            try {
-                if (!$home instanceof Planet) {
-                    throw new GameException(t('Du hast keinen Planeten, zu dem die Flotte zurückfliegen kann.'));
-                }
-                // With cargo the way home is a transport (visible); it stays at the planet it came from.
-                $fleet->rememberHome($home->getGalaxy(), $home->getSystem(), $home->getPosition());
-                $mission = $fleet->getCargo()->isEmpty() ? FleetMission::Station : FleetMission::TransportStation;
-                $this->addFlash('success', $this->fleetService->sendFleet($fleet, $this->player(), $home->getGalaxy(), $home->getSystem(), $home->getPosition(), $mission, new Resources()));
-            } catch (GameException $e) {
-                $this->addFlash('error', t('Rückflug nicht möglich: {error}', ['{error}' => $e->translatable()]));
-            }
+            $this->flyBack($fleet);
         }
 
         return $this->redirectToRoute('app_trade_post', ['id' => $post->getId()]);
+    }
+
+    /** "Zurückfliegen" without a deal: a waiting fleet leaves the post as it is. */
+    #[Route('/trade-post/{id}/return', name: 'app_trade_post_return', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    #[IsCsrfTokenValid('trade', tokenKey: '_token')]
+    public function return(TradePost $post, Request $request, FleetRepository $fleets): Response
+    {
+        $this->currentPlanet();
+        $fleet = $fleets->find($request->request->getInt('fleet'));
+        if (null === $fleet || !$fleet->getOwner()->isSameAs($this->player())) {
+            $this->addFlash('error', t('Wähle eine Flotte aus, die hier wartet.'));
+        } elseif (!$fleet->isIdle() || !$fleet->isAt($post->getGalaxy(), $post->getSystem(), $post->getPosition())) {
+            $this->addFlash('error', t('{label} wartet nicht an diesem Handelsstützpunkt.', ['{label}' => $fleet->getLabel()]));
+        } else {
+            $this->flyBack($fleet);
+        }
+
+        return $this->redirectToRoute('app_trade_post', ['id' => $post->getId()]);
+    }
+
+    /**
+     * Back to the planet the fleet came from (if still own, else the main planet). Leaving a trade
+     * post costs nothing: the post fuels and provisions departing fleets.
+     */
+    private function flyBack(Fleet $fleet): void
+    {
+        $planets = $this->player()->getPlanets();
+        $origin = $fleet->getHome();
+        $home = (null === $origin ? null : $planets->findFirst(static fn (int $key, Planet $p): bool => $p->getGalaxy() === $origin[0] && $p->getSystem() === $origin[1] && $p->covers($origin[2])))
+            ?? $planets->findFirst(static fn (int $key, Planet $p): bool => $p->isHomeworld()) ?? $planets->first();
+        try {
+            if (!$home instanceof Planet) {
+                throw new GameException(t('Du hast keinen Planeten, zu dem die Flotte zurückfliegen kann.'));
+            }
+            // With cargo the way home is a transport (visible); it stays at the planet it came from.
+            $fleet->rememberHome($home->getGalaxy(), $home->getSystem(), $home->getPosition());
+            $mission = $fleet->getCargo()->isEmpty() ? FleetMission::Station : FleetMission::TransportStation;
+            $this->addFlash('success', $this->fleetService->sendFleet($fleet, $this->player(), $home->getGalaxy(), $home->getSystem(), $home->getPosition(), $mission, new Resources()));
+        } catch (GameException $e) {
+            $this->addFlash('error', t('Rückflug nicht möglich: {error}', ['{error}' => $e->translatable()]));
+        }
     }
 }
