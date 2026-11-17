@@ -141,6 +141,16 @@ final readonly class GameStats
             'signups' => $scalar('SELECT COUNT(u.id) FROM '.User::class.' u WHERE u.createdAt >= :since AND u.system = false', ['since' => $since]),
             'signoffs' => $scalar('SELECT COUNT(d.id) FROM '.DeletedAccount::class.' d WHERE d.deletedAt >= :since', ['since' => $since]),
         ];
+        // Online now (a page view in the last Presence::ONLINE_MINUTES), by life form.
+        $online = array_fill_keys(array_map(static fn (LifeForm $form): string => $form->value, LifeForm::cases()), 0);
+        foreach ($this->em->createQuery('SELECT u.lifeForm AS form, COUNT(u.id) AS n FROM '.User::class.' u WHERE u.system = false AND u.lastSeenAt >= :online GROUP BY u.lifeForm')
+            ->setParameter('online', $this->now()->modify(\sprintf('-%d minutes', Presence::ONLINE_MINUTES)))
+            ->getArrayResult() as $row) {
+            $form = $row['form'] instanceof LifeForm ? $row['form']->value : (string) $row['form'];
+            $online[$form] = (int) $row['n'];
+        }
+        $status['online'] = array_sum($online);
+        $status['online_by_life_form'] = $online;
         // Planet slots nobody has colonized yet.
         $status['free_slots'] = max(0, $status['slots'] - $status['colonized_slots'] - $status['ownerless_slots'] - $status['guild_slots']);
 

@@ -1,6 +1,8 @@
 {# Figures of the universe. Needs: stats #}
 <dl class="stats status-stats">
     <div><dt>{{ 'Spieler'|trans }}</dt><dd>{{ stats.players|num }}</dd></div>
+    <div><dt>{{ 'Gerade online'|trans }}</dt><dd>{{ stats.online|num }}
+        <span class="small muted status-online-forms">{% for form in enum_cases('App\\Game\\LifeForm') %}<span title="{{ form.label|trans }}">{{ form.icon }} {{ stats.online_by_life_form[form.value]|num }}</span>{{ not loop.last ? ' · ' }}{% endfor %}</span></dd></div>
     <div><dt>{{ 'Planeten'|trans }}</dt><dd>{{ stats.planets|num }}</dd></div>
     <div><dt>{{ 'Besiedelte Plätze'|trans }}</dt><dd>{{ stats.colonized_slots|num }}</dd></div>
     <div><dt>{{ 'Herrenlose Planeten'|trans }}</dt><dd>{{ stats.ownerless|num }}</dd></div>
