@@ -922,3 +922,6 @@ tr.suspicious-strong td { background: rgba(255, 138, 128, .08); }
 .poll-bar { height: .55rem; background: #ffffff12; border-radius: 3px; overflow: hidden; }
 .poll-bar span { display: block; height: 100%; background: var(--accent); }
 .poll-reasons { list-style: none; padding: 0; display: grid; gap: .5rem; }
+
+/* Distance calculator */
+.distance-table tr.slowest td { background: rgba(255, 193, 7, .08); }

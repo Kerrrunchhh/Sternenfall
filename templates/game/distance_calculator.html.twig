@@ -1,0 +1,58 @@
+{% extends 'game/_layout.html.twig' %}
+
+{% block title %}{{ 'Entfernungsrechner – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
+
+{% macro coords(prefix, values, galaxies, systems) %}
+    <label>{{ 'Galaxie'|trans }} <input type="number" data-calc="{{ prefix }}-g" value="{{ values[0] }}" min="1" max="{{ galaxies }}" class="short"></label>
+    <label>{{ 'System'|trans }} <input type="number" data-calc="{{ prefix }}-s" value="{{ values[1] }}" min="1" max="{{ systems }}" class="short"></label>
+    <label>{{ 'Position'|trans }} <input type="number" data-calc="{{ prefix }}-p" value="{{ values[2] }}" min="1" max="50" class="short"></label>
+{% endmacro %}
+
+{% block content %}
+    <h1>{{ '📏 Entfernungsrechner'|trans }}</h1>
+    <p class="muted">{{ 'Probiere Flugzeiten aus: Start und Ziel eingeben, Antriebsforschung und Lebensform nach Belieben ändern. Gerechnet wird wie im Spiel – innerhalb eines Systems hängt die Strecke davon ab, wo die Planeten gerade auf ihrer Bahn stehen.'|trans }}</p>
+
+    <div class="distance-calculator" data-distance-calculator="{{ calc|json_encode }}">
+        <div class="grid">
+            <section class="panel">
+                <h2>{{ 'Strecke'|trans }}</h2>
+                <p class="inline-action"><strong>{{ 'Start'|trans }}</strong> {{ _self.coords('from', from, galaxies, systems) }}</p>
+                <p class="inline-action"><strong>{{ 'Ziel'|trans }}</strong> {{ _self.coords('to', to, galaxies, systems) }}</p>
+                <p class="inline-action"><label>{{ 'Geschwindigkeit'|trans }} <input type="number" data-calc="percent" value="100" min="0.1" max="100" step="0.1" class="short"> %</label></p>
+                <p><strong data-calc-out="distance"></strong></p>
+            </section>
+            <section class="panel">
+                <h2>{{ 'Forschung'|trans }}</h2>
+                <table class="table simulator-table">
+                    {% for d in drives %}
+                        <tr><td>{{ d.label }}</td><td class="num"><input type="number" data-calc-drive="{{ d.type }}" value="{{ d.level }}" min="0" max="100" class="short" aria-label="{{ d.label }}"></td></tr>
+                    {% endfor %}
+                    <tr><td>{{ 'Lebensform'|trans }}</td><td class="num"><select data-calc="lifeform">
+                        {% for l in life_forms %}<option value="{{ l.factor }}" {{ l.value == own_life_form ? 'selected' }}>{{ l.label }}{% if l.factor != 1 %} (×{{ l.factor|num }}){% endif %}</option>{% endfor %}
+                    </select></td></tr>
+                </table>
+                <p class="muted small">{{ 'Vorbelegt mit deiner Forschung. Jede Stufe macht die Schiffe ihres Antriebs 4 % schneller; Wächter fliegen doppelt, Piraten 1,5-mal so schnell.'|trans }}</p>
+            </section>
+        </div>
+
+        <section class="panel">
+            <h2>{{ 'Flugzeiten'|trans }}</h2>
+            <p class="muted small">{{ 'Trag bei einzelnen Schiffen eine Anzahl ein, um eine ganze Flotte zu rechnen – das langsamste Schiff bestimmt das Tempo.'|trans }}</p>
+            <table class="table distance-table">
+                <tr class="table-head"><td>{{ 'Schiff'|trans }}</td><td class="num">{{ 'Anzahl'|trans }}</td><td class="num">{{ 'Tempo'|trans }}</td><td class="num">{{ 'Flugzeit hin'|trans }}</td><td class="num">{{ 'Ankunft'|trans }}</td></tr>
+                {% for s in calc.ships %}
+                    <tr data-calc-ship="{{ s.type }}">
+                        <td>{{ s.label }}</td>
+                        <td class="num"><input type="number" data-calc-count="{{ s.type }}" min="0" value="" placeholder="0" class="short" aria-label="{{ 'Anzahl {ship}'|trans({'{ship}': s.label}) }}"></td>
+                        <td class="num" data-calc-speed></td>
+                        <td class="num" data-calc-time></td>
+                        <td class="num small muted" data-calc-arrival></td>
+                    </tr>
+                {% endfor %}
+            </table>
+            <div class="panel construction" data-calc-fleet hidden>
+                <div><strong>{{ 'Deine Flotte'|trans }}</strong> <span data-calc-out="fleet"></span></div>
+            </div>
+        </section>
+    </div>
+{% endblock %}

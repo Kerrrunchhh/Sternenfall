@@ -1204,6 +1204,74 @@ const orbit = (() => {
         if (a[2] !== b[2]) return orbit.distance(a[0], a[1], a[2], b[2], serverClock.now().getTime());
         return 5;
     };
+    // Distance calculator: the same distance and speed formulas as the game, live while typing.
+    const calculator = document.querySelector('[data-distance-calculator]');
+    if (calculator) {
+        const cfg = JSON.parse(calculator.dataset.distanceCalculator);
+        const num = (n) => Math.round(n).toLocaleString(LOCALE_TAG);
+        const value = (name) => parseFloat(String(calculator.querySelector(`[data-calc="${name}"]`).value).replace(',', '.'));
+        const level = (drive) => parseInt(calculator.querySelector(`[data-calc-drive="${drive}"]`)?.value, 10) || 0;
+        const update = () => {
+            const from = ['g', 's', 'p'].map((k) => parseInt(value(`from-${k}`), 10));
+            const to = ['g', 's', 'p'].map((k) => parseInt(value(`to-${k}`), 10));
+            const percent = Math.min(100, Math.max(0.1, value('percent') || 100));
+            const lifeform = value('lifeform') || 1;
+            if ([...from, ...to].some(Number.isNaN)) {
+                return;
+            }
+            const d = distance(from, to);
+            calculator.querySelector('[data-calc-out="distance"]').textContent = t('Entfernung: {distance}', { distance: num(d) });
+            // Speeds like Economy::shipSpeed: drive research, life form; probes and fusionators are faster than the fastest.
+            const own = Object.fromEntries(cfg.ships.map((s) => [s.type, Math.round(s.speed * (1 + cfg.researchBonus * level(s.drive)) * lifeform)]));
+            const fastestRegular = Math.max(...cfg.ships.filter((s) => s.type !== 'scout' && s.type !== 'fusionator').map((s) => own[s.type]));
+            own.fusionator = Math.max(own.fusionator, Math.ceil(1.1 * fastestRegular));
+            own.scout = Math.max(own.scout, Math.ceil(1.1 * own.fusionator));
+            const seconds = (speed) => Math.max(5, Math.round(3600 * d / (speed * percent / 100) / cfg.gameSpeed));
+            const at = (s) => serverClock.format(new Date(serverClock.now().getTime() + s * 1000), { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+            let slowest = null;
+            let fuel = 0;
+            let crew = 0;
+            cfg.ships.forEach((s) => {
+                const row = calculator.querySelector(`[data-calc-ship="${s.type}"]`);
+                const secs = seconds(own[s.type]);
+                row.querySelector('[data-calc-speed]').textContent = num(own[s.type]);
+                row.querySelector('[data-calc-time]').textContent = duration(secs);
+                row.querySelector('[data-calc-arrival]').textContent = at(secs);
+                const count = parseInt(row.querySelector('[data-calc-count]').value, 10) || 0;
+                row.classList.remove('slowest');
+                if (count > 0) {
+                    fuel += s.fuel * count;
+                    crew += s.crew * count;
+                    if (null === slowest || own[s.type] < own[slowest.type]) {
+                        slowest = s;
+                    }
+                }
+            });
+            const box = calculator.querySelector('[data-calc-fleet]');
+            box.hidden = null === slowest;
+            if (slowest) {
+                calculator.querySelector(`[data-calc-ship="${slowest.type}"]`).classList.add('slowest');
+                const secs = seconds(own[slowest.type]);
+                // Consumption like Navigation::fuel and the crew's food and water on the way (there and back).
+                const hydrogen = 2 * fuel * (1 + d / 10000) * percent / 100;
+                const hours = 2 * secs / 3600;
+                calculator.querySelector('[data-calc-out="fleet"]').textContent = t('Tempo {speed} ({ship}) · hin {there} · hin und zurück {both} · Verbrauch hin und zurück: {hydrogen} Wasserstoff, {food} Nahrung, {water} Wasser', {
+                    speed: num(own[slowest.type]),
+                    ship: slowest.label,
+                    there: duration(secs),
+                    both: duration(2 * secs),
+                    hydrogen: num(Math.ceil(hydrogen)),
+                    food: num(Math.ceil(crew * cfg.foodPerCrew * cfg.gameSpeed * hours)),
+                    water: num(Math.ceil(crew * cfg.waterPerCrew * cfg.gameSpeed * hours)),
+                });
+            }
+        };
+        calculator.querySelectorAll('input, select').forEach((input) => input.addEventListener('input', update));
+        update();
+        // Within a system the planets move: keep the times right for "now".
+        setInterval(() => { if (!document.hidden) update(); }, 30000);
+    }
+
     document.querySelectorAll('form[data-flight]').forEach((form) => {
         const preview = form.querySelector('[data-flight-preview]');
         const gameSpeed = parseFloat(form.dataset.gameSpeed) || 1;
