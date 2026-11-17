@@ -53,7 +53,7 @@ final class HomePlanetTest extends TestCase
 
         $colony = $colonizer->foundColony(new \App\Entity\User('siedler'), 1, 2, 3, 100, new \App\Game\Resources(iron: 1000, hydrogen: 50));
 
-        self::assertEquals(new \App\Game\Resources(iron: 1500, titanium: 500, food: 200, water: 200, hydrogen: 50), $colony->getResources());
+        self::assertEquals(new \App\Game\Resources(iron: 1500, titanium: 500, food: 200, water: 200, hydrogen: 250), $colony->getResources());
         self::assertSame(1, $colony->getBuildingLevel(\App\Game\BuildingType::BioCell));
     }
 }

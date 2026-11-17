@@ -80,10 +80,14 @@ final readonly class Colonizer
      * Founds a colony on a free slot (persisted, not flushed). The settlers need
      * a home, so every colony starts with a bio cell – and with the ship's supplies and cargo.
      */
-    /** Every colony ship brings these supplies along (on top of its cargo), so the colony can start building at once. */
+    /**
+     * Every colony ship brings these supplies along (on top of its cargo), so the colony can start
+     * building at once – hydrogen included: the command center needs it for levels 1 and 2, and
+     * only then can the electrolysis that makes hydrogen be built.
+     */
     public static function supplies(): Resources
     {
-        return new Resources(iron: 500, titanium: 500, food: 200, water: 200);
+        return new Resources(iron: 500, titanium: 500, food: 200, water: 200, hydrogen: 200);
     }
 
     public function foundColony(User $user, int $galaxy, int $system, int $position, float $settlers, Resources $cargo): Planet

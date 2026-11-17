@@ -215,7 +215,7 @@ enum ShipType: string
             self::Freighter => 'Kleines Handelsschiff für Rohstoffe zwischen Kolonien. Nur Handelsschiffe können Fracht und Beute transportieren.',
             self::LargeFreighter => 'Großes Handelsschiff mit enormer Ladekapazität. Nur Handelsschiffe können Fracht und Beute transportieren.',
             self::Salvager => 'Sammelt nach Raumschlachten die Trümmerfelder im Orbit ein. Sein Bergeraum nimmt nur Trümmer auf, keine andere Fracht.',
-            self::ColonyShip => 'Gründet eine Kolonie auf einem freien Planeten und wird dabei verbraucht. Die Besatzung wird zu Siedlern. An Bord sind Vorräte für den Anfang: 500 Eisen, 500 Titan, 200 Nahrung und 200 Wasser.',
+            self::ColonyShip => 'Gründet eine Kolonie auf einem freien Planeten und wird dabei verbraucht. Die Besatzung wird zu Siedlern. An Bord sind Vorräte für den Anfang: 500 Eisen, 500 Titan, 200 Nahrung, 200 Wasser und 200 Wasserstoff.',
             self::InvasionShip => 'Bringt Truppen für die Übernahme feindlicher Planeten. Ein Invasionsschiff reicht für etwa 20.000 Einwohner (dann 90 % Chance); die Chance liegt immer zwischen 1 und 99 %. Bei einer Fusion wird nur ein Planet abgesprengt und übernommen.',
             self::LaserTurret => 'Günstiges Abwehrgeschütz gegen leichte Jäger. Steht fest auf dem Planeten.',
             self::ElectronTurret => 'Mittelschweres Abwehrgeschütz. Steht fest auf dem Planeten.',
