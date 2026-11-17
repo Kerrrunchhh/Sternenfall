@@ -28,7 +28,7 @@
                         <tr><td>{{ d.label }}</td><td class="num"><input type="number" data-calc-drive="{{ d.type }}" value="{{ d.level }}" min="0" max="100" class="short" aria-label="{{ d.label }}"></td></tr>
                     {% endfor %}
                     <tr><td>{{ 'Lebensform'|trans }}</td><td class="num"><select data-calc="lifeform">
-                        {% for l in life_forms %}<option value="{{ l.factor }}" {{ l.value == own_life_form ? 'selected' }}>{{ l.label }}{% if l.factor != 1 %} (×{{ l.factor|num }}){% endif %}</option>{% endfor %}
+                        {% for l in life_forms %}<option value="{{ l.factor }}" {{ l.value == own_life_form ? 'selected' }}>{{ l.label }}{% if l.factor != 1 %} (×{{ l.factor|num(l.factor == l.factor|round ? 0 : 1) }}){% endif %}</option>{% endfor %}
                     </select></td></tr>
                 </table>
                 <p class="muted small">{{ 'Vorbelegt mit deiner Forschung. Jede Stufe macht die Schiffe ihres Antriebs 4 % schneller; Wächter fliegen doppelt, Piraten 1,5-mal so schnell.'|trans }}</p>
