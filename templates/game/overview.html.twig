@@ -111,8 +111,9 @@
                 {% endfor %}
                 {% for f in own_movements %}
                     {% set only = f.shipList|length == 1 ? f.shipList[0].type.value : null %}
+                    {% set hover %}{% for s in f.shipList %}{{ s.count|num }} × {{ s.type.label|trans }}{{ not loop.last ? ', ' }}{% endfor %}{% if not f.cargo.empty %} – {{ 'Ladung:'|trans }}{% for type in enum_cases('App\\Game\\ResourceType') %}{% if f.cargo.get(type) > 0 %} {{ type.label|trans }} {{ f.cargo.get(type)|num }}{% endif %}{% endfor %}{% endif %}{% endset %}
                     <tr>
-                        <td class="movement-what">
+                        <td class="movement-what" title="{{ hover|trim|raw }}">
                             {{ f.named ? f.name : (only == 'scout' ? ('Sonde'|trans) : (only == 'colony_ship' ? ('Kolonieschiff'|trans) : ('Flotte'|trans))) }}:
                             {{ f.mission.flightLabel|trans }}{% if f.mission.value != 'hover' %} {{ f.returning ? ('← zurück nach'|trans) : '→' }} {{ ui.coords(f.returning ? f.coordinates : f.targetCoordinates) }}{% endif %}
                         </td>

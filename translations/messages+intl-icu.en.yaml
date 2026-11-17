@@ -2960,3 +2960,4 @@
 "Auf freien Plätzen kann man nicht mehr stationieren – dort versorgt niemand eine Flotte. {label} stand auf dem freien Platz [{from}] und fliegt deshalb kostenlos zurück nach {name} [{coords}] ({arrival}).": "You can no longer station at free slots – nobody supplies a fleet there. {label} was at the free slot [{from}] and therefore flies back to {name} [{coords}] free of charge ({arrival})."
 "Nur zurückfliegen": "Just fly back"
 "Die Flotte fliegt ohne Handel zu dem Planeten zurück, von dem sie hergeschickt wurde (sonst zu deinem Hauptplaneten), und bringt ihre Ladung mit. Den Rückflug zahlt der Stützpunkt.": "The fleet flies back without trading to the planet it was sent from (otherwise to your main planet) and brings its cargo along. The trade post pays for the return flight."
+"Ladung:": "Cargo:"
