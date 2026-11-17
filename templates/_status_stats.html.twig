@@ -10,5 +10,5 @@
     <div><dt>{{ 'Laufende Transporte'|trans }}</dt><dd>{{ stats.transports|num }}</dd></div>
     <div><dt>{{ 'Laufende Angriffe'|trans }}</dt><dd>{{ stats.attacks|num }}</dd></div>
     <div><dt>{{ 'Anmeldungen (24 h)'|trans }}</dt><dd>{{ stats.signups|num }}</dd></div>
-    <div><dt>{{ 'Abmeldungen (24 h)'|trans }}</dt><dd>{{ stats.signoffs|num }}</dd></div>
+    {# Abmeldungen (24 h) hidden for now: stats.signoffs is still computed. #}
 </dl>
