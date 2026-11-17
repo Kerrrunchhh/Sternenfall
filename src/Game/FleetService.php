@@ -730,6 +730,9 @@ final readonly class FleetService
                 if (!Universe::isValidSlot($galaxy, $system, $position)) {
                     throw new GameException(t('Diese Koordinaten gibt es nicht.'));
                 }
+                if (FleetMission::Station === $mission && null === $target && null === $this->tradePosts->findAt($galaxy, $system, $position)) {
+                    throw new GameException(t('Auf freien Plätzen kann man nicht stationieren – dort versorgt niemand die Flotte. Stationiere auf einem Planeten oder an einem Handelsstützpunkt.'));
+                }
                 if (FleetMission::Jump === $mission && null === $target) {
                     throw new GameException(t('Springen kannst du nur zu einem besiedelten Planeten.'));
                 }
@@ -1281,6 +1284,55 @@ final readonly class FleetService
         }
     }
 
+    /**
+     * Fleets waiting at a free slot (no planet, no trade post) – since 2026-11-17 nobody may station
+     * there any more; the ones left are sent home once, free of charge (FleetsFromFreeSlotsCommand).
+     *
+     * @return list<Fleet>
+     */
+    public function fleetsAtFreeSlots(): array
+    {
+        return array_values(array_filter(
+            $this->fleetRepository->findBy(['mission' => null]),
+            fn (Fleet $f): bool => null === $this->planetRepository->findAt($f->getGalaxy(), $f->getSystem(), $f->getPosition())
+                && null === $this->tradePosts->findAt($f->getGalaxy(), $f->getSystem(), $f->getPosition()),
+        ));
+    }
+
+    /**
+     * Sends a fleet from a free slot home without costs: the own planet it came from, else the home
+     * world; an empty fleet is moved there at once. The owner is told. Returns where it goes.
+     */
+    public function sendHomeFree(Fleet $fleet): ?Planet
+    {
+        $home = $this->homeFor($fleet);
+        if (null === $home) {
+            return null;
+        }
+        $this->withEventLock(function () use ($fleet, $home): void {
+            $this->em->refresh($fleet);
+            if (!$fleet->isIdle()) {
+                return;
+            }
+            $from = \sprintf('%d:%d:%d', $fleet->getGalaxy(), $fleet->getSystem(), $fleet->getPosition());
+            $now = $this->now();
+            if (!$fleet->hasShips()) {
+                $fleet->relocate($home->getGalaxy(), $home->getSystem(), $home->getPosition());
+                $fleet->park($now);
+                $arrival = t('sofort, sie ist leer');
+            } else {
+                $distance = $this->navigation->distance($fleet->getGalaxy(), $fleet->getSystem(), $fleet->getPosition(), $home->getGalaxy(), $home->getSystem(), $home->getPosition());
+                $seconds = $this->navigation->flightSeconds($distance, $this->navigation->slowestSpeed($fleet->getShips(), $fleet->getOwner()));
+                $fleet->depart($fleet->getCargo()->isEmpty() ? FleetMission::Station : FleetMission::TransportStation, $home->getGalaxy(), $home->getSystem(), $home->getPosition(), $now, $seconds);
+                $arrival = t('Ankunft {time}', ['{time}' => $this->localTime($fleet->getArriveAt())]);
+            }
+            $this->inbox->send($fleet->getOwner(), t('{label} fliegt heim', ['{label}' => $fleet->getLabel()]), t('Auf freien Plätzen kann man nicht mehr stationieren – dort versorgt niemand eine Flotte. {label} stand auf dem freien Platz [{from}] und fliegt deshalb kostenlos zurück nach {name} [{coords}] ({arrival}).', ['{label}' => $fleet->getLabel(), '{from}' => $from, '{name}' => $home->getName(), '{coords}' => $home->getCoordinates(), '{arrival}' => $arrival]));
+            $this->em->flush();
+        });
+
+        return $home;
+    }
+
     /** Where an overstaying fleet flies: the own planet it came from, else the home world. */
     private function homeFor(Fleet $fleet): ?Planet
     {
@@ -1472,8 +1524,12 @@ final readonly class FleetService
 
         $error = match ($mission) {
             FleetMission::Transport, FleetMission::TransportStation => null === $target ? 'Am Ziel befindet sich kein Planet.' : null,
-            // Named fleets may be parked anywhere; quick dispatches only join the hangar of an own planet.
-            FleetMission::Station => $owned || $named ? null : 'Ohne Flottennamen kann nur auf eigenen Planeten stationiert werden.',
+            // Named fleets may wait at planets and trade posts – never at a free slot, where nothing supplies them.
+            FleetMission::Station => match (true) {
+                null === $target && null === $post => 'Auf freien Plätzen kann man nicht stationieren – dort versorgt niemand die Flotte. Stationiere auf einem Planeten oder an einem Handelsstützpunkt.',
+                $owned || $named => null,
+                default => 'Ohne Flottennamen kann nur auf eigenen Planeten stationiert werden.',
+            },
             FleetMission::Jump => match (true) {
                 !$named => 'Springen können nur benannte Flotten.',
                 null === $target => 'Springen kannst du nur zu einem besiedelten Planeten.',
