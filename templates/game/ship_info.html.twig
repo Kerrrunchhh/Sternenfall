@@ -24,6 +24,7 @@
             {% endif %}
 
             <h2 class="section-title">{{ 'Werte mit deiner Forschung'|trans }}</h2>
+            <p class="muted small">{{ 'Angriff und Verteidigung sind Kampfkraft: wie viel Schaden die Einheit anrichtet, wenn sie angreift bzw. wenn sie verteidigt. Beide verstärkt die Waffenforschung. Der Schild fängt Treffer ab, bevor die Hülle getroffen wird – ihn verstärkt die Schildforschung.'|trans }}</p>
             <dl class="stats">
                 {% if not type.stationary %}{{ ui.ship_stat(('Angriff'|trans), stats.attack) }}{% endif %}
                 {{ ui.ship_stat(('Verteidigung'|trans), stats.defense) }}
