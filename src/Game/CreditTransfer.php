@@ -60,4 +60,33 @@ final readonly class CreditTransfer
             ]));
         });
     }
+
+    /**
+     * A member pays credits into his alliance treasury (any rank). The founder is told; paying
+     * out stays with him. The treasury is raised in one statement, like the tax.
+     */
+    public function deposit(Planet $planet, int $amount): void
+    {
+        $member = $planet->getOwner();
+        if ($amount < 1) {
+            throw new GameException(t('Gib einen Betrag von mindestens 1 Credit an.'));
+        }
+
+        $this->planets->transaction($planet, function (Planet $planet, \DateTimeImmutable $now) use ($member, $amount): void {
+            $alliance = $member->getAlliance();
+            if (null === $alliance) {
+                throw new GameException(t('Du bist in keiner Allianz.'));
+            }
+            if ($member->getCredits() < $amount) {
+                throw new GameException(t('So viele Credits hast du nicht (du hast {credits}).', ['{credits}' => new Num(floor($member->getCredits()))]));
+            }
+            $member->addCredits(-$amount);
+            $this->em->getConnection()->executeStatement('UPDATE alliance SET treasury = treasury + ? WHERE id = ?', [$amount, $alliance->getId()]);
+            foreach ($alliance->getMembers() as $other) {
+                if (!$other->isSameAs($member) && true === $other->getAllianceRank()?->canManage()) {
+                    $this->inbox->send($other, t('💰 Einzahlung in die Allianzkasse'), t('{player} hat {amount} Credits in die Kasse von „{name}“ eingezahlt.', ['{player}' => $member->getUsername(), '{amount}' => new Num($amount), '{name}' => $alliance->getName()]));
+                }
+            }
+        });
+    }
 }

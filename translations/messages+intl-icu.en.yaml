@@ -2966,3 +2966,8 @@
 "Piraten können nur wechseln, wenn sie wieder heldenhaft sind: mindestens 1 Heldenpunkt. Du hast {points}.": "Pirates can only switch once they are heroic again: at least 1 hero point. You have {points}."
 "Wächter kann nur werden, wer mindestens {required} Heldenpunkte hat. Du hast {points}.": "Only players with at least {required} hero points can become guardians. You have {points}."
 "Pirat wird nur, wer kriminell ist (mindestens 1 Krimipunkt); Piraten wechseln erst wieder mit mindestens 1 Heldenpunkt. Wächter wird nur, wer mindestens 1000 Heldenpunkte hat, und verlässt sie erst unter 1000.": "Only criminals become pirates (at least 1 crime point); pirates can only switch again with at least 1 hero point. Only players with at least 1000 hero points become guardians, and they can only leave below 1000."
+"💰 Einzahlung in die Allianzkasse": "💰 Deposit into the alliance treasury"
+"{player} hat {amount} Credits in die Kasse von „{name}“ eingezahlt.": "{player} paid {amount} credits into the treasury of “{name}”."
+"{value} Credits in die Allianzkasse eingezahlt.": "{value} credits paid into the alliance treasury."
+"Aus deinem Kontostand in die Allianzkasse. Auszahlen kann nur der Gründer.": "From your balance into the alliance treasury. Only the founder can pay out."
+"In die Allianzkasse einzahlen": "Pay into the alliance treasury"

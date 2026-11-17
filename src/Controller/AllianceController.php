@@ -227,6 +227,18 @@ class AllianceController extends AbstractGameController
         return $this->redirectToRoute('app_alliance');
     }
 
+    /** Every member can pay credits into the treasury. */
+    #[Route('/alliance/einzahlung', name: 'app_alliance_deposit', methods: ['POST'])]
+    #[IsCsrfTokenValid('alliance', tokenKey: '_token')]
+    public function deposit(Request $request, \App\Game\CreditTransfer $credits): Response
+    {
+        $planet = $this->currentPlanet();
+        $amount = (int) floor(NumberInput::amount($request->request->getString('amount')));
+        $this->attempt(fn () => $credits->deposit($planet, $amount), t('{value} Credits in die Allianzkasse eingezahlt.', ['{value}' => new Num($amount)]));
+
+        return $this->redirectToRoute('app_alliance');
+    }
+
     #[Route('/alliance/presentation', name: 'app_alliance_present', methods: ['POST'])]
     #[IsCsrfTokenValid('alliance', tokenKey: '_token')]
     public function present(Request $request): Response

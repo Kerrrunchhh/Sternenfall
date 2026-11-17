@@ -9,6 +9,11 @@
         {% if rank.hasFleetRights %} {{ '· du siehst und steuerst die für die {type} freigegebenen Flotten unter'|trans({'{type}': alliance.type|trans}) }} <a href="{{ path('app_fleet') }}">{{ 'Flotten'|trans }}</a>{% endif %}
         {{ '· Steuer {taxRate} % · Allianzkasse {treasury} Credits'|trans({'{taxRate}': alliance.taxRate, '{treasury}': alliance.treasury|num}) }}
     </p>
+    <form method="post" action="{{ path('app_alliance_deposit') }}" class="inline-action deposit-form">
+        <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
+        <input type="text" name="amount" inputmode="numeric" class="short" placeholder="{{ 'Credits'|trans }}" required aria-label="{{ 'Betrag'|trans }}">
+        <button class="btn btn-small btn-secondary" type="submit" id="alliance-deposit" title="{{ 'Aus deinem Kontostand in die Allianzkasse. Auszahlen kann nur der Gründer.'|trans }}">{{ 'In die Allianzkasse einzahlen'|trans }}</button>
+    </form>
     <section class="panel profile">
         {{ ui.picture(alliance.image, 'alliances', alliance.name) }}
         <div class="profile-info">

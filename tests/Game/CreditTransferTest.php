@@ -2,9 +2,11 @@
 
 namespace App\Tests\Game;
 
+use App\Entity\Alliance;
 use App\Entity\Message;
 use App\Entity\Planet;
 use App\Entity\User;
+use App\Game\AllianceRank;
 use App\Game\CreditTransfer;
 use App\Game\Economy;
 use App\Game\GameException;
@@ -66,6 +68,34 @@ class CreditTransferTest extends TestCase
         }
         self::assertSame(100.0, $payer->getCredits(), 'nothing paid');
         self::assertSame([], $this->statements);
+    }
+
+    public function testAMemberPaysIntoTheTreasuryAndTheFounderIsTold(): void
+    {
+        [$member, $planet] = $this->player('mitglied', 1, 500);
+        [$founder] = $this->player('gruender', 2, 0);
+        $alliance = new Alliance('Sternenbund', 'SB', $member->getLifeForm(), $this->now);
+        (new \ReflectionProperty(Alliance::class, 'id'))->setValue($alliance, 7);
+        $founder->joinAlliance($alliance, AllianceRank::Founder);
+        $member->joinAlliance($alliance, AllianceRank::Member);
+
+        $this->transfer()->deposit($planet, 200);
+
+        self::assertSame(300.0, $member->getCredits());
+        self::assertSame([['UPDATE alliance SET treasury = treasury + ? WHERE id = ?', [200, 7]]], $this->statements);
+        $message = array_values(array_filter($this->persisted, static fn (object $o): bool => $o instanceof Message))[0];
+        self::assertSame($founder, $message->getRecipient());
+        self::assertStringContainsString('mitglied', $message->getBody());
+
+        foreach ([[$planet, 301, 'more than he has'], [$planet, 0, 'nothing'], [$this->player('allein', 3, 100)[1], 10, 'no alliance']] as [$from, $amount, $why]) {
+            try {
+                $this->transfer()->deposit($from, $amount);
+                self::fail('expected a refusal: '.$why);
+            } catch (GameException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+        self::assertSame(300.0, $member->getCredits());
     }
 
     /** @return array{User, Planet} */
