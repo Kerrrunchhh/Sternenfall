@@ -201,6 +201,23 @@ class FleetRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * The player's fleets in a system or flying to it (to tell which of them end up at a planet there).
+     *
+     * @return list<Fleet>
+     */
+    public function findOwnTouchingSystem(\App\Entity\User $owner, int $galaxy, int $system): array
+    {
+        return $this->createQueryBuilder('f')
+            ->where('f.owner = :owner')
+            ->andWhere('(f.galaxy = :g AND f.system = :s) OR (f.targetGalaxy = :g AND f.targetSystem = :s)')
+            ->setParameter('owner', $owner)
+            ->setParameter('g', $galaxy)
+            ->setParameter('s', $system)
+            ->getQuery()
+            ->getResult();
+    }
+
     /** @return list<Fleet> all fleets waiting at a position */
     public function findIdleAt(int $galaxy, int $system, int $position): array
     {

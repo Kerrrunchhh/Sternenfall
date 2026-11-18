@@ -62,7 +62,7 @@
             <form method="post" action="{{ path('app_planet_abandon', {id: planet.id}) }}" class="abandon-form">
                 <input type="hidden" name="_token" value="{{ csrf_token('planet_abandon') }}">
                 <button class="btn btn-small btn-danger" type="submit" name="do" value="abandon" id="planet-abandon"
-                        data-confirm="{{ '{name} [{coordinates}] verlassen? Nach 48 Stunden ist der Planet weg – mit allen Gebäuden, Rohstoffen und den Schiffen im Hangar. Flotten, die hier warten, bleiben am freien Platz zurück. Bis dahin kannst du abbrechen.'|trans({'{name}': planet.name, '{coordinates}': planet.coordinates}) }}"
+                        data-confirm="{{ '{name} [{coordinates}] verlassen? Nach 48 Stunden gehört der Planet niemandem mehr – Gebäude, Rohstoffe und die Schiffe im Hangar bleiben herrenlos zurück, jeder kann ihn angreifen und erobern. Solange deine Flotten hier stehen oder hierher zurückkehren, geht das nicht. Bis dahin kannst du abbrechen.'|trans({'{name}': planet.name, '{coordinates}': planet.coordinates}) }}"
                         data-confirm-label="{{ 'Planet verlassen'|trans }}">{{ 'Planet verlassen'|trans }}</button>
             </form>
         {% endif %}
@@ -70,7 +70,7 @@
 
     {% if planet.beingAbandoned %}
         <div class="panel warning abandon-warning">
-            <div>{{ '<strong>{name} wird verlassen</strong> – in {abandonAt} ({abandonAt2}). Gebäude, Rohstoffe und die Schiffe im Hangar gehen dann verloren; Flotten, die hier warten, bleiben am freien Platz zurück. Flotten ohne Treibstoff kommen nur weg, wenn du den Planeten vorher belieferst.'|trans({'{name}': planet.name|e, '{abandonAt}': ui.countdown(planet.abandonAt, now), '{abandonAt2}': ui.at(planet.abandonAt, now)})|raw }}</div>
+            <div>{{ '<strong>{name} wird verlassen</strong> – in {abandonAt} ({abandonAt2}). Danach ist er herrenlos: Gebäude, Rohstoffe und die Schiffe im Hangar bleiben zurück, jeder kann ihn erobern. Flotten, die dann noch hier stehen, können nur noch umstationieren, solange das Lager Treibstoff und Proviant hergibt – angreifen können sie von hier nicht.'|trans({'{name}': planet.name|e, '{abandonAt}': ui.countdown(planet.abandonAt, now), '{abandonAt2}': ui.at(planet.abandonAt, now)})|raw }}</div>
             <form method="post" action="{{ path('app_planet_abandon', {id: planet.id}) }}">
                 <input type="hidden" name="_token" value="{{ csrf_token('planet_abandon') }}">
                 <button class="btn btn-small" type="submit" name="do" value="stay" id="planet-stay">{{ 'Doch bleiben'|trans }}</button>

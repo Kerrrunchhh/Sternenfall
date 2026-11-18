@@ -115,6 +115,16 @@
                                 {% set treaty = treaty_with(p.owner) %}
                                 {% if treaty %}<span class="muted small" title="{{ treaty.label|trans }}: {{ treaty.effect|trans }}">{{ treaty.icon }}</span>{% endif %}
                                 {% if may_attack(p.owner) %}<a href="{{ path('app_fleet', coords|merge({mission: 'attack'})) }}">{{ 'Angreifen'|trans }}</a>{% endif %}
+                                {% if p.owner.system and p.owner.username != constant('App\\Game\\TradeGuild::NAME') %}
+                                    {# Ownerless (abandoned or of a deleted account): a colony ship can settle it once no ships or defense are left. #}
+                                    <form method="post" action="{{ path('app_galaxy_colonize') }}" class="inline-form">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('galaxy') }}">
+                                        <input type="hidden" name="galaxy" value="{{ coords.galaxy }}">
+                                        <input type="hidden" name="system" value="{{ coords.system }}">
+                                        <input type="hidden" name="position" value="{{ coords.position }}">
+                                        <button type="submit" class="link-button" id="colonize-{{ coords.position }}" title="{{ 'Herrenlos: Ein Kolonieschiff übernimmt den Planeten mit Gebäuden, Lager und Bauschleifen – sobald dort keine Schiffe und keine Verteidigung mehr stehen.'|trans }}">{{ 'Besiedeln'|trans }}</button>
+                                    </form>
+                                {% endif %}
                                 {% if planet_post and planet_post.accessibleTo(player) %}
                                     <a href="{{ path('app_fleet', coords|merge({mission: 'trade'})) }}" title="{{ 'Handelsflotte hinschicken – sie wartet dort zum Handeln'|trans }}">{{ 'Handeln'|trans }}</a>
                                 {% else %}

@@ -190,13 +190,14 @@ class Planet
      * orders are refunded into its storage; resources, ships and defenses stay on it,
      * the buildings only if they are not destroyed.
      */
-    public function leaveToNobody(User $nobody, bool $destroyBuildings): void
+    /** $keepQueues: an abandoned planet keeps its building and shipyard queues for whoever settles it next. */
+    public function leaveToNobody(User $nobody, bool $destroyBuildings, bool $keepQueues = false): void
     {
-        foreach ($this->buildingOrders->toArray() as $order) {
+        foreach ($keepQueues ? [] : $this->buildingOrders->toArray() as $order) {
             $this->setResources($this->getResources()->add($order->getCost()));
             $this->removeBuildingOrder($order);
         }
-        foreach ($this->shipyardOrders->toArray() as $order) {
+        foreach ($keepQueues ? [] : $this->shipyardOrders->toArray() as $order) {
             $this->setResources($this->getResources()->add($order->getUnitCost()->multiply($order->getRemaining())));
             $this->removeShipyardOrder($order);
         }
@@ -464,6 +465,19 @@ class Planet
      * An invasion: the planet changes hands. Queues are lost, and the new owner
      * only fully owns it after the integration period.
      */
+    /**
+     * A colony ship settles an ownerless planet: it changes hands at once (no integration period),
+     * with its buildings, storage and queues.
+     */
+    public function settle(User $newOwner): void
+    {
+        $this->hiddenInProfile = false;
+        $this->owner->getPlanets()->removeElement($this);
+        $this->owner = $newOwner;
+        $newOwner->addPlanet($this);
+        $this->abandonAt = null;
+    }
+
     public function conquer(User $newOwner, \DateTimeImmutable $now, bool $inWar = false): void
     {
         $this->hiddenInProfile = false;

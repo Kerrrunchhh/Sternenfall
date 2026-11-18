@@ -37,7 +37,36 @@ final readonly class PlanetService
         private ClockInterface $clock,
         private PlanetUpdater $updater,
         private Economy $economy,
+        private ?\App\Repository\FleetRepository $fleets = null,
     ) {
+    }
+
+    /**
+     * Own fleets that are at the planet or will end up there: waiting there, flying there to stay,
+     * or out on a mission that returns there. While there are any, the planet can't be abandoned –
+     * otherwise abandoning would fly a fleet stuck there without supplies home for free.
+     *
+     * @return list<\App\Entity\Fleet>
+     */
+    public function fleetsBoundTo(Planet $planet): array
+    {
+        if (null === $this->fleets) {
+            return [];
+        }
+        $at = static fn (?int $g, ?int $s, ?int $p): bool => $g === $planet->getGalaxy() && $s === $planet->getSystem() && null !== $p && $planet->covers($p);
+
+        return array_values(array_filter(
+            $this->fleets->findOwnTouchingSystem($planet->getOwner(), $planet->getGalaxy(), $planet->getSystem()),
+            static function (\App\Entity\Fleet $f) use ($at): bool {
+                $here = $at($f->getGalaxy(), $f->getSystem(), $f->getPosition());
+                if (null === $f->getMission() || $f->isReturning()) {
+                    return $here;
+                }
+                $stays = $f->getMission()->isOneWay($f->isNamed()) || \App\Game\FleetMission::TransportStation === $f->getMission();
+
+                return $stays ? $at($f->getTargetGalaxy(), $f->getTargetSystem(), $f->getTargetPosition()) : $here;
+            },
+        ));
     }
 
     /** Bring resources and constructions up to date. */
@@ -173,6 +202,9 @@ final readonly class PlanetService
             if ($planet->isBeingAbandoned()) {
                 throw new GameException(t('{name} wird bereits verlassen.', ['{name}' => $planet->getName()]));
             }
+            if ([] !== $bound = $this->fleetsBoundTo($planet)) {
+                throw new GameException(t('Auf {name} stehen noch deine Flotten oder kehren dorthin zurück: {fleets}. Hol sie zuerst weg – vorher kannst du den Planeten nicht verlassen.', ['{name}' => $planet->getName(), '{fleets}' => new \App\I18n\Lines(array_map(static fn (\App\Entity\Fleet $f): \Symfony\Contracts\Translation\TranslatableInterface|string => $f->getLabel(), $bound), ', ')]));
+            }
             $at = $now->modify(self::ABANDON_DELAY);
             $planet->setAbandonAt($at);
         });
@@ -190,11 +222,11 @@ final readonly class PlanetService
         });
     }
 
-    /** Gives up a planet whose 48 hours are over (caller flushes). Returns false if it is not due. */
-    public function giveUp(Planet $planet): bool
+    /** Gives up a planet whose 48 hours are over (caller flushes): to $nobody (ownerless), else it disappears. Returns false if it is not due. */
+    public function giveUp(Planet $planet, ?User $nobody = null): bool
     {
         $done = false;
-        $this->locked($planet, function (Planet $planet, \DateTimeImmutable $now) use (&$done): void {
+        $this->locked($planet, function (Planet $planet, \DateTimeImmutable $now) use (&$done, $nobody): void {
             if (null === $planet->getAbandonAt() || $planet->getAbandonAt() > $now) {
                 return;
             }
@@ -202,8 +234,14 @@ final readonly class PlanetService
             if ($owner->isResearchingOn($planet)) {
                 $owner->clearResearch();
             }
-            $owner->getPlanets()->removeElement($planet);
-            $this->em->remove($planet);
+            if (null !== $nobody) {
+                // It becomes ownerless, like the planets of deleted accounts: storage, buildings, hangar
+                // and queues stay – anyone may attack and conquer it or settle it with a colony ship.
+                $planet->leaveToNobody($nobody, false, keepQueues: true);
+            } else {
+                $owner->getPlanets()->removeElement($planet);
+                $this->em->remove($planet);
+            }
             $done = true;
         });
 
