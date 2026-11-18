@@ -43,6 +43,9 @@ class CreditTransferTest extends TestCase
         $this->transfer()->pay($planet, $receiver, 300, '  Danke für die Hilfe!  ');
 
         self::assertSame(700.0, $payer->getCredits());
+        $logged = array_values(array_filter($this->persisted, static fn (object $o): bool => $o instanceof \App\Entity\ActionLogEntry));
+        self::assertSame('300 Credits an empfaenger gezahlt – Nachricht: Danke für die Hilfe!', $logged[0]->getText(), 'the payment is in the activity log');
+        self::assertSame($receiver, $logged[0]->getOther());
         self::assertSame([[300, 2]], array_map(static fn (array $s): array => $s[1], $this->statements), 'credited in one statement');
         $message = array_values(array_filter($this->persisted, static fn (object $o): bool => $o instanceof Message))[0];
         self::assertSame($receiver, $message->getRecipient());
@@ -127,6 +130,6 @@ class CreditTransferTest extends TestCase
         $economy = new Economy(1.0);
         $planets = new PlanetService($em, new LockFactory(new InMemoryStore()), $clock, new PlanetUpdater($economy), $economy);
 
-        return new CreditTransfer($planets, new PushingGuard($em, $economy), new Inbox($em, $clock), $em);
+        return new CreditTransfer($planets, new PushingGuard($em, $economy), new Inbox($em, $clock), $em, new \App\Game\ActionLog($em, $clock));
     }
 }

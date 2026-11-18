@@ -62,6 +62,7 @@ final readonly class FleetService
         private ?AttackBans $attackBans = null,
         private ?TradeGuild $tradeGuild = null,
         private ?Awards $awards = null,
+        private ?ActionLog $actionLog = null,
     ) {
     }
 
@@ -417,6 +418,7 @@ final readonly class FleetService
                 $this->em->persist($fleet);
             });
         });
+        $this->logDeparture($fleet, $origin->getOwner());
 
         return t('Kolonieschiff von {name} [{coords}] gestartet nach [{galaxy}:{system}:{position}], Ankunft {value}.', ['{name}' => $origin->getName(), '{coords}' => $origin->getCoordinates(), '{galaxy}' => $galaxy, '{system}' => $system, '{position}' => $position, '{value}' => $this->localTime($fleet->getArriveAt())]);
     }
@@ -821,6 +823,7 @@ final readonly class FleetService
         }
 
         if ($fleet->isMoving()) {
+            $this->logDeparture($fleet, $actor);
             $result = new Lines([
                 $result,
                 $speedPercent < 100 ? t('Mit {speed} % Geschwindigkeit.', ['{speed}' => new Num($speedPercent, 2)]) : null,
@@ -1070,6 +1073,7 @@ final readonly class FleetService
                 $go(null, $this->now());
                 $this->em->flush();
             }
+            $this->logDeparture($fleet, $actor, $prey->getOwner());
             $result = t('{mission}: {label} fängt die Flotte von {player} bei [{g}:{s}:{p}] ab.', ['{mission}' => t($mission->label()), '{label}' => $fleet->getLabel(), '{player}' => $prey->getOwner()->getUsername(), '{g}' => $g, '{s}' => $s, '{p}' => $p]);
         });
 
@@ -1674,6 +1678,7 @@ final readonly class FleetService
                 $this->transportRequests?->delivered($fleet, $target);
                 $this->inbox->send($player, t('Transport nach {where} angekommen', ['{where}' => $where]), new Lines([t('{name} hat folgende Ladung bei {planet} {where} abgeliefert:', ['{name}' => $name, '{planet}' => $target->getName(), '{where}' => $where]), $this->formatResources($cargo)]));
                 if ($target->getOwner()->getId() !== $player->getId()) {
+                    $this->actionLog?->record($player, ActionLog::DELIVERY, \sprintf('Lieferung von %s an %s auf %s [%s]: %s', $fleet->getName() ?? 'Schnellflotte', $target->getOwner()->getUsername(), $target->getName(), $target->getCoordinates(), ActionLog::resources($cargo)), $target->getOwner());
                     $this->inbox->send($target->getOwner(), t('Lieferung von {player}', ['{player}' => $player->getUsername()]), new Lines([t('{player} hat dir auf {planet} {where} Rohstoffe geliefert:', ['{player}' => $player->getUsername(), '{planet}' => $target->getName(), '{where}' => $where]), $this->formatResources($cargo)]));
                 }
                 // "Transportieren und stationieren": the fleet stays there instead of flying back.
@@ -2073,6 +2078,30 @@ final readonly class FleetService
         if (\in_array($mission, [FleetMission::Attack, FleetMission::Raid, FleetMission::Intercept], true) && null !== $planet = $this->ownerlessAt($fleet)) {
             throw new GameException(t('{name} [{coords}] ist herrenlos – von dort kann keine Flotte angreifen. Umstationieren geht, solange sein Lager Treibstoff und Proviant hergibt.', ['{name}' => $planet->getName(), '{coords}' => $planet->getCoordinates()]));
         }
+    }
+
+    /** Activity log: a fleet order with ships, cargo, target and who it concerns (flushed here). */
+    private function logDeparture(Fleet $fleet, User $actor, ?User $concerned = null): void
+    {
+        if (null === $this->actionLog) {
+            return;
+        }
+        $target = $this->planetRepository->findAt((int) $fleet->getTargetGalaxy(), (int) $fleet->getTargetSystem(), (int) $fleet->getTargetPosition());
+        $concerned ??= null !== $target && !$target->getOwner()->isSameAs($actor) ? $target->getOwner() : null;
+        $controlledFor = $fleet->getOwner()->isSameAs($actor) ? '' : \sprintf(' (Flotte von %s, freigegeben)', $fleet->getOwner()->getUsername());
+        $this->actionLog->record($actor, ActionLog::FLEET, \sprintf(
+            '%s%s: %s von [%s] nach [%s]%s · Schiffe: %s · Ladung: %s · Ankunft %s',
+            $fleet->getName() ?? 'Schnellflotte',
+            $controlledFor,
+            $fleet->getMission()?->label() ?? '–',
+            $fleet->getCoordinates(),
+            $fleet->getTargetCoordinates(),
+            null !== $target ? \sprintf(' (%s von %s)', $target->getName(), $target->getOwner()->getUsername()) : '',
+            ActionLog::goods($fleet->getShips()),
+            ActionLog::resources($fleet->getCargo()),
+            \App\I18n\DisplayZone::local($fleet->getArriveAt())->format('d.m. H:i'),
+        ), $concerned ?? ($fleet->getOwner()->isSameAs($actor) ? null : $fleet->getOwner()));
+        $this->em->flush();
     }
 
     /** The planet of the fleet's owner at the fleet's position, if any. */

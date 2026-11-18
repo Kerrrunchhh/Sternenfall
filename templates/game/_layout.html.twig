@@ -145,6 +145,7 @@
             {% if is_granted('ROLE_MODERATOR') %}<a href="{{ path('app_admin_tickets') }}" class="{{ route starts with 'app_admin_ticket' ? 'active' }}">{{ '🛡 Meldungen'|trans }}{% if open_tickets > 0 %} <span class="badge">{{ open_tickets }}</span>{% endif %}</a>{% endif %}
             {% if is_granted('ROLE_MODERATOR') %}<a href="{{ path('app_admin_multis') }}" class="{{ route == 'app_admin_multis' ? 'active' }}">{{ '🛡 Multis'|trans }}</a>{% endif %}
             {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('app_admin_users') }}" class="{{ route starts with 'app_admin_user' ? 'active' }}">{{ '🛡 Benutzer'|trans }}</a>{% endif %}
+            {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('app_admin_action_log') }}" class="{{ route == 'app_admin_action_log' ? 'active' }}">{{ '🛡 Protokoll'|trans }}</a>{% endif %}
             {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('app_admin_game') }}" class="{{ route == 'app_admin_game' ? 'active' }}">{{ '🛡 Spielsteuerung'|trans }}{% if attack_ban|default(null) %} <span class="badge">⛔</span>{% endif %}</a>{% endif %}
             <a href="{{ path('app_notes') }}" class="{{ route == 'app_notes' ? 'active' }}"><span class="nav-icon" aria-hidden="true">📝</span>{{ 'Notizblock'|trans }}</a>
             <a href="{{ path('app_player_search') }}" class="{{ route == 'app_player_search' ? 'active' }}"><span class="nav-icon" aria-hidden="true">🔍</span>{{ 'Spieler suchen'|trans }}</a>

@@ -46,7 +46,29 @@ final readonly class CombatService
         private ?ContractService $contracts = null,
         private ?BountyService $bounties = null,
         private ?AccountDeletion $deletion = null,
+        private ?ActionLog $actionLog = null,
     ) {
+    }
+
+    /** Activity log: the battle from each attacking player's side, with his loot. */
+    private function logBattle(array $attackers, string $what, User $against, TranslatableInterface|string $headline, array $loot): void
+    {
+        if (null === $this->actionLog) {
+            return;
+        }
+        $outcome = $headline instanceof TranslatableInterface ? '' : $headline;
+        foreach (array_unique(array_map(static fn (Fleet $f): User => $f->getOwner(), $attackers), \SORT_REGULAR) as $owner) {
+            $mine = array_values(array_filter($loot, static fn (array $e): bool => $e['ownerId'] === $owner->getId()));
+            $taken = array_reduce($mine, static fn (Resources $sum, array $e): Resources => $sum->add(Resources::fromArray($e['resources'])), new Resources());
+            $ships = array_reduce(array_filter($attackers, static fn (Fleet $f): bool => $f->getOwner()->isSameAs($owner)), static function (array $sum, Fleet $f): array {
+                foreach ($f->getShips() as $type => $count) {
+                    $sum[$type] = ($sum[$type] ?? 0) + $count;
+                }
+
+                return $sum;
+            }, []);
+            $this->actionLog->record($owner, ActionLog::COMBAT, \sprintf('%s%s · Beute: %s · übrige Schiffe: %s', $what, '' === $outcome ? '' : ' – '.$outcome, ActionLog::resources($taken), ActionLog::goods($ships)), $against);
+        }
     }
 
     /**
@@ -133,6 +155,7 @@ final readonly class CombatService
                 $outcome = [...$outcome, ...$this->invade($attackers, $target, $brokenOff, $population, $now)];
             }
 
+            $this->logBattle($attackers, \sprintf('Angriff auf %s [%s] von %s', $target->getName(), $target->getCoordinates(), $defender->getUsername()), $defender, $result->attackerWon() ? 'gewonnen' : 'nicht gewonnen', $loot);
             $subject = t('Kampfbericht {name} [{coords}]', ['{name}' => $target->getName(), '{coords}' => $target->getCoordinates()]);
             $body = static fn (?User $viewer): TranslatableInterface => new Lines([$headline, '', $result->report($viewer), '', ...array_filter($outcome), ...$experience]);
             $this->notify([...array_map(static fn (Fleet $f): User => $f->getOwner(), $attackers), $defender, ...array_map(static fn (Fleet $f): User => $f->getOwner(), $guards), ...$result->participants()], $subject, $body, $result, $loot);
@@ -238,6 +261,7 @@ final readonly class CombatService
         }
 
         $coords = \sprintf('%d:%d:%d', $g, $s, $p);
+        $this->logBattle([$hunter], \sprintf('%s bei [%s] gegen %s', $raid ? 'Überfall' : 'Abfangkampf', $coords, implode(', ', array_unique(array_map(static fn (Fleet $f): string => $f->getOwner()->getUsername(), $preys)))), $preys[0]->getOwner(), $result->attackerWon() ? 'gewonnen' : 'nicht gewonnen', $taken);
         $subject = $raid ? t('Kampfbericht Überfall bei [{coords}]', ['{coords}' => $coords]) : t('Kampfbericht Abfangkampf bei [{coords}]', ['{coords}' => $coords]);
         $headline = $result->attackerWon()
             ? ($raid ? t('Überfall erfolgreich.') : t('Abfangkampf erfolgreich.'))

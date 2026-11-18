@@ -231,6 +231,21 @@ final class GuestFleetTest extends TestCase
         self::assertSame(3, $fleet->getTargetPosition(), 'the fusion is one planet: its top slot');
     }
 
+    public function testAFleetOrderIsLoggedWithThePlayerItConcerns(): void
+    {
+        $this->ally();
+        $fleet = new Fleet($this->guest, 'Besuch', 1, 20, 3, ['falke' => 10]);
+        $this->place(new Planet($this->host, 'Nachbar', 1, 21, 1, $this->now));
+
+        $this->service()->sendFleet($fleet, $this->guest, 1, 21, 1, FleetMission::Transport, new Resources());
+
+        $entries = array_values(array_filter($this->persisted, static fn (object $o): bool => $o instanceof \App\Entity\ActionLogEntry));
+        self::assertCount(1, $entries);
+        self::assertSame($this->guest, $entries[0]->getActor());
+        self::assertSame($this->host, $entries[0]->getOther(), 'the owner of the target planet');
+        self::assertStringContainsString('Besuch: Transport von [1:20:3] nach [1:21:1] (Nachbar von gastgeber) · Schiffe: 10 Falke', $entries[0]->getText());
+    }
+
     private function ally(): void
     {
         $alliance = new Alliance('Bund', 'BND', $this->guest->getLifeForm(), $this->now);
@@ -284,6 +299,7 @@ final class GuestFleetTest extends TestCase
             $em, new PlanetService($em, $locks, $clock, new PlanetUpdater($economy), $economy), $planets, $fleets,
             new Navigation($economy), $economy, $none(Colonizer::class), $none(FusionService::class), $this->createStub(TradePostRepository::class),
             $none(TradeService::class), $none(CombatService::class), $none(Radar::class), $none(Espionage::class), new Inbox($em, $clock), $locks, $clock,
+            actionLog: new \App\Game\ActionLog($em, $clock),
         );
     }
 }

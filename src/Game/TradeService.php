@@ -34,6 +34,7 @@ final readonly class TradeService
         private Inbox $inbox,
         private LockFactory $lockFactory,
         private ClockInterface $clock,
+        private ?ActionLog $actionLog = null,
     ) {
     }
 
@@ -340,6 +341,11 @@ final readonly class TradeService
             }
             if (!$deal->isEmpty()) {
                 $lines[] = $own ? t('Abgeholt: {goods}.', ['{goods}' => self::summary($deal->bought)]) : t('Gekauft: {goods} für {price} Credits.', ['{goods}' => self::summary($deal->bought), '{price}' => new Num($deal->price)]);
+            }
+            if ([] !== $lines) {
+                $this->actionLog?->record($actor, ActionLog::TRADE, \sprintf('Handel am Stützpunkt %s [%s] von %s mit %s: verkauft %s%s · gekauft %s%s', $post->getName(), $post->getCoordinates(), $trader->getUsername(), $fleet->getName() ?? 'Schnellflotte',
+                    ActionLog::goods($sold), $own ? '' : ' für '.number_format($income, 0, ',', '.').' Credits',
+                    ActionLog::goods($deal->bought), $own ? '' : ' für '.number_format($deal->price, 0, ',', '.').' Credits'), $trader);
             }
             if ([] === $lines) {
                 throw new GameException(t('Es wurde nichts gehandelt: Lager, Preise, Ankaufsmengen, Credits oder Frachtraum reichten nicht.'));

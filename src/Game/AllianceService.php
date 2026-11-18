@@ -34,6 +34,7 @@ final readonly class AllianceService
         private LockFactory $lockFactory,
         private ClockInterface $clock,
         private ImageStore $images,
+        private ?ActionLog $actionLog = null,
     ) {
     }
 
@@ -391,6 +392,7 @@ final readonly class AllianceService
                 throw new GameException(t('In der Allianzkasse sind nur {treasury} Credits.', ['{treasury}' => new Num($alliance->getTreasury())]));
             }
             $this->em->getConnection()->executeStatement('UPDATE `user` SET credits = credits + ? WHERE id = ?', [$amount, $member->getId()]);
+            $this->actionLog?->record($actor, ActionLog::TREASURY, \sprintf('%s Credits aus der Kasse von „%s“ an %s ausgezahlt', number_format($amount, 0, ',', '.'), $alliance->getName(), $member->getUsername()), $member);
             $this->inbox->send($member, t('Auszahlung aus der Allianzkasse'), new Lines([t('{player} hat dir {amount} Credits aus der Kasse von „{name}“ ausgezahlt.', ['{player}' => $actor->getUsername(), '{amount}' => new Num($amount), '{name}' => $alliance->getName()]), '' === trim($note) ? null : trim($note)]));
             $this->em->flush();
         });

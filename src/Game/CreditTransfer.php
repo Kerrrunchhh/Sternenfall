@@ -23,6 +23,7 @@ final readonly class CreditTransfer
         private PushingGuard $guard,
         private Inbox $inbox,
         private EntityManagerInterface $em,
+        private ?ActionLog $actionLog = null,
     ) {
     }
 
@@ -50,6 +51,7 @@ final readonly class CreditTransfer
             }
             $this->guard->checkAndRecordCredits($sender, $receiver, $amount, $now);
             $sender->addCredits(-$amount);
+            $this->actionLog?->record($sender, ActionLog::CREDITS, \sprintf('%s Credits an %s gezahlt%s', number_format($amount, 0, ',', '.'), $receiver->getUsername(), '' === $message ? '' : ' – Nachricht: '.mb_substr($message, 0, 200)), $receiver);
             // In one statement: the receiver's own updates (production, under his lock) don't overwrite it.
             $this->em->getConnection()->executeStatement('UPDATE `user` SET credits = credits + ? WHERE id = ?', [$amount, $receiver->getId()]);
             $this->inbox->send($receiver, t('💰 {player} hat dir {amount} Credits gezahlt', ['{player}' => $sender->getUsername(), '{amount}' => new Num($amount)]), new Lines([
@@ -82,6 +84,7 @@ final readonly class CreditTransfer
             }
             $member->addCredits(-$amount);
             $this->em->getConnection()->executeStatement('UPDATE alliance SET treasury = treasury + ? WHERE id = ?', [$amount, $alliance->getId()]);
+            $this->actionLog?->record($member, ActionLog::TREASURY, \sprintf('%s Credits in die Kasse von „%s“ [%s] eingezahlt', number_format($amount, 0, ',', '.'), $alliance->getName(), $alliance->getTag()));
             foreach ($alliance->getMembers() as $other) {
                 if (!$other->isSameAs($member) && true === $other->getAllianceRank()?->canManage()) {
                     $this->inbox->send($other, t('💰 Einzahlung in die Allianzkasse'), t('{player} hat {amount} Credits in die Kasse von „{name}“ eingezahlt.', ['{player}' => $member->getUsername(), '{amount}' => new Num($amount), '{name}' => $alliance->getName()]));

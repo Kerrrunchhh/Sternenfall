@@ -24,6 +24,7 @@
                 {% if u.deactivated %}<span class="small" style="color: var(--bad)">{{ 'deaktiviert seit {deactivatedAt}'|trans({'{deactivatedAt}': u.deactivatedAt|date('d.m.Y')}) }}</span>{% endif %}
                 {% if u.deleteAt %}<span class="small" style="color: var(--bad)">{{ 'wird am {deleteAt} gelöscht'|trans({'{deleteAt}': u.deleteAt|date('d.m. H:i')}) }}</span>{% endif %}
                 <span class="muted small">{{ '{Mail} · seit {createdAt} · {planets} Planeten'|trans({'{Mail}': u.email ?? 'keine E-Mail'|trans, '{createdAt}': u.createdAt|date('d.m.Y'), '{planets}': u.planets|length}) }}</span>
+                <a class="small" href="{{ path('app_admin_action_log', {player: u.username}) }}">📜 {{ 'Protokoll'|trans }}</a>
             </summary>
             <div class="admin-user-actions">
                 <form method="post" action="{{ path('app_admin_user', {id: u.id}) }}" class="inline-action">

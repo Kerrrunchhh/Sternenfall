@@ -34,6 +34,7 @@
                                 {% endif %}
                                 {% if not loop.last %}<br>{% endif %}
                             {% endfor %}
+                            {% if is_granted('ROLE_ADMIN') %}<br><a href="{{ path('app_admin_action_log', {player: pair.a.username, with: pair.b.username}) }}" title="{{ 'Was die beiden miteinander zu tun hatten'|trans }}">📜 {{ 'Protokoll'|trans }}</a>{% endif %}
                         </td>
                     </tr>
                 {% endfor %}
