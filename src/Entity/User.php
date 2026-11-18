@@ -454,6 +454,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     /** Players who gave an address must confirm it before they can log in. */
+    public function getEmailVerifiedAt(): ?\DateTimeImmutable
+    {
+        return $this->emailVerifiedAt;
+    }
+
     public function needsEmailConfirmation(): bool
     {
         return null !== $this->email && null === $this->emailVerifiedAt;

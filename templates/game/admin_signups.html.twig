@@ -1,0 +1,29 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}{{ 'Anmeldungen – Admin – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
+
+{% block content %}
+    <h1>{{ '🛡 Anmeldungen'|trans }}</h1>
+    <p class="muted small">{{ 'Die neuesten 100 Registrierungen. Mit der Bestätigung der E-Mail-Adresse startet das Konto: Ab dann gilt die angezeigte Zeit, vorher die der Registrierung.'|trans }}</p>
+    <section class="panel">
+        <div class="table-scroll">
+            <table class="table">
+                <thead><tr><th>{{ 'Spieler'|trans }}</th><th>{{ 'Seit'|trans }}</th><th>{{ 'E-Mail'|trans }}</th><th>{{ 'Bestätigt'|trans }}</th><th>{{ 'Lebensform'|trans }}</th><th class="num">{{ 'Planeten'|trans }}</th><th>{{ 'Zuletzt online'|trans }}</th></tr></thead>
+                <tbody>
+                    {% for u in users %}
+                        <tr>
+                            <td><a href="{{ path('app_admin_users', {q: u.username}) }}" title="{{ 'In der Benutzerverwaltung öffnen'|trans }}">{{ u.username }}</a>{% if u.deactivated %} <span class="small" style="color: var(--bad)">{{ 'deaktiviert'|trans }}</span>{% endif %}</td>
+                            <td class="small nowrap">{{ u.createdAt|date('d.m.Y H:i') }}</td>
+                            <td class="small">{{ u.email ?? '–' }}</td>
+                            <td class="small">{% if u.emailVerifiedAt %}✔ {{ u.emailVerifiedAt|date('d.m. H:i') }}{% elseif u.email %}<span class="negative">{{ 'nein'|trans }}</span>{% else %}–{% endif %}</td>
+                            <td class="small">{{ u.lifeForm.icon }} {{ u.lifeForm.label|trans }}</td>
+                            <td class="num">{{ u.planets|length }}</td>
+                            <td class="small nowrap">{{ u.lastSeenAt ? u.lastSeenAt|date('d.m. H:i') : ('nie'|trans) }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+{% endblock %}

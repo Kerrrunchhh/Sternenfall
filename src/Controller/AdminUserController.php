@@ -50,6 +50,17 @@ class AdminUserController extends AbstractGameController
         ]);
     }
 
+    /** The newest registrations (unconfirmed ones included): who joined, confirmed and played. */
+    #[Route('/admin/anmeldungen', name: 'app_admin_signups', methods: ['GET'])]
+    public function signups(UserRepository $users): Response
+    {
+        return $this->renderGame('game/admin_signups.html.twig', $this->currentPlanet(), [
+            'users' => $users->createQueryBuilder('u')->where('u.system = false')
+                ->orderBy('u.createdAt', 'DESC')->addOrderBy('u.id', 'DESC')->setMaxResults(100)
+                ->getQuery()->getResult(),
+        ]);
+    }
+
     #[Route('/admin/benutzer/{id}', name: 'app_admin_user', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('admin_users', tokenKey: '_token')]
     public function act(User $user, Request $request, EntityManagerInterface $em, VacationService $vacations, Inbox $inbox, AccountDeletion $deletion, AccountDeactivation $deactivation, \App\Game\AccountRename $rename, \App\Game\LifeFormService $lifeForms): Response
