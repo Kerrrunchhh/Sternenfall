@@ -80,8 +80,10 @@
     {% if planet.integrating(now) %}
         <p class="panel warning">{{ '{name} wurde invadiert und geht am {integratedAt} vollständig in deinen Besitz über.'|trans({'{name}': planet.name, '{integratedAt}': planet.integratedAt|date('d.m.Y H:i')}) }}</p>
     {% endif %}
+    {# The boxes below, in the player's order (Konto): a grid where wide boxes take a whole row. #}
+    <div class="overview-sections">
     {% if player.showsOnOverview('contacts') %}
-    <section class="panel quick-contacts" data-fold="overview-contacts">
+    <section class="panel quick-contacts ov-wide" style="order: {{ player.overviewPosition('contacts') }}" data-fold="overview-contacts">
         <h2>{{ 'Schnellkontakte'|trans }}
             {%- set online = contacts|filter(c => presence(c) and presence(c).online)|length %}
             <small class="fold-summary muted">{{ (contacts|length == 1 ? '1 Kontakt' : '{count} Kontakte')|trans({'{count}': contacts|length}) }}{% if online > 0 %} · {{ '{count} online'|trans({'{count}': online}) }}{% endif %}{% if unread_mail > 0 %} · <strong>{{ (unread_mail == 1 ? '1 neue Nachricht' : '{count} neue Nachrichten')|trans({'{count}': unread_mail}) }}</strong>{% endif %}{% if contact_requests > 0 %} · <strong>{{ (contact_requests == 1 ? '1 Anfrage' : '{count} Anfragen')|trans({'{count}': contact_requests}) }}</strong>{% endif %}</small>
@@ -91,7 +93,7 @@
     {% endif %}
     {% if player.showsOnOverview('movements') %}
     {% if incoming is not empty or own_movements is not empty or guild_deliveries is not empty %}
-        <section class="panel movements" data-fold="overview-movements">
+        <section class="panel movements ov-wide" style="order: {{ player.overviewPosition('movements') }}" data-fold="overview-movements">
             {% set moving = incoming|length + attacks|length + own_movements|length + guild_deliveries|length %}
             {% set hostile = attacks|length %}
             {% set next = (incoming|map(f => f.arriveAt)|merge(attacks|map(a => a.fleet.arriveAt))|merge(own_movements|map(f => f.nextEventAt))|merge(guild_deliveries|map(r => r.guildDeliveryAt)))|sort|first %}
@@ -149,7 +151,7 @@
     {% endif %}
     {% if player.showsOnOverview('transport_requests') %}
     {% if transport_running is not empty or transport_open > 0 %}
-        <section class="panel" data-fold="overview-transport">
+        <section class="panel ov-wide" style="order: {{ player.overviewPosition('transport_requests') }}" data-fold="overview-transport">
             <h2>{{ 'Transportgesuche'|trans }}
                 <small class="fold-summary muted">{% if transport_running is not empty %}{{ (transport_running|length == 1 ? '1 läuft' : '{count} laufen')|trans({'{count}': transport_running|length}) }}{% endif %}{% if transport_running is not empty and transport_open > 0 %} · {% endif %}{% if transport_open > 0 %}<strong>{{ (transport_open == 1 ? '1 offenes Gesuch für Händler' : '{count} offene Gesuche für Händler')|trans({'{count}': transport_open}) }}</strong>{% endif %}</small>
                 <a class="small" href="{{ path('app_transport_requests') }}">{{ 'Alle Gesuche →'|trans }}</a></h2>
@@ -173,7 +175,7 @@
     {% endif %}
     {% if player.showsOnOverview('research') %}
     {% if player.researching %}
-        <section class="panel" data-fold="overview-research">
+        <section class="panel ov-wide" style="order: {{ player.overviewPosition('research') }}" data-fold="overview-research">
             <h2>{{ 'Forschung'|trans }}
                 <small class="fold-summary muted">{{ '{label} (Stufe {researchTargetLevel})'|trans({'{label}': player.researchType.label|trans, '{researchTargetLevel}': player.researchTargetLevel}) }} · {{ ui.countdown(player.researchFinishesAt, now) }}</small></h2>
             <div class="construction">
@@ -184,13 +186,13 @@
     {% endif %}
     {% endif %}
     {% if player.showsOnOverview('ticker') %}
-    {{ include('game/_board_ticker.html.twig', {back: 'overview', fold: 'overview-ticker'}) }}
+    {{ include('game/_board_ticker.html.twig', {back: 'overview', fold: 'overview-ticker', order: player.overviewPosition('ticker')}) }}
     {% endif %}
 
-    {# Building, shipyard and defense queues, below the ticker. #}
+    {# Building, shipyard and defense queues. #}
     {% if player.showsOnOverview('queues') %}
     {% if building_queue is not empty or shipyard_queue is not empty or defense_queue is not empty %}
-        <div class="grid">
+        <div class="grid ov-wide" style="order: {{ player.overviewPosition('queues') }}">
             {% if building_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Buildings, entries: building_queue, back: 'app_overview', fold: 'overview-queue-buildings'}) }}{% endif %}
             {% if shipyard_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Shipyard, entries: shipyard_queue, back: 'app_overview', fold: 'overview-queue-shipyard'}) }}{% endif %}
             {% if defense_queue is not empty %}{{ include('game/_queue.html.twig', {queue_planet: planet, kind: enum('App\\Game\\QueueKind').Defense, entries: defense_queue, back: 'app_overview', fold: 'overview-queue-defense'}) }}{% endif %}
@@ -198,9 +200,8 @@
     {% endif %}
     {% endif %}
 
-    <div class="grid">
         {% if player.showsOnOverview('resources') %}
-        <section class="panel" data-fold="overview-resources">
+        <section class="panel" style="order: {{ player.overviewPosition('resources') }}" data-fold="overview-resources">
             {% set short = enum_cases('App\\Game\\ResourceType')|filter(t => net.get(t) < 0) %}
             <h2>{{ 'Rohstoffe pro Stunde'|trans }}
                 <small class="fold-summary muted">{% if short is empty %}{{ 'alle Bilanzen positiv'|trans }}{% else %}<strong class="negative">{{ 'im Minus: {labels}'|trans({'{labels}': short|map(t => t.label|trans)|join(', ')}) }}</strong>{% endif %}</small></h2>
@@ -232,7 +233,7 @@
         </section>
         {% endif %}
         {% if player.showsOnOverview('population') %}
-        <section class="panel" data-fold="overview-population">
+        <section class="panel" style="order: {{ player.overviewPosition('population') }}" data-fold="overview-population">
             <h2>{{ 'Bevölkerung'|trans }}
                 <small class="fold-summary muted">{{ '{population} von {capacity} Einwohnern'|trans({'{population}': planet.population|num, '{capacity}': population_capacity|num}) }}</small></h2>
             <table class="table">
@@ -249,7 +250,7 @@
         </section>
         {% endif %}
         {% if player.showsOnOverview('planet') %}
-        <section class="panel" data-fold="overview-planet">
+        <section class="panel" style="order: {{ player.overviewPosition('planet') }}" data-fold="overview-planet">
             <h2>{{ 'Planet'|trans }}
                 <small class="fold-summary muted">{{ planet.type.icon }} {{ planet.type.label|trans }} · {{ '{points} Punkte'|trans({'{points}': planet_points(planet)|num}) }}</small></h2>
             <table class="table">
@@ -261,7 +262,7 @@
         </section>
         {% endif %}
         {% if player.showsOnOverview('hangar') %}
-        <section class="panel" data-fold="overview-hangar">
+        <section class="panel" style="order: {{ player.overviewPosition('hangar') }}" data-fold="overview-hangar">
             {% set hangar_ships = hangar|reduce((sum, e) => sum + e.count, 0) %}
             <h2>{{ 'Hangar'|trans }}
                 <small class="fold-summary muted">{{ (hangar_ships == 1 ? '1 Schiff' : '{count} Schiffe')|trans({'{count}': hangar_ships|num}) }}</small></h2>

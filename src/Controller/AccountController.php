@@ -26,7 +26,7 @@ class AccountController extends AbstractGameController
             'vacation_max' => VacationService::MAX_DAYS,
             'topics' => \App\Game\GameMailer::TOPICS,
             'timezones' => self::timezones(new \DateTimeImmutable()),
-            'overview_sections' => OverviewSection::cases(),
+            'overview_sections' => $this->player()->getOverviewOrder(),
         ]);
     }
 
@@ -37,6 +37,11 @@ class AccountController extends AbstractGameController
         $this->currentPlanet();
         $chosen = $request->request->all('sections');
         $this->player()->showOnOverview(array_values(array_filter(OverviewSection::cases(), static fn (OverviewSection $s): bool => \in_array($s->value, $chosen, true))));
+        // The order of the list (moved with ↑/↓); unknown values are ignored.
+        $order = array_values(array_filter(array_map(static fn (mixed $v): ?OverviewSection => OverviewSection::tryFrom((string) $v), $request->request->all('order'))));
+        if ([] !== $order) {
+            $this->player()->setOverviewOrder($order);
+        }
         $em->flush();
         $this->addFlash('success', t('Einstellungen gespeichert.'));
 

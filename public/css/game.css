@@ -232,6 +232,13 @@ form .btn-small[type=submit] { margin-top: 0; }
 .content { flex: 1; padding: 1rem; min-width: 0; }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
+/* Overview: the boxes in the player's order (style="order: n"); wide boxes take a whole row, small ones fill rows. */
+.overview-sections { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); grid-auto-flow: row dense; gap: 1rem; align-items: start; }
+.overview-sections > * { margin: 0; min-width: 0; }
+.overview-sections > .ov-wide { grid-column: 1 / -1; }
+.overview-order { list-style: none; padding: 0; margin: .5rem 0 1rem; display: flex; flex-direction: column; gap: .3rem; max-width: 26rem; }
+.overview-order li { display: flex; justify-content: space-between; align-items: center; gap: .5rem; padding: .25rem .5rem; border: 1px solid var(--border); border-radius: 6px; }
+.overview-order-move { display: flex; gap: .25rem; }
 .table { width: 100%; border-collapse: collapse; }
 .table td { padding: .35rem 0; border-bottom: 1px solid #ffffff0d; }
 .num { text-align: right; font-variant-numeric: tabular-nums; }

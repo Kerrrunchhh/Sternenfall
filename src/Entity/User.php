@@ -60,6 +60,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $hiddenOverviewSections = null;
 
+    /** @var list<string>|null the player's order of the overview boxes (OverviewSection values); null: default order */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $overviewOrder = null;
+
     /** @var array<string, mixed>|null what the build bot queues on every planet (App\Game\BuildBot\BuildBotSettings) */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $buildBot = null;
@@ -549,6 +553,32 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $key = $section instanceof \App\Game\OverviewSection ? $section->value : $section;
 
         return !\in_array($key, $this->hiddenOverviewSections ?? [], true);
+    }
+
+    /**
+     * The overview boxes in the player's order; boxes he never placed (new ones) follow in the default order.
+     *
+     * @return list<\App\Game\OverviewSection>
+     */
+    public function getOverviewOrder(): array
+    {
+        $ordered = array_values(array_filter(array_map(\App\Game\OverviewSection::tryFrom(...), $this->overviewOrder ?? [])));
+
+        return [...$ordered, ...array_values(array_filter(\App\Game\OverviewSection::cases(), static fn (\App\Game\OverviewSection $s): bool => !\in_array($s, $ordered, true)))];
+    }
+
+    /** @param list<\App\Game\OverviewSection> $order */
+    public function setOverviewOrder(array $order): void
+    {
+        $this->overviewOrder = array_values(array_unique(array_map(static fn (\App\Game\OverviewSection $s): string => $s->value, $order)));
+    }
+
+    /** Place of a box on the overview, 1-based (for Twig: style="order: …"). */
+    public function overviewPosition(\App\Game\OverviewSection|string $section): int
+    {
+        $section = $section instanceof \App\Game\OverviewSection ? $section : \App\Game\OverviewSection::from($section);
+
+        return (int) array_search($section, $this->getOverviewOrder(), true) + 1;
     }
 
     /** @param list<\App\Game\OverviewSection> $shown the boxes to show; all others are hidden */

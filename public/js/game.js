@@ -394,6 +394,21 @@ const orbit = (() => {
         label();
     });
 
+    // Lists ordered with ↑/↓ (overview boxes in the account settings): moves the row; the form saves the order.
+    document.querySelectorAll('[data-reorder]').forEach((list) => {
+        list.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-reorder-up], [data-reorder-down]');
+            if (!button) return;
+            const item = button.closest('[data-reorder-item]');
+            if (button.matches('[data-reorder-up]') && item.previousElementSibling) {
+                item.parentNode.insertBefore(item, item.previousElementSibling);
+            } else if (button.matches('[data-reorder-down]') && item.nextElementSibling) {
+                item.parentNode.insertBefore(item.nextElementSibling, item);
+            }
+            button.focus();
+        });
+    });
+
     // Fold-out sections marked with data-remember-open keep their open/closed state (per browser).
     document.querySelectorAll('details[data-remember-open]').forEach((details) => {
         const key = 'sternenfall.open.' + details.dataset.rememberOpen;

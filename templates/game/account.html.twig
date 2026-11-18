@@ -41,11 +41,19 @@
         <p class="muted small">{{ 'Welche Bereiche die Übersicht zeigt. Die Warnung bei Angriffen auf deine Planeten erscheint immer.'|trans }}</p>
         <form method="post" action="{{ path('app_account_overview') }}" class="mail-form">
             <input type="hidden" name="_token" value="{{ csrf_token('account') }}">
-            <fieldset class="topic-list">
+            <p class="muted small">{{ 'Häkchen: anzeigen. Mit ↑ und ↓ legst du die Reihenfolge fest.'|trans }}</p>
+            <ol class="overview-order" data-reorder>
                 {% for section in overview_sections %}
-                    <label class="radio"><input type="checkbox" name="sections[]" value="{{ section.value }}" {{ player.showsOnOverview(section) ? 'checked' }}> {{ section.label|trans }}</label>
+                    <li data-reorder-item>
+                        <input type="hidden" name="order[]" value="{{ section.value }}">
+                        <label class="radio"><input type="checkbox" name="sections[]" value="{{ section.value }}" {{ player.showsOnOverview(section) ? 'checked' }}> {{ section.label|trans }}</label>
+                        <span class="overview-order-move">
+                            <button type="button" class="btn btn-small btn-secondary" data-reorder-up aria-label="{{ '{label} nach oben'|trans({'{label}': section.label|trans}) }}">↑</button>
+                            <button type="button" class="btn btn-small btn-secondary" data-reorder-down aria-label="{{ '{label} nach unten'|trans({'{label}': section.label|trans}) }}">↓</button>
+                        </span>
+                    </li>
                 {% endfor %}
-            </fieldset>
+            </ol>
             <button class="btn btn-small" type="submit" id="overview-save">{{ 'Speichern'|trans }}</button>
         </form>
     </section>

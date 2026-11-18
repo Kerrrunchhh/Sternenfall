@@ -2,15 +2,18 @@
 
 namespace App\Game;
 
-/** The boxes on the overview a player may hide (Konto). The attack alarm always shows. */
+/**
+ * The boxes on the overview a player may hide and reorder (Konto). The attack alarm always shows.
+ * The order of the cases is the default order.
+ */
 enum OverviewSection: string
 {
     case Contacts = 'contacts';
     case Movements = 'movements';
+    case Queues = 'queues';
     case TransportRequests = 'transport_requests';
     case Research = 'research';
     case Ticker = 'ticker';
-    case Queues = 'queues';
     case Resources = 'resources';
     case Population = 'population';
     case Planet = 'planet';

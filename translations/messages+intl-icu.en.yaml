@@ -3040,3 +3040,4 @@
 "Dein Kolonieschiff hat den herrenlosen Planeten {name} {where} besiedelt. Gebäude, Lager und Bauschleifen gehören jetzt dir; {settlers} Siedler sind dazugekommen, dazu die Ladung und die Vorräte des Schiffs. Flotten, die schon zu diesem Planeten unterwegs sind, siehst du jetzt in der Übersicht.": "Your colony ship settled the ownerless planet {name} {where}. Buildings, storage and queues are yours now; {settlers} settlers joined, plus the cargo and the ship's supplies. Fleets already on their way to this planet now show up in your overview."
 "Herrenlos: Ein Kolonieschiff übernimmt den Planeten mit Gebäuden, Lager und Bauschleifen – sobald dort keine Schiffe und keine Verteidigung mehr stehen.": "Ownerless: a colony ship takes over the planet with buildings, storage and queues – once no ships or defense are left there."
 "Besiedeln": "Settle"
+"Häkchen: anzeigen. Mit ↑ und ↓ legst du die Reihenfolge fest.": "Ticked: shown. With ↑ and ↓ you set the order."
