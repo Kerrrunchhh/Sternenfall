@@ -262,6 +262,30 @@ final class GuestFleetTest extends TestCase
         self::assertEquals($lead->getArriveAt(), $second->getArriveAt(), 'it joins and arrives together with the lead');
     }
 
+    public function testColonyShipsMayStartWithoutFreeSlotsTheCheckIsOnArrival(): void
+    {
+        // No colonization research: the home world takes the only slot.
+        $validate = new \ReflectionMethod(FleetService::class, 'validateMission');
+        $validate->invoke($this->service(), FleetMission::Colonize, $this->guest, null, ['colony_ship' => 3], false, null, []);
+
+        $ship = new Fleet($this->guest, null, 1, 10, 1, ['colony_ship' => 1]);
+        $ship->depart(FleetMission::Colonize, 1, 33, 5, $this->now->modify('-1 hour'), 60);
+        (new \ReflectionMethod(FleetService::class, 'arrive'))->invoke($this->service(), $ship);
+
+        self::assertTrue($ship->isReturning(), 'no slot free on arrival: back home');
+        self::assertCount(1, $this->guest->getPlanets());
+    }
+
+    public function testNamedFleetsCarryColonyShipsButDoNotColonize(): void
+    {
+        $validate = new \ReflectionMethod(FleetService::class, 'validateMission');
+        $validate->invoke($this->service(), FleetMission::Station, $this->guest, $this->planets['1:10:1'], ['colony_ship' => 2, 'falke' => 3], true, null, []);
+
+        $this->expectException(GameException::class);
+        $this->expectExceptionMessage('Kolonisiert wird aus dem Hangar');
+        $validate->invoke($this->service(), FleetMission::Colonize, $this->guest, null, ['colony_ship' => 2], true, null, []);
+    }
+
     private function ally(): void
     {
         $alliance = new Alliance('Bund', 'BND', $this->guest->getLifeForm(), $this->now);

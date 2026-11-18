@@ -99,7 +99,7 @@ enum FleetMission: string
             self::TransportStation => 'Liefert die Ladung an einen besiedelten Planeten ab und bleibt dort stationiert, statt zurückzufliegen. Mit Ladung ist die Flotte unterwegs sichtbar.',
             self::Station => 'Verlegt Schiffe und Ladung dauerhaft auf einen deiner Planeten.',
             self::Jump => 'Springt mit normaler Flugzeit zu einem besiedelten Planeten (auch fremd) und wartet dort auf Befehle. Ohne Fracht unsichtbar und unangreifbar; mit Fracht sichtbar und von Piraten abfangbar.',
-            self::Colonize => 'Gründet mit einem Kolonieschiff eine Kolonie auf einem freien Platz. Schneller geht es mit „Kolonisieren“ im Universum: dann startet ein Kolonieschiff direkt aus dem Hangar des gerade gewählten Planeten. Übrige Schiffe einer Flotte kehren zurück.',
+            self::Colonize => 'Gründet mit einem Kolonieschiff aus dem Hangar eine Kolonie auf einem freien Platz oder besiedelt einen herrenlosen Planeten. Ob du noch Kolonieplätze frei hast, wird erst bei der Ankunft geprüft – sonst kehrt das Schiff zurück. Am schnellsten geht es mit „Kolonisieren“ in der Galaxie. Kolonieschiffe in benannten Flotten kannst du zu anderen Planeten verlegen; zum Kolonisieren nimm sie vorher aus der Flotte.',
             self::Spy => 'Eine Sonde fliegt direkt aus dem Hangar (🔭 in Universum oder Radar), schickt einen Bericht und verglüht danach. Wie viel du erfährst, hängt von deiner Spionagetechnik ab.',
             self::Fuse => 'Schicke den Fusionator zu dem Planeten, der angeschweißt werden soll: Er verschweißt ihn mit deinem Planeten direkt darüber und wird dabei verbraucht.',
             self::Gather => 'Schiffe fliegen zu einer Flotte und schließen sich ihr an.',

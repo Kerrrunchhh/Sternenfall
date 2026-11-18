@@ -1604,8 +1604,8 @@ final readonly class FleetService
                 null !== $target && [] !== $target->getShips() => t('{name} [{coords}] ist herrenlos, aber dort stehen noch Schiffe oder Verteidigung. Greif den Planeten zuerst an – besiedeln kannst du ihn erst, wenn dort nichts mehr steht.', ['{name}' => $target->getName(), '{coords}' => $target->getCoordinates()]),
                 null !== $post => 'Auf diesem Platz steht ein Handelsstützpunkt.',
                 ($ships[ShipType::ColonyShip->value] ?? 0) < 1 => 'Zum Kolonisieren wird ein Kolonieschiff benötigt.',
-                Economy::ownedSlots($player) + $this->fleetRepository->countColonyShipsUnderway($player) + ($target?->getFusionSize() ?? 1) > $this->economy->colonySlots($player)
-                    => t('Deine Kolonisationstechnik erlaubt {value} Planetenplätze (verschweißte zählen einzeln) – sie sind belegt oder schon von Kolonieschiffen angeflogen. Erforsche „Kolonisationstechnik“ weiter.', ['{value}' => $this->economy->colonySlots($player)]),
+                // Colony slots are checked on arrival only: any number of colony ships may fly.
+                $named => t('Kolonisiert wird aus dem Hangar: Nimm das Kolonieschiff zuerst aus der Flotte („Schiffe aus der Flotte entfernen“) und schick es dann von dort los – z. B. mit „Kolonisieren“ in der Galaxie.'),
                 default => null,
             },
             FleetMission::Fuse => match (true) {
