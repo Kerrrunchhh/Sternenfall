@@ -382,6 +382,18 @@ const orbit = (() => {
         reminder.hidden = now - get(VOTED) < 24 * 3600 * 1000 || now - get(LATER) < 6 * 3600 * 1000;
     })();
 
+    // Card pictures on/off (buildings, research, shipyard), remembered per browser; <html> gets the class early in base.html.twig.
+    document.querySelectorAll('[data-picture-toggle]').forEach((button) => {
+        const root = document.documentElement;
+        const label = () => { button.textContent = root.classList.contains('hide-pictures') ? button.dataset.labelShow : button.dataset.labelHide; };
+        button.addEventListener('click', () => {
+            const hide = root.classList.toggle('hide-pictures');
+            try { localStorage.setItem('sternenfall.hidePictures', hide ? '1' : '0'); } catch (e) { /* ignore */ }
+            label();
+        });
+        label();
+    });
+
     // Fold-out sections marked with data-remember-open keep their open/closed state (per browser).
     document.querySelectorAll('details[data-remember-open]').forEach((details) => {
         const key = 'sternenfall.open.' + details.dataset.rememberOpen;

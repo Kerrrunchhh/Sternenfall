@@ -4,7 +4,7 @@
 {% block title %}{{ defense ? ('Planetenverteidigung'|trans) : ('Werft'|trans) }} – {{ game_name }}{% endblock %}
 
 {% block content %}
-    <h1>{{ defense ? ('Planetenverteidigung'|trans) : ('Werft'|trans) }}</h1>
+    <div class="page-head"><h1>{{ defense ? ('Planetenverteidigung'|trans) : ('Werft'|trans) }}</h1>{{ include('game/_picture_toggle.html.twig') }}</div>
 
     {{ include('game/_queue.html.twig', {queue_planet: planet, kind: defense ? enum('App\\Game\\QueueKind').Defense : enum('App\\Game\\QueueKind').Shipyard, entries: queue, back: defense ? 'app_defense' : 'app_shipyard'}) }}
 

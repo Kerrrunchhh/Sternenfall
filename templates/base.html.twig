@@ -6,6 +6,8 @@
         {# The game is dark already: dark mode extensions (Dark Reader) leave it alone, and the browser draws its own controls dark. #}
         <meta name="darkreader-lock">
         <meta name="color-scheme" content="dark">
+        {# Pictures on the building, research and shipyard cards hidden in this browser (see _picture_toggle). #}
+        <script>try { if (localStorage.getItem('sternenfall.hidePictures') === '1') { document.documentElement.classList.add('hide-pictures'); } } catch (e) { /* ignore */ }</script>
         {% if adsense_client and not (app.user and app.user.isExtended(date())) %}
             {# Google AdSense (site verification and ads); extended accounts see no ads. #}
             <meta name="google-adsense-account" content="{{ adsense_client }}">

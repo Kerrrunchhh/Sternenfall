@@ -4,7 +4,7 @@
 {% block title %}{{ 'Forschung – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
-    <h1>{{ 'Forschung'|trans }}</h1>
+    <div class="page-head"><h1>{{ 'Forschung'|trans }}</h1>{{ include('game/_picture_toggle.html.twig') }}</div>
 
     {% if player.researching %}
         <div class="panel construction">

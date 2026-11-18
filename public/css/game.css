@@ -248,6 +248,8 @@ form .btn-small[type=submit] { margin-top: 0; }
 .has-picture { display: grid; grid-template-columns: 220px 1fr; gap: 1rem; align-items: start; }
 .card-picture { width: 100%; height: auto; aspect-ratio: 345 / 251; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); background: #05070d; }
 .card-body { min-width: 0; }
+.hide-pictures .card-picture { display: none; }
+.hide-pictures .has-picture { display: block; }
 @media (max-width: 640px) {
     .has-picture { grid-template-columns: 1fr; }
     .card-picture { max-height: 180px; }
