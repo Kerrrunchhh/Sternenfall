@@ -46,6 +46,14 @@ class CreditTransferTest extends TestCase
         $logged = array_values(array_filter($this->persisted, static fn (object $o): bool => $o instanceof \App\Entity\ActionLogEntry));
         self::assertSame('300 Credits an empfaenger gezahlt – Nachricht: Danke für die Hilfe!', $logged[0]->getText(), 'the payment is in the activity log');
         self::assertSame($receiver, $logged[0]->getOther());
+
+        // Both statements show it, with the message as purpose.
+        $bookings = array_values(array_filter($this->persisted, static fn (object $o): bool => $o instanceof \App\Entity\CreditBooking));
+        self::assertCount(2, $bookings);
+        self::assertSame([-300.0, 300.0], [$bookings[0]->getAmount(), $bookings[1]->getAmount()]);
+        self::assertSame([$payer, $receiver], [$bookings[0]->getUser(), $bookings[1]->getUser()]);
+        self::assertSame('Danke für die Hilfe!', $bookings[1]->getPurpose());
+        self::assertSame($payer, $bookings[1]->getCounterparty());
         self::assertSame([[300, 2]], array_map(static fn (array $s): array => $s[1], $this->statements), 'credited in one statement');
         $message = array_values(array_filter($this->persisted, static fn (object $o): bool => $o instanceof Message))[0];
         self::assertSame($receiver, $message->getRecipient());
@@ -130,6 +138,6 @@ class CreditTransferTest extends TestCase
         $economy = new Economy(1.0);
         $planets = new PlanetService($em, new LockFactory(new InMemoryStore()), $clock, new PlanetUpdater($economy), $economy);
 
-        return new CreditTransfer($planets, new PushingGuard($em, $economy), new Inbox($em, $clock), $em, new \App\Game\ActionLog($em, $clock));
+        return new CreditTransfer($planets, new PushingGuard($em, $economy), new Inbox($em, $clock), $em, new \App\Game\ActionLog($em, $clock), new \App\Game\CreditLedger($em, $clock));
     }
 }

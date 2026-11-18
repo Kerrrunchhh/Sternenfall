@@ -35,6 +35,7 @@ final readonly class TradeService
         private LockFactory $lockFactory,
         private ClockInterface $clock,
         private ?ActionLog $actionLog = null,
+        private ?CreditLedger $ledger = null,
     ) {
     }
 
@@ -341,6 +342,15 @@ final readonly class TradeService
             }
             if (!$deal->isEmpty()) {
                 $lines[] = $own ? t('Abgeholt: {goods}.', ['{goods}' => self::summary($deal->bought)]) : t('Gekauft: {goods} für {price} Credits.', ['{goods}' => self::summary($deal->bought), '{price}' => new Num($deal->price)]);
+            }
+            // Credit statements of both sides; the trade post names the bookings for its owner's report.
+            if (!$own && $income >= 1) {
+                $this->ledger?->book($actor, $income, CreditLedger::TRADE, $trader, \sprintf('Verkauf an „%s“ [%s]: %s', $post->getName(), $post->getCoordinates(), ActionLog::goods($sold)), $post, $sold);
+                $this->ledger?->book($trader, -$income, CreditLedger::TRADE, $actor, \sprintf('Ankauf an „%s“ [%s]: %s', $post->getName(), $post->getCoordinates(), ActionLog::goods($sold)), $post, $sold);
+            }
+            if (!$own && !$deal->isEmpty()) {
+                $this->ledger?->book($actor, -$deal->price, CreditLedger::TRADE, $trader, \sprintf('Einkauf an „%s“ [%s]: %s', $post->getName(), $post->getCoordinates(), ActionLog::goods($deal->bought)), $post, $deal->bought);
+                $this->ledger?->book($trader, $deal->price, CreditLedger::TRADE, $actor, \sprintf('Verkauf an „%s“ [%s]: %s', $post->getName(), $post->getCoordinates(), ActionLog::goods($deal->bought)), $post, $deal->bought);
             }
             if ([] !== $lines) {
                 $this->actionLog?->record($actor, ActionLog::TRADE, \sprintf('Handel am Stützpunkt %s [%s] von %s mit %s: verkauft %s%s · gekauft %s%s', $post->getName(), $post->getCoordinates(), $trader->getUsername(), $fleet->getName() ?? 'Schnellflotte',

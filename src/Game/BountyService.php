@@ -30,6 +30,7 @@ final readonly class BountyService
         private UserRepository $users,
         private Inbox $inbox,
         private ClockInterface $clock,
+        private ?CreditLedger $ledger = null,
     ) {
     }
 
@@ -70,6 +71,7 @@ final readonly class BountyService
         $this->escrow($client, $reward);
 
         $bounty = new Bounty($client, $target, $reward, $requiredShield, $days, $note, $this->now());
+        $this->ledger?->book($client, -$reward, CreditLedger::BOUNTY, null, \sprintf('Kopfgeld auf %s ausgesetzt', $target->getUsername()), counterpartyName: 'Kopfgeld');
         $this->em->persist($bounty);
         $this->inbox->send($target, t('Kopfgeld auf dich ausgesetzt'), t('Auf dich ist ein Kopfgeld von {reward} Credits ausgesetzt: Wer {shield} Schildpunkte deiner Raumschiffe zerstört, bekommt es. Es gilt bis {endsAt}.', ['{reward}' => new Num($reward), '{shield}' => new Num($requiredShield), '{endsAt}' => new When($bounty->getEndsAt())]));
         $this->em->flush();
@@ -88,6 +90,7 @@ final readonly class BountyService
         }
         $bounty->close(Bounty::CANCELLED);
         $this->credit($client, $bounty->getReward());
+        $this->ledger?->book($client, $bounty->getReward(), CreditLedger::BOUNTY, null, \sprintf('Kopfgeld auf %s zurückgezogen', $bounty->getTarget()->getUsername()), counterpartyName: 'Kopfgeld');
         $this->em->flush();
     }
 
@@ -134,6 +137,7 @@ final readonly class BountyService
         foreach ($this->bounties->findDue($this->now()) as $bounty) {
             $bounty->close(Bounty::EXPIRED);
             $this->credit($bounty->getClient(), $bounty->getReward());
+            $this->ledger?->book($bounty->getClient(), $bounty->getReward(), CreditLedger::BOUNTY, null, \sprintf('Kopfgeld auf %s abgelaufen – Erstattung', $bounty->getTarget()->getUsername()), counterpartyName: 'Kopfgeld');
             $this->inbox->send($bounty->getClient(), t('Kopfgeld abgelaufen'), t('Niemand hat das Kopfgeld auf {player} verdient. Du bekommst die {reward} Credits zurück.', ['{player}' => $bounty->getTarget()->getUsername(), '{reward}' => new Num($bounty->getReward())]));
         }
         $this->em->flush();
@@ -144,6 +148,7 @@ final readonly class BountyService
         $bounty->award($hunter);
         // The hunter is loaded (and may just have earned credits) during the battle: book it on the entity, flushed with the battle.
         $hunter->addCredits($bounty->getReward());
+        $this->ledger?->book($hunter, $bounty->getReward(), CreditLedger::BOUNTY, $bounty->getClient(), \sprintf('Kopfgeld auf %s verdient', $bounty->getTarget()->getUsername()));
         $this->inbox->send($hunter, t('Kopfgeld verdient'), t('Du hast {shield} Schildpunkte der Raumschiffe von {player} zerstört und bekommst das Kopfgeld von {client}: {reward} Credits.', ['{shield}' => new Num($bounty->getRequiredShield()), '{player}' => $bounty->getTarget()->getUsername(), '{client}' => $bounty->getClient()->getUsername(), '{reward}' => new Num($bounty->getReward())]));
         $this->inbox->send($bounty->getClient(), t('Kopfgeld vergeben'), t('{hunter} hat dein Kopfgeld auf {player} verdient ({reward} Credits).', ['{hunter}' => $hunter->getUsername(), '{player}' => $bounty->getTarget()->getUsername(), '{reward}' => new Num($bounty->getReward())]));
         $this->inbox->send($bounty->getTarget(), t('Kopfgeld auf dich vergeben'), t('{hunter} hat das Kopfgeld von {client} auf dich kassiert.', ['{hunter}' => $hunter->getUsername(), '{client}' => $bounty->getClient()->getUsername()]));

@@ -29,6 +29,7 @@ final readonly class ContractService
         private PlanetRepository $planets,
         private Inbox $inbox,
         private ClockInterface $clock,
+        private ?CreditLedger $ledger = null,
     ) {
     }
 
@@ -54,6 +55,7 @@ final readonly class ContractService
         $this->escrow($client, $reward);
 
         $contract = new Contract($client, $kind, $planet, $reward, $days, $note, $this->now());
+        $this->ledger?->book($client, -$reward, CreditLedger::CONTRACT, null, \sprintf('Auftrag „%s“ für %s [%s] ausgeschrieben', $contract->kindLabel(), $planet->getName(), $planet->getCoordinates()), counterpartyName: 'Auftrag');
         $this->em->persist($contract);
         $this->em->flush();
 
@@ -100,6 +102,7 @@ final readonly class ContractService
         }
         $contract->close(Contract::CANCELLED);
         $this->credit($client, $contract->getReward());
+        $this->ledger?->book($client, $contract->getReward(), CreditLedger::CONTRACT, null, \sprintf('Auftrag „%s“ für %s [%s] zurückgezogen', $contract->kindLabel(), $contract->getPlanetName(), $contract->getCoordinates()), counterpartyName: 'Auftrag');
         $this->em->flush();
     }
 
@@ -123,6 +126,7 @@ final readonly class ContractService
                 && true === $contract->getContractor()?->isSameAs($conqueror)) {
                 $contract->close(Contract::DONE);
                 $this->credit($conqueror, $contract->getReward());
+                $this->ledger?->book($conqueror, $contract->getReward(), CreditLedger::CONTRACT, $contract->getClient(), \sprintf('Auftrag „%s“ erfüllt: %s [%s] erobert', $contract->kindLabel(), $planet->getName(), $contract->getCoordinates()));
                 $this->inbox->send($conqueror, t('Auftrag erfüllt'), t('Du hast {name} [{coords}] erobert – {reward} Credits Belohnung von {player}.', ['{name}' => $planet->getName(), '{coords}' => $contract->getCoordinates(), '{reward}' => new Num($contract->getReward()), '{player}' => $contract->getClient()->getUsername()]));
                 $this->inbox->send($contract->getClient(), t('Auftrag erfüllt'), t('{player} hat {name} [{coords}] erobert und die Belohnung erhalten.', ['{player}' => $conqueror->getUsername(), '{name}' => $planet->getName(), '{coords}' => $contract->getCoordinates()]));
             }
@@ -138,10 +142,12 @@ final readonly class ContractService
             if ($contract->isProtection() && null !== $contractor && true === $planet?->getOwner()->isSameAs($contract->getClient())) {
                 $contract->close(Contract::DONE);
                 $this->credit($contractor, $contract->getReward());
+                $this->ledger?->book($contractor, $contract->getReward(), CreditLedger::CONTRACT, $contract->getClient(), \sprintf('Auftrag „%s“ erfüllt: %s [%s] geschützt', $contract->kindLabel(), $contract->getPlanetName(), $contract->getCoordinates()));
                 $this->inbox->send($contractor, t('Auftrag erfüllt'), t('{planetName} [{coords}] gehört nach wie vor {player} – {reward} Credits für den Schutz.', ['{planetName}' => $contract->getPlanetName(), '{coords}' => $contract->getCoordinates(), '{player}' => $contract->getClient()->getUsername(), '{reward}' => new Num($contract->getReward())]));
             } else {
                 $contract->close(Contract::FAILED);
                 $this->credit($contract->getClient(), $contract->getReward());
+                $this->ledger?->book($contract->getClient(), $contract->getReward(), CreditLedger::CONTRACT, null, \sprintf('Auftrag „%s“ für %s [%s] nicht erfüllt – Erstattung', $contract->kindLabel(), $contract->getPlanetName(), $contract->getCoordinates()), counterpartyName: 'Auftrag');
                 if (null !== $contractor) {
                     $this->inbox->send($contractor, t('Auftrag nicht erfüllt'), t('Die Zeit für „{kindLabel}“ bei {planetName} [{coords}] ist um. Die Belohnung geht an {player} zurück.', ['{kindLabel}' => t($contract->kindLabel()), '{planetName}' => $contract->getPlanetName(), '{coords}' => $contract->getCoordinates(), '{player}' => $contract->getClient()->getUsername()]));
                 }

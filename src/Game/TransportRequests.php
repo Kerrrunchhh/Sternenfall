@@ -27,6 +27,7 @@ final readonly class TransportRequests
         private TransportRequestRepository $requests,
         private Inbox $inbox,
         private ClockInterface $clock,
+        private ?CreditLedger $ledger = null,
     ) {
     }
 
@@ -76,6 +77,7 @@ final readonly class TransportRequests
         }
         $request = new TransportRequest($requester, $planet, $goods, $offer, $this->now());
         $this->em->persist($request);
+        $this->ledger?->book($requester, -$offer, CreditLedger::TRANSPORT, null, \sprintf('Transportgesuch für %s [%s]: %s', $planet->getName(), $planet->getCoordinates(), ActionLog::resources($goods)), counterpartyName: 'Transportgesuch');
         $this->em->flush();
 
         return $request;
@@ -88,6 +90,7 @@ final readonly class TransportRequests
         }
         $request->close(TransportRequest::CANCELLED, $this->now());
         $this->credit($requester, $request->getOffer());
+        $this->ledger?->book($requester, $request->getOffer(), CreditLedger::TRANSPORT, null, \sprintf('Transportgesuch für %s [%s] zurückgezogen', $request->getPlanetName(), $request->getCoordinates()), counterpartyName: 'Transportgesuch');
         $this->em->flush();
     }
 
@@ -108,6 +111,7 @@ final readonly class TransportRequests
             $request->close(TransportRequest::DONE, $this->now());
             if (null !== $trader) {
                 $this->credit($trader, $request->getOffer());
+                $this->ledger?->book($trader, $request->getOffer(), CreditLedger::TRANSPORT, $request->getRequester(), \sprintf('Transportgesuch geliefert an %s [%s]', $request->getPlanetName(), $request->getCoordinates()));
                 $this->inbox->send($trader, t('Transportgesuch erfüllt'), t('Geliefert an {planetName} [{coords}] von {player}: {offer} Credits.', ['{planetName}' => $request->getPlanetName(), '{coords}' => $request->getCoordinates(), '{player}' => $request->getRequester()->getUsername(), '{offer}' => new Num($request->getOffer())]));
             }
             $this->inbox->send($request->getRequester(), t('Lieferung angekommen'), t('{value} hat dein Transportgesuch für {planetName} [{coords}] erfüllt.', ['{value}' => $trader?->getUsername() ?? t('Ein Händler'), '{planetName}' => $request->getPlanetName(), '{coords}' => $request->getCoordinates()]));

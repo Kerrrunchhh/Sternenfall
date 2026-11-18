@@ -60,6 +60,7 @@ final readonly class TradeGuild
         private Inbox $inbox,
         private ClockInterface $clock,
         private ?CacheInterface $cache = null,
+        private ?CreditLedger $ledger = null,
     ) {
     }
 
@@ -194,6 +195,7 @@ final readonly class TradeGuild
                 // The planet is gone or no longer his: no delivery, the price goes back.
                 $request->close(TransportRequest::CANCELLED, $now);
                 $this->em->getConnection()->executeStatement('UPDATE `user` SET credits = credits + ? WHERE id = ?', [$request->getOffer(), $requester->getId()]);
+                $this->ledger?->book($requester, $request->getOffer(), CreditLedger::TRANSPORT, null, \sprintf('Lieferung der Handelsgilde an %s [%s] gescheitert – Erstattung', $request->getPlanetName(), $request->getCoordinates()), counterpartyName: self::NAME);
                 $this->inbox->send($requester, t('Lieferung der Handelsgilde gescheitert'), t('{planet} [{coords}] gehört dir nicht mehr. Die Handelsgilde hat nicht geliefert, du bekommst {offer} Credits zurück.', ['{planet}' => $request->getPlanetName(), '{coords}' => $request->getCoordinates(), '{offer}' => new Num($request->getOffer())]));
                 continue;
             }

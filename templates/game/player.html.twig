@@ -95,7 +95,7 @@
                         <form method="post" action="{{ path('app_player_pay', {id: profile.id}) }}" class="mail-form">
                             <input type="hidden" name="_token" value="{{ csrf_token('pay') }}">
                             <label>{{ 'Betrag'|trans }} <input type="text" name="amount" inputmode="numeric" required class="short" placeholder="1.000"> {{ 'Credits'|trans }} <span class="muted small">{{ '(du hast {credits})'|trans({'{credits}': player.credits|round(0, 'floor')|num}) }}</span></label>
-                            <label>{{ 'Nachricht (freiwillig)'|trans }} <textarea name="message" rows="2" maxlength="{{ constant('App\\Game\\CreditTransfer::MAX_MESSAGE') }}"></textarea></label>
+                            <label>{{ 'Verwendungszweck / Nachricht (freiwillig)'|trans }} <textarea name="message" rows="2" maxlength="{{ constant('App\\Game\\CreditTransfer::MAX_MESSAGE') }}" placeholder="{{ 'Steht bei euch beiden im Kontoauszug, z. B. „Bezahlung 20.000 Eisen“'|trans }}"></textarea></label>
                             <button class="btn" type="submit" id="profile-pay" data-confirm="{{ '{username} wirklich Credits zahlen? Das lässt sich nicht rückgängig machen.'|trans({'{username}': profile.username}) }}" data-confirm-label="{{ 'Zahlen'|trans }}">{{ 'Zahlen'|trans }}</button>
                             <p class="muted small">{{ 'Hat {username} mehr Punkte als du, gilt der Pushing-Schutz wie bei Rohstoff-Lieferungen.'|trans({'{username}': profile.username}) }}</p>
                         </form>

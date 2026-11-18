@@ -38,6 +38,7 @@ final readonly class FusionatorMarket
         private Inbox $inbox,
         private LockFactory $lockFactory,
         private ClockInterface $clock,
+        private ?CreditLedger $ledger = null,
     ) {
     }
 
@@ -124,6 +125,8 @@ final readonly class FusionatorMarket
                 }
                 $buyer->addCredits(-$price);
             });
+            $this->ledger?->book($buyer, -$price, CreditLedger::FUSIONATOR, $seller, \sprintf('%d Fusionator(en) gekauft', $quantity));
+            $this->ledger?->book($seller, $price, CreditLedger::FUSIONATOR, $buyer, \sprintf('%d Fusionator(en) verkauft', $quantity));
             $sellerPlanet = $this->mainPlanet($seller);
             if (null !== $sellerPlanet) {
                 $this->planets->transaction($sellerPlanet, static fn () => $seller->addCredits($price));

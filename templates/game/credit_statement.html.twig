@@ -1,0 +1,47 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}{{ 'Kontoauszug – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
+
+{% block content %}
+    <h1>{{ 'Handel'|trans }}</h1>
+    {{ include('game/_trade_tabs.html.twig') }}
+
+    <section class="panel">
+        <h2>{{ 'Kontoauszug'|trans }}</h2>
+        <p class="muted small">{{ 'Credits, die du an andere gezahlt oder von ihnen bekommen hast – Überweisungen mit Verwendungszweck, Handel, Allianzkasse, Transportgesuche, Aufträge, Kopfgelder und Fusionatoren – aus den letzten {days} Tagen. Einnahmen aus deinen Planeten und Ausgaben für Bauten stehen nicht darin.'|trans({'{days}': keep_days}) }}</p>
+        <form method="get" action="{{ path('app_trade_statement') }}" class="inline-action">
+            <select name="direction" aria-label="{{ 'Richtung'|trans }}">
+                <option value="">{{ 'Ein- und Ausgänge'|trans }}</option>
+                <option value="in" {{ direction == 'in' ? 'selected' }}>{{ 'Nur Eingänge'|trans }}</option>
+                <option value="out" {{ direction == 'out' ? 'selected' }}>{{ 'Nur Ausgänge'|trans }}</option>
+            </select>
+            <select name="kind" aria-label="{{ 'Art'|trans }}">
+                <option value="">{{ 'Alle Arten'|trans }}</option>
+                {% for key, label in kinds %}<option value="{{ key }}" {{ kind == key ? 'selected' }}>{{ label|trans }}</option>{% endfor %}
+            </select>
+            <button class="btn btn-small btn-secondary" type="submit" id="statement-filter">{{ 'Anzeigen'|trans }}</button>
+        </form>
+        {% if bookings is empty %}
+            <p class="muted">{{ 'Keine Buchungen.'|trans }}</p>
+        {% else %}
+            <p class="small">{{ 'Eingänge: {income} · Ausgänge: {spent} · Saldo: {balance}'|trans({'{income}': income|num, '{spent}': spent|num, '{balance}': (income - spent > 0 ? '+') ~ (income - spent)|num}) }}</p>
+            <div class="table-scroll">
+                <table class="table statement">
+                    <thead><tr><th>{{ 'Datum'|trans }}</th><th>{{ 'Art'|trans }}</th><th>{{ 'Von / an'|trans }}</th><th>{{ 'Verwendungszweck'|trans }}</th><th class="num">{{ 'Credits'|trans }}</th></tr></thead>
+                    <tbody>
+                        {% for b in bookings %}
+                            <tr>
+                                <td class="small nowrap">{{ b.createdAt|date('d.m. H:i') }}</td>
+                                <td class="small">{{ kinds[b.kind]|default(b.kind)|trans }}</td>
+                                <td>{% if b.counterparty %}{{ ui.player(b.counterparty) }}{% elseif b.counterpartyName %}{{ b.counterpartyName|trans }}{% else %}<span class="muted">–</span>{% endif %}</td>
+                                <td class="small">{{ b.purpose }}</td>
+                                <td class="num {{ b.amount > 0 ? 'trend-up' : 'trend-down' }}">{{ b.amount > 0 ? '+' }}{{ b.amount|num }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </section>
+{% endblock %}

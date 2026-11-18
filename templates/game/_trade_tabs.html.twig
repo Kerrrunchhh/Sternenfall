@@ -2,4 +2,6 @@
 <nav class="tabs" aria-label="{{ 'Handel'|trans }}">
     <a href="{{ path('app_trade') }}" class="{{ app.request.attributes.get('_route') == 'app_trade' ? 'active' }}">{{ 'Handelsstützpunkte'|trans }}</a>
     <a href="{{ path('app_trade_fusionators') }}" class="{{ app.request.attributes.get('_route') == 'app_trade_fusionators' ? 'active' }}">{{ 'Fusionatoren'|trans }}</a>
+    <a href="{{ path('app_trade_statement') }}" class="{{ app.request.attributes.get('_route') == 'app_trade_statement' ? 'active' }}">{{ 'Kontoauszug'|trans }}</a>
+    {% if player.lifeForm.value == 'trader' %}<a href="{{ path('app_trade_report') }}" class="{{ app.request.attributes.get('_route') == 'app_trade_report' ? 'active' }}">{{ 'Auswertung'|trans }}</a>{% endif %}
 </nav>
