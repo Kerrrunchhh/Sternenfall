@@ -17,7 +17,7 @@
             <tbody>
                 <tr class="table-head"><td colspan="3">{{ group.title|trans }}</td></tr>
                 {% for row in economy.ships|filter(r => r.type.stationary == group.stationary) %}
-                    <tr><td>{{ row.type.label|trans }}</td><td class="num">{{ row.count|num }}</td><td class="num">{{ _self.change(row.count, row.week) }}</td></tr>
+                    <tr><td>{% if app.user %}<a href="{{ path('app_ship_info', {type: row.type.value}) }}" title="{{ 'Beschreibung und Werte mit deiner Forschung'|trans }}">{{ row.type.label|trans }}</a>{% else %}{{ row.type.label|trans }}{% endif %}</td><td class="num">{{ row.count|num }}</td><td class="num">{{ _self.change(row.count, row.week) }}</td></tr>
                 {% endfor %}
             </tbody>
         {% endfor %}
