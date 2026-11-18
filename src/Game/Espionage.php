@@ -207,7 +207,8 @@ final readonly class Espionage
         $lines[] = '';
         $lines[] = t('Stationierte Schiffe und Türme:');
         $lines = [...$lines, ...$this->shipLines($planet->getShips(), '  ')];
-        foreach ($this->fleets->findIdleAt($galaxy, $system, $position) as $fleet) {
+        // Fleets wait at the top slot of a fusion, whichever of its slots the probe flew to.
+        foreach ($this->fleets->findIdleAt($planet->getGalaxy(), $planet->getSystem(), $planet->getPosition()) as $fleet) {
             $lines[] = t('  Flotte von {player}:', ['{player}' => $fleet->getOwner()->getUsername()]);
             $lines = [...$lines, ...$this->shipLines($fleet->getShips(), '    ')];
         }

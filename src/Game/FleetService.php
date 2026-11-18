@@ -1397,6 +1397,11 @@ final readonly class FleetService
             throw new GameException(t('Diese Koordinaten gibt es nicht.'));
         }
         $target = $this->planetRepository->findAt($galaxy, $system, $position);
+        // A fusion is one planet: whichever of its slots is chosen, the fleet flies to its top slot
+        // (where waiting fleets are found for battles, espionage and departures).
+        if (null !== $target) {
+            $position = $target->getPosition();
+        }
         $atPlanet = $this->planetRepository->findAt($fleet->getGalaxy(), $fleet->getSystem(), $fleet->getPosition());
         // A fleet can fuse the planet it is waiting at; every other mission needs a different target.
         $sameSpot = $fleet->isAt($galaxy, $system, $position) || (null !== $target && $target->getId() === $atPlanet?->getId());

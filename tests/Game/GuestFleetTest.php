@@ -217,6 +217,20 @@ final class GuestFleetTest extends TestCase
         $validate->invoke($this->service(), FleetMission::Colonize, $this->guest, $guarded, ['colony_ship' => 1], false, null, []);
     }
 
+    public function testAFleetSentToALowerSlotOfAFusionWaitsAtItsTop(): void
+    {
+        $top = $this->place(new Planet($this->guest, 'Oben', 1, 50, 3, $this->now));
+        $lower = new Planet($this->guest, 'Unten', 1, 50, 4, $this->now);
+        \App\Game\Fusion::merge($top, [$lower]);
+        $this->guest->getPlanets()->removeElement($lower);
+        $this->planets['1:10:1']->setResources(new Resources(hydrogen: 100000, food: 100000, water: 100000));
+        $fleet = new Fleet($this->guest, 'Wache', 1, 10, 1, ['falke' => 5]);
+
+        $this->service()->sendFleet($fleet, $this->guest, 1, 50, 4, FleetMission::Station, new Resources());
+
+        self::assertSame(3, $fleet->getTargetPosition(), 'the fusion is one planet: its top slot');
+    }
+
     private function ally(): void
     {
         $alliance = new Alliance('Bund', 'BND', $this->guest->getLifeForm(), $this->now);

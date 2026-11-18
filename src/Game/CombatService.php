@@ -61,7 +61,8 @@ final readonly class CombatService
         $this->planets->transaction($target, function (Planet $target, \DateTimeImmutable $now) use ($attacker, $joiners): void {
             $attackers = [$attacker, ...$joiners];
             $defender = $target->getOwner();
-            [$g, $s, $p] = [$attacker->getTargetGalaxy(), $attacker->getTargetSystem(), $attacker->getTargetPosition()];
+            // Fleets wait at the top slot of a fusion, whichever of its slots was targeted.
+            [$g, $s, $p] = [$target->getGalaxy(), $target->getSystem(), $target->getPosition()];
 
             // Defenders: hangar and turrets, plus waiting fleets of the owner and his alliance.
             $owners = [$defender];
