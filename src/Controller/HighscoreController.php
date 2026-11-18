@@ -31,16 +31,23 @@ class HighscoreController extends AbstractGameController
             ? null !== $player->getAlliance() && $row['alliance']->getId() === $player->getAlliance()->getId()
             : $row['user']->isSameAs($player);
         $own = array_values(array_filter($rows, $isOwn))[0] ?? null;
+        // 100 per page; the own row is added below when it is on another page.
+        $pages = max(1, (int) ceil(\count($rows) / self::TOP));
+        $page = min($pages, max(1, $query->getInt('page', 1)));
+        $first = ($page - 1) * self::TOP;
 
         return $this->renderGame('game/highscores.html.twig', $planet, [
             'view' => $view,
             'sort' => $sort,
             'life_form' => $lifeForm,
-            'rows' => \array_slice($rows, 0, self::TOP),
+            'rows' => \array_slice($rows, $first, self::TOP),
             'total' => \count($rows),
             'own' => $own,
-            'own_outside' => null !== $own && $own['rank'] > self::TOP,
+            'own_outside' => null !== $own && ($own['rank'] <= $first || $own['rank'] > $first + self::TOP),
+            'own_page' => null === $own ? null : (int) ceil($own['rank'] / self::TOP),
             'top' => self::TOP,
+            'page' => $page,
+            'pages' => $pages,
             'top_today' => $stats->topExperienceToday(),
             'research_leaders' => $research,
         ]);

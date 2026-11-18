@@ -72,7 +72,14 @@
                     {{ _self.row(own, view, own) }}
                 {% endif %}
             </table>
-            {% if total > top %}<p class="muted small">{{ 'Angezeigt werden die besten {top}{Platz}.'|trans({'{top}': top, '{Platz}': own_outside ? (' ' ~ 'und dein Platz'|trans)}) }}</p>{% endif %}
+            {% if pages > 1 %}
+                <nav class="pager" aria-label="{{ 'Seiten'|trans }}">
+                    {% if page > 1 %}<a class="btn btn-small btn-secondary" href="{{ path('app_highscores', params|merge({page: page - 1})) }}" id="highscore-prev">{{ '← Plätze {from}–{to}'|trans({'{from}': (page - 2) * top + 1, '{to}': (page - 1) * top}) }}</a>{% endif %}
+                    <span class="muted small">{{ 'Plätze {from}–{to} von {total}'|trans({'{from}': (page - 1) * top + 1, '{to}': min(page * top, total), '{total}': total|num}) }}</span>
+                    {% if page < pages %}<a class="btn btn-small btn-secondary" href="{{ path('app_highscores', params|merge({page: page + 1})) }}" id="highscore-next">{{ 'Plätze {from}–{to} →'|trans({'{from}': page * top + 1, '{to}': min((page + 1) * top, total)}) }}</a>{% endif %}
+                    {% if own_page and own_page != page %}<a class="small" href="{{ path('app_highscores', params|merge({page: own_page})) }}#own">{{ 'Zu meinem Platz'|trans }}</a>{% endif %}
+                </nav>
+            {% endif %}
         {% endif %}
         {% if view == 'alliances' %}<p class="muted small">{{ 'Allianzen zählen die Summe ihrer Mitglieder. Der Lebensform-Filter richtet sich nach der Art der Allianz.'|trans }}</p>{% endif %}
     </section>
@@ -82,7 +89,8 @@
 
 {% macro row(r, view, own) %}
     {% import 'game/_macros.html.twig' as ui %}
-    <tr class="{{ own and own.rank == r.rank and (view == 'players' ? own.user.id == r.user.id : own.alliance.id == r.alliance.id) ? 'highscore-own' }}">
+    {% set mine = own and own.rank == r.rank and (view == 'players' ? own.user.id == r.user.id : own.alliance.id == r.alliance.id) %}
+    <tr class="{{ mine ? 'highscore-own' }}"{% if mine %} id="own"{% endif %}>
         <td class="num">{{ r.rank }}.</td>
         {% if view == 'players' %}
             <td>{{ ui.player(r.user) }}</td>
