@@ -120,6 +120,19 @@ final class GuestFleetTest extends TestCase
         self::assertLessThan(100000, $wreck->getResources()->hydrogen, 'the ownerless planet paid the relocation');
     }
 
+    public function testLootIsStoredWhenTheFleetLandsAtHome(): void
+    {
+        $fleet = new Fleet($this->guest, 'Sturm', 1, 10, 1, ['falke' => 10, 'salvager' => 2]);
+        $fleet->depart(FleetMission::Attack, 1, 20, 3, $this->now->modify('-2 hours'), 3600);
+        $fleet->setCargo(new Resources(iron: 5000));
+        $fleet->startReturn();
+
+        (new \ReflectionMethod(FleetService::class, 'land'))->invoke($this->service(), $fleet);
+
+        self::assertSame(5000.0, $this->planets['1:10:1']->getResources()->iron);
+        self::assertTrue($fleet->getCargo()->isEmpty());
+    }
+
     public function testAPlanetWithOwnFleetsBoundToItCannotBeAbandoned(): void
     {
         $colony = $this->place(new Planet($this->guest, 'Kolonie', 1, 30, 2, $this->now));

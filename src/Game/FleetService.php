@@ -1438,8 +1438,10 @@ final readonly class FleetService
         if (0 === $capacity && !$cargo->isEmpty()) {
             throw new GameException(t('Nur Handelsschiffe (Frachter, Großfrachter) können Fracht transportieren. Nimm einen Frachter in die Flotte auf.'));
         }
-        if ($fleet->getCargo()->add($cargo)->total() > $capacity) {
-            throw new GameException(t('Die Ladung übersteigt die Frachtkapazität von {capacity}.', ['{capacity}' => new Num($capacity)]));
+        // Loot in the salvage holds counts as well (it stays on board when the fleet lands abroad).
+        $hold = $capacity + array_sum(array_map(static fn (string $type, int $count): int => ShipType::from($type)->salvageCapacity() * $count, array_keys($ships), $ships));
+        if ($fleet->getCargo()->add($cargo)->total() > $hold) {
+            throw new GameException(t('Die Ladung übersteigt die Frachtkapazität von {capacity}.', ['{capacity}' => new Num($hold)]));
         }
 
         // Leaving an own planet: remember it – trade fleets and fleets sent home after
@@ -1960,8 +1962,10 @@ final readonly class FleetService
     /** A returning fleet reaches its point of departure. */
     private function land(Fleet $fleet): void
     {
-        // Picked-up resources go straight into the storage of the planet the fleet returns to.
-        if (FleetMission::Pickup === $fleet->getMission() && $fleet->isNamed() && null !== $home = $this->ownPlanetAt($fleet)) {
+        // Picked-up resources and loot (attack, raid, salvage) go into the storage of the own planet
+        // the fleet returns to; until then they were on board and could be raided.
+        if (\in_array($fleet->getMission(), [FleetMission::Pickup, FleetMission::Attack, FleetMission::Raid, FleetMission::Salvage], true)
+            && $fleet->isNamed() && !$fleet->getCargo()->isEmpty() && null !== $home = $this->ownPlanetAt($fleet)) {
             $this->planets->transaction($home, function (Planet $home) use ($fleet): void {
                 $home->setResources($home->getResources()->add($fleet->getCargo()));
                 $fleet->setCargo(new Resources());

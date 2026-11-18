@@ -159,9 +159,9 @@ final readonly class CombatService
         if (null === $field) {
             return t('Dort gab es kein Trümmerfeld.');
         }
-        // Salvagers never carry anything: what they collect lands straight at their start planet.
-        $taken = $field->collect($this->lootCapacity($fleet));
-        $where = $this->depositAtStart($fleet, $taken);
+        // What they collect stays on board until they are home – and can be raided on the way.
+        $taken = $field->collect(max(0, $this->lootCapacity($fleet) - $fleet->getCargo()->total()));
+        $where = $this->loadLoot($fleet, $taken);
         if ($field->isEmpty()) {
             $this->em->remove($field);
         }
@@ -190,6 +190,11 @@ final readonly class CombatService
         $hunter->replaceShips($result->survivors(BattleGroup::ATTACKER, 'attacker'));
         foreach ($preys as $i => $prey) {
             $prey->replaceShips($result->survivors(BattleGroup::DEFENDER, 'prey:'.$i));
+            // Cargo in destroyed holds (freighters, salvagers) is lost.
+            $hold = $this->capacity($prey) + $this->lootCapacity($prey);
+            if ($prey->getCargo()->total() > $hold) {
+                $prey->setCargo($hold > 0 ? $prey->getCargo()->multiply($hold / $prey->getCargo()->total())->floor() : new Resources());
+            }
         }
         $outcome = [$this->leaveDebris($g, $s, $p, $result)];
         $this->showDebris($result->participants(), $g, $s, $p);
@@ -211,7 +216,7 @@ final readonly class CombatService
         } elseif ($raid && $result->attackerWon() && $cargo->total() < 1) {
             $outcome[] = t('Die Flotte war leer – keine Beute.');
         } elseif ($raid && $result->attackerWon() && $hunter->hasShips()) {
-            $free = $this->lootCapacity($hunter);
+            $free = max(0, $this->lootCapacity($hunter) - $hunter->getCargo()->total());
             $share = $cargo->total() > 0 ? min(1.0, $free / $cargo->total()) : 0;
             $loot = new Resources();
             foreach ($preys as $prey) {
@@ -219,7 +224,7 @@ final readonly class CombatService
                 $prey->setCargo($prey->getCargo()->subtract($part));
                 $loot = $loot->add($part);
             }
-            $where = $this->depositAtStart($hunter, $loot);
+            $where = $this->loadLoot($hunter, $loot);
             $outcome[] = t('Erbeutet: {loot} – {where}.', ['{loot}' => $this->describe($loot), '{where}' => $where]);
             $taken = [self::lootEntry($hunter->getOwner(), $loot)];
         }
@@ -259,7 +264,7 @@ final readonly class CombatService
         $available = Resources::fromCallback(static fn (ResourceType $t): float => max(0, floor($target->getResources()->get($t) - $protected)));
         $space = [];
         foreach ($attackers as $i => $fleet) {
-            $space[$i] = $fleet->hasShips() ? $this->lootCapacity($fleet) : 0;
+            $space[$i] = $fleet->hasShips() ? max(0, $this->lootCapacity($fleet) - $fleet->getCargo()->total()) : 0;
         }
         $free = array_sum($space);
         $share = $available->total() > 0 ? min(1.0, $free / $available->total()) : 0;
@@ -270,13 +275,13 @@ final readonly class CombatService
                 continue;
             }
             $part = $loot->multiply($space[$i] / $free)->floor();
-            $where = $this->depositAtStart($fleet, $part);
+            $where = $this->loadLoot($fleet, $part);
             $taken = $taken->add($part);
             $takenBy[] = self::lootEntry($fleet->getOwner(), $part);
             if (\count($attackers) > 1) {
                 $lines[] = t('Beute von {player}: {value} – {where}.', ['{player}' => $fleet->getOwner()->getUsername(), '{value}' => $this->describe($part), '{where}' => $where]);
             } else {
-                $lines[] = t('Die Bergungsschiffe haben die Beute zum Startplaneten gebracht – {where}.', ['{where}' => $where]);
+                $lines[] = t('Die Beute ist an Bord der Bergungsschiffe – {where}.', ['{where}' => $where]);
             }
         }
         $target->setResources($target->getResources()->subtract($taken));
@@ -449,18 +454,18 @@ final readonly class CombatService
      * Salvage ships never carry anything: loot and debris land at once in the storage of the
      * planet the fleet started from – even if it belongs to another player.
      */
-    private function depositAtStart(Fleet $fleet, Resources $resources): TranslatableInterface
+    /**
+     * Loot goes on board of the salvage ships: they bring it home to their start planet, where it
+     * goes into storage on landing – until then it travels openly and can be raided.
+     */
+    private function loadLoot(Fleet $fleet, Resources $resources): TranslatableInterface
     {
         if ($resources->total() < 1) {
             return t('nichts erbeutet');
         }
-        $start = $this->planetRepository?->findAt($fleet->getGalaxy(), $fleet->getSystem(), $fleet->getPosition());
-        if (null === $start) {
-            return t('am Startort steht kein Planet, die Rohstoffe sind verloren');
-        }
-        $start->setResources($start->getResources()->add($resources));
+        $fleet->setCargo($fleet->getCargo()->add($resources));
 
-        return t('abgeliefert auf {name} [{coords}]', ['{name}' => $start->getName(), '{coords}' => $start->getCoordinates()]);
+        return t('an Bord der Bergungsschiffe, sie bringen sie zum Startplaneten');
     }
 
     /** Warfleets carry their loot in salvage ships – freighters don't fly with them. */

@@ -239,7 +239,7 @@ class FusionCombatTest extends TestCase
     }
 
     /** @param array<string, int> $ships */
-    public function testSalvageShipsBringTheLootStraightToTheStartPlanet(): void
+    public function testSalvageShipsCarryTheLootHome(): void
     {
         $planet = new Planet($this->defender, 'Speicher', 1, 1, 5, $this->now);
         $planet->setResources(new Resources(iron: 500000, titanium: 500000));
@@ -250,8 +250,9 @@ class FusionCombatTest extends TestCase
         self::assertSame($before, $this->startPlanet->getResources()->total(), 'no salvage ship, no loot');
 
         $withSalvager = $this->attack($planet, ['leviathan' => 1, 'salvager' => 2]);
-        self::assertSame(0.0, $withSalvager->getCargo()->total(), 'salvagers never carry anything');
-        self::assertEqualsWithDelta($before + 2 * ShipType::Salvager->salvageCapacity(), $this->startPlanet->getResources()->total(), 2, 'the loot is at the start planet');
+        self::assertEqualsWithDelta(2 * ShipType::Salvager->salvageCapacity(), $withSalvager->getCargo()->total(), 2, 'the loot is on board – it can be raided on the way home');
+        self::assertSame($before, $this->startPlanet->getResources()->total(), 'nothing arrives at the start planet before the fleet');
+        self::assertTrue(\App\Game\Radar::isRaidable($withSalvager), 'returning with loot: raidable');
 
         self::assertNotNull(\App\Game\FleetService::freightersInWarfleet(['pfeil' => 5, 'large_freighter' => 1]));
         self::assertNull(\App\Game\FleetService::freightersInWarfleet(['pfeil' => 5, 'salvager' => 1]));
@@ -291,7 +292,8 @@ class FusionCombatTest extends TestCase
 
         self::assertStringContainsString('Im Konvoi flogen gemeinsam: Karawane (verteidiger), Geleit (verteidiger)', $this->report());
         self::assertLessThan(20, $hunter->getShipCount(ShipType::Falke), 'the escort fires back');
-        self::assertSame(30000.0, $freighters->getCargo()->iron, 'the cargo is saved');
+        self::assertSame(0.0, $hunter->getCargo()->total(), 'the raid was beaten off: no loot');
+        self::assertSame($freighters->hasShips() ? 30000.0 : 0.0, $freighters->getCargo()->iron, 'surviving holds keep their cargo, destroyed ones lose it');
     }
 
     /** @param list<Fleet> $joiners */
