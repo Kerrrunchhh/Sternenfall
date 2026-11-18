@@ -5,7 +5,7 @@
 
 {% block content %}
     <h1>{{ '🛡 Spielerprotokoll'|trans }}</h1>
-    <p class="muted small">{{ 'Flottenbefehle, Lieferungen, Handel, Zahlungen und Kämpfe der letzten {days} Tage – für den Verdacht auf Cheating. Jede Einsicht wird selbst protokolliert.'|trans({'{days}': keep_days}) }}</p>
+    <p class="muted small">{{ 'Flottenbefehle, Lieferungen, Handel, Zahlungen und Kämpfe der letzten {days} Tage – nur Spielinhalte, keine IP-Adressen. Für den Verdacht auf Cheating; jede Einsicht und jeder Download wird selbst protokolliert. Heruntergeladene Fälle nur so lange aufheben, wie der Fall läuft.'|trans({'{days}': keep_days}) }}</p>
     <form method="get" action="{{ path('app_admin_action_log') }}" class="panel inline-action admin-user-search">
         <input type="text" name="player" value="{{ query.player }}" required placeholder="{{ 'Spieler'|trans }}" aria-label="{{ 'Spieler'|trans }}">
         <input type="text" name="with" value="{{ query.with }}" placeholder="{{ 'nur mit Spieler (optional)'|trans }}" aria-label="{{ 'nur mit Spieler'|trans }}">
@@ -19,6 +19,7 @@
     {% if subject %}
         <section class="panel">
             <h2>{{ subject.username }}{% if with %} ↔ {{ with.username }}{% endif %} <small class="muted">{{ (entries|length == 1 ? '1 Eintrag' : '{count} Einträge')|trans({'{count}': entries|length}) }}</small></h2>
+            {% if entries is not empty %}<p><a class="btn btn-small btn-secondary" id="action-log-csv" href="{{ path('app_admin_action_log_csv', {player: subject.username, with: with ? with.username : null, kind: kind}|filter(v => v is not null)) }}">⬇ {{ 'Als CSV herunterladen'|trans }}</a></p>{% endif %}
             {% if entries is empty %}
                 <p class="muted">{{ 'Keine Einträge.'|trans }}</p>
             {% else %}
@@ -40,20 +41,5 @@
                 </div>
             {% endif %}
         </section>
-        {% if logins is not empty %}
-            <section class="panel">
-                <h2>{{ 'Anmeldungen'|trans }} <small class="muted">{{ logins|length }}</small></h2>
-                <div class="table-scroll">
-                    <table class="table">
-                        <thead><tr><th>{{ 'Zeit'|trans }}</th><th>{{ 'IP'|trans }}</th><th>{{ 'Gerät'|trans }}</th><th>{{ 'Browser'|trans }}</th></tr></thead>
-                        <tbody>
-                            {% for l in logins %}
-                                <tr><td class="small nowrap">{{ l.createdAt|date('d.m. H:i') }}</td><td class="small">{{ l.ip }}</td><td class="small">{{ l.fingerprint ? l.fingerprint|slice(0, 10) : '–' }}</td><td class="small muted">{{ l.userAgent|slice(0, 90) }}</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-        {% endif %}
     {% endif %}
 {% endblock %}
