@@ -246,6 +246,22 @@ final class GuestFleetTest extends TestCase
         self::assertStringContainsString('Besuch: Transport von [1:20:3] nach [1:21:1] (Nachbar von gastgeber) · Schiffe: 10 Falke', $entries[0]->getText());
     }
 
+    public function testAFleetOfTheGroupStartingAMomentLaterStillJoinsTheLead(): void
+    {
+        $this->place(new Planet($this->guest, 'Ziel', 1, 21, 1, $this->now));
+        $this->planets['1:10:1']->setResources(new Resources(hydrogen: 100000, food: 100000, water: 100000));
+        $navigation = new Navigation(new Economy(1.0));
+        $seconds = $navigation->flightSeconds($navigation->distance(1, 10, 1, 1, 21, 1), $navigation->slowestSpeed(['falke' => 5], $this->guest));
+        // The leading fleet of the group started two seconds earlier, at the same speed.
+        $lead = new Fleet($this->guest, 'HR_01', 1, 10, 1, ['falke' => 5]);
+        $lead->depart(FleetMission::TransportStation, 1, 21, 1, $this->now->modify('-2 seconds'), $seconds);
+        $second = new Fleet($this->guest, 'HR_02', 1, 10, 1, ['falke' => 5]);
+
+        $this->service()->sendFleet($second, $this->guest, 1, 21, 1, FleetMission::TransportStation, new Resources(), lead: $lead);
+
+        self::assertEquals($lead->getArriveAt(), $second->getArriveAt(), 'it joins and arrives together with the lead');
+    }
+
     private function ally(): void
     {
         $alliance = new Alliance('Bund', 'BND', $this->guest->getLifeForm(), $this->now);

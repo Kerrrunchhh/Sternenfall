@@ -80,6 +80,12 @@ final readonly class FleetService
         ));
     }
 
+    /**
+     * Fleets of a group start one after the other (milliseconds to a few seconds apart): one that
+     * would arrive at most this much after the leading fleet still joins it and arrives with it.
+     */
+    public const int JOIN_TOLERANCE_SECONDS = 5;
+
     /** Missions several fleets can fly together, arriving at the same time. */
     public const array GROUP_MISSIONS = [FleetMission::Attack, FleetMission::Transport, FleetMission::TransportStation];
 
@@ -218,7 +224,7 @@ final readonly class FleetService
                 $ships = $fleet->getShips();
                 $distance = $this->navigation->distance($fleet->getGalaxy(), $fleet->getSystem(), $fleet->getPosition(), $galaxy, $system, $position);
                 $seconds = $this->navigation->flightSeconds($distance, $this->navigation->slowestSpeed($ships, $fleet->getOwner()), $speedPercent);
-                if (null !== $lead && $this->now()->modify("+{$seconds} seconds") > $lead->getArriveAt()) {
+                if (null !== $lead && $this->now()->modify("+{$seconds} seconds")->getTimestamp() > $lead->getArriveAt()->getTimestamp() + self::JOIN_TOLERANCE_SECONDS) {
                     throw new GameException(t('Zu langsam: {label} ist {value} am Ziel.', ['{label}' => $lead->getLabel(), '{value}' => $this->localTime($lead->getArriveAt())]));
                 }
                 $oneWay = $mission->isOneWay($fleet->isNamed());
@@ -785,7 +791,7 @@ final readonly class FleetService
             $launch = function (?Planet $base, \DateTimeImmutable $now, ?Planet $host = null) use ($fleet, $mission, $galaxy, $system, $position, $cargo, $order, $speedPercent, $lead): void {
                 $this->launch($fleet, $base, $mission, $galaxy, $system, $position, $cargo, $now, $order, $speedPercent, $host);
                 if (null !== $lead) {
-                    if ($fleet->getArriveAt() > $lead->getArriveAt()) {
+                    if ($fleet->getArriveAt()->getTimestamp() > $lead->getArriveAt()->getTimestamp() + self::JOIN_TOLERANCE_SECONDS) {
                         throw new GameException(t('Zu langsam: {label} käme erst {value} an, {label2} ist {value2} dort.', ['{label}' => $fleet->getLabel(), '{value}' => $this->localTime($fleet->getArriveAt()), '{label2}' => $lead->getLabel(), '{value2}' => $this->localTime($lead->getArriveAt())]));
                     }
                     $fleet->arriveTogetherWith($lead);
