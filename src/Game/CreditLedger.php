@@ -57,10 +57,9 @@ final readonly class CreditLedger
         $player = null !== $counterparty && !$counterparty->isSystem() && !$counterparty->isSameAs($user) ? $counterparty : null;
         $name = $counterpartyName ?? (null !== $counterparty && $counterparty->isSystem() ? $counterparty->getUsername() : null);
         $this->em->persist(new CreditBooking($user, round($amount, 2), $kind, $player, $name, mb_substr(trim($purpose), 0, 1000), $post, array_filter($goods), $this->now()));
+        // Old bookings go now and then (a cheap indexed delete).
         if (1 === random_int(1, 200)) {
-            $this->em->createQuery('DELETE FROM '.CreditBooking::class.' b WHERE b.createdAt < :before')
-                ->setParameter('before', $this->now()->modify('-'.self::KEEP_DAYS.' days'))
-                ->execute();
+            $this->em->getConnection()->executeStatement('DELETE FROM credit_booking WHERE created_at < ?', [$this->now()->modify('-'.self::KEEP_DAYS.' days')->format('Y-m-d H:i:s')]);
         }
     }
 

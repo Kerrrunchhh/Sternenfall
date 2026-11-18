@@ -54,7 +54,8 @@ class CreditTransferTest extends TestCase
         self::assertSame([$payer, $receiver], [$bookings[0]->getUser(), $bookings[1]->getUser()]);
         self::assertSame('Danke für die Hilfe!', $bookings[1]->getPurpose());
         self::assertSame($payer, $bookings[1]->getCounterparty());
-        self::assertSame([[300, 2]], array_map(static fn (array $s): array => $s[1], $this->statements), 'credited in one statement');
+        $credits = array_values(array_filter($this->statements, static fn (array $s): bool => str_starts_with($s[0], 'UPDATE `user`')));
+        self::assertSame([[300, 2]], array_map(static fn (array $s): array => $s[1], $credits), 'credited in one statement');
         $message = array_values(array_filter($this->persisted, static fn (object $o): bool => $o instanceof Message))[0];
         self::assertSame($receiver, $message->getRecipient());
         self::assertStringContainsString('zahler', $message->getSubject());
@@ -125,7 +126,10 @@ class CreditTransferTest extends TestCase
         $connection = $this->createStub(Connection::class);
         $connection->method('fetchOne')->willReturn(0);
         $connection->method('executeStatement')->willReturnCallback(function (string $sql, array $params): int {
-            $this->statements[] = [$sql, $params];
+            // The occasional pruning of old log entries is no payment.
+            if (!str_starts_with($sql, 'DELETE')) {
+                $this->statements[] = [$sql, $params];
+            }
 
             return 1;
         });

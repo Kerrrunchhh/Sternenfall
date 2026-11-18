@@ -57,9 +57,7 @@ final readonly class ActionLog
     /** Deletes entries older than KEEP_DAYS. */
     public function prune(): int
     {
-        return $this->em->createQuery('DELETE FROM '.ActionLogEntry::class.' e WHERE e.createdAt < :before')
-            ->setParameter('before', $this->now()->modify('-'.self::KEEP_DAYS.' days'))
-            ->execute();
+        return (int) $this->em->getConnection()->executeStatement('DELETE FROM action_log_entry WHERE created_at < ?', [$this->now()->modify('-'.self::KEEP_DAYS.' days')->format('Y-m-d H:i:s')]);
     }
 
     /**
