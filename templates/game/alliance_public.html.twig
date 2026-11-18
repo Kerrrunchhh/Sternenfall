@@ -5,7 +5,7 @@
 
 {% block content %}
     <section class="panel profile">
-        {{ ui.picture(alliance.image, 'alliances', alliance.name) }}
+        {{ ui.picture(alliance.image, 'alliances', alliance.name, 'xlarge') }}
         <div class="profile-info">
             <h1>{{ alliance.name }} <small>[{{ alliance.tag }}]</small></h1>
             <p class="muted">{{ (alliance.members|length == 1 ? '{type} · {count} Mitglied · gegründet {createdAt}' : '{type} · {count} Mitglieder · gegründet {createdAt}')|trans({'{type}': alliance.type|trans, '{count}': alliance.members|length, '{createdAt}': alliance.createdAt|date('d.m.Y')}) }}</p>

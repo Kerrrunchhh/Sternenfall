@@ -345,7 +345,7 @@
 "Beziehungen von {name}": "Relations of {name}"
 "Biete Credits für den <strong>Schutz</strong> eines deiner Planeten (der Auftragnehmer darf dort so lange Schiffe stationieren) oder für eine <strong>Invasion</strong> (ist das Ziel eine Fusion, muss sie zuerst gesprengt und dann der oberste Planet invadiert werden). Die Belohnung wird beim Anlegen verwahrt und nur bei Erfolg ausgezahlt – sonst bekommst du sie zurück.": "Offer credits for the <strong>protection</strong> of one of your planets (the contractor may station ships there for that long) or for an <strong>invasion</strong> (if the target is a fusion, it must be blown apart first and then the top planet invaded). The reward is held in escrow when you create the contract and only paid out on success – otherwise you get it back."
 "Bilanz": "Balance"
-"Bild (JPEG, PNG, WebP oder GIF, max. 2 MB – wird auf 400 × 400 Pixel verkleinert)": "Picture (JPEG, PNG, WebP or GIF, max. 2 MB – resized to 400 × 400 pixels)"
+"Bild (JPEG, PNG, WebP oder GIF, max. 2 MB – wird auf höchstens 800 × 800 Pixel verkleinert)": "Picture (JPEG, PNG, WebP or GIF, max. 2 MB – resized to at most 800 × 800 pixels)"
 "Bild (JPEG, PNG, WebP oder GIF, max. 2 MB)": "Picture (JPEG, PNG, WebP or GIF, max. 2 MB)"
 "Bild entfernen": "Remove picture"
 "Biozelle": "Bio cell"

@@ -12,14 +12,14 @@ use function Symfony\Component\Translation\t;
 /**
  * Stores uploaded pictures for player profiles and alliances.
  *
- * Every upload is validated, decoded and re-encoded with GD (max 400×400, WebP):
+ * Every upload is validated, decoded and re-encoded with GD (max 800×800, WebP):
  * that strips metadata and anything hidden in the original file. Files live
  * outside the web root and are delivered by MediaController.
  */
 final readonly class ImageStore
 {
     public const array KINDS = ['avatars', 'alliances'];
-    public const int MAX_SIZE = 400;
+    public const int MAX_SIZE = 800;
 
     public function __construct(
         private ValidatorInterface $validator,

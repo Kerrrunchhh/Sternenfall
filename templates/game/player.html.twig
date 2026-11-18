@@ -148,7 +148,7 @@
                 <input type="hidden" name="_token" value="{{ csrf_token('profile') }}">
                 <label for="profile-text">{{ 'Über dich (sehen alle, die auf deinen Namen klicken)'|trans }}</label>
                 <textarea id="profile-text" name="text" rows="6" maxlength="5000">{{ profile.profileText }}</textarea>
-                <label for="profile-image">{{ 'Bild (JPEG, PNG, WebP oder GIF, max. 2 MB – wird auf 400 × 400 Pixel verkleinert)'|trans }}</label>
+                <label for="profile-image">{{ 'Bild (JPEG, PNG, WebP oder GIF, max. 2 MB – wird auf höchstens 800 × 800 Pixel verkleinert)'|trans }}</label>
                 <input id="profile-image" type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif">
                 {% if profile.avatar %}
                     <label class="checkbox"><input type="checkbox" name="remove_image" value="1"> {{ 'Bild entfernen'|trans }}</label>

@@ -473,6 +473,7 @@ form.inline { display: inline; }
 .profile-info h2 { margin: .5rem 0 .3rem; }
 .picture { border-radius: 8px; border: 1px solid var(--border); object-fit: cover; flex-shrink: 0; }
 .picture-large { width: 160px; height: 160px; }
+.picture-xlarge { width: 240px; height: 240px; max-width: 100%; font-size: 5rem; }
 .picture-empty { display: flex; align-items: center; justify-content: center; font-size: 3.5rem; color: var(--muted); background: var(--bg-2); }
 input[type=file] { color: var(--muted); font-size: .9rem; }
 label.checkbox { display: flex; gap: .4rem; align-items: center; color: var(--text); }

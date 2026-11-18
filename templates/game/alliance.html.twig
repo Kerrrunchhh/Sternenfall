@@ -15,7 +15,7 @@
         <button class="btn btn-small btn-secondary" type="submit" id="alliance-deposit" title="{{ 'Aus deinem Kontostand in die Allianzkasse. Auszahlen kann nur der Gründer.'|trans }}">{{ 'In die Allianzkasse einzahlen'|trans }}</button>
     </form>
     <section class="panel profile">
-        {{ ui.picture(alliance.image, 'alliances', alliance.name) }}
+        {{ ui.picture(alliance.image, 'alliances', alliance.name, 'xlarge') }}
         <div class="profile-info">
             {% if rank.canSeeBoard %}
                 <h2>{{ 'Intern'|trans }}</h2>
