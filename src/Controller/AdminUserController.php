@@ -52,7 +52,7 @@ class AdminUserController extends AbstractGameController
 
     #[Route('/admin/benutzer/{id}', name: 'app_admin_user', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('admin_users', tokenKey: '_token')]
-    public function act(User $user, Request $request, EntityManagerInterface $em, VacationService $vacations, Inbox $inbox, AccountDeletion $deletion, AccountDeactivation $deactivation, \App\Game\AccountRename $rename): Response
+    public function act(User $user, Request $request, EntityManagerInterface $em, VacationService $vacations, Inbox $inbox, AccountDeletion $deletion, AccountDeactivation $deactivation, \App\Game\AccountRename $rename, \App\Game\LifeFormService $lifeForms): Response
     {
         $this->currentPlanet();
         $form = $request->request;
@@ -77,6 +77,15 @@ class AdminUserController extends AbstractGameController
                     $this->addFlash('success', t('{old} heißt jetzt {player}.', ['{old}' => $old, '{player}' => $user->getUsername()]));
                     // Search for the new name, so the account stays in view.
                     $form->set('q', $user->getUsername());
+                    break;
+                case 'lifeform':
+                    $lifeForm = \App\Game\LifeForm::tryFrom($form->getString('lifeform')) ?? throw new GameException(t('Unbekannte Lebensform.'));
+                    $planet = $user->getPlanets()->first();
+                    if (!$planet instanceof \App\Entity\Planet) {
+                        throw new GameException(t('{player} hat keinen Planeten.', ['{player}' => $user->getUsername()]));
+                    }
+                    $lifeForms->change($planet, $lifeForm, $admin);
+                    $this->addFlash('success', t('{player} gehört jetzt zu den {lifeForm}.', ['{player}' => $user->getUsername(), '{lifeForm}' => t($lifeForm->label())]));
                     break;
                 case 'vacation':
                     $reason = trim($form->getString('reason'));

@@ -31,24 +31,32 @@ final readonly class LifeFormService
      * Takes the fleet event lock first (trade post stock is changed by fleet
      * arrivals), then the player lock, like every other fleet-related operation.
      */
-    public function change(Planet $planet, LifeForm $lifeForm): void
+    /**
+     * $admin: the game team changes it (corrections) – no hero point rules and no cooldown, and the
+     * player's own 30 days are not restarted; he gets a message. Alliances still hold one life form.
+     */
+    public function change(Planet $planet, LifeForm $lifeForm, ?\App\Entity\User $admin = null): void
     {
         $lock = $this->lockFactory->createLock('fleet_events');
         $lock->acquire(true);
         try {
-            $this->planets->transaction($planet, function (Planet $planet, \DateTimeImmutable $now) use ($lifeForm): void {
+            $this->planets->transaction($planet, function (Planet $planet, \DateTimeImmutable $now) use ($lifeForm, $admin): void {
                 $player = $planet->getOwner();
                 if ($player->getLifeForm() === $lifeForm) {
-                    throw new GameException(t('Du gehörst bereits zu den {lifeForm}.', ['{lifeForm}' => t($lifeForm->label())]));
+                    throw new GameException(null !== $admin
+                        ? t('{player} gehört bereits zu den {lifeForm}.', ['{player}' => $player->getUsername(), '{lifeForm}' => t($lifeForm->label())])
+                        : t('Du gehörst bereits zu den {lifeForm}.', ['{lifeForm}' => t($lifeForm->label())]));
                 }
                 // An alliance only has players of one life form.
                 if (null !== $alliance = $player->getAlliance()) {
-                    throw new GameException(t('Du bist in „{name}“ ({type}) – dort sind nur {label}. Tritt erst aus, dann kannst du die Lebensform wechseln.', ['{name}' => $alliance->getName(), '{type}' => $alliance->getType(), '{label}' => t($alliance->getLifeForm()->label())]));
+                    throw new GameException(null !== $admin
+                        ? t('{player} ist in „{name}“ ({type}) – dort sind nur {label}. Er muss erst austreten (oder entfernt werden).', ['{player}' => $player->getUsername(), '{name}' => $alliance->getName(), '{type}' => $alliance->getType(), '{label}' => t($alliance->getLifeForm()->label())])
+                        : t('Du bist in „{name}“ ({type}) – dort sind nur {label}. Tritt erst aus, dann kannst du die Lebensform wechseln.', ['{name}' => $alliance->getName(), '{type}' => $alliance->getType(), '{label}' => t($alliance->getLifeForm()->label())]));
                 }
-                if (null !== $refusal = HeroPoints::lifeFormChangeRefusal($player->getLifeForm(), $lifeForm, $player->getHeroPoints($now))) {
+                if (null === $admin && null !== $refusal = HeroPoints::lifeFormChangeRefusal($player->getLifeForm(), $lifeForm, $player->getHeroPoints($now))) {
                     throw new GameException($refusal);
                 }
-                if ($player->getNextLifeFormChangeAt() > $now) {
+                if (null === $admin && $player->getNextLifeFormChangeAt() > $now) {
                     throw new GameException(t('Ein Wechsel ist erst ab {value} möglich.', ['{value}' => new When($player->getNextLifeFormChangeAt())]));
                 }
 
@@ -67,6 +75,13 @@ final readonly class LifeFormService
                     }
                 }
 
+                if (null !== $admin) {
+                    $old = $player->getLifeForm();
+                    $player->changeLifeForm($lifeForm, $player->getLifeFormSince());
+                    $this->inbox->send($player, t('Deine Lebensform wurde geändert'), t('Die Spielleitung hat deine Lebensform von {old} auf {new} geändert. Deine eigene Wechselfrist läuft unverändert weiter.', ['{old}' => t($old->label()), '{new}' => t($lifeForm->label())]));
+
+                    return;
+                }
                 $player->changeLifeForm($lifeForm, $now);
             });
         } finally {
