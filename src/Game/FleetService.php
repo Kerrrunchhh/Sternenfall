@@ -221,7 +221,9 @@ final readonly class FleetService
                     throw new GameException(t('Zu langsam: {label} ist {value} am Ziel.', ['{label}' => $lead->getLabel(), '{value}' => $this->localTime($lead->getArriveAt())]));
                 }
                 $oneWay = $mission->isOneWay($fleet->isNamed());
-                $travel = $this->navigation->supplies($ships, $seconds, $oneWay)->add(new Resources(hydrogen: $this->navigation->fuel($ships, $distance, $oneWay, $speedPercent)));
+                // Worst case of the ±5 % scatter, so no fleet of the group fails at the start.
+                $travel = $this->navigation->supplies($ships, $seconds, $oneWay)->add(new Resources(hydrogen: $this->navigation->fuel($ships, $distance, $oneWay, $speedPercent)))
+                    ->multiply(1 + Navigation::CONSUMPTION_SPREAD)->ceil();
                 $base = $this->ownPlanetAt($fleet);
                 if (null !== $base) {
                     $needed = ($loads[spl_object_id($fleet)] ?? new Resources())->add($travel);
@@ -976,8 +978,8 @@ final readonly class FleetService
                             continue;
                         }
 
-                        $needed = $this->navigation->supplies($ships, $seconds, oneWay: true)
-                            ->add(new Resources(hydrogen: $this->navigation->fuel($ships, $distance, oneWay: true)));
+                        $needed = Navigation::vary($this->navigation->supplies($ships, $seconds, oneWay: true)
+                            ->add(new Resources(hydrogen: $this->navigation->fuel($ships, $distance, oneWay: true))));
                         if (!$planet->getResources()->covers($needed)) {
                             $report[] = t('{count} × {type} auf {name}: nicht genug Treibstoff oder Proviant', ['{count}' => $count, '{type}' => t($type->label()), '{name}' => $planet->getName()]);
                             continue;
@@ -1476,9 +1478,9 @@ final readonly class FleetService
         }
         // Fleets that stay at the target (and probes, which burn up) pay for one way only.
         $oneWay = $mission->isOneWay($fleet->isNamed());
-        $fuel = $this->navigation->fuel($ships, $distance, $oneWay, $speedPercent);
-        $supplies = $this->navigation->supplies($ships, $seconds, $oneWay);
-        $travel = $supplies->add(new Resources(hydrogen: $fuel));
+        // Varied by up to ±5 % – the consumption must not reveal where the fleet flies.
+        $travel = Navigation::vary($this->navigation->supplies($ships, $seconds, $oneWay)->add(new Resources(hydrogen: $this->navigation->fuel($ships, $distance, $oneWay, $speedPercent))));
+        [$fuel, $supplies] = [$travel->hydrogen, $travel];
         $missing = t('Treibstoff ({fuel} Wasserstoff) und Proviant ({food} Nahrung, {water} Wasser)', ['{fuel}' => new Num($fuel), '{food}' => new Num($supplies->food), '{water}' => new Num($supplies->water)]);
 
         // Leaving a trade post costs nothing: the post fuels and provisions departing fleets.

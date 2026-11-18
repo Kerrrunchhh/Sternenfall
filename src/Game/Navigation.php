@@ -69,6 +69,20 @@ final readonly class Navigation
         return max(5, (int) round(3600 * $distance / $effective / $this->economy->speed()));
     }
 
+    /**
+     * Actual consumption scatters by up to this share either way (each resource on its own), so
+     * the fuel and provisions a planet loses don't give the target away.
+     */
+    public const float CONSUMPTION_SPREAD = 0.05;
+
+    /** Fuel and provisions as actually used: the computed amounts, each varied by ±CONSUMPTION_SPREAD. */
+    public static function vary(Resources $consumption): Resources
+    {
+        return Resources::fromCallback(static fn (\App\Game\ResourceType $type): float => ceil(
+            $consumption->get($type) * (1 + random_int(-1000, 1000) / 1000 * self::CONSUMPTION_SPREAD),
+        ));
+    }
+
     public static function clampPercent(float $percent): float
     {
         return max(self::MIN_SPEED_PERCENT, min(self::MAX_SPEED_PERCENT, $percent));

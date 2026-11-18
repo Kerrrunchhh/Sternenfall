@@ -1374,7 +1374,7 @@ const orbit = (() => {
                 // Consumption like Navigation::fuel and the crew's food and water on the way (there and back).
                 const hydrogen = 2 * fuel * (1 + d / 10000) * percent / 100;
                 const hours = 2 * secs / 3600;
-                calculator.querySelector('[data-calc-out="fleet"]').textContent = t('Tempo {speed} ({ship}) · hin {there} · hin und zurück {both} · Verbrauch hin und zurück: {hydrogen} Wasserstoff, {food} Nahrung, {water} Wasser', {
+                calculator.querySelector('[data-calc-out="fleet"]').textContent = t('Tempo {speed} ({ship}) · hin {there} · hin und zurück {both} · Verbrauch hin und zurück (±5 %): {hydrogen} Wasserstoff, {food} Nahrung, {water} Wasser', {
                     speed: num(own[slowest.type]),
                     ship: slowest.label,
                     there: duration(secs),
@@ -1436,7 +1436,7 @@ const orbit = (() => {
                 const hours = legs * seconds / 3600;
                 const food = crew * (parseFloat(form.dataset.foodPerCrew) || 0) * gameSpeed * hours;
                 const water = crew * (parseFloat(form.dataset.waterPerCrew) || 0) * gameSpeed * hours;
-                text += '\n' + t(oneWay ? 'Verbrauch für den Hinflug: {hydrogen} Wasserstoff · {food} Nahrung · {water} Wasser' : 'Verbrauch hin und zurück: {hydrogen} Wasserstoff · {food} Nahrung · {water} Wasser', { hydrogen: fmt(hydrogen), food: fmt(food), water: fmt(water) });
+                text += '\n' + t(oneWay ? 'Verbrauch für den Hinflug (±5 %): {hydrogen} Wasserstoff · {food} Nahrung · {water} Wasser' : 'Verbrauch hin und zurück (±5 %): {hydrogen} Wasserstoff · {food} Nahrung · {water} Wasser', { hydrogen: fmt(hydrogen), food: fmt(food), water: fmt(water) });
             }
             preview.textContent = text;
         };

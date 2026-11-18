@@ -182,13 +182,15 @@ final readonly class TradeService
             }
 
             $plan = $this->sendAwayPlan($fleet) ?? throw new GameException(t('Der Besitzer dieser Flotte hat keinen Heimatplaneten.'));
-            foreach ($plan['cost']->toArray() as $good => $amount) {
+            // The actual consumption scatters by ±5 % like every departure (Navigation::vary).
+            $cost = Navigation::vary($plan['cost']);
+            foreach ($cost->toArray() as $good => $amount) {
                 if ($post->getStock($good) < $amount) {
-                    throw new GameException(t('Im Lager fehlt Treibstoff oder Proviant: benötigt {hydrogen} Wasserstoff, {food} Nahrung, {water} Wasser. Die Flotte bleibt stehen.', ['{hydrogen}' => new Num($plan['cost']->hydrogen), '{food}' => new Num($plan['cost']->food), '{water}' => new Num($plan['cost']->water)]));
+                    throw new GameException(t('Im Lager fehlt Treibstoff oder Proviant: benötigt {hydrogen} Wasserstoff, {food} Nahrung, {water} Wasser. Die Flotte bleibt stehen.', ['{hydrogen}' => new Num($cost->hydrogen), '{food}' => new Num($cost->food), '{water}' => new Num($cost->water)]));
                 }
             }
-            $this->asPlayer($actor, static function () use ($post, $plan): void {
-                foreach ($plan['cost']->toArray() as $good => $amount) {
+            $this->asPlayer($actor, static function () use ($post, $cost): void {
+                foreach ($cost->toArray() as $good => $amount) {
                     if ($amount > 0) {
                         $post->addStock($good, -$amount);
                     }
