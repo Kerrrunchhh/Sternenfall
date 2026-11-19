@@ -15,47 +15,6 @@
         <span class="muted small galaxy-keys-hint">{{ 'Tastatur: ←/→ oder A/D wechseln das System, ↑/↓ oder W/S die Galaxie.'|trans }}</span>
     </form>
 
-    {# The universe map: the galaxies circle the centre of the universe; flights between them depend on where they are (App\Game\Orbit). #}
-    <section class="panel universe-map" id="universumskarte" data-fold="galaxy-universe">
-        <h2>{{ '🌌 Universum'|trans }}</h2>
-        <p class="muted small">{{ 'Die {galaxies} Galaxien umkreisen das Zentrum des Universums – innen schnell (90 Tage), außen langsam (365 Tage). Ein Flug in eine andere Galaxie ist kurz, wenn beide auf derselben Seite stehen, und lang, wenn das Zentrum dazwischen liegt.'|trans({'{galaxies}': galaxies}) }}</p>
-        <div class="galaxy-map-canvas">
-            <svg data-universe-map data-config="{{ universe_map|json_encode }}" viewBox="-105 -105 210 210" role="img" aria-label="{{ 'Grafische Universumskarte'|trans }}"></svg>
-        </div>
-        <div class="system-time small galaxy-map-time">
-            <button type="button" class="btn btn-small btn-secondary" data-universe-play aria-pressed="false">{{ '▶ Abspielen'|trans }}</button>
-            <label>{{ 'Zeit:'|trans }} <input type="range" min="0" max="365" step="1" value="0" data-universe-time aria-label="{{ 'Tage in die Zukunft'|trans }}"></label>
-            <output data-universe-time-label>{{ 'jetzt'|trans }}</output>
-        </div>
-        <p class="small galaxy-map-legend">
-            <span class="gm-key gm-key-own"></span> {{ 'deine Planeten'|trans }}
-            <span class="gm-key gm-key-current"></span> {{ 'angezeigte Galaxie'|trans }}
-        </p>
-        <p class="small galaxy-map-info" data-universe-map-info aria-live="polite">{{ 'Tippe auf eine Galaxie, um sie auszuwählen.'|trans }}</p>
-    </section>
-
-    {# The galaxy map: the systems on spiral arms; the galaxy turns as a whole and circles the centre of the universe (App\Game\Orbit). #}
-    <section class="panel galaxy-map" id="galaxiekarte" data-fold="galaxy-map">
-        <h2>{{ '🌀 Galaxie {galaxy}'|trans({'{galaxy}': galaxy}) }}</h2>
-        <p class="muted small">{{ 'Die {systems} Systeme liegen auf vier Spiralarmen. Die Galaxie dreht sich einmal in {spin} Tagen um ihr Zentrum – die Wege zwischen den Systemen bleiben dabei gleich. Sie selbst umkreist das Zentrum des Universums einmal in {orbit} Tagen: Flüge in andere Galaxien sind deshalb mal kürzer, mal länger.'|trans({'{systems}': systems, '{spin}': galaxy_spin_days, '{orbit}': galaxy_orbit_days}) }}</p>
-        <div class="galaxy-map-canvas">
-            <svg data-galaxy-map data-config="{{ galaxy_map|json_encode }}" viewBox="-105 -105 210 210" role="img" aria-label="{{ 'Grafische Galaxiekarte'|trans }}"></svg>
-        </div>
-        <div class="system-time small galaxy-map-time">
-            <button type="button" class="btn btn-small btn-secondary" data-galaxy-play aria-pressed="false">{{ '▶ Abspielen'|trans }}</button>
-            <label>{{ 'Zeit:'|trans }} <input type="range" min="0" max="{{ galaxy_spin_days * 24 }}" step="1" value="0" data-galaxy-time aria-label="{{ 'Stunden in die Zukunft'|trans }}"></label>
-            <output data-galaxy-time-label>{{ 'jetzt'|trans }}</output>
-        </div>
-        <p class="small galaxy-map-legend">
-            <span class="gm-key gm-key-own"></span> {{ 'deine Planeten'|trans }}
-            <span class="gm-key gm-key-alliance"></span> {{ 'Allianz'|trans }}
-            <span class="gm-key gm-key-guild"></span> {{ 'Handelsgilde'|trans }}
-            <span class="gm-key gm-key-occupied"></span> {{ 'bewohnt'|trans }}
-            <span class="gm-key gm-key-current"></span> {{ 'angezeigtes System'|trans }}
-        </p>
-        <p class="small galaxy-map-info" data-galaxy-map-info aria-live="polite">{{ 'Tippe auf die Karte, um ein System auszuwählen.'|trans }}</p>
-    </section>
-
     {# The planets circle their sun; flights within the system depend on where they are (App\Game\Orbit). #}
     <section class="panel system-view" id="systemansicht" data-fold="galaxy-system-view">
         <h2>{{ '☀ {sun} im System {galaxy}:{system}'|trans({'{sun}': sun.label|trans, '{galaxy}': galaxy, '{system}': system}) }}</h2>
@@ -203,5 +162,46 @@
             </tbody>
         </table>
         <p class="muted small galaxy-legend"><span class="legend-swatch legend-vacation"></span> {{ 'Im Urlaub'|trans }} <span class="legend-swatch legend-newbie"></span> {{ 'Noobschutz'|trans }} <span class="legend-swatch legend-inactive"></span> {{ 'Inaktiv (30 Tage)'|trans }} <span class="legend-swatch legend-criminal"></span> {{ 'Kriminell'|trans }} <span class="legend-swatch legend-trade"></span> {{ 'Handelsstützpunkt'|trans }}</p>
+    </section>
+
+    {# The galaxy map: the systems on spiral arms; the galaxy turns as a whole and circles the centre of the universe (App\Game\Orbit). #}
+    <section class="panel galaxy-map" id="galaxiekarte" data-fold="galaxy-map">
+        <h2>{{ '🌀 Galaxie {galaxy}'|trans({'{galaxy}': galaxy}) }}</h2>
+        <p class="muted small">{{ 'Die {systems} Systeme liegen auf vier Spiralarmen. Die Galaxie dreht sich einmal in {spin} Tagen um ihr Zentrum – die Wege zwischen den Systemen bleiben dabei gleich. Sie selbst umkreist das Zentrum des Universums einmal in {orbit} Tagen: Flüge in andere Galaxien sind deshalb mal kürzer, mal länger.'|trans({'{systems}': systems, '{spin}': galaxy_spin_days, '{orbit}': galaxy_orbit_days}) }}</p>
+        <div class="galaxy-map-canvas">
+            <svg data-galaxy-map data-config="{{ galaxy_map|json_encode }}" viewBox="-105 -105 210 210" role="img" aria-label="{{ 'Grafische Galaxiekarte'|trans }}"></svg>
+        </div>
+        <div class="system-time small galaxy-map-time">
+            <button type="button" class="btn btn-small btn-secondary" data-galaxy-play aria-pressed="false">{{ '▶ Abspielen'|trans }}</button>
+            <label>{{ 'Zeit:'|trans }} <input type="range" min="0" max="{{ galaxy_spin_days * 24 }}" step="1" value="0" data-galaxy-time aria-label="{{ 'Stunden in die Zukunft'|trans }}"></label>
+            <output data-galaxy-time-label>{{ 'jetzt'|trans }}</output>
+        </div>
+        <p class="small galaxy-map-legend">
+            <span class="gm-key gm-key-own"></span> {{ 'deine Planeten'|trans }}
+            <span class="gm-key gm-key-alliance"></span> {{ 'Allianz'|trans }}
+            <span class="gm-key gm-key-guild"></span> {{ 'Handelsgilde'|trans }}
+            <span class="gm-key gm-key-occupied"></span> {{ 'bewohnt'|trans }}
+            <span class="gm-key gm-key-current"></span> {{ 'angezeigtes System'|trans }}
+        </p>
+        <p class="small galaxy-map-info" data-galaxy-map-info aria-live="polite">{{ 'Tippe auf die Karte, um ein System auszuwählen.'|trans }}</p>
+    </section>
+
+    {# The universe map: the galaxies circle the centre of the universe; flights between them depend on where they are (App\Game\Orbit). #}
+    <section class="panel universe-map" id="universumskarte" data-fold="galaxy-universe">
+        <h2>{{ '🌌 Universum'|trans }}</h2>
+        <p class="muted small">{{ 'Die {galaxies} Galaxien umkreisen das Zentrum des Universums – innen schnell (90 Tage), außen langsam (365 Tage). Ein Flug in eine andere Galaxie ist kurz, wenn beide auf derselben Seite stehen, und lang, wenn das Zentrum dazwischen liegt.'|trans({'{galaxies}': galaxies}) }}</p>
+        <div class="galaxy-map-canvas">
+            <svg data-universe-map data-config="{{ universe_map|json_encode }}" viewBox="-105 -105 210 210" role="img" aria-label="{{ 'Grafische Universumskarte'|trans }}"></svg>
+        </div>
+        <div class="system-time small galaxy-map-time">
+            <button type="button" class="btn btn-small btn-secondary" data-universe-play aria-pressed="false">{{ '▶ Abspielen'|trans }}</button>
+            <label>{{ 'Zeit:'|trans }} <input type="range" min="0" max="365" step="1" value="0" data-universe-time aria-label="{{ 'Tage in die Zukunft'|trans }}"></label>
+            <output data-universe-time-label>{{ 'jetzt'|trans }}</output>
+        </div>
+        <p class="small galaxy-map-legend">
+            <span class="gm-key gm-key-own"></span> {{ 'deine Planeten'|trans }}
+            <span class="gm-key gm-key-current"></span> {{ 'angezeigte Galaxie'|trans }}
+        </p>
+        <p class="small galaxy-map-info" data-universe-map-info aria-live="polite">{{ 'Tippe auf eine Galaxie, um sie auszuwählen.'|trans }}</p>
     </section>
 {% endblock %}
