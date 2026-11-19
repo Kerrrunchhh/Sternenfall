@@ -2,20 +2,31 @@
 {% import 'game/_macros.html.twig' as ui %}
 
 {% macro ship_inputs(rows, prefix = 'ships') %}
+    <div data-ship-picker>
     <table class="table">
         <tr class="table-head"><td>{{ 'Schiff'|trans }}</td><td class="num">{{ 'Verfügbar'|trans }}</td><td class="num">{{ 'Anzahl'|trans }}</td></tr>
         {% for row in rows %}
+            {% set strength = ship_strength(row.type, app.user) %}
             <tr>
                 <td>{{ row.type.label|trans }}</td>
                 <td class="num">{{ row.count|num }}</td>
                 <td class="num">
                     <input type="number" name="{{ prefix }}[{{ row.type.value }}]" min="0" max="{{ row.count }}" value="0"
-                           aria-label="{{ 'Anzahl {label}'|trans({'{label}': row.type.label|trans}) }}" data-cargo="{{ row.type.cargo }}">
+                           aria-label="{{ 'Anzahl {label}'|trans({'{label}': row.type.label|trans}) }}" data-cargo="{{ row.type.cargo }}"
+                           data-attack="{{ strength.attack }}" data-defense="{{ strength.defense }}" data-shield="{{ strength.shield }}">
                     <button type="button" class="btn btn-small btn-secondary" data-fill-max="{{ row.count }}">{{ 'max'|trans }}</button>
                 </td>
             </tr>
         {% endfor %}
     </table>
+    {# Opens as soon as ships are picked: their number and fighting values added up (research included). #}
+    <p class="fleet-strength small" data-fleet-strength hidden aria-live="polite">
+        <span>{{ 'Schiffe'|trans }}: <strong data-sum="count">0</strong></span>
+        <span title="{{ 'Kampfwert beim Angreifen, Abfangen und Überfallen'|trans }}">⚔️ {{ 'Angriff'|trans }}: <strong data-sum="attack">0</strong></span>
+        <span title="{{ 'Kampfwert beim Verteidigen'|trans }}">🛡️ {{ 'Verteidigung'|trans }}: <strong data-sum="defense">0</strong></span>
+        <span>🔰 {{ 'Schild'|trans }}: <strong data-sum="shield">0</strong></span>
+    </p>
+    </div>
 {% endmacro %}
 
 {% macro target_inputs(target, missions, with_cargo, bookmarks = []) %}

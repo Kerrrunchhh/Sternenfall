@@ -15,6 +15,7 @@
 {% endmacro %}
 
 {% block body %}
+    {% set route = app.request.attributes.get('_route') %}
     <header class="topbar">
         <a class="logo-link" href="{{ path('app_overview') }}" title="{{ 'Zur Übersicht'|trans }}"><img class="logo-image" src="{{ asset('pictures/brand/logo-header.webp') }}" alt="{{ game_name }}" width="206" height="48"></a>
         <div class="resources">
@@ -57,7 +58,6 @@
             {% if player.alliance %}<a class="alliance-tag" href="{{ path('app_alliance_public', {id: player.alliance.id}) }}">[{{ player.alliance.tag }}]</a> {% endif %}<a href="{{ path('app_player', {id: player.id}) }}" title="{{ 'Dein Profil und Konto (Urlaub, E-Mail, erweiterter Account)'|trans }}">{{ player.lifeForm.icon }} {{ app.user.username }}</a> <span class="muted">({{ player.lifeForm.label|trans }})</span> · <a href="{{ path('app_logout') }}">{{ 'Abmelden'|trans }}</a>
         </div>
     </header>
-    {% set route = app.request.attributes.get('_route') %}
     {# Phones only: the most used pages of the Imperium menu at the top; "Menü" opens the whole menu (without JS it jumps down to it). #}
     <nav class="mobile-tabs" aria-label="{{ 'Schnellmenü'|trans }}">
         <a href="{{ path('app_fleet') }}" class="{{ route == 'app_fleet' ? 'active' }}"><span aria-hidden="true">🚀</span>{{ 'Flotten'|trans }}</a>

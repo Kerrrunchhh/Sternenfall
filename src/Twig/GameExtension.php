@@ -63,6 +63,22 @@ final class GameExtension
         return $until > new \DateTimeImmutable() ? $until : null;
     }
 
+    /**
+     * Fighting values of one ship of the type for the player (research included), for the
+     * strength box below the ship pickers.
+     *
+     * @return array{attack: int, defense: int, shield: int}
+     */
+    #[AsTwigFunction('ship_strength')]
+    public static function shipStrength(\App\Game\ShipType $type, \App\Entity\User $player): array
+    {
+        return [
+            'attack' => (int) round(\App\Game\ShipStats::attack($type, $player)),
+            'defense' => (int) round(\App\Game\ShipStats::defense($type, $player)),
+            'shield' => (int) round(\App\Game\ShipStats::shield($type, $player)),
+        ];
+    }
+
     /** Points of one planet (building levels × points rate). */
     #[AsTwigFunction('planet_points')]
     public static function planetPoints(\App\Entity\Planet $planet): int

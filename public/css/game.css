@@ -616,6 +616,8 @@ label.checkbox { display: flex; gap: .4rem; align-items: center; color: var(--te
 
 /* Fleet movements on the overview: one line each */
 .movement-table td { padding-top: .3rem; padding-bottom: .3rem; vertical-align: middle; }
+.fleet-strength { display: flex; flex-wrap: wrap; gap: .3rem 1.1rem; margin: .4rem 0 .6rem; padding: .5rem .75rem; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; background: var(--bg-2); }
+.fleet-strength strong { font-variant-numeric: tabular-nums; color: var(--text); }
 .movement-table .movement-cargo { display: block; overflow: hidden; text-overflow: ellipsis; }
 .movement-table .movement-what { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; width: 100%; }
 .movement-table .movement-time { white-space: nowrap; width: 1%; }

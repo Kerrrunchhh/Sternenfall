@@ -1910,6 +1910,28 @@ const orbit = (() => {
         setInterval(() => { if (form.dataset.from && !document.hidden) update(); }, 1000);
     });
 
+    // Ship pickers: as soon as ships are picked, a box adds up their number and fighting values.
+    document.querySelectorAll('[data-ship-picker]').forEach((picker) => {
+        const box = picker.querySelector('[data-fleet-strength]');
+        const inputs = [...picker.querySelectorAll('input[data-attack]')];
+        if (!box || inputs.length === 0) return;
+        const number = new Intl.NumberFormat(LOCALE_TAG, { maximumFractionDigits: 0 });
+        const update = () => {
+            const sums = { count: 0, attack: 0, defense: 0, shield: 0 };
+            inputs.forEach((input) => {
+                const count = Math.max(0, parseInt(input.value, 10) || 0);
+                sums.count += count;
+                sums.attack += count * (parseInt(input.dataset.attack, 10) || 0);
+                sums.defense += count * (parseInt(input.dataset.defense, 10) || 0);
+                sums.shield += count * (parseInt(input.dataset.shield, 10) || 0);
+            });
+            Object.entries(sums).forEach(([key, value]) => { box.querySelector(`[data-sum="${key}"]`).textContent = number.format(value); });
+            box.hidden = sums.count === 0;
+        };
+        inputs.forEach((input) => input.addEventListener('input', update));
+        update();
+    });
+
     // Fleet form: "max" buttons and live cargo capacity.
     // "max" buttons in every ship form.
     document.querySelectorAll('[data-fill-max]').forEach((button) => {
