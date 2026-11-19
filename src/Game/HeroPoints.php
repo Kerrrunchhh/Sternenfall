@@ -15,7 +15,8 @@ use function Symfony\Component\Translation\t;
  * crews of destroyed spaceships: hero points if the victims belong to a pirate or a criminal,
  * crime points (negative) otherwise, in a war too – at most MAX_CRIME_PER_BATTLE per battle. Defending never costs points; intercepting
  * an attacking fleet counts as defending. Fighting pirates and criminals earns them back, and
- * without new crimes they recover by RECOVERY_PER_DAY up to START.
+ * without new crimes they recover by RECOVERY_PER_DAY up to START. Surviving rescue ships save
+ * crews that would cost crime points (ShipType::rescueCapacity each, for their owner's share).
  *
  * Criminal guardians lose their double speed. Traders and guardians don't attack settlers and
  * traders who aren't criminal (except in a war) – unless they are criminal themselves; players
@@ -64,18 +65,19 @@ final class HeroPoints
     /**
      * Points each attacking player earns in a battle. Bombed inhabitants count for the players
      * whose heavy bombers survived (by their number), the crews of destroyed spaceships for the
-     * whole attacking side (by build weight, like combat experience).
+     * whole attacking side (by build weight, like combat experience). A player's surviving
+     * rescue ships save crews of his share that would cost crime points.
      *
      * @param bool $defensive intercepting an attack: only hero points, never crime points
      *
-     * @return array<int, array{user: User, points: float}> keyed by spl_object_id of the user
+     * @return array<int, array{user: User, points: float, rescued: float}> keyed by spl_object_id of the user
      */
     public static function forBattle(BattleResult $result, float $bombed = 0, ?User $bombedOwner = null, bool $defensive = false): array
     {
         $earned = [];
         $add = static function (User $user, float $points) use (&$earned): void {
             $key = spl_object_id($user);
-            $earned[$key] = ['user' => $user, 'points' => ($earned[$key]['points'] ?? 0.0) + $points];
+            $earned[$key] = ['user' => $user, 'points' => ($earned[$key]['points'] ?? 0.0) + $points, 'rescued' => $earned[$key]['rescued'] ?? 0.0];
         };
         $attackers = $result->side(BattleGroup::ATTACKER);
 
@@ -83,18 +85,32 @@ final class HeroPoints
         $weights = [];
         foreach ($attackers as $group) {
             $key = spl_object_id($group->owner);
-            $weights[$key] = ['user' => $group->owner, 'weight' => ($weights[$key]['weight'] ?? 0.0) + $group->buildWeight()];
+            $weights[$key] = [
+                'user' => $group->owner,
+                'weight' => ($weights[$key]['weight'] ?? 0.0) + $group->buildWeight(),
+                'rescue' => ($weights[$key]['rescue'] ?? 0) + $group->alive() * $group->type->rescueCapacity(),
+            ];
         }
         $total = array_sum(array_column($weights, 'weight'));
+        $crimeDeaths = [];
         foreach ($result->side(BattleGroup::DEFENDER) as $group) {
             $deaths = $group->type->isStationary() ? 0 : $group->lost() * $group->type->spec()->crew;
             $sign = self::sign($group->owner);
             if ($deaths <= 0 || 0 === $sign || $total <= 0 || ($defensive && $sign < 0)) {
                 continue;
             }
-            foreach ($weights as ['user' => $user, 'weight' => $weight]) {
-                $add($user, $sign * $deaths / self::DEATHS_PER_POINT * $weight / $total);
+            foreach ($weights as $key => ['user' => $user, 'weight' => $weight]) {
+                if ($sign < 0) {
+                    $crimeDeaths[$key] = ($crimeDeaths[$key] ?? 0.0) + $deaths * $weight / $total;
+                } else {
+                    $add($user, $deaths / self::DEATHS_PER_POINT * $weight / $total);
+                }
             }
+        }
+        foreach ($crimeDeaths as $key => $deaths) {
+            $rescued = min($deaths, $weights[$key]['rescue']);
+            $add($weights[$key]['user'], -($deaths - $rescued) / self::DEATHS_PER_POINT);
+            $earned[$key]['rescued'] = $rescued;
         }
 
         // Bombed inhabitants.
@@ -123,15 +139,23 @@ final class HeroPoints
     /**
      * Books the points and describes them for the battle report.
      *
-     * @param array<int, array{user: User, points: float}> $earned
+     * @param array<int, array{user: User, points: float, rescued?: float}> $earned
      *
      * @return list<TranslatableInterface> report lines
      */
     public static function apply(array $earned): array
     {
         $lines = [];
-        foreach ($earned as ['user' => $user, 'points' => $points]) {
-            if (abs($points) < 0.5 || $user->isSystem()) {
+        foreach ($earned as $entry) {
+            ['user' => $user, 'points' => $points] = $entry;
+            if ($user->isSystem()) {
+                continue;
+            }
+            $rescued = $entry['rescued'] ?? 0.0;
+            if ($rescued >= 1) {
+                $lines[] = t('  🛟 Die Rettungsschiffe von {player} haben {count} Besatzungsmitglieder gerettet.', ['{player}' => $user->getUsername(), '{count}' => new Num((int) round($rescued))]);
+            }
+            if (abs($points) < 0.5) {
                 continue;
             }
             $wasCriminal = $user->isCriminal();

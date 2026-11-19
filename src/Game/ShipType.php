@@ -27,6 +27,7 @@ enum ShipType: string
     case Freighter = 'freighter';
     case LargeFreighter = 'large_freighter';
     case Salvager = 'salvager';
+    case RescueShip = 'rescue_ship';
     case ColonyShip = 'colony_ship';
     case InvasionShip = 'invasion_ship';
     case Fusionator = 'fusionator';
@@ -56,6 +57,7 @@ enum ShipType: string
             self::Freighter => 'Frachter',
             self::LargeFreighter => 'Großfrachter',
             self::Salvager => 'Bergungsschiff',
+            self::RescueShip => 'Rettungsschiff',
             self::ColonyShip => 'Kolonieschiff',
             self::InvasionShip => 'Invasionsschiff',
             self::Fusionator => 'Fusionator',
@@ -105,6 +107,12 @@ enum ShipType: string
     public function salvageCapacity(): int
     {
         return self::Salvager === $this ? $this->spec()->cargo : 0;
+    }
+
+    /** Crew members of destroyed enemy ships one surviving rescue ship saves per battle (HeroPoints). */
+    public function rescueCapacity(): int
+    {
+        return self::RescueShip === $this ? 200 : 0;
     }
 
     /** Ships that carry goods; in a raid without bombers they and their cargo are spared. */
@@ -165,9 +173,10 @@ enum ShipType: string
             self::Freighter => 19,
             self::LargeFreighter => 20,
             self::Salvager => 21,
-            self::ColonyShip => 22,
-            self::InvasionShip => 23,
-            self::Fusionator => 24,
+            self::RescueShip => 22,
+            self::ColonyShip => 23,
+            self::InvasionShip => 24,
+            self::Fusionator => 25,
         };
     }
 
@@ -215,6 +224,7 @@ enum ShipType: string
             self::Freighter => 'Kleines Handelsschiff für Rohstoffe zwischen Kolonien. Nur Handelsschiffe transportieren Fracht; in Kriegsflotten fliegen sie nicht mit – die Beute tragen Bergungsschiffe.',
             self::LargeFreighter => 'Großes Handelsschiff mit enormer Ladekapazität. Nur Handelsschiffe transportieren Fracht; in Kriegsflotten fliegen sie nicht mit – die Beute tragen Bergungsschiffe.',
             self::Salvager => 'Sammelt nach Raumschlachten die Trümmerfelder im Orbit ein und trägt die Beute eines Angriffs. Was er geladen hat, bringt er zu seinem Startplaneten – unterwegs kann es überfallen werden. Andere Fracht nimmt er nicht auf.',
+            self::RescueShip => 'Fliegt mit Angriffen mit und rettet die Besatzungen zerstörter feindlicher Schiffe: Jedes Rettungsschiff, das den Kampf übersteht, rettet bis zu 200 Besatzungsmitglieder. Gerettete zählen nicht als Tote – so gibt es dafür keine Krimipunkte. Besatzungen von Piraten und Kriminellen rettet es nicht (für sie gibt es weiter Heldenpunkte), ausgebombte Einwohner auch nicht. Kämpft selbst nicht.',
             self::ColonyShip => 'Gründet eine Kolonie auf einem freien Planeten oder besiedelt einen herrenlosen (mit dessen Gebäuden, Lager und Bauschleifen – sobald dort keine Schiffe und keine Verteidigung mehr stehen) und wird dabei verbraucht. Die Besatzung wird zu Siedlern. An Bord sind Vorräte für den Anfang: 500 Eisen, 500 Titan, 200 Nahrung, 200 Wasser und 200 Wasserstoff.',
             self::InvasionShip => 'Bringt Truppen für die Übernahme feindlicher Planeten. Ein Invasionsschiff reicht für etwa 20.000 Einwohner (dann 90 % Chance); die Chance liegt immer zwischen 1 und 99 %. Bei einer Fusion wird nur ein Planet abgesprengt und übernommen.',
             self::LaserTurret => 'Günstiges Abwehrgeschütz gegen leichte Jäger. Steht fest auf dem Planeten.',
@@ -270,6 +280,8 @@ enum ShipType: string
                 [$yard(4), $tech($ion, 3)]),
             self::Salvager => new ShipSpec($r(8000, 6000, 1000), 10, 1, 10, 1600, 2500, 20000, 300, $ion,
                 [$yard(3), $tech($ion, 2), $tech(ResearchType::RotationShield, 2)]),
+            self::RescueShip => new ShipSpec($r(6000, 5000, 1000), 10, 0, 40, 2000, 12000, 0, 100, $ion,
+                [$yard(3), $tech($ion, 2), $tech(ResearchType::RotationShield, 1)]),
             self::ColonyShip => new ShipSpec($r(10000, 20000, 10000), 100, 0, 100, 3000, 2500, 0, 1000, $ion,
                 [$yard(4), $tech($ion, 3), $tech(ResearchType::InvasionTech, 1)]),
             self::InvasionShip => new ShipSpec($r(30000, 40000, 15000), 500, 0, 200, 3000, 3000, 0, 1500, $plasma,

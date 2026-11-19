@@ -28,7 +28,7 @@
                 {% if profile.criminal %}
                     <p class="criminal-note" id="profile-criminal">{{ '🚨 Kriminell ({points} Heldenpunkte): Jeder darf {player} angreifen, und wer gegen ihn kämpft, bekommt Heldenpunkte. Ohne neue Untaten kommen 10 Heldenpunkte pro Tag zurück.'|trans({'{points}': profile.heroPoints|num, '{player}': profile.username}) }}</p>
                 {% else %}
-                    <p class="small muted" id="profile-hero-points" title="{{ 'Jeder startet mit 1000. Bomben auf Zivilisten und zerstörte Schiffe von Spielern, die keine Piraten oder Kriminellen sind, kosten Heldenpunkte (1 je 10 Tote, höchstens 100 pro Kampf) – unter 0 ist man kriminell. Kampf gegen Piraten und Kriminelle bringt welche, und ohne neue Untaten kommen 10 pro Tag zurück (bis 1000).'|trans }}">{{ '🎖 {points} Heldenpunkte'|trans({'{points}': profile.heroPoints|num}) }}</p>
+                    <p class="small muted" id="profile-hero-points" title="{{ 'Jeder startet mit 1000. Bomben auf Zivilisten und zerstörte Schiffe von Spielern, die keine Piraten oder Kriminellen sind, kosten Heldenpunkte (1 je 10 Tote, höchstens 100 pro Kampf; Rettungsschiffe retten Besatzungen) – unter 0 ist man kriminell. Kampf gegen Piraten und Kriminelle bringt welche, und ohne neue Untaten kommen 10 pro Tag zurück (bis 1000).'|trans }}">{{ '🎖 {points} Heldenpunkte'|trans({'{points}': profile.heroPoints|num}) }}</p>
                 {% endif %}
             {% endif %}
             {% if awards is not empty %}

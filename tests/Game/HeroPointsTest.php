@@ -147,6 +147,61 @@ class HeroPointsTest extends TestCase
         })()), 'ownerless planets: nobody to judge');
     }
 
+    public function testSurvivingRescueShipsSaveCrewsThatWouldCostCrimePoints(): void
+    {
+        $attacker = $this->player('Retterin');
+        $settler = $this->player('Siedlerin');
+        $pirate = $this->player('Pirat', LifeForm::Pirate);
+        self::assertSame(200, ShipType::RescueShip->rescueCapacity());
+        self::assertSame(0, ShipType::Salvager->rescueCapacity());
+
+        // 2 leviathans = 1000 crew; 3 rescue ships save 600 of them: 400 dead = −40.
+        $earned = array_values(HeroPoints::forBattle($this->battle($attacker, [$settler], ShipType::Leviathan, 2, rescueShips: 3)));
+        self::assertEqualsWithDelta(-40, $earned[0]['points'], 0.001);
+        self::assertEqualsWithDelta(600, $earned[0]['rescued'], 0.001);
+
+        // Enough rescue ships: no crime points at all.
+        $earned = array_values(HeroPoints::forBattle($this->battle($attacker, [$settler], ShipType::Leviathan, 2, rescueShips: 10)));
+        self::assertEqualsWithDelta(0, $earned[0]['points'], 0.001);
+        self::assertEqualsWithDelta(1000, $earned[0]['rescued'], 0.001);
+
+        // Pirates' crews are not rescued: the hero points stay.
+        $earned = array_values(HeroPoints::forBattle($this->battle($attacker, [$pirate], ShipType::Leviathan, 2, rescueShips: 10)));
+        self::assertEqualsWithDelta(100, $earned[0]['points'], 0.001);
+        self::assertEqualsWithDelta(0, $earned[0]['rescued'], 0.001);
+    }
+
+    public function testDestroyedRescueShipsRescueNobody(): void
+    {
+        $attacker = $this->player('Retterin');
+        $settler = $this->player('Siedlerin');
+        $result = $this->battle($attacker, [$settler], ShipType::Leviathan, 2, rescueShips: 10, rescueShipsDestroyed: true);
+
+        self::assertEqualsWithDelta(-100, array_values(HeroPoints::forBattle($result))[0]['points'], 0.001);
+    }
+
+    public function testRescueShipsOnlyHelpTheirOwner(): void
+    {
+        $rescuer = $this->player('Retterin');
+        $partner = $this->player('Partner');
+        $settler = $this->player('Siedlerin');
+        $groups = [
+            new BattleGroup(BattleGroup::ATTACKER, $rescuer, ShipType::Leviathan, 10),
+            new BattleGroup(BattleGroup::ATTACKER, $rescuer, ShipType::RescueShip, 10),
+            new BattleGroup(BattleGroup::ATTACKER, $partner, ShipType::Leviathan, 10),
+        ];
+        $victim = new BattleGroup(BattleGroup::DEFENDER, $settler, ShipType::Leviathan, 2);
+        $victim->takeDamage(\INF);
+        $earned = HeroPoints::forBattle(new BattleResult([...$groups, $victim], false));
+
+        self::assertEqualsWithDelta(0, $earned[spl_object_id($rescuer)]['points'], 0.001);
+        self::assertLessThan(-40, $earned[spl_object_id($partner)]['points'], 'the partner\'s share of the dead still counts');
+
+        $text = implode("\n", array_map(static fn ($l): string => \is_string($l) ? $l : $l->trans(new \Symfony\Component\Translation\IdentityTranslator()), HeroPoints::apply($earned)));
+        self::assertMatchesRegularExpression('/🛟 Die Rettungsschiffe von Retterin haben \d+ Besatzungsmitglieder gerettet\./', $text);
+        self::assertStringNotContainsString('Rettungsschiffe von Partner', $text);
+    }
+
     public function testApplyBooksThePointsAndTellsWhoTurnedCriminal(): void
     {
         $player = $this->player('Pilotin');
@@ -205,9 +260,15 @@ class HeroPointsTest extends TestCase
     }
 
     /** @param list<User> $defenders each loses $count units of $type */
-    private function battle(User $attacker, array $defenders, ShipType $type, int $count): BattleResult
+    private function battle(User $attacker, array $defenders, ShipType $type, int $count, int $rescueShips = 0, bool $rescueShipsDestroyed = false): BattleResult
     {
         $groups = [new BattleGroup(BattleGroup::ATTACKER, $attacker, ShipType::Leviathan, 10)];
+        if ($rescueShips > 0) {
+            $groups[] = $rescue = new BattleGroup(BattleGroup::ATTACKER, $attacker, ShipType::RescueShip, $rescueShips);
+            if ($rescueShipsDestroyed) {
+                $rescue->takeDamage(\INF);
+            }
+        }
         foreach ($defenders as $defender) {
             $group = new BattleGroup(BattleGroup::DEFENDER, $defender, $type, $count);
             $group->hp = 0;

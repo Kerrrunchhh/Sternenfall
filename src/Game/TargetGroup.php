@@ -20,7 +20,7 @@ enum TargetGroup: string
     case Cruisers = 'cruisers';
     case Battleships = 'battleships';
     case Turrets = 'turrets';
-    /** Probes, freighters, salvagers, colony ships, fusionators. */
+    /** Probes, freighters, salvagers, rescue ships, colony ships, fusionators. */
     case Civil = 'civil';
 
     public static function of(ShipType $type): self
