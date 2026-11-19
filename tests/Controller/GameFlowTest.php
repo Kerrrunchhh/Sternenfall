@@ -41,6 +41,11 @@ class GameFlowTest extends WebTestCase
         $this->client->followRedirect();
         self::assertSelectorTextContains('h1', 'Heimatwelt');
         self::assertSelectorTextContains('.flash-success', 'Willkommen');
+        // Phones: the most used pages sit in a tab bar at the top, "Menü" opens the whole Imperium menu.
+        self::assertSelectorExists('.mobile-tabs a[href="/fleet"]');
+        self::assertSelectorExists('.mobile-tabs a[href="/trade"]');
+        self::assertSelectorExists('.mobile-tabs a[href="#imperium"][data-menu-open]');
+        self::assertSelectorExists('nav#imperium [data-menu-close]');
 
         $user = static::getContainer()->get(UserRepository::class)->findOneBy(['username' => 'Kommandant']);
         self::assertNotNull($user);
@@ -547,6 +552,25 @@ class GameFlowTest extends WebTestCase
         self::assertNull($repository->findApplicationOf($this->user('Bewerberin')), 'withdrawn');
     }
 
+    public function testAQuickContactOpensAMenuForAMessageOrTheirPlanets(): void
+    {
+        $this->register('Kurierin');
+        $this->client->request('GET', '/logout');
+        $this->register('Funkerin');
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        [$her, $me] = [$this->user('Kurierin'), $this->user('Funkerin')];
+        $contact = new \App\Entity\Contact($me, $her, new \DateTimeImmutable());
+        $contact->accept(new \DateTimeImmutable());
+        $em->persist($contact);
+        $em->flush();
+
+        $crawler = $this->client->request('GET', '/overview');
+        self::assertSame('/mail/new?to=Kurierin', $crawler->filter('#contact-write-'.$her->getId())->attr('href'));
+        $this->client->click($crawler->filter('#contact-planets-'.$her->getId())->link());
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('#planets', $her->getPlanets()->first()->getCoordinates());
+    }
+
     public function testThePlayerChoosesWhichSectionsTheOverviewShows(): void
     {
         $this->register('Ordnerin');
@@ -613,6 +637,47 @@ class GameFlowTest extends WebTestCase
         self::assertSelectorTextContains('#summary-reports', '1 Kampf');
         self::assertSelectorTextContains('#summary-defender', '10 × Pfeil');
         self::assertSelectorTextContains('#summary-players', 'Chronistin');
+    }
+
+    public function testRememberedCoordinatesCanBeReorderedAndStaySelected(): void
+    {
+        $this->register('Lotse');
+        $crawler = $this->client->request('GET', '/galaxy');
+        $adds = $crawler->filter('form[action$="/bookmarks/add"]');
+        $coords = [];
+        foreach ([0, 1, 2] as $i) {
+            $form = $adds->eq($i)->form();
+            $coords[] = implode(':', [$form['galaxy']->getValue(), $form['system']->getValue(), $form['position']->getValue()]);
+            $this->client->submit($form);
+        }
+        $rows = fn (): array => $this->client->getCrawler()->filter('tr[data-bookmark-id]')->each(static fn ($row): string => trim($row->filter('td.num')->first()->text()));
+
+        // Tick the last one and move it to the top: it stays ticked for the next move.
+        $crawler = $this->client->request('GET', '/bookmarks');
+        self::assertSame($coords, $rows());
+        $lastId = $crawler->filter('tr[data-bookmark-id]')->last()->attr('data-bookmark-id');
+        $form = $crawler->filter('#bookmark-move-top')->form();
+        $form['ids'][2]->tick();
+        $this->client->submit($form);
+        self::assertResponseRedirects('/bookmarks?selected='.$lastId.'#bookmark-'.$lastId);
+        $crawler = $this->client->followRedirect();
+        self::assertSame([$coords[2], $coords[0], $coords[1]], $rows());
+        self::assertSame('checked', $crawler->filter('#bookmark-check-'.$lastId)->attr('checked'));
+
+        $this->client->submit($crawler->filter('#bookmark-move-down')->form());
+        $crawler = $this->client->followRedirect();
+        self::assertSame([$coords[0], $coords[2], $coords[1]], $rows());
+
+        // Drag & drop sends the whole order (the fleet form lists them the same way).
+        $ids = $crawler->filter('tr[data-bookmark-id]')->each(static fn ($row): string => (string) $row->attr('data-bookmark-id'));
+        $this->client->request('POST', '/bookmarks/order', ['_token' => $crawler->filter('[data-bookmark-sort]')->attr('data-token'), 'ids' => array_reverse($ids)]);
+        self::assertResponseStatusCodeSame(204);
+        $crawler = $this->client->request('GET', '/bookmarks');
+        self::assertSame([$coords[1], $coords[2], $coords[0]], $rows());
+
+        // "Clear selection" works without JavaScript too: the plain page has nothing ticked.
+        $this->client->click($crawler->filter('[data-bookmark-clear]')->link());
+        self::assertCount(0, $this->client->getCrawler()->filter('tr[data-bookmark-id] input:checked'));
     }
 
     public function testTheBuildBotFillsTheBuildingQueue(): void

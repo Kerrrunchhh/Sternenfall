@@ -1051,6 +1051,144 @@ const orbit = (() => {
         });
     });
 
+    // Phones: "Menü" in the tab bar opens the Imperium menu over the page (without JS the link jumps down to it).
+    const menuOpener = document.querySelector('[data-menu-open]');
+    if (menuOpener) {
+        const setMenu = (open) => {
+            document.body.classList.toggle('menu-open', open);
+            menuOpener.setAttribute('aria-expanded', open ? 'true' : 'false');
+        };
+        menuOpener.addEventListener('click', (event) => {
+            event.preventDefault();
+            setMenu(true);
+            const close = document.querySelector('[data-menu-close]');
+            if (close) close.focus();
+        });
+        document.querySelectorAll('[data-menu-close]').forEach((button) => button.addEventListener('click', () => {
+            setMenu(false);
+            menuOpener.focus();
+        }));
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && document.body.classList.contains('menu-open')) {
+                setMenu(false);
+                menuOpener.focus();
+            }
+        });
+        // Back from a page left via the menu (bfcache): start with the menu closed.
+        window.addEventListener('pageshow', () => setMenu(false));
+    }
+
+    // Quick contact menus: one open at a time, closed by a click elsewhere or Escape, kept on screen.
+    const contactMenus = [...document.querySelectorAll('[data-contact-menu]')];
+    contactMenus.forEach((menu) => menu.addEventListener('toggle', () => {
+        if (!menu.open) {
+            return;
+        }
+        contactMenus.forEach((other) => { if (other !== menu) other.open = false; });
+        const list = menu.querySelector('.contact-menu-list');
+        list.classList.remove('align-right');
+        if (list.getBoundingClientRect().right > document.documentElement.clientWidth - 8) {
+            list.classList.add('align-right');
+        }
+    }));
+    if (contactMenus.length) {
+        document.addEventListener('click', (event) => {
+            contactMenus.forEach((menu) => { if (menu.open && !menu.contains(event.target)) menu.open = false; });
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key !== 'Escape') {
+                return;
+            }
+            contactMenus.filter((menu) => menu.open).forEach((menu) => {
+                menu.open = false;
+                menu.querySelector('summary').focus();
+            });
+        });
+    }
+
+    // Remembered coordinates: own order by drag & drop (handle ⠿, also arrow keys), "clear selection".
+    document.querySelectorAll('[data-bookmark-sort]').forEach((body) => {
+        document.querySelectorAll('[data-bookmark-clear]').forEach((clear) => clear.addEventListener('click', (event) => {
+            event.preventDefault();
+            body.querySelectorAll('input[type=checkbox]').forEach((box) => { box.checked = false; });
+        }));
+        const order = () => [...body.querySelectorAll('tr[data-bookmark-id]')].map((row) => row.dataset.bookmarkId);
+        const save = () => {
+            const params = new URLSearchParams({ _token: body.dataset.token });
+            order().forEach((id) => params.append('ids[]', id));
+            fetch(body.dataset.url, { method: 'POST', body: params, credentials: 'same-origin' })
+                .then((response) => { if (!response.ok) throw new Error(String(response.status)); })
+                .catch(() => window.location.reload());
+        };
+        const middle = (row) => { const box = row.getBoundingClientRect(); return box.top + box.height / 2; };
+        // Swaps the neighbours past the dragged row – the row itself stays in the DOM, so the pointer capture holds.
+        const place = (row, y) => {
+            for (;;) {
+                const prev = row.previousElementSibling;
+                const next = row.nextElementSibling;
+                if (prev && y < middle(prev)) {
+                    row.after(prev);
+                } else if (next && y > middle(next)) {
+                    row.before(next);
+                } else {
+                    return;
+                }
+            }
+        };
+        body.querySelectorAll('[data-drag-handle]').forEach((handle) => {
+            handle.hidden = false;
+            const row = handle.closest('tr');
+            handle.addEventListener('pointerdown', (event) => {
+                if (event.button !== 0) {
+                    return;
+                }
+                event.preventDefault();
+                const before = order().join();
+                let y = event.clientY;
+                handle.setPointerCapture(event.pointerId);
+                row.classList.add('dragging');
+                // Near the top or bottom edge the page scrolls along (long lists on the phone).
+                let frame = 0;
+                const scroll = () => {
+                    const step = y < 110 ? -12 : (y > window.innerHeight - 50 ? 12 : 0);
+                    if (step) {
+                        window.scrollBy(0, step);
+                        place(row, y);
+                    }
+                    frame = requestAnimationFrame(scroll);
+                };
+                frame = requestAnimationFrame(scroll);
+                const move = (e) => { y = e.clientY; place(row, y); };
+                const end = () => {
+                    cancelAnimationFrame(frame);
+                    handle.removeEventListener('pointermove', move);
+                    handle.removeEventListener('pointerup', end);
+                    handle.removeEventListener('pointercancel', end);
+                    row.classList.remove('dragging');
+                    if (order().join() !== before) {
+                        save();
+                    }
+                };
+                handle.addEventListener('pointermove', move);
+                handle.addEventListener('pointerup', end);
+                handle.addEventListener('pointercancel', end);
+            });
+            handle.addEventListener('keydown', (event) => {
+                const prev = row.previousElementSibling;
+                const next = row.nextElementSibling;
+                if (event.key === 'ArrowUp' && prev) {
+                    row.after(prev);
+                } else if (event.key === 'ArrowDown' && next) {
+                    row.before(next);
+                } else {
+                    return;
+                }
+                event.preventDefault();
+                save();
+            });
+        });
+    });
+
     // Shipyard build rate (100–200 %): highlight the cost row of the chosen rate and use its maximum.
     document.querySelectorAll('[data-build-rates]').forEach((box) => {
         const select = box.querySelector('select[name="percent"]');

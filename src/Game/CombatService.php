@@ -474,11 +474,6 @@ final readonly class CombatService
         return ['owner' => $owner->getUsername(), 'ownerId' => $owner->getId(), 'resources' => $resources->toArray()];
     }
 
-    /** Cargo space for plunder: only trade ships carry it. */
-    /**
-     * Salvage ships never carry anything: loot and debris land at once in the storage of the
-     * planet the fleet started from – even if it belongs to another player.
-     */
     /**
      * Loot goes on board of the salvage ships: they bring it home to their start planet, where it
      * goes into storage on landing – until then it travels openly and can be raided.

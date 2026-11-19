@@ -89,7 +89,7 @@ enum ShipType: string
         return self::Scout === $this;
     }
 
-    /** Only trade ships (freighters) carry cargo: resources, plunder and goods bought at trade posts. */
+    /** Only trade ships (freighters) carry cargo: resources and goods bought at trade posts. Plunder goes into salvage ships. */
     public function carriesCargo(): bool
     {
         return \in_array($this, [self::Freighter, self::LargeFreighter], true);
@@ -212,8 +212,8 @@ enum ShipType: string
             self::Leviathan => 'Das gewaltigste Kriegsschiff des Universums. Immense Kosten und Bauzeit.',
             self::HeavyBomber => 'Bombardiert Infrastruktur und Bevölkerung. Nur Einwohner in Bunkern sind sicher.',
             self::Scout => 'Sehr billige, extrem schnelle Einweg-Sonde: startet über 🔭 direkt aus dem Hangar, späht Planeten, freie Plätze oder Flotten aus und verglüht danach – auch wenn sie nichts entdeckt. Kann nicht in Flotten aufgenommen werden. Jede Stufe Spionagetechnik macht sie 4 % schneller.',
-            self::Freighter => 'Kleines Handelsschiff für Rohstoffe zwischen Kolonien. Nur Handelsschiffe können Fracht und Beute transportieren.',
-            self::LargeFreighter => 'Großes Handelsschiff mit enormer Ladekapazität. Nur Handelsschiffe können Fracht und Beute transportieren.',
+            self::Freighter => 'Kleines Handelsschiff für Rohstoffe zwischen Kolonien. Nur Handelsschiffe transportieren Fracht; in Kriegsflotten fliegen sie nicht mit – die Beute tragen Bergungsschiffe.',
+            self::LargeFreighter => 'Großes Handelsschiff mit enormer Ladekapazität. Nur Handelsschiffe transportieren Fracht; in Kriegsflotten fliegen sie nicht mit – die Beute tragen Bergungsschiffe.',
             self::Salvager => 'Sammelt nach Raumschlachten die Trümmerfelder im Orbit ein und trägt die Beute eines Angriffs. Was er geladen hat, bringt er zu seinem Startplaneten – unterwegs kann es überfallen werden. Andere Fracht nimmt er nicht auf.',
             self::ColonyShip => 'Gründet eine Kolonie auf einem freien Planeten oder besiedelt einen herrenlosen (mit dessen Gebäuden, Lager und Bauschleifen – sobald dort keine Schiffe und keine Verteidigung mehr stehen) und wird dabei verbraucht. Die Besatzung wird zu Siedlern. An Bord sind Vorräte für den Anfang: 500 Eisen, 500 Titan, 200 Nahrung, 200 Wasser und 200 Wasserstoff.',
             self::InvasionShip => 'Bringt Truppen für die Übernahme feindlicher Planeten. Ein Invasionsschiff reicht für etwa 20.000 Einwohner (dann 90 % Chance); die Chance liegt immer zwischen 1 und 99 %. Bei einer Fusion wird nur ein Planet abgesprengt und übernommen.',

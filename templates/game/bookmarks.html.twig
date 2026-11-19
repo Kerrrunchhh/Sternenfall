@@ -10,10 +10,19 @@
     {% if bookmarks is empty %}
         <p class="panel muted">{{ 'Noch keine Koordinaten gemerkt.'|trans }}</p>
     {% else %}
+        <p class="muted small">{{ 'Die Reihenfolge gilt auch für die Auswahl beim Losschicken einer Flotte. Hake Koordinaten an und verschiebe sie mit den Knöpfen unten – oder ziehe sie am Griff ⠿ an ihren Platz.'|trans }}</p>
+        <form id="bookmark-move" method="post" action="{{ path('app_bookmark_move') }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('bookmark') }}">
+        </form>
         <div class="panel">
             <table class="table bookmarks">
+                <tbody data-bookmark-sort data-url="{{ path('app_bookmark_order') }}" data-token="{{ csrf_token('bookmark') }}">
                 {% for b in bookmarks %}
-                    <tr>
+                    <tr id="bookmark-{{ b.id }}" data-bookmark-id="{{ b.id }}">
+                        <td class="bookmark-pick-cell">
+                            <button type="button" class="drag-handle" data-drag-handle hidden title="{{ 'Ziehen zum Verschieben'|trans }}" aria-label="{{ '{label} verschieben'|trans({'{label}': b.label|trans}) }}">⠿</button>
+                            <input type="checkbox" form="bookmark-move" name="ids[]" value="{{ b.id }}" id="bookmark-check-{{ b.id }}"{{ selected[b.id] is defined ? ' checked' }} aria-label="{{ '{label} auswählen'|trans({'{label}': b.label|trans}) }}">
+                        </td>
                         <td class="num">{{ ui.coords(b.coordinates) }}</td>
                         <td>
                             <form method="post" action="{{ path('app_bookmark_rename', {id: b.id}) }}" class="inline-action">
@@ -31,7 +40,17 @@
                         </td>
                     </tr>
                 {% endfor %}
+                </tbody>
             </table>
+            {% if bookmarks|length > 1 %}
+                <div class="bookmark-tools" role="group" aria-label="{{ 'Ausgewählte Koordinaten verschieben'|trans }}">
+                    <button class="btn btn-small" type="submit" form="bookmark-move" name="move" value="top" id="bookmark-move-top">⤒ {{ 'Ganz nach oben'|trans }}</button>
+                    <button class="btn btn-small" type="submit" form="bookmark-move" name="move" value="up" id="bookmark-move-up">↑ {{ 'Nach oben'|trans }}</button>
+                    <button class="btn btn-small" type="submit" form="bookmark-move" name="move" value="down" id="bookmark-move-down">↓ {{ 'Nach unten'|trans }}</button>
+                    <button class="btn btn-small" type="submit" form="bookmark-move" name="move" value="bottom" id="bookmark-move-bottom">⤓ {{ 'Ganz nach unten'|trans }}</button>
+                    <a class="btn btn-small btn-secondary" href="{{ path('app_bookmarks') }}" data-bookmark-clear>{{ 'Auswahl aufheben'|trans }}</a>
+                </div>
+            {% endif %}
         </div>
     {% endif %}
 {% endblock %}

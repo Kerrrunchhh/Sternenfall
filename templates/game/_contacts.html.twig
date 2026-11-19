@@ -23,13 +23,19 @@
 {% if contacts is empty %}
     <p class="muted small">{{ 'Noch keine Schnellkontakte. Im Profil eines Mitspielers kannst du ihn anfragen; nimmt er an, steht er hier mit seinem Online-Status.'|trans }}</p>
 {% else %}
-    {# All contacts in one row; a click on the name opens a new message to them. #}
+    {# All contacts in one row; a click on the name opens a small menu: write a message or look up the planets. #}
     <ul class="contact-chips">
         {% for c in contacts %}
             {% set st = presence(c) %}
-            <li><a class="contact-chip {{ st ? (st.online ? 'presence-online' : 'presence-offline') }}" href="{{ path('app_mail_compose', {to: c.username}) }}" title="{{ 'Nachricht an {username}'|trans({'{username}': c.username}) }}{{ st ? ' · ' ~ st.text|trans }}">
-                {%- if st %}<span class="presence-dot" aria-hidden="true"></span>{% endif %}<span aria-hidden="true">{{ c.lifeForm.icon }}</span> {{ c.username -}}
-            </a></li>
+            <li><details class="contact-menu" data-contact-menu>
+                <summary class="contact-chip {{ st ? (st.online ? 'presence-online' : 'presence-offline') }}" title="{{ c.username }}{{ st ? ' · ' ~ st.text|trans }}">
+                    {%- if st %}<span class="presence-dot" aria-hidden="true"></span>{% endif %}<span aria-hidden="true">{{ c.lifeForm.icon }}</span> {{ c.username -}}
+                </summary>
+                <ul class="contact-menu-list">
+                    <li><a href="{{ path('app_mail_compose', {to: c.username}) }}" id="contact-write-{{ c.id }}">✉️ {{ 'Nachricht senden'|trans }}</a></li>
+                    <li><a href="{{ path('app_player', {id: c.id}) }}#planets" id="contact-planets-{{ c.id }}">🪐 {{ 'Planeten & Koordinaten'|trans }}</a></li>
+                </ul>
+            </details></li>
         {% endfor %}
     </ul>
 {% endif %}

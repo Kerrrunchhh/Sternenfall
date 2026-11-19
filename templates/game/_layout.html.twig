@@ -53,6 +53,15 @@
         </div>
     </header>
     {% set route = app.request.attributes.get('_route') %}
+    {# Phones only: the most used pages of the Imperium menu at the top; "Menü" opens the whole menu (without JS it jumps down to it). #}
+    <nav class="mobile-tabs" aria-label="{{ 'Schnellmenü'|trans }}">
+        <a href="{{ path('app_fleet') }}" class="{{ route == 'app_fleet' ? 'active' }}"><span aria-hidden="true">🚀</span>{{ 'Flotten'|trans }}</a>
+        <a href="{{ path('app_galaxy') }}" class="{{ route == 'app_galaxy' ? 'active' }}"><span aria-hidden="true">🌌</span>{{ 'Galaxie'|trans }}</a>
+        <a href="{{ path('app_trade') }}" class="{{ route in ['app_trade', 'app_trade_fusionators', 'app_trade_post', 'app_trade_statement', 'app_trade_report'] ? 'active' }}"><span aria-hidden="true">⚖️</span>{{ 'Handel'|trans }}</a>
+        <a href="{{ path('app_mail') }}" class="{{ route starts with 'app_mail' ? 'active' }}"><span aria-hidden="true">✉️</span>{{ 'Post'|trans }}{% if unread_mail + contact_requests > 0 %}<span class="badge">{{ unread_mail + contact_requests }}</span>{% endif %}</a>
+        <a href="{{ path('app_messages') }}" class="{{ route == 'app_messages' ? 'active' }}"><span aria-hidden="true">🔔</span>{{ 'Nachrichten'|trans }}<span class="badge" data-unread-badge {{ unread_messages > 0 ? '' : 'hidden' }}>{{ unread_messages }}</span></a>
+        <a href="#imperium" data-menu-open aria-controls="imperium" aria-expanded="false"><span aria-hidden="true">☰</span>{{ 'Menü'|trans }}</a>
+    </nav>
     <div class="layout">
         <nav class="sidebar sidebar-left" aria-label="{{ 'Navigation'|trans }}">
             <h2 class="sidebar-title">{{ planet.name }}</h2>
@@ -117,8 +126,8 @@
             <footer class="game-footer muted small"><a href="{{ path('app_imprint') }}">{{ 'Impressum'|trans }}</a> · <a href="{{ path('app_privacy') }}">{{ 'Datenschutz'|trans }}</a> · <a href="{{ path('app_terms') }}">{{ 'AGB'|trans }}</a> · {{ include('_privacy_settings_link.html.twig') }} {{ include('_language_switch.html.twig') }}</footer>
         </main>
         <aside class="sidebar sidebar-right board-column" aria-label="{{ 'Schwarzes Brett'|trans }}">
-            <nav class="empire-nav" aria-label="{{ 'Imperium'|trans }}">
-            <h2 class="sidebar-title">{{ 'Imperium'|trans }}</h2>
+            <nav class="empire-nav" id="imperium" aria-label="{{ 'Imperium'|trans }}">
+            <h2 class="sidebar-title">{{ 'Imperium'|trans }}<button type="button" class="menu-close" data-menu-close aria-label="{{ 'Menü schließen'|trans }}">✕</button></h2>
             <a href="{{ path('app_fleet') }}" class="{{ route == 'app_fleet' ? 'active' }}"><span class="nav-icon" aria-hidden="true">🚀</span>{{ 'Flotten'|trans }}</a>
             <a href="{{ path('app_galaxy') }}" class="{{ route == 'app_galaxy' ? 'active' }}"><span class="nav-icon" aria-hidden="true">🌌</span>{{ 'Galaxie'|trans }}</a>
             <a href="{{ path('app_radar') }}" class="{{ route == 'app_radar' ? 'active' }}"><span class="nav-icon" aria-hidden="true">📡</span>{{ 'Radar'|trans }}</a>

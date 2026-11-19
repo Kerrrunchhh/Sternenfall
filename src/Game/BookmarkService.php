@@ -34,7 +34,8 @@ final readonly class BookmarkService
         if (null !== $existing) {
             return $existing;
         }
-        if (\count($this->bookmarks->findByOwner($player)) >= self::MAX_BOOKMARKS) {
+        $all = $this->bookmarks->findByOwner($player);
+        if (\count($all) >= self::MAX_BOOKMARKS) {
             throw new GameException(t('Du kannst dir höchstens {value} Koordinaten merken. Lösche zuerst alte.', ['{value}' => self::MAX_BOOKMARKS]));
         }
         $planet = $this->planets->findAt($galaxy, $system, $position);
@@ -43,6 +44,7 @@ final readonly class BookmarkService
             : \sprintf('Platz %d:%d:%d', $galaxy, $system, $position);
 
         $bookmark = new Bookmark($player, $galaxy, $system, $position, $label, \DateTimeImmutable::createFromInterface($this->clock->now()));
+        $bookmark->setSortOrder(array_reduce($all, static fn (int $max, Bookmark $b): int => max($max, $b->getSortOrder()), 0) + 1);
         $this->em->persist($bookmark);
         $this->em->flush();
 
@@ -64,6 +66,79 @@ final readonly class BookmarkService
     {
         $this->assertOwner($bookmark, $player);
         $this->em->remove($bookmark);
+        $this->em->flush();
+    }
+
+    /**
+     * Moves the selected bookmarks one place or all the way up or down. Several selected ones
+     * keep their order among each other; a block that already is at the edge stays there.
+     *
+     * @param list<int> $ids
+     */
+    public function move(User $player, array $ids, BookmarkMove $move): void
+    {
+        $list = $this->bookmarks->findByOwner($player);
+        $selected = array_fill_keys($ids, true);
+        $isSelected = static fn (Bookmark $b): bool => isset($selected[$b->getId()]);
+        if ([] === array_filter($list, $isSelected)) {
+            throw new GameException(t('Wähle zuerst Koordinaten aus.'));
+        }
+
+        switch ($move) {
+            case BookmarkMove::Top:
+            case BookmarkMove::Bottom:
+                $picked = array_values(array_filter($list, $isSelected));
+                $rest = array_values(array_filter($list, static fn (Bookmark $b): bool => !$isSelected($b)));
+                $list = BookmarkMove::Top === $move ? [...$picked, ...$rest] : [...$rest, ...$picked];
+                break;
+            case BookmarkMove::Up:
+                for ($i = 1, $n = \count($list); $i < $n; ++$i) {
+                    if ($isSelected($list[$i]) && !$isSelected($list[$i - 1])) {
+                        [$list[$i - 1], $list[$i]] = [$list[$i], $list[$i - 1]];
+                    }
+                }
+                break;
+            case BookmarkMove::Down:
+                for ($i = \count($list) - 2; $i >= 0; --$i) {
+                    if ($isSelected($list[$i]) && !$isSelected($list[$i + 1])) {
+                        [$list[$i + 1], $list[$i]] = [$list[$i], $list[$i + 1]];
+                    }
+                }
+                break;
+        }
+
+        $this->renumber($list);
+    }
+
+    /**
+     * Takes over a complete order (drag & drop). Unknown ids are ignored; bookmarks missing
+     * from it keep their order behind the given ones.
+     *
+     * @param list<int> $ids
+     */
+    public function reorder(User $player, array $ids): void
+    {
+        $byId = [];
+        foreach ($this->bookmarks->findByOwner($player) as $bookmark) {
+            $byId[$bookmark->getId()] = $bookmark;
+        }
+        $list = [];
+        foreach ($ids as $id) {
+            if (isset($byId[$id])) {
+                $list[] = $byId[$id];
+                unset($byId[$id]);
+            }
+        }
+
+        $this->renumber([...$list, ...array_values($byId)]);
+    }
+
+    /** @param list<Bookmark> $list */
+    private function renumber(array $list): void
+    {
+        foreach ($list as $i => $bookmark) {
+            $bookmark->setSortOrder($i + 1);
+        }
         $this->em->flush();
     }
 

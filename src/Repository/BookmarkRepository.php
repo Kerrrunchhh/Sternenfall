@@ -15,10 +15,10 @@ class BookmarkRepository extends ServiceEntityRepository
         parent::__construct($registry, Bookmark::class);
     }
 
-    /** @return list<Bookmark> sorted by coordinates */
+    /** @return list<Bookmark> in the player's own order */
     public function findByOwner(User $owner): array
     {
-        return $this->findBy(['owner' => $owner], ['galaxy' => 'ASC', 'system' => 'ASC', 'position' => 'ASC']);
+        return $this->findBy(['owner' => $owner], ['sortOrder' => 'ASC', 'id' => 'ASC']);
     }
 
     public function findOneAt(User $owner, int $galaxy, int $system, int $position): ?Bookmark

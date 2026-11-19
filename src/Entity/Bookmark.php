@@ -35,6 +35,10 @@ class Bookmark
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
+    /** Place in the player's own order of the list (1 = top); new bookmarks go to the end. */
+    #[ORM\Column(options: ['default' => 0])]
+    private int $sortOrder = 0;
+
     public function __construct(User $owner, int $galaxy, int $system, int $position, string $label, \DateTimeImmutable $createdAt)
     {
         $this->owner = $owner;
@@ -88,5 +92,15 @@ class Bookmark
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    public function getSortOrder(): int
+    {
+        return $this->sortOrder;
+    }
+
+    public function setSortOrder(int $sortOrder): void
+    {
+        $this->sortOrder = $sortOrder;
     }
 }

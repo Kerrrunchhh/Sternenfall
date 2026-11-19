@@ -3,7 +3,9 @@
 namespace App\Controller;
 
 use App\Entity\Bookmark;
+use App\Game\BookmarkMove;
 use App\Game\BookmarkService;
+use App\Game\GameException;
 use App\Repository\BookmarkRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,12 +25,14 @@ class BookmarkController extends AbstractGameController
     }
 
     #[Route('/bookmarks', name: 'app_bookmarks', methods: ['GET'])]
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $planet = $this->currentPlanet();
 
         return $this->renderGame('game/bookmarks.html.twig', $planet, [
             'bookmarks' => $this->bookmarks->findByOwner($this->player()),
+            // Ticked boxes survive a move, so the same selection can be moved again.
+            'selected' => array_fill_keys(self::ids($request->query->getString('selected')), true),
             'max_bookmarks' => BookmarkService::MAX_BOOKMARKS,
         ]);
     }
@@ -43,6 +47,43 @@ class BookmarkController extends AbstractGameController
         $this->attempt(fn () => $this->service->add($this->player(), $g, $s, $p), t('Koordinaten [{g}:{s}:{p}] gemerkt.', ['{g}' => $g, '{s}' => $s, '{p}' => $p]));
 
         return $this->redirect($this->generateUrl('app_galaxy', ['galaxy' => $g, 'system' => $s]).'#slot-'.$p);
+    }
+
+    /** Moves the ticked bookmarks one place or all the way up or down; they stay ticked. */
+    #[Route('/bookmarks/move', name: 'app_bookmark_move', methods: ['POST'])]
+    #[IsCsrfTokenValid('bookmark', tokenKey: '_token')]
+    public function move(Request $request): Response
+    {
+        $this->currentPlanet();
+        $ids = self::ids(implode(',', $request->request->all('ids')));
+        try {
+            $move = BookmarkMove::tryFrom($request->request->getString('move')) ?? throw new GameException(t('Unbekannte Richtung.'));
+            $this->service->move($this->player(), $ids, $move);
+        } catch (GameException $e) {
+            $this->addFlash('error', $e->translatable());
+        }
+
+        if ([] === $ids) {
+            return $this->redirectToRoute('app_bookmarks');
+        }
+
+        return $this->redirect($this->generateUrl('app_bookmarks', ['selected' => implode(',', $ids)]).'#bookmark-'.$ids[0]);
+    }
+
+    /** Saves the whole order after drag & drop (called by game.js). */
+    #[Route('/bookmarks/order', name: 'app_bookmark_order', methods: ['POST'])]
+    #[IsCsrfTokenValid('bookmark', tokenKey: '_token')]
+    public function order(Request $request): Response
+    {
+        $this->service->reorder($this->player(), self::ids(implode(',', $request->request->all('ids'))));
+
+        return new Response(null, Response::HTTP_NO_CONTENT);
+    }
+
+    /** @return list<int> positive ids from "3,7,12", without duplicates */
+    private static function ids(string $list): array
+    {
+        return array_values(array_unique(array_filter(array_map(intval(...), explode(',', $list)), static fn (int $id): bool => $id > 0)));
     }
 
     #[Route('/bookmarks/{id}/rename', name: 'app_bookmark_rename', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
