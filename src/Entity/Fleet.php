@@ -485,6 +485,24 @@ class Fleet
         return $this->tradeOrder ?? [];
     }
 
+    /** What a pickup is to load at its target, as resources. */
+    public function getPickupGoods(): Resources
+    {
+        return Resources::fromArray(array_map('floatval', $this->getTradeOrder()));
+    }
+
+    /** Whether the fleet has a hold: trade ships, or salvagers for loot. */
+    public function hasHold(): bool
+    {
+        foreach ($this->getShipList() as ['type' => $type]) {
+            if ($type->carriesCargo() || $type->salvageCapacity() > 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /** @param array<string, float> $order */
     public function setTradeOrder(array $order): void
     {

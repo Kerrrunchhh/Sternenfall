@@ -3154,3 +3154,5 @@
 "Tippe auf eine Galaxie, um sie auszuwählen.": "Tap a galaxy to pick it."
 "Gehört zum erweiterten Account": "Part of the extended account"
 "Der <strong>🤖 Baubot</strong>: Er füllt die Bauschleifen deiner Planeten auf Knopfdruck nach deinen Vorgaben – Gebäude, Werft und Verteidigung.": "The <strong>🤖 build bot</strong>: it fills the build queues of your planets at the push of a button, the way you set it up – buildings, shipyard and defense."
+"leer": "empty"
+"holt ab: {goods}": "picks up: {goods}"

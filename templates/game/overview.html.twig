@@ -124,7 +124,9 @@
                             {{ f.named ? f.name : (only == 'scout' ? ('Sonde'|trans) : (only == 'colony_ship' ? ('Kolonieschiff'|trans) : ('Flotte'|trans))) }}:
                             {{ f.mission.flightLabel|trans }}{% if f.mission.value != 'hover' %} {{ f.returning ? ('← zurück nach'|trans) : '→' }} {{ ui.coords(f.returning ? f.coordinates : f.targetCoordinates) }}{% endif %}
                             {# What the fleet carries – trade flights, pickups, loot. #}
-                            {% if not f.cargo.empty %}<span class="movement-cargo small muted" title="{{ 'Ladung'|trans }}">📦 {{ ui.goods(f.cargo) }}</span>{% endif %}
+                            {% if not f.cargo.empty %}<span class="movement-cargo small muted" title="{{ 'Ladung'|trans }}">📦 {{ ui.goods(f.cargo) }}</span>
+                            {% elseif f.hasHold %}<span class="movement-cargo small muted" title="{{ 'Ladung'|trans }}">📦 {{ 'leer'|trans }}</span>{% endif %}
+                            {% if f.mission.value == 'pickup' and not f.returning and not f.pickupGoods.empty %}<span class="movement-cargo small muted">📥 {{ 'holt ab: {goods}'|trans({'{goods}': ui.goods(f.pickupGoods)}) }}</span>{% endif %}
                         </td>
                         <td class="num movement-time" title="{{ f.returning ? 'Rückkehr'|trans : (f.mission.value == 'hover' ? 'landet'|trans : 'Ankunft'|trans) }}">{{ ui.countdown(f.nextEventAt, now) }}</td>
                         <td class="num small muted movement-time">{{ ui.at(f.nextEventAt, now) }}</td>
