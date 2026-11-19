@@ -203,11 +203,15 @@
                     {% endif %}
                 {% for e in section.rows %}
                     {% set f = e.fleet %}
+                    {# Ships and fighting values of the whole fleet (its owner's research), for the box below the actions. #}
+                    {% set fs = {count: 0, attack: 0, defense: 0, shield: 0} %}
+                    {% for s in f.shipList %}{% set st = ship_strength(s.type, f.owner) %}{% set fs = {count: fs.count + s.count, attack: fs.attack + s.count * st.attack, defense: fs.defense + s.count * st.defense, shield: fs.shield + s.count * st.shield} %}{% endfor %}
                     <tr class="{{ f.moving ? 'moving' }}" data-fleet-row data-name="{{ f.label|trans|lower }}" data-own="{{ e.own ? 1 : 0 }}" data-ships="{{ f.ships|json_encode }}">
                         <td>
                             <input type="checkbox" name="fleets[]" value="{{ f.id }}" id="pick-{{ f.id }}" aria-label="{{ '{label} auswählen'|trans({'{label}': f.label|trans}) }}"
                                    data-from="{{ f.galaxy }}:{{ f.system }}:{{ f.position }}" data-speed="{{ e.speed }}" data-fuel="{{ e.fuel }}" data-crew="{{ e.crew }}" data-named="{{ f.named ? 1 : 0 }}"
-                                   data-capacity="{{ e.capacity }}" data-load="{{ f.cargo.total|round(0, 'floor') }}"{% if e.post %} data-trade-post="{{ path('app_trade_post', {id: e.post.id}) }}"{% endif %}>
+                                   data-capacity="{{ e.capacity }}" data-load="{{ f.cargo.total|round(0, 'floor') }}"
+                                   data-ship-count="{{ fs.count }}" data-attack="{{ fs.attack }}" data-defense="{{ fs.defense }}" data-shield="{{ fs.shield }}"{% if e.post %} data-trade-post="{{ path('app_trade_post', {id: e.post.id}) }}"{% endif %}>
                         </td>
                         <td>
                             <label for="pick-{{ f.id }}"><strong>{{ f.label|trans }}</strong></label>
@@ -262,6 +266,13 @@
                 </label>
                 <span class="muted small" data-selected-count>{{ 'Keine Flotte ausgewählt'|trans }}</span>
             </div>
+            {# Opens as soon as fleets are ticked: their ships and fighting values added up. #}
+            <p class="fleet-strength small" data-picked-strength hidden aria-live="polite">
+                <span>{{ 'Schiffe'|trans }}: <strong data-sum="count">0</strong></span>
+                <span title="{{ 'Kampfwert beim Angreifen, Abfangen und Überfallen'|trans }}">⚔️ {{ 'Angriff'|trans }}: <strong data-sum="attack">0</strong></span>
+                <span title="{{ 'Kampfwert beim Verteidigen'|trans }}">🛡️ {{ 'Verteidigung'|trans }}: <strong data-sum="defense">0</strong></span>
+                <span>🔰 {{ 'Schild'|trans }}: <strong data-sum="shield">0</strong></span>
+            </p>
             <p class="muted small" data-action-help></p>
 
             <div class="bulk-panel" data-panel="send" hidden>

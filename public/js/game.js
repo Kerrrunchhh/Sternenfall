@@ -728,6 +728,15 @@ const orbit = (() => {
             const value = action.value;
             const single = picked.length === 1 ? picked[0].value : null;
             count.textContent = picked.length === 0 ? t('Keine Flotte ausgewählt') : (picked.length === 1 ? t('1 Flotte ausgewählt') : t('{count} Flotten ausgewählt', { count: picked.length }));
+            // Ships and fighting values of the ticked fleets, added up.
+            const strength = document.querySelector('[data-picked-strength]');
+            if (strength) {
+                const format = new Intl.NumberFormat(LOCALE_TAG, { maximumFractionDigits: 0 });
+                [['count', 'shipCount'], ['attack', 'attack'], ['defense', 'defense'], ['shield', 'shield']].forEach(([key, data]) => {
+                    strength.querySelector(`[data-sum="${key}"]`).textContent = format.format(picked.reduce((sum, box) => sum + (parseInt(box.dataset[data], 10) || 0), 0));
+                });
+                strength.hidden = picked.length === 0;
+            }
             if (all) {
                 const shown = boxes.filter((box) => !box.closest('tr').hidden).length;
                 all.checked = picked.length > 0 && picked.length === shown;
