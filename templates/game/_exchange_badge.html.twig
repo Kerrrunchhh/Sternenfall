@@ -1,0 +1,3 @@
+{# Visitor exchange of BrowserGamesTop: players discover another game, the site sends players to us.
+   The banner is served locally (no request to the site before the click); the click passes the player's number. #}
+<a href="https://browsergamestop.com/exchange/starfall-new-horizons?userid={{ player.id }}" target="_blank" rel="noopener" title="{{ 'Entdecke ein anderes Browserspiel auf BrowserGamesTop – dafür kommen neue Spieler zu uns.'|trans }}"><img src="{{ asset('pictures/brand/exchange-browsergamestop.png') }}" alt="{{ 'Ein anderes Browserspiel entdecken'|trans }}" width="234" height="60" loading="lazy" style="border:0;display:inline-block;max-width:100%;height:auto"></a>
