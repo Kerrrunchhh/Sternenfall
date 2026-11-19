@@ -126,6 +126,8 @@
                             {# What the fleet carries – trade flights, pickups, loot. #}
                             {% if not f.cargo.empty %}<span class="movement-cargo small muted" title="{{ 'Ladung'|trans }}">📦 {{ ui.goods(f.cargo) }}</span>
                             {% elseif f.hasHold %}<span class="movement-cargo small muted" title="{{ 'Ladung'|trans }}">📦 {{ 'leer'|trans }}</span>{% endif %}
+                            {# Gathering: which ships join which fleet. #}
+                            {% if f.mission.value == 'gather' and not f.returning %}<span class="movement-cargo small muted">🚀 {{ hover|trim }}{% if f.targetFleet %} {{ '→ zu „{fleet}“'|trans({'{fleet}': f.targetFleet.label|trans}) }}{% endif %}</span>{% endif %}
                             {% if f.mission.value == 'pickup' and not f.returning and not f.pickupGoods.empty %}<span class="movement-cargo small muted">📥 {{ 'holt ab: {goods}'|trans({'{goods}': ui.goods(f.pickupGoods)}) }}</span>{% endif %}
                         </td>
                         <td class="num movement-time" title="{{ f.returning ? 'Rückkehr'|trans : (f.mission.value == 'hover' ? 'landet'|trans : 'Ankunft'|trans) }}">{{ ui.countdown(f.nextEventAt, now) }}</td>
