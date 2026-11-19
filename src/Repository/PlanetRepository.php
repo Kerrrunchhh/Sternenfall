@@ -64,6 +64,29 @@ class PlanetRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * Systems of the galaxy with at least one planet – of the given owners only, if any are given.
+     *
+     * @param list<\App\Entity\User>|null $owners
+     *
+     * @return list<int>
+     */
+    public function systemsInGalaxy(int $galaxy, ?array $owners = null): array
+    {
+        if ([] === $owners) {
+            return [];
+        }
+        $query = $this->createQueryBuilder('p')
+            ->select('DISTINCT p.system')
+            ->where('p.galaxy = :galaxy')
+            ->setParameter('galaxy', $galaxy);
+        if (null !== $owners) {
+            $query->andWhere('p.owner IN (:owners)')->setParameter('owners', $owners);
+        }
+
+        return array_map('intval', $query->getQuery()->getSingleColumnResult());
+    }
+
     public function findInSystem(int $galaxy, int $system): array
     {
         return $this->findBy(['galaxy' => $galaxy, 'system' => $system], ['position' => 'ASC']);

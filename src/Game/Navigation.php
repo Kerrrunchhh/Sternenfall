@@ -25,26 +25,25 @@ final readonly class Navigation
     /** Leaving the own system: a base plus this much per system in between. */
     public const int SYSTEM_BASE = 5000;
     public const int PER_SYSTEM = 500;
-    /** Another galaxy: this much more on top of the way across the systems. */
-    public const int PER_GALAXY = 100000;
-
     /**
      * Within a system the planets circle their sun: the distance depends on the moment (see Orbit).
      * To another system: a base, 500 per system in between and half the orbit radii of start and
-     * target (outer planets are farther out). Another galaxy adds 100,000 per galaxy on top, so it is
+     * target (outer planets are farther out). Another galaxy adds the way between the two galaxies,
+     * which circle the centre of the universe (Orbit::galaxyDistance, at least 100,000), so it is
      * never shorter than the same way inside a galaxy.
      * Mirrored in public/js/game.js (flight preview) – change both together.
      */
     public function distance(int $galaxy1, int $system1, int $position1, int $galaxy2, int $system2, int $position2, ?\DateTimeInterface $at = null): int
     {
+        $at ??= $this->clock?->now() ?? \Symfony\Component\Clock\now();
         if ($galaxy1 === $galaxy2 && $system1 === $system2) {
-            return $position1 === $position2 ? 5 : Orbit::distance($galaxy1, $system1, $position1, $position2, $at ?? $this->clock?->now() ?? \Symfony\Component\Clock\now());
+            return $position1 === $position2 ? 5 : Orbit::distance($galaxy1, $system1, $position1, $position2, $at);
         }
 
         return self::SYSTEM_BASE
             + self::PER_SYSTEM * abs($system1 - $system2)
             + intdiv(Orbit::radius($position1) + Orbit::radius($position2), 2)
-            + self::PER_GALAXY * abs($galaxy1 - $galaxy2);
+            + Orbit::galaxyDistance($galaxy1, $galaxy2, $at);
     }
 
     /** @param array<string, int> $ships */

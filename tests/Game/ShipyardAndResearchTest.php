@@ -132,9 +132,14 @@ class ShipyardAndResearchTest extends TestCase
         $player = new User('spaeher');
         $player->setResearchLevel(ResearchType::Espionage, 1);
         $navigation = new \App\Game\Navigation($this->economy);
+        $speed = $this->economy->shipSpeed(ShipType::Scout, $player);
 
-        $seconds = $navigation->flightSeconds($navigation->distance(3, 277, 1, 16, 185, 1), $this->economy->shipSpeed(ShipType::Scout, $player));
-        self::assertEqualsWithDelta(3600, $seconds, 600, '3:277 → 16:185 with espionage 1: about an hour (67 minutes since the systems in between count too)');
+        // The galaxies circle the centre: 3:277 → 16:185 takes half an hour to an hour and a quarter, depending on where they are.
+        foreach (['2026-11-19', '2026-12-05', '2027-01-20', '2027-04-01'] as $day) {
+            $seconds = $navigation->flightSeconds($navigation->distance(3, 277, 1, 16, 185, 1, new \DateTimeImmutable($day.' 00:00 UTC')), $speed);
+            self::assertGreaterThan(30 * 60, $seconds, $day);
+            self::assertLessThan(75 * 60, $seconds, $day);
+        }
         self::assertLessThan(5 * 60, $navigation->flightSeconds($navigation->distance(3, 277, 1, 3, 300, 1), $this->economy->shipSpeed(ShipType::Scout, $player)), 'another system: minutes');
     }
 

@@ -9,7 +9,13 @@ namespace App\Game;
  * shorter and longer all the time: TRAVEL_BASE plus the real distance between the two slots
  * at the moment of departure – "when the stars are right".
  *
- * public/js/game.js (orbit) computes the same for the system view and the flight preview.
+ * The galaxies circle the centre of the universe the same way: galaxy 1 in GALAXY_INNER_DAYS,
+ * galaxy 25 in GALAXY_OUTER_DAYS. Flights between galaxies cover GALAXY_TRAVEL_BASE plus the real
+ * distance between the two galaxies at departure. Inside a galaxy the systems lie on spiral arms
+ * and the galaxy turns as a whole (GALAXY_SPIN_DAYS): distances between systems never change –
+ * the turning is only shown on the galaxy map.
+ *
+ * public/js/game.js (orbit) computes the same for the system view, the galaxy map and the flight preview.
  */
 final class Orbit
 {
@@ -22,6 +28,15 @@ final class Orbit
     public const int RADIUS_STEP = 100;
     /** Leaving and approaching a planet, on top of the distance between the two. */
     public const int TRAVEL_BASE = 600;
+
+    public const float GALAXY_INNER_DAYS = 90;
+    public const float GALAXY_OUTER_DAYS = 365;
+    /** Orbit radius of galaxy g: g × GALAXY_RADIUS_STEP. Chosen so that on average a flight between two galaxies is about as long as before (100,000 per galaxy). */
+    public const int GALAXY_RADIUS_STEP = 41000;
+    /** Leaving one galaxy and entering the other, on top of the distance between the two. */
+    public const int GALAXY_TRAVEL_BASE = 100000;
+    /** One turn of a galaxy around its centre (only shown on the galaxy map). */
+    public const float GALAXY_SPIN_DAYS = 30;
 
     public static function radius(int $position): int
     {
@@ -44,6 +59,41 @@ final class Orbit
         $turns = ($at->getTimestamp() - self::EPOCH) / self::periodSeconds($galaxy, $system, $position);
 
         return fmod($phase + 2 * M_PI * $turns, 2 * M_PI);
+    }
+
+    public static function galaxyRadius(int $galaxy): int
+    {
+        return self::GALAXY_RADIUS_STEP * $galaxy;
+    }
+
+    /** Seconds for one orbit of the galaxy around the centre of the universe. */
+    public static function galaxyPeriodSeconds(int $galaxy): float
+    {
+        $share = Universe::GALAXIES > 1 ? max(0, min(1, ($galaxy - 1) / (Universe::GALAXIES - 1))) : 0.0;
+
+        return 86400 * (self::GALAXY_INNER_DAYS + (self::GALAXY_OUTER_DAYS - self::GALAXY_INNER_DAYS) * $share ** 1.5);
+    }
+
+    /** Angle of the galaxy on its orbit around the centre of the universe (radians) at the moment. */
+    public static function galaxyAngle(int $galaxy, \DateTimeInterface $at): float
+    {
+        $phase = crc32("galaxy:$galaxy") / 4294967296 * 2 * M_PI;
+        $turns = ($at->getTimestamp() - self::EPOCH) / self::galaxyPeriodSeconds($galaxy);
+
+        return fmod($phase + 2 * M_PI * $turns, 2 * M_PI);
+    }
+
+    /** The part of a flight between two galaxies that depends on where they are at the moment. */
+    public static function galaxyDistance(int $from, int $to, \DateTimeInterface $at): int
+    {
+        if ($from === $to) {
+            return 0;
+        }
+        $a = self::galaxyRadius($from);
+        $b = self::galaxyRadius($to);
+        $between = self::galaxyAngle($from, $at) - self::galaxyAngle($to, $at);
+
+        return self::GALAXY_TRAVEL_BASE + (int) round(sqrt(max(0.0, $a * $a + $b * $b - 2 * $a * $b * cos($between))));
     }
 
     /** Flight distance between two slots of the same system at the moment. */

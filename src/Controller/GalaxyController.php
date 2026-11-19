@@ -125,6 +125,30 @@ class GalaxyController extends AbstractGameController
             'debris' => $espionage->knownDebris($this->player(), $galaxy, $system),
             'galaxies' => Universe::GALAXIES,
             'systems' => Universe::SYSTEMS_PER_GALAXY,
+            // The galaxy map: every system on the spiral arms, turning with the galaxy (see Orbit, public/js/game.js).
+            'galaxy_map' => [
+                'galaxy' => $galaxy,
+                'system' => $system,
+                'systems' => Universe::SYSTEMS_PER_GALAXY,
+                'occupied' => $planets->systemsInGalaxy($galaxy),
+                'own' => $planets->systemsInGalaxy($galaxy, [$player]),
+                'alliance' => null === $player->getAlliance() ? [] : $planets->systemsInGalaxy($galaxy, array_values(array_filter(
+                    $player->getAlliance()->getMembers()->toArray(),
+                    static fn (\App\Entity\User $member): bool => !$member->isSameAs($player),
+                ))),
+                'guild' => \App\Game\TradeGuild::SYSTEM,
+                'url' => $this->generateUrl('app_galaxy', ['galaxy' => $galaxy]),
+            ],
+            // The universe map: the galaxies circling the centre of the universe (see Orbit, public/js/game.js).
+            'universe_map' => [
+                'galaxy' => $galaxy,
+                'galaxies' => Universe::GALAXIES,
+                'own' => array_values(array_unique(array_map(static fn (\App\Entity\Planet $p): int => $p->getGalaxy(), $player->getPlanets()->toArray()))),
+                'periods' => array_map(static fn (int $g): int => (int) round(\App\Game\Orbit::galaxyPeriodSeconds($g) / 86400), range(1, Universe::GALAXIES)),
+                'url' => $this->generateUrl('app_galaxy'),
+            ],
+            'galaxy_orbit_days' => (int) round(\App\Game\Orbit::galaxyPeriodSeconds($galaxy) / 86400),
+            'galaxy_spin_days' => (int) \App\Game\Orbit::GALAXY_SPIN_DAYS,
         ]);
     }
 }

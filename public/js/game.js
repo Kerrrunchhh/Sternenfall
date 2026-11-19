@@ -36,7 +36,9 @@ const serverClock = (() => {
 })();
 
 // Orbits – the same as App\Game\Orbit and Universe::planetsInSystem (keep both in step): the
-// planets circle their sun, so flights within a system get shorter and longer all the time.
+// planets circle their sun, so flights within a system get shorter and longer all the time; the
+// galaxies circle the centre of the universe, so flights between galaxies change too. A galaxy
+// turns as a whole (only shown on the galaxy map, distances between systems stay the same).
 const orbit = (() => {
     const EPOCH = 1767225600; // 01.01.2026 00:00 UTC
     const INNER_DAYS = 1;
@@ -44,6 +46,12 @@ const orbit = (() => {
     const RADIUS_BASE = 200;
     const RADIUS_STEP = 100;
     const TRAVEL_BASE = 600;
+    const GALAXIES = 25;
+    const GALAXY_INNER_DAYS = 90;
+    const GALAXY_OUTER_DAYS = 365;
+    const GALAXY_RADIUS_STEP = 41000;
+    const GALAXY_TRAVEL_BASE = 100000;
+    const GALAXY_SPIN_DAYS = 30;
     const table = Array.from({ length: 256 }, (_, n) => {
         let c = n;
         for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
@@ -79,7 +87,24 @@ const orbit = (() => {
         return TRAVEL_BASE + Math.round(Math.sqrt(Math.max(0, a * a + b * b - 2 * a * b * Math.cos(angle(g, s, from, ms) - angle(g, s, to, ms)))));
     };
 
-    return { slots, angle, distance };
+    const galaxyPeriod = (g) => {
+        const share = Math.max(0, Math.min(1, (g - 1) / (GALAXIES - 1)));
+        return 86400 * (GALAXY_INNER_DAYS + (GALAXY_OUTER_DAYS - GALAXY_INNER_DAYS) * share ** 1.5);
+    };
+    const galaxyAngle = (g, ms) => {
+        const phase = crc32(`galaxy:${g}`) / 4294967296 * 2 * Math.PI;
+        return (phase + 2 * Math.PI * (Math.floor(ms / 1000) - EPOCH) / galaxyPeriod(g)) % (2 * Math.PI);
+    };
+    const galaxyDistance = (from, to, ms) => {
+        if (from === to) return 0;
+        const a = GALAXY_RADIUS_STEP * from;
+        const b = GALAXY_RADIUS_STEP * to;
+        return GALAXY_TRAVEL_BASE + Math.round(Math.sqrt(Math.max(0, a * a + b * b - 2 * a * b * Math.cos(galaxyAngle(from, ms) - galaxyAngle(to, ms)))));
+    };
+    // How far the galaxy has turned around its own centre (galaxy map only).
+    const spin = (g, ms) => (crc32(`spin:${g}`) / 4294967296 * 2 * Math.PI + 2 * Math.PI * (ms / 1000 - EPOCH) / (GALAXY_SPIN_DAYS * 86400)) % (2 * Math.PI);
+
+    return { slots, angle, distance, crc32, galaxyAngle, galaxyDistance, spin };
 })();
 
 // Battle report: replay of the course of the battle, step by step in firing order.
@@ -441,7 +466,8 @@ const orbit = (() => {
         head.tabIndex = 0;
         let folded = false;
         try { folded = localStorage.getItem(key) === '1'; } catch (e) { /* ignore */ }
-        set(folded);
+        // A link straight to the box (#id) opens it.
+        set(folded && !(box.id && window.location.hash === '#' + box.id));
         const toggle = (event) => {
             if (event.target.closest('a, button, input, select, form')) {
                 return; // links inside the heading keep working
@@ -1409,6 +1435,274 @@ const orbit = (() => {
         setInterval(draw, 60000);
     }
 
+    // Time slider and ▶ for the maps: the slider goes up to its max in steps of unitMs ahead of now;
+    // ▶ plays the whole range in about 12 seconds (smoothly, between the steps) and then starts again.
+    const timeLapse = ({ slider, label, play, unitMs, format }, render) => {
+        let ahead = 0;
+        let frame = 0;
+        let last = 0;
+        const draw = () => {
+            const ms = serverClock.now().getTime() + ahead * unitMs;
+            render(ms);
+            if (label) label.textContent = ahead < 0.5 ? t('jetzt') : serverClock.format(new Date(ms), format);
+        };
+        const stop = () => {
+            cancelAnimationFrame(frame);
+            frame = 0;
+            if (play) {
+                play.textContent = t('▶ Abspielen');
+                play.setAttribute('aria-pressed', 'false');
+            }
+        };
+        const step = (time) => {
+            const max = parseFloat(slider.max);
+            ahead += last ? (time - last) * max / 12000 : 0;
+            last = time;
+            if (ahead > max) ahead = 0;
+            slider.value = String(Math.round(ahead));
+            draw();
+            frame = requestAnimationFrame(step);
+        };
+        play?.addEventListener('click', () => {
+            if (frame) {
+                stop();
+                return;
+            }
+            last = 0;
+            play.textContent = t('⏸ Anhalten');
+            play.setAttribute('aria-pressed', 'true');
+            frame = requestAnimationFrame(step);
+        });
+        slider?.addEventListener('input', () => {
+            stop();
+            ahead = parseFloat(slider.value);
+            draw();
+        });
+        draw();
+        setInterval(() => { if (!document.hidden && !frame) draw(); }, 60000);
+
+        return { now: () => serverClock.now().getTime() + ahead * unitMs, redraw: draw };
+    };
+
+    // Galaxy map: the systems on four spiral arms around the centre; the galaxy turns as a whole
+    // (orbit.spin), so the arms move but the systems keep their distances. Tap to pick a system.
+    const galaxyMap = document.querySelector('[data-galaxy-map]');
+    if (galaxyMap) {
+        const cfg = JSON.parse(galaxyMap.dataset.config);
+        const NS = 'http://www.w3.org/2000/svg';
+        const node = (name, attrs) => {
+            const element = document.createElementNS(NS, name);
+            Object.entries(attrs).forEach(([key, value]) => element.setAttribute(key, value));
+            return element;
+        };
+        const sets = { own: new Set(cfg.own), alliance: new Set(cfg.alliance), occupied: new Set(cfg.occupied) };
+        const ARMS = 4;
+        const perArm = Math.ceil(cfg.systems / ARMS);
+        // Fixed place of every system before the galaxy's turn: along its arm from the core outwards, slightly scattered.
+        const places = [];
+        for (let s = 1; s <= cfg.systems; s++) {
+            const arm = Math.floor((s - 1) / perArm);
+            const f = ((s - 1) % perArm) / Math.max(1, perArm - 1);
+            const jitter = orbit.crc32(`star:${cfg.galaxy}:${s}`);
+            const r = 12 + 84 * f + ((jitter & 0xff) / 255 - 0.5) * 4;
+            const a = arm * 2 * Math.PI / ARMS + 2.8 * f + (((jitter >>> 8) & 0xff) / 255 - 0.5) * 0.12;
+            places[s] = { r, a };
+        }
+        const kindOf = (s) => (s === cfg.system ? 'gm-current' : sets.own.has(s) ? 'gm-own' : sets.alliance.has(s) ? 'gm-alliance'
+            : s === cfg.guild ? 'gm-guild' : sets.occupied.has(s) ? 'gm-occupied' : 'gm-empty');
+        const radiusOf = { 'gm-current': 2.4, 'gm-own': 2.1, 'gm-alliance': 1.8, 'gm-guild': 2.1, 'gm-occupied': 1.1, 'gm-empty': 0.7 };
+
+        const defs = node('defs', {});
+        const glow = node('radialGradient', { id: 'gm-core' });
+        glow.append(node('stop', { offset: '0%', 'stop-color': '#fff8e1', 'stop-opacity': '0.95' }));
+        glow.append(node('stop', { offset: '35%', 'stop-color': '#ffcc80', 'stop-opacity': '0.35' }));
+        glow.append(node('stop', { offset: '100%', 'stop-color': '#ffcc80', 'stop-opacity': '0' }));
+        defs.append(glow);
+        galaxyMap.append(defs, node('circle', { r: 30, fill: 'url(#gm-core)' }));
+        const turning = node('g', {});
+        galaxyMap.append(turning);
+        // Faint arms behind the systems.
+        for (let arm = 0; arm < ARMS; arm++) {
+            const points = [];
+            for (let i = 0; i <= 40; i++) {
+                const f = i / 40;
+                const a = arm * 2 * Math.PI / ARMS + 2.8 * f;
+                points.push(`${((12 + 84 * f) * Math.cos(a)).toFixed(1)},${((12 + 84 * f) * Math.sin(a)).toFixed(1)}`);
+            }
+            turning.append(node('polyline', { class: 'gm-arm', points: points.join(' ') }));
+        }
+        const dots = [];
+        // Empty systems first, so the marked ones lie on top.
+        const order = Array.from({ length: cfg.systems }, (_, i) => i + 1).sort((x, y) => (kindOf(x) === 'gm-empty' ? 0 : 1) - (kindOf(y) === 'gm-empty' ? 0 : 1));
+        order.forEach((s) => {
+            const kind = kindOf(s);
+            const { r, a } = places[s];
+            const dot = node('circle', { class: `gm-system ${kind}`, cx: (r * Math.cos(a)).toFixed(2), cy: (r * Math.sin(a)).toFixed(2), r: radiusOf[kind] });
+            turning.append(dot);
+            dots[s] = dot;
+        });
+        const marker = node('circle', { class: 'gm-selected', r: 4, visibility: 'hidden' });
+        turning.append(marker);
+
+        timeLapse({
+            slider: document.querySelector('[data-galaxy-time]'),
+            label: document.querySelector('[data-galaxy-time-label]'),
+            play: document.querySelector('[data-galaxy-play]'),
+            unitMs: 3600000,
+            format: { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' },
+        }, (ms) => {
+            turning.setAttribute('transform', `rotate(${(orbit.spin(cfg.galaxy, ms) * 180 / Math.PI).toFixed(3)})`);
+        });
+        const info = document.querySelector('[data-galaxy-map-info]');
+        const select = (s) => {
+            const { r, a } = places[s];
+            marker.setAttribute('cx', (r * Math.cos(a)).toFixed(2));
+            marker.setAttribute('cy', (r * Math.sin(a)).toFixed(2));
+            marker.setAttribute('visibility', 'visible');
+            if (!info) return;
+            const notes = [
+                sets.own.has(s) ? t('deine Planeten') : null,
+                sets.alliance.has(s) ? t('Allianz') : null,
+                s === cfg.guild ? t('Handelsgilde') : null,
+                !sets.own.has(s) && !sets.alliance.has(s) && s !== cfg.guild ? (sets.occupied.has(s) ? t('bewohnt') : t('unbewohnt')) : null,
+            ].filter(Boolean);
+            info.textContent = `${t('System {galaxy}:{system}', { galaxy: cfg.galaxy, system: s })} · ${notes.join(', ')} `;
+            const link = document.createElement('a');
+            link.href = `${cfg.url}${cfg.url.includes('?') ? '&' : '?'}system=${s}#systemansicht`;
+            link.textContent = t('→ anzeigen');
+            info.append(link);
+        };
+        // A tap picks the nearest system (the dots are too small to hit on a phone).
+        galaxyMap.addEventListener('click', (event) => {
+            const matrix = turning.getScreenCTM();
+            if (!matrix) return;
+            const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse());
+            let best = null;
+            let bestDistance = Infinity;
+            for (let s = 1; s <= cfg.systems; s++) {
+                const { r, a } = places[s];
+                const d = (r * Math.cos(a) - point.x) ** 2 + (r * Math.sin(a) - point.y) ** 2;
+                if (d < bestDistance) { bestDistance = d; best = s; }
+            }
+            if (best !== null && bestDistance < 100) select(best);
+        });
+    }
+
+    // Universe map: the galaxies on their orbits around the centre of the universe (orbit.galaxyAngle),
+    // each turning around itself (orbit.spin). Tap to pick a galaxy.
+    const universeMap = document.querySelector('[data-universe-map]');
+    if (universeMap) {
+        const cfg = JSON.parse(universeMap.dataset.config);
+        const NS = 'http://www.w3.org/2000/svg';
+        const node = (name, attrs) => {
+            const element = document.createElementNS(NS, name);
+            Object.entries(attrs).forEach(([key, value]) => element.setAttribute(key, value));
+            return element;
+        };
+        const fmt = new Intl.NumberFormat(LOCALE_TAG, { maximumFractionDigits: 0 });
+        const own = new Set(cfg.own);
+        // Rings evenly spaced for the eye; the distances use the real orbit radii.
+        const ring = (g) => 10 + 85 * (g - 1) / Math.max(1, cfg.galaxies - 1);
+        const defs = node('defs', {});
+        const core = node('radialGradient', { id: 'um-core' });
+        core.append(node('stop', { offset: '0%', 'stop-color': '#ffffff', 'stop-opacity': '0.9' }));
+        core.append(node('stop', { offset: '40%', 'stop-color': '#b39ddb', 'stop-opacity': '0.3' }));
+        core.append(node('stop', { offset: '100%', 'stop-color': '#b39ddb', 'stop-opacity': '0' }));
+        const glow = node('radialGradient', { id: 'um-glow' });
+        glow.append(node('stop', { offset: '0%', 'stop-color': '#fff8e1', 'stop-opacity': '1' }));
+        glow.append(node('stop', { offset: '100%', 'stop-color': '#b39ddb', 'stop-opacity': '0' }));
+        defs.append(core, glow);
+        universeMap.append(defs, node('circle', { r: 9, fill: 'url(#um-core)' }));
+        for (let g = 1; g <= cfg.galaxies; g++) {
+            universeMap.append(node('circle', { class: 'um-orbit' + (g === cfg.galaxy ? ' um-orbit-current' : ''), r: ring(g) }));
+        }
+        const line = node('line', { class: 'sv-line', visibility: 'hidden' });
+        universeMap.append(line);
+        const galaxies = [];
+        for (let g = 1; g <= cfg.galaxies; g++) {
+            const kind = g === cfg.galaxy ? 'um-current' : own.has(g) ? 'um-own' : 'um-other';
+            const group = node('g', { class: `um-galaxy ${kind}` });
+            const body = node('g', {});
+            const size = g === cfg.galaxy ? 1.9 : own.has(g) ? 1.6 : 1.3;
+            body.append(node('circle', { r: 3.2 * size, fill: 'url(#um-glow)', opacity: 0.55 }));
+            // Two little spiral arms, so one sees the galaxy turn.
+            body.append(node('path', { class: 'um-arm', d: `M0,0 q${2.2 * size},${-0.6 * size} ${3 * size},${1.8 * size}` }));
+            body.append(node('path', { class: 'um-arm', d: `M0,0 q${-2.2 * size},${0.6 * size} ${-3 * size},${-1.8 * size}` }));
+            body.append(node('circle', { class: 'um-dot', r: 0.9 * size }));
+            const label = node('text', { class: 'um-label', x: 3.6 * size, y: -2.4 * size });
+            label.textContent = String(g);
+            group.append(body, label);
+            universeMap.append(group);
+            galaxies[g] = { group, body };
+        }
+        const marker = node('circle', { class: 'gm-selected', r: 5.5, visibility: 'hidden' });
+        universeMap.append(marker);
+        const at = (g, ms) => {
+            const a = orbit.galaxyAngle(g, ms);
+            return [ring(g) * Math.cos(a), ring(g) * Math.sin(a)];
+        };
+        const info = document.querySelector('[data-universe-map-info]');
+        let selected = null;
+        const describe = (ms) => {
+            if (!info || selected === null) return;
+            const notes = [t('Galaxie {galaxy}', { galaxy: selected }), t('Umlauf: {days} Tage', { days: cfg.periods[selected - 1] })];
+            if (own.has(selected)) notes.push(t('deine Planeten'));
+            if (selected !== cfg.galaxy) {
+                notes.push(t('Weg von Galaxie {from}: {distance}', { from: cfg.galaxy, distance: fmt.format(orbit.galaxyDistance(cfg.galaxy, selected, ms)) }));
+            }
+            info.textContent = notes.join(' · ') + ' ';
+            const link = document.createElement('a');
+            link.href = `${cfg.url}?galaxy=${selected}#galaxiekarte`;
+            link.textContent = t('→ anzeigen');
+            info.append(link);
+        };
+        const lapse = timeLapse({
+            slider: document.querySelector('[data-universe-time]'),
+            label: document.querySelector('[data-universe-time-label]'),
+            play: document.querySelector('[data-universe-play]'),
+            unitMs: 86400000,
+            format: { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' },
+        }, (ms) => {
+            for (let g = 1; g <= cfg.galaxies; g++) {
+                const [x, y] = at(g, ms);
+                galaxies[g].group.setAttribute('transform', `translate(${x.toFixed(2)} ${y.toFixed(2)})`);
+                galaxies[g].body.setAttribute('transform', `rotate(${(orbit.spin(g, ms) * 180 / Math.PI).toFixed(2)})`);
+            }
+            if (selected !== null) {
+                const [x, y] = at(selected, ms);
+                marker.setAttribute('cx', x.toFixed(2));
+                marker.setAttribute('cy', y.toFixed(2));
+                marker.setAttribute('visibility', 'visible');
+                if (selected !== cfg.galaxy) {
+                    const [x1, y1] = at(cfg.galaxy, ms);
+                    Object.entries({ x1, y1, x2: x, y2: y }).forEach(([key, value]) => line.setAttribute(key, value.toFixed(2)));
+                    line.setAttribute('visibility', 'visible');
+                } else {
+                    line.setAttribute('visibility', 'hidden');
+                }
+            }
+            describe(ms);
+        });
+        // A tap picks the nearest galaxy where it is at the moment shown.
+        universeMap.addEventListener('click', (event) => {
+            const matrix = universeMap.getScreenCTM();
+            if (!matrix) return;
+            const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse());
+            const ms = lapse.now();
+            let best = null;
+            let bestDistance = Infinity;
+            for (let g = 1; g <= cfg.galaxies; g++) {
+                const [x, y] = at(g, ms);
+                const d = (x - point.x) ** 2 + (y - point.y) ** 2;
+                if (d < bestDistance) { bestDistance = d; best = g; }
+            }
+            if (best !== null && bestDistance < 150) {
+                selected = best;
+                lapse.redraw();
+            }
+        });
+    }
+
     // Confirmation modal for dangerous buttons (data-confirm="question", data-confirm-label="Do it").
     const dialog = document.getElementById('confirm-dialog');
     if (dialog && typeof dialog.showModal === 'function') {
@@ -1471,7 +1765,7 @@ const orbit = (() => {
     const distance = (a, b) => {
         // The same as App\Game\Navigation::distance (keep both in step).
         if (a[0] !== b[0] || a[1] !== b[1]) {
-            return 5000 + 500 * Math.abs(a[1] - b[1]) + Math.floor((200 + 100 * a[2] + 200 + 100 * b[2]) / 2) + 100000 * Math.abs(a[0] - b[0]);
+            return 5000 + 500 * Math.abs(a[1] - b[1]) + Math.floor((200 + 100 * a[2] + 200 + 100 * b[2]) / 2) + orbit.galaxyDistance(a[0], b[0], serverClock.now().getTime());
         }
         if (a[2] !== b[2]) return orbit.distance(a[0], a[1], a[2], b[2], serverClock.now().getTime());
         return 5;

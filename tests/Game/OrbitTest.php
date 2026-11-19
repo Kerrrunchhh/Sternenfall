@@ -54,6 +54,51 @@ class OrbitTest extends TestCase
         self::assertLessThanOrEqual($farthest, Orbit::distance(1, 1, 1, 10, $at));
     }
 
+    public function testGalaxiesCircleTheCentreInnerOnesFaster(): void
+    {
+        self::assertEqualsWithDelta(90 * 86400, Orbit::galaxyPeriodSeconds(1), 1);
+        self::assertEqualsWithDelta(365 * 86400, Orbit::galaxyPeriodSeconds(Universe::GALAXIES), 1);
+        self::assertLessThan(Orbit::galaxyPeriodSeconds(13), Orbit::galaxyPeriodSeconds(12));
+
+        $at = new \DateTimeImmutable('2026-11-19 00:00:00 UTC');
+        self::assertEqualsWithDelta(Orbit::galaxyAngle(7, $at), Orbit::galaxyAngle(7, $at->modify('+'.(int) Orbit::galaxyPeriodSeconds(7).' seconds')), 1e-6);
+    }
+
+    public function testTheWayBetweenGalaxiesChangesButStaysAsLongAsBeforeOnAverage(): void
+    {
+        $start = new \DateTimeImmutable('2026-11-19 00:00:00 UTC');
+        self::assertSame(0, Orbit::galaxyDistance(4, 4, $start));
+        self::assertSame(Orbit::galaxyDistance(4, 9, $start), Orbit::galaxyDistance(9, 4, $start));
+
+        // Between the closest and the farthest position, and it moves.
+        $a = Orbit::galaxyRadius(4);
+        $b = Orbit::galaxyRadius(9);
+        $seen = [];
+        for ($day = 0; $day < 365; $day += 5) {
+            $d = Orbit::galaxyDistance(4, 9, $start->modify("+$day days"));
+            self::assertGreaterThanOrEqual(Orbit::GALAXY_TRAVEL_BASE + $b - $a - 1, $d);
+            self::assertLessThanOrEqual(Orbit::GALAXY_TRAVEL_BASE + $a + $b + 1, $d);
+            $seen[] = $d;
+        }
+        self::assertGreaterThan(100000, max($seen) - min($seen), 'the galaxies move against each other');
+
+        // Over all pairs and a year: about as far as the old 100,000 per galaxy (866,667 on average).
+        $sum = 0;
+        $count = 0;
+        for ($day = 0; $day < 365; $day += 30) {
+            $at = $start->modify("+$day days");
+            for ($g = 1; $g <= Universe::GALAXIES; ++$g) {
+                for ($h = 1; $h <= Universe::GALAXIES; ++$h) {
+                    if ($g !== $h) {
+                        $sum += Orbit::galaxyDistance($g, $h, $at);
+                        ++$count;
+                    }
+                }
+            }
+        }
+        self::assertEqualsWithDelta(866667, $sum / $count, 100000);
+    }
+
     public function testEverySystemHasAFixedSun(): void
     {
         self::assertSame(SunType::of(4, 123), SunType::of(4, 123));

@@ -22,17 +22,19 @@ class NavigationTest extends TestCase
 
     public function testDistanceGrowsWithScope(): void
     {
-        $samePlanet = $this->navigation->distance(1, 1, 5, 1, 1, 5);
-        $sameSystem = $this->navigation->distance(1, 1, 5, 1, 1, 9);
-        $sameGalaxy = $this->navigation->distance(1, 1, 5, 1, 20, 5);
-        $otherGalaxy = $this->navigation->distance(1, 1, 5, 3, 1, 5);
+        $at = new \DateTimeImmutable('2026-11-19 12:00:00 UTC');
+        $samePlanet = $this->navigation->distance(1, 1, 5, 1, 1, 5, $at);
+        $sameSystem = $this->navigation->distance(1, 1, 5, 1, 1, 9, $at);
+        $sameGalaxy = $this->navigation->distance(1, 1, 5, 1, 20, 5, $at);
+        $otherGalaxy = $this->navigation->distance(1, 1, 5, 3, 1, 5, $at);
 
         // Within a system it depends on where the two planets are on their orbits (see OrbitTest).
         self::assertGreaterThanOrEqual(\App\Game\Orbit::TRAVEL_BASE + 400, $sameSystem);
         self::assertLessThanOrEqual(\App\Game\Orbit::TRAVEL_BASE + \App\Game\Orbit::radius(5) + \App\Game\Orbit::radius(9), $sameSystem);
         // 5,000 base, 500 per system (1,000 until 2026-11-17), half the orbit radii of both planets (700 each at position 5).
         self::assertSame(5000 + 19 * 500 + 700, $sameGalaxy);
-        self::assertSame(5000 + 700 + 2 * 100000, $otherGalaxy);
+        // Another galaxy: the way between the two galaxies on their orbits at the moment (see OrbitTest).
+        self::assertSame(5000 + 700 + \App\Game\Orbit::galaxyDistance(1, 3, $at), $otherGalaxy);
         self::assertTrue($samePlanet < $sameSystem && $sameSystem < $sameGalaxy && $sameGalaxy < $otherGalaxy);
     }
 
@@ -45,10 +47,12 @@ class NavigationTest extends TestCase
 
         self::assertGreaterThan($this->navigation->distance(1, 100, 1, 1, 101, 1), $this->navigation->distance(1, 100, 1, 1, 101, 40), 'outer planets are farther out');
 
-        // Across a galaxy it is the same way plus 100,000 – never shorter than inside one.
+        // Across a galaxy it is the same way plus the way between the galaxies (at least 100,000) – never shorter than inside one.
+        $at = new \DateTimeImmutable('2026-11-19 12:00:00 UTC');
         $farInside = $this->navigation->distance(1, 1, 50, 1, 500, 50);
         $otherGalaxy = $this->navigation->distance(1, 250, 1, 2, 250, 1);
-        self::assertSame($this->navigation->distance(1, 1, 50, 1, 500, 50) + 100000, $this->navigation->distance(1, 1, 50, 2, 500, 50));
+        self::assertSame($this->navigation->distance(1, 1, 50, 1, 500, 50) + \App\Game\Orbit::galaxyDistance(1, 2, $at), $this->navigation->distance(1, 1, 50, 2, 500, 50, $at));
+        self::assertGreaterThanOrEqual(100000, \App\Game\Orbit::galaxyDistance(1, 2, $at));
         self::assertGreaterThan($this->navigation->distance(1, 250, 1, 1, 251, 1), $otherGalaxy);
         self::assertGreaterThan(250000, $farInside, '499 systems at 500 each');
     }
