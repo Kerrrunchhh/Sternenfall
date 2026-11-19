@@ -112,9 +112,9 @@ final readonly class TransportRequests
             if (null !== $trader) {
                 $this->credit($trader, $request->getOffer());
                 $this->ledger?->book($trader, $request->getOffer(), CreditLedger::TRANSPORT, $request->getRequester(), \sprintf('Transportgesuch geliefert an %s [%s]', $request->getPlanetName(), $request->getCoordinates()));
-                $this->inbox->send($trader, t('Transportgesuch erfüllt'), t('Geliefert an {planetName} [{coords}] von {player}: {offer} Credits.', ['{planetName}' => $request->getPlanetName(), '{coords}' => $request->getCoordinates(), '{player}' => $request->getRequester()->getUsername(), '{offer}' => new Num($request->getOffer())]));
+                $this->inbox->send($trader, t('Transportgesuch erfüllt'), t('Geliefert an {planetName} [{coords}] von {player}: {offer} Credits.', ['{planetName}' => $request->getPlanetName(), '{coords}' => $request->getCoordinates(), '{player}' => $request->getRequester()->getUsername(), '{offer}' => new Num($request->getOffer())]), folder: MessageFolder::Trade);
             }
-            $this->inbox->send($request->getRequester(), t('Lieferung angekommen'), t('{value} hat dein Transportgesuch für {planetName} [{coords}] erfüllt.', ['{value}' => $trader?->getUsername() ?? t('Ein Händler'), '{planetName}' => $request->getPlanetName(), '{coords}' => $request->getCoordinates()]));
+            $this->inbox->send($request->getRequester(), t('Lieferung angekommen'), t('{value} hat dein Transportgesuch für {planetName} [{coords}] erfüllt.', ['{value}' => $trader?->getUsername() ?? t('Ein Händler'), '{planetName}' => $request->getPlanetName(), '{coords}' => $request->getCoordinates()]), folder: MessageFolder::Trade);
         }
     }
 

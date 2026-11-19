@@ -29,8 +29,9 @@ final class MessageFolderTest extends TestCase
         $inbox->send($player, t('Transport angekommen'), t('Alles da.'));
         $inbox->send($player, t('Spionagebericht'), t('Viel Eisen.'), folder: MessageFolder::Spy);
         $inbox->send($player, t('Kampfbericht'), t('Gewonnen.'), folder: MessageFolder::Battle);
+        $inbox->send($player, t('Lieferung angekommen'), t('Die Handelsgilde hat geliefert.'), folder: MessageFolder::Trade);
 
-        self::assertSame([MessageFolder::General, MessageFolder::Spy, MessageFolder::Battle], array_map(static fn (Message $m): MessageFolder => $m->getFolder(), $stored));
+        self::assertSame([MessageFolder::General, MessageFolder::Spy, MessageFolder::Battle, MessageFolder::Trade], array_map(static fn (Message $m): MessageFolder => $m->getFolder(), $stored));
     }
 
     public function testEveryFolderHasALabelAndAnIcon(): void

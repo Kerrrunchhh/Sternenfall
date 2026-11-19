@@ -1675,17 +1675,17 @@ final readonly class FleetService
             case FleetMission::Transport:
             case FleetMission::TransportStation:
                 if (null === $target) {
-                    $this->inbox->send($player, t('Transport nach {where} gescheitert', ['{where}' => $where]), t('Am Ziel befand sich kein Planet mehr. {name} kehrt mit ihrer Ladung zurück.', ['{name}' => $name]));
+                    $this->inbox->send($player, t('Transport nach {where} gescheitert', ['{where}' => $where]), t('Am Ziel befand sich kein Planet mehr. {name} kehrt mit ihrer Ladung zurück.', ['{name}' => $name]), folder: MessageFolder::Trade);
                     break;
                 }
                 $cargo = $fleet->getCargo();
                 $this->planets->transaction($target, static fn (Planet $t) => $t->setResources($t->getResources()->add($cargo)));
                 $fleet->setCargo(new Resources());
                 $this->transportRequests?->delivered($fleet, $target);
-                $this->inbox->send($player, t('Transport nach {where} angekommen', ['{where}' => $where]), new Lines([t('{name} hat folgende Ladung bei {planet} {where} abgeliefert:', ['{name}' => $name, '{planet}' => $target->getName(), '{where}' => $where]), $this->formatResources($cargo)]));
+                $this->inbox->send($player, t('Transport nach {where} angekommen', ['{where}' => $where]), new Lines([t('{name} hat folgende Ladung bei {planet} {where} abgeliefert:', ['{name}' => $name, '{planet}' => $target->getName(), '{where}' => $where]), $this->formatResources($cargo)]), folder: MessageFolder::Trade);
                 if ($target->getOwner()->getId() !== $player->getId()) {
                     $this->actionLog?->record($player, ActionLog::DELIVERY, \sprintf('Lieferung von %s an %s auf %s [%s]: %s', $fleet->getName() ?? 'Schnellflotte', $target->getOwner()->getUsername(), $target->getName(), $target->getCoordinates(), ActionLog::resources($cargo)), $target->getOwner());
-                    $this->inbox->send($target->getOwner(), t('Lieferung von {player}', ['{player}' => $player->getUsername()]), new Lines([t('{player} hat dir auf {planet} {where} Rohstoffe geliefert:', ['{player}' => $player->getUsername(), '{planet}' => $target->getName(), '{where}' => $where]), $this->formatResources($cargo)]));
+                    $this->inbox->send($target->getOwner(), t('Lieferung von {player}', ['{player}' => $player->getUsername()]), new Lines([t('{player} hat dir auf {planet} {where} Rohstoffe geliefert:', ['{player}' => $player->getUsername(), '{planet}' => $target->getName(), '{where}' => $where]), $this->formatResources($cargo)]), folder: MessageFolder::Trade);
                 }
                 // "Transportieren und stationieren": the fleet stays there instead of flying back.
                 if (FleetMission::TransportStation === $fleet->getMission()) {
@@ -1757,17 +1757,17 @@ final readonly class FleetService
                 $this->planets->transaction($target, function (Planet $t) use ($fleet, &$report): void {
                     $report = $this->pickUp($t, $fleet);
                 });
-                $this->inbox->send($player, t('Rohstoffe von {name} abgeholt', ['{name}' => $target->getName()]), t("{name} hat auf {name2} {where} geladen:\n{report}\nSie bringt die Ladung zurück zu ihrem Startplaneten.", ['{name}' => $name, '{name2}' => $target->getName(), '{where}' => $where, '{report}' => $report]));
+                $this->inbox->send($player, t('Rohstoffe von {name} abgeholt', ['{name}' => $target->getName()]), t("{name} hat auf {name2} {where} geladen:\n{report}\nSie bringt die Ladung zurück zu ihrem Startplaneten.", ['{name}' => $name, '{name2}' => $target->getName(), '{where}' => $where, '{report}' => $report]), folder: MessageFolder::Trade);
                 break;
 
             case FleetMission::Supply:
                 $post = $this->tradePosts->findAt($fleet->getTargetGalaxy(), $fleet->getTargetSystem(), $fleet->getTargetPosition());
                 if (null === $post || !$post->getOwner()->isSameAs($player) || !$post->isActive()) {
-                    $this->inbox->send($player, t('Belieferung von {where} gescheitert', ['{where}' => $where]), t('Dort steht kein aktiver Handelsstützpunkt von dir mehr. {name} kehrt zurück.', ['{name}' => $name]));
+                    $this->inbox->send($player, t('Belieferung von {where} gescheitert', ['{where}' => $where]), t('Dort steht kein aktiver Handelsstützpunkt von dir mehr. {name} kehrt zurück.', ['{name}' => $name]), folder: MessageFolder::Trade);
                     break;
                 }
                 $delivered = $this->trade->supply($post, $fleet);
-                $this->inbox->send($player, t('{name} beliefert', ['{name}' => $post->getName()]), t('{name} hat an {name2} {where} abgeliefert: {delivered}.', ['{name}' => $name, '{name2}' => $post->getName(), '{where}' => $where, '{delivered}' => $delivered]));
+                $this->inbox->send($player, t('{name} beliefert', ['{name}' => $post->getName()]), t('{name} hat an {name2} {where} abgeliefert: {delivered}.', ['{name}' => $name, '{name2}' => $post->getName(), '{where}' => $where, '{delivered}' => $delivered]), folder: MessageFolder::Trade);
                 if (!$fleet->hasShips()) {
                     $this->fleetRepository->forget($fleet);
 
@@ -1778,12 +1778,12 @@ final readonly class FleetService
             case FleetMission::Trade:
                 $post = $this->tradePosts->findAt($fleet->getTargetGalaxy(), $fleet->getTargetSystem(), $fleet->getTargetPosition());
                 if (null === $post || !$post->isAccessibleTo($player)) {
-                    $this->inbox->send($player, t('Handel an {where} gescheitert', ['{where}' => $where]), t('Der Handelsstützpunkt ist nicht mehr da oder für dich gesperrt. {name} kehrt zurück.', ['{name}' => $name]));
+                    $this->inbox->send($player, t('Handel an {where} gescheitert', ['{where}' => $where]), t('Der Handelsstützpunkt ist nicht mehr da oder für dich gesperrt. {name} kehrt zurück.', ['{name}' => $name]), folder: MessageFolder::Trade);
                     break;
                 }
                 // The fleet waits at the post; buying and selling happen on the trade post page.
                 $fleet->settleAtTarget();
-                $this->inbox->send($player, t('{name} am Handelsstützpunkt {name2} {where}', ['{name}' => $name, '{name2}' => $post->getName(), '{where}' => $where]), t('{name} ist bei {name2} {where} eingetroffen und wartet dort. Kaufen und verkaufen kannst du auf der Seite des Handelsstützpunkts (im Universum anklicken).', ['{name}' => $name, '{name2}' => $post->getName(), '{where}' => $where]));
+                $this->inbox->send($player, t('{name} am Handelsstützpunkt {name2} {where}', ['{name}' => $name, '{name2}' => $post->getName(), '{where}' => $where]), t('{name} ist bei {name2} {where} eingetroffen und wartet dort. Kaufen und verkaufen kannst du auf der Seite des Handelsstützpunkts (im Universum anklicken).', ['{name}' => $name, '{name2}' => $post->getName(), '{where}' => $where]), folder: MessageFolder::Trade);
 
                 return;
 

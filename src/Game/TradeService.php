@@ -81,7 +81,7 @@ final readonly class TradeService
         foreach ($this->posts->findOnLostPlanets() as $post) {
             $planet = $post->getPlanet();
             if (null !== $planet) {
-                $this->inbox->send($post->getOwner(), t('Handelsstützpunkt verloren'), t('{planet} [{coords}] gehört dir nicht mehr – dein Handelsstützpunkt „{name}“ dort ist aufgelöst.', ['{planet}' => $planet->getName(), '{coords}' => $planet->getCoordinates(), '{name}' => $post->getName()]));
+                $this->inbox->send($post->getOwner(), t('Handelsstützpunkt verloren'), t('{planet} [{coords}] gehört dir nicht mehr – dein Handelsstützpunkt „{name}“ dort ist aufgelöst.', ['{planet}' => $planet->getName(), '{coords}' => $planet->getCoordinates(), '{name}' => $post->getName()]), folder: MessageFolder::Trade);
                 $this->em->remove($post);
             }
         }
@@ -103,7 +103,7 @@ final readonly class TradeService
                     $home->setResources($home->getResources()->add($stock));
                 });
             }
-            $this->inbox->send($owner, t('Handelsstützpunkt umgezogen'), t('Handelsstützpunkte stehen jetzt auf einer deiner Kolonien und handeln mit deren Rohstoffen. „{name}“ [{coords}] ist deshalb aufgelöst; das Lager ({goods}) liegt jetzt auf {home}. Richte unter Handel einen neuen Stützpunkt auf einer Kolonie ein.', ['{name}' => $post->getName(), '{coords}' => $post->getCoordinates(), '{goods}' => Goods::summary(array_filter($stock->toArray(), static fn (float $v): bool => $v > 0)), '{home}' => $home instanceof Planet ? $home->getName() : '–']));
+            $this->inbox->send($owner, t('Handelsstützpunkt umgezogen'), t('Handelsstützpunkte stehen jetzt auf einer deiner Kolonien und handeln mit deren Rohstoffen. „{name}“ [{coords}] ist deshalb aufgelöst; das Lager ({goods}) liegt jetzt auf {home}. Richte unter Handel einen neuen Stützpunkt auf einer Kolonie ein.', ['{name}' => $post->getName(), '{coords}' => $post->getCoordinates(), '{goods}' => Goods::summary(array_filter($stock->toArray(), static fn (float $v): bool => $v > 0)), '{home}' => $home instanceof Planet ? $home->getName() : '–']), folder: MessageFolder::Trade);
             $this->em->remove($post);
         }
         $this->em->flush();
@@ -201,7 +201,7 @@ final readonly class TradeService
 
             $home = $plan['home'];
             $fleet->depart(FleetMission::Station, $home->getGalaxy(), $home->getSystem(), $home->getPosition(), $this->now(), $plan['seconds']);
-            $this->inbox->send($fleet->getOwner(), t('Flotte „{label}“ weggeschickt', ['{label}' => $fleet->getLabel()]), t('{player} hat deine Flotte vom Handelsstützpunkt {name} [{coords}] zu deinem Heimatplaneten {name2} [{coords2}] zurückgeschickt.', ['{player}' => $actor->getUsername(), '{name}' => $post->getName(), '{coords}' => $post->getCoordinates(), '{name2}' => $home->getName(), '{coords2}' => $home->getCoordinates()]));
+            $this->inbox->send($fleet->getOwner(), t('Flotte „{label}“ weggeschickt', ['{label}' => $fleet->getLabel()]), t('{player} hat deine Flotte vom Handelsstützpunkt {name} [{coords}] zu deinem Heimatplaneten {name2} [{coords2}] zurückgeschickt.', ['{player}' => $actor->getUsername(), '{name}' => $post->getName(), '{coords}' => $post->getCoordinates(), '{name2}' => $home->getName(), '{coords2}' => $home->getCoordinates()]), folder: MessageFolder::Trade);
             $this->em->flush();
         });
     }
@@ -362,7 +362,7 @@ final readonly class TradeService
             }
 
             if (!$own) {
-                $this->inbox->send($trader, t('Handel mit {player} an {name}', ['{player}' => $actor->getUsername(), '{name}' => $post->getName()]), new Lines($lines));
+                $this->inbox->send($trader, t('Handel mit {player} an {name}', ['{player}' => $actor->getUsername(), '{name}' => $post->getName()]), new Lines($lines), folder: MessageFolder::Trade);
             }
             // An abandoned post disappears once its owner has collected everything.
             if (!$post->isActive() && $post->isEmpty()) {

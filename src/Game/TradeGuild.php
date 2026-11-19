@@ -181,7 +181,7 @@ final readonly class TradeGuild
                 ShipType::LargeFreighter->spec()->speed,
             ), $this->navigation->gameSpeed());
             $request->assignToGuild($guild, $now->modify('+'.$seconds.' seconds'));
-            $this->inbox->send($request->getRequester(), t('Die Handelsgilde liefert'), t('Für dein Transportgesuch an {planet} [{coords}] hat sich kein Händler gefunden – die Handelsgilde liefert: {goods}. Ankunft {arrival}.', ['{planet}' => $request->getPlanetName(), '{coords}' => $request->getCoordinates(), '{goods}' => \App\I18n\Goods::summary($request->getGoods()->toArray()), '{arrival}' => new When($request->getGuildDeliveryAt(), 'd.m. H:i')]));
+            $this->inbox->send($request->getRequester(), t('Die Handelsgilde liefert'), t('Für dein Transportgesuch an {planet} [{coords}] hat sich kein Händler gefunden – die Handelsgilde liefert: {goods}. Ankunft {arrival}.', ['{planet}' => $request->getPlanetName(), '{coords}' => $request->getCoordinates(), '{goods}' => \App\I18n\Goods::summary($request->getGoods()->toArray()), '{arrival}' => new When($request->getGuildDeliveryAt(), 'd.m. H:i')]), folder: MessageFolder::Trade);
         }
 
         foreach ($this->requests->findBy(['status' => TransportRequest::ASSIGNED, 'fleet' => null]) as $request) {
@@ -196,7 +196,7 @@ final readonly class TradeGuild
                 $request->close(TransportRequest::CANCELLED, $now);
                 $this->em->getConnection()->executeStatement('UPDATE `user` SET credits = credits + ? WHERE id = ?', [$request->getOffer(), $requester->getId()]);
                 $this->ledger?->book($requester, $request->getOffer(), CreditLedger::TRANSPORT, null, \sprintf('Lieferung der Handelsgilde an %s [%s] gescheitert – Erstattung', $request->getPlanetName(), $request->getCoordinates()), counterpartyName: self::NAME);
-                $this->inbox->send($requester, t('Lieferung der Handelsgilde gescheitert'), t('{planet} [{coords}] gehört dir nicht mehr. Die Handelsgilde hat nicht geliefert, du bekommst {offer} Credits zurück.', ['{planet}' => $request->getPlanetName(), '{coords}' => $request->getCoordinates(), '{offer}' => new Num($request->getOffer())]));
+                $this->inbox->send($requester, t('Lieferung der Handelsgilde gescheitert'), t('{planet} [{coords}] gehört dir nicht mehr. Die Handelsgilde hat nicht geliefert, du bekommst {offer} Credits zurück.', ['{planet}' => $request->getPlanetName(), '{coords}' => $request->getCoordinates(), '{offer}' => new Num($request->getOffer())]), folder: MessageFolder::Trade);
                 continue;
             }
             $goods = $request->getGoods();
@@ -204,7 +204,7 @@ final readonly class TradeGuild
                 $p->setResources($p->getResources()->add($goods));
             });
             $request->close(TransportRequest::DONE, $now);
-            $this->inbox->send($requester, t('Lieferung angekommen'), t('Die Handelsgilde hat dein Transportgesuch für {planet} [{coords}] erfüllt.', ['{planet}' => $request->getPlanetName(), '{coords}' => $request->getCoordinates()]));
+            $this->inbox->send($requester, t('Lieferung angekommen'), t('Die Handelsgilde hat dein Transportgesuch für {planet} [{coords}] erfüllt.', ['{planet}' => $request->getPlanetName(), '{coords}' => $request->getCoordinates()]), folder: MessageFolder::Trade);
         }
         $this->em->flush();
     }
