@@ -2786,7 +2786,7 @@
 "Füllt die Schleifen aller Planeten mit diesen Einstellungen.": "Fills the queues of all planets with these settings."
 "Im Baubot ist noch nichts eingestellt.": "Nothing is set in the build bot yet."
 "Baubot": "Build bot"
-"Handelsgilde: {total} Rohstoffe → {coordinates}": "Trade guild: {total} resources → {coordinates}"
+"Handelsgilde: {goods} → {coordinates}": "Trade guild: {goods} → {coordinates}"
 "Deine angreifenden und transportierenden Flotten <small class=\"muted\">– in deiner Radarreichweite; andere sehen sie mit ihrem Radar</small>": "Your attacking and transporting fleets <small class=\"muted\">– within your radar range; others see them with their radar</small>"
 "Wartende Flotten sind unsichtbar. Sichtbar werden Flotten, die angreifen oder Rohstoffe transportieren – sobald sie auf ihrem Flug in deinen Radarbereich kommen. Eine Flotte fliegt gleichmäßig von System zu System.": "Waiting fleets are invisible. Fleets that attack or transport resources become visible – as soon as their flight brings them into your radar range. A fleet moves evenly from system to system."
 "🏅 +1 Punkt je Stufe · zählt jetzt {points}": "🏅 +1 point per level · counts {points} now"

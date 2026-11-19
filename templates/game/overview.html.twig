@@ -139,7 +139,7 @@
                 {% endfor %}
                 {% for r in guild_deliveries %}
                     <tr>
-                        <td class="movement-what">{{ 'Handelsgilde: {total} Rohstoffe → {coordinates}'|trans({'{total}': r.goods.total|num|e, '{coordinates}': ui.coords(r.coordinates)})|raw }}</td>
+                        <td class="movement-what">{{ 'Handelsgilde: {goods} → {coordinates}'|trans({'{goods}': ui.goods(r.goods)|e, '{coordinates}': ui.coords(r.coordinates)})|raw }}</td>
                         <td class="num movement-time" title="{{ 'Ankunft'|trans }}">{{ ui.countdown(r.guildDeliveryAt, now) }}</td>
                         <td class="num small muted movement-time">{{ ui.at(r.guildDeliveryAt, now) }}</td>
                         <td></td>
@@ -158,7 +158,7 @@
             {% for r in transport_running %}
                 <div class="proposal">
                     <div>
-                        {{ '{planetName} {coordinates} · {total} Rohstoffe · {offer} Credits'|trans({'{planetName}': r.planetName|e, '{coordinates}': ui.coords(r.coordinates), '{total}': r.goods.total|num|e, '{offer}': r.offer|num|e})|raw }}
+                        {{ '{planetName} {coordinates} · {goods} · {offer} Credits'|trans({'{planetName}': r.planetName|e, '{coordinates}': ui.coords(r.coordinates), '{goods}': ui.goods(r.goods)|e, '{offer}': r.offer|num|e})|raw }}
                         <div class="muted small">
                             {{ r.status == 'open' ? ('offen'|trans) : ('wird geliefert'|trans) }}
                             {% if r.requester.id == player.id %}{% if r.trader %} {{ '· Händler {trader}'|trans({'{trader}': ui.player(r.trader)})|raw }}{% endif %}{% else %} {{ '· du lieferst an {requester}'|trans({'{requester}': ui.player(r.requester)})|raw }}{% endif %}
