@@ -52,6 +52,30 @@ final class AdminNoticesTest extends TestCase
         self::assertStringContainsString('https://starfallnewhorizons.com/admin/anmeldungen', $text);
     }
 
+    public function testPayPalProblemsAreListedWithWhatHappened(): void
+    {
+        $notice = new AdminNotice(AdminNotice::PAYPAL, new User('Kaeufer', $this->now), $this->now, 'PayPal meldet einen Fehler – „Window closed“ · Browser: Firefox');
+
+        [$subject, $text] = AdminNotices::compose([$notice], new \DateTimeZone('Europe/Berlin'));
+
+        self::assertSame('Admin: 1 PayPal-Problem', $subject);
+        self::assertStringContainsString("PayPal-Probleme:\n– 19.11. 11:00 Kaeufer: PayPal meldet einen Fehler – „Window closed“ · Browser: Firefox", $text);
+    }
+
+    public function testAPlayerCanReportAtMostFivePayPalProblemsAnHour(): void
+    {
+        $player = new User('Kaeufer', $this->now);
+        foreach ([4 => 1, 5 => 0] as $already => $persisted) {
+            $repository = $this->createStub(AdminNoticeRepository::class);
+            $repository->method('countSince')->willReturn($already);
+            $em = $this->createMock(EntityManagerInterface::class);
+            $em->expects(self::exactly($persisted))->method('persist');
+            $notices = new AdminNotices($em, $repository, $this->mailer($this->createStub(MailerInterface::class)), new MockClock($this->now), new LockFactory(new InMemoryStore()));
+
+            $notices->record(AdminNotice::PAYPAL, $player, 'PayPal-Fenster geschlossen');
+        }
+    }
+
     public function testNewEventsGoOutOnceToEveryAdminAndNothingIsSentWithoutNews(): void
     {
         $admin = new User('Chefin', $this->now);

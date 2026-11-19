@@ -38,7 +38,7 @@ class ExtendedController extends AbstractGameController
     /** Called by the page after PayPal's window approved the subscription. */
     #[Route('/erweitert/aktivieren', name: 'app_extended_activate', methods: ['POST'])]
     #[IsCsrfTokenValid('extended', tokenKey: '_token')]
-    public function activate(Request $request, Inbox $inbox, GameMailer $mailer, TranslatorInterface $translator, EntityManagerInterface $em, #[Autowire(env: 'GAME_NAME')] string $gameName): JsonResponse
+    public function activate(Request $request, Inbox $inbox, GameMailer $mailer, TranslatorInterface $translator, EntityManagerInterface $em, \App\Game\AdminNotices $adminNotices, #[Autowire(env: 'GAME_NAME')] string $gameName): JsonResponse
     {
         try {
             if ('1' !== $request->request->getString('consent')) {
@@ -61,8 +61,38 @@ class ExtendedController extends AbstractGameController
 
             return new JsonResponse(['ok' => true]);
         } catch (PaymentException $e) {
+            $adminNotices->record(\App\Entity\AdminNotice::PAYPAL, $this->player(), self::describeProblem('Bestätigung im Spiel abgelehnt', $e->trans($translator, 'de'), $request));
+
             return new JsonResponse(['ok' => false, 'error' => $e->trans($translator)], 422);
         }
+    }
+
+    /** What the player's browser tells about a booking that went wrong (for the admins' digest). */
+    private const array PROBLEMS = [
+        'cancel' => 'PayPal-Fenster geschlossen, ohne abzuschließen',
+        'error' => 'PayPal meldet einen Fehler',
+        'load' => 'PayPal-Skript nicht geladen (Werbeblocker? Tracking-Schutz?)',
+        'confirm' => 'Bestätigung im Spiel nicht erreicht (Verbindung?)',
+    ];
+
+    #[Route('/erweitert/problem', name: 'app_extended_problem', methods: ['POST'])]
+    #[IsCsrfTokenValid('extended', tokenKey: '_token')]
+    public function problem(Request $request, \App\Game\AdminNotices $adminNotices): Response
+    {
+        $kind = $request->request->getString('kind');
+        if (isset(self::PROBLEMS[$kind])) {
+            $adminNotices->record(\App\Entity\AdminNotice::PAYPAL, $this->player(), self::describeProblem(self::PROBLEMS[$kind], $request->request->getString('message'), $request));
+        }
+
+        return new Response(null, Response::HTTP_NO_CONTENT);
+    }
+
+    /** One line for the digest: what happened, PayPal's message and the browser. */
+    private static function describeProblem(string $what, string $message, Request $request): string
+    {
+        $message = trim(preg_replace('/\s+/u', ' ', mb_substr($message, 0, 300)) ?? '');
+
+        return $what.('' === $message ? '' : ' – „'.$message.'“').' · Browser: '.mb_substr((string) $request->headers->get('User-Agent', '?'), 0, 200);
     }
 
     #[Route('/erweitert/kuendigen', name: 'app_extended_cancel', methods: ['POST'])]

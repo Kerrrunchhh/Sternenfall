@@ -21,6 +21,15 @@ class AdminNoticeRepository extends ServiceEntityRepository
         return $this->findBy(['sentAt' => null], ['createdAt' => 'ASC', 'id' => 'ASC']);
     }
 
+    /** How many notices of the kind the player caused since then (to stop flooding). */
+    public function countSince(User $user, string $kind, \DateTimeImmutable $since): int
+    {
+        return (int) $this->createQueryBuilder('n')->select('COUNT(n.id)')
+            ->where('n.user = :user AND n.kind = :kind AND n.createdAt >= :since')
+            ->setParameter('user', $user)->setParameter('kind', $kind)->setParameter('since', $since)
+            ->getQuery()->getSingleScalarResult();
+    }
+
     /** @return list<User> admins with an address to mail to */
     public function findAdmins(): array
     {

@@ -633,6 +633,26 @@ class GameFlowTest extends WebTestCase
         self::assertResponseRedirects('/suche?q=stern', 301);
     }
 
+    public function testAFailedPayPalBookingIsReportedToTheAdmins(): void
+    {
+        $this->register('Kaeuferin');
+        // With a subscription the page shows the cancel form – its token is the one the PayPal button uses too.
+        $user = $this->user('Kaeuferin');
+        $user->setSubscription('I-TEST123456', 'ACTIVE');
+        static::getContainer()->get(EntityManagerInterface::class)->flush();
+        $crawler = $this->client->request('GET', '/erweitert');
+        $token = (string) $crawler->filter('form[action$="/erweitert/kuendigen"] input[name="_token"]')->attr('value');
+
+        $this->client->request('POST', '/erweitert/problem', ['_token' => $token, 'kind' => 'error', 'message' => 'Window closed'], [], ['HTTP_USER_AGENT' => 'Testbrowser']);
+        self::assertResponseStatusCodeSame(204);
+        $this->client->request('POST', '/erweitert/problem', ['_token' => $token, 'kind' => 'unknown']);
+
+        $notices = static::getContainer()->get(\App\Repository\AdminNoticeRepository::class)->findBy(['kind' => \App\Entity\AdminNotice::PAYPAL]);
+        self::assertCount(1, $notices, 'unknown kinds are ignored');
+        self::assertStringContainsString('Window closed', (string) $notices[0]->getDetail());
+        self::assertStringContainsString('Testbrowser', (string) $notices[0]->getDetail());
+    }
+
     public function testThePlayerChoosesWhichSectionsTheOverviewShows(): void
     {
         $this->register('Ordnerin');

@@ -29,9 +29,16 @@ final readonly class AdminNotices
     ) {
     }
 
-    public function record(string $kind, User $user): void
+    /** PayPal problems a player may report per hour (more are dropped). */
+    public const int MAX_PAYPAL_REPORTS_PER_HOUR = 5;
+
+    public function record(string $kind, User $user, ?string $detail = null): void
     {
-        $this->em->persist(new AdminNotice($kind, $user, \DateTimeImmutable::createFromInterface($this->clock->now())));
+        $now = \DateTimeImmutable::createFromInterface($this->clock->now());
+        if (AdminNotice::PAYPAL === $kind && $this->notices->countSince($user, $kind, $now->modify('-1 hour')) >= self::MAX_PAYPAL_REPORTS_PER_HOUR) {
+            return;
+        }
+        $this->em->persist(new AdminNotice($kind, $user, $now, $detail));
         $this->em->flush();
     }
 
@@ -72,6 +79,7 @@ final readonly class AdminNotices
     {
         $signups = array_values(array_filter($notices, static fn (AdminNotice $n): bool => AdminNotice::SIGNUP === $n->getKind()));
         $bookings = array_values(array_filter($notices, static fn (AdminNotice $n): bool => AdminNotice::EXTENDED === $n->getKind()));
+        $problems = array_values(array_filter($notices, static fn (AdminNotice $n): bool => AdminNotice::PAYPAL === $n->getKind()));
         $at = static fn (AdminNotice $n): string => $n->getCreatedAt()->setTimezone($zone)->format('d.m. H:i');
 
         $parts = [];
@@ -91,6 +99,14 @@ final readonly class AdminNotices
             $lines[] = 'Erweiterter Account gebucht:';
             foreach ($bookings as $n) {
                 $lines[] = \sprintf('– %s %s', $at($n), $n->getUsername());
+            }
+            $lines[] = '';
+        }
+        if ([] !== $problems) {
+            $parts[] = 1 === \count($problems) ? '1 PayPal-Problem' : \count($problems).' PayPal-Probleme';
+            $lines[] = 'PayPal-Probleme:';
+            foreach ($problems as $n) {
+                $lines[] = \sprintf('– %s %s: %s', $at($n), $n->getUsername(), $n->getDetail() ?? '?');
             }
             $lines[] = '';
         }

@@ -580,8 +580,17 @@ const orbit = (() => {
         const toggle = () => { box.hidden = !consent.checked; if (hint) hint.hidden = consent.checked; };
         if (consent) { consent.addEventListener('change', toggle); toggle(); } else { box.hidden = false; }
         const show = (message) => { error.textContent = message; error.hidden = false; };
+        // Problems go to the admins (digest mail), so failed bookings can be looked into.
+        const report = (kind, message = '') => {
+            if (!box.dataset.problemUrl) return;
+            const body = new FormData();
+            body.append('_token', box.dataset.token);
+            body.append('kind', kind);
+            body.append('message', String(message).slice(0, 300));
+            fetch(box.dataset.problemUrl, { method: 'POST', body, credentials: 'same-origin', keepalive: true }).catch(() => {});
+        };
         const render = () => {
-            if (!window.paypal) { show(t('PayPal konnte nicht geladen werden.')); return; }
+            if (!window.paypal) { show(t('PayPal konnte nicht geladen werden.')); report('load'); return; }
             window.paypal.Buttons({
                 style: { label: 'subscribe' },
                 createSubscription: (data, actions) => actions.subscription.create({ plan_id: box.dataset.plan, custom_id: box.dataset.custom }),
@@ -593,9 +602,10 @@ const orbit = (() => {
                     return fetch(box.dataset.url, { method: 'POST', body, credentials: 'same-origin' })
                         .then((response) => response.json())
                         .then((result) => { if (result.ok) { window.location.reload(); } else { show(result.error); } })
-                        .catch(() => show(t('Die Bestätigung ist fehlgeschlagen. Lade die Seite neu – das Abo wird über PayPal nachgetragen.')));
+                        .catch((e) => { show(t('Die Bestätigung ist fehlgeschlagen. Lade die Seite neu – das Abo wird über PayPal nachgetragen.')); report('confirm', e && e.message); });
                 },
-                onError: () => show(t('PayPal meldet einen Fehler. Bitte versuche es später noch einmal.')),
+                onCancel: () => report('cancel'),
+                onError: (e) => { show(t('PayPal meldet einen Fehler. Bitte versuche es später noch einmal.')); report('error', e && (e.message || e)); },
             }).render(box);
         };
         if (window.paypal) { render(); } else { window.addEventListener('load', render); }

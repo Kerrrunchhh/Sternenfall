@@ -39,7 +39,7 @@
             </label>
             <p class="small muted">{{ 'Wie wir deine Daten bei der Zahlung verarbeiten, steht in der'|trans }} <a href="{{ path('app_privacy') }}">{{ 'Datenschutzerklärung'|trans }}</a>.</p>
             <p class="small muted" data-consent-hint>{{ 'Setze zuerst das Häkchen, dann erscheint der PayPal-Knopf.'|trans }}</p>
-            <div id="paypal-button" hidden data-extended-subscribe data-plan="{{ paypal.planId }}" data-custom="{{ player.id }}" data-url="{{ path('app_extended_activate') }}" data-token="{{ csrf_token('extended') }}"></div>
+            <div id="paypal-button" hidden data-extended-subscribe data-plan="{{ paypal.planId }}" data-custom="{{ player.id }}" data-url="{{ path('app_extended_activate') }}" data-problem-url="{{ path('app_extended_problem') }}" data-token="{{ csrf_token('extended') }}"></div>
             <p class="flash flash-error" data-paypal-error hidden></p>
             <script src="https://www.paypal.com/sdk/js?client-id={{ paypal.clientId|url_encode }}&vault=true&intent=subscription&currency=EUR&locale={{ app.request.locale == 'en' ? 'en_GB' : 'de_DE' }}" defer></script>
         {% endif %}
