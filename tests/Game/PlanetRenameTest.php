@@ -8,6 +8,8 @@ use App\Game\Economy;
 use App\Game\GameException;
 use App\Game\PlanetService;
 use App\Game\PlanetUpdater;
+use App\Repository\ContractRepository;
+use App\Repository\TransportRequestRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
@@ -31,6 +33,20 @@ class PlanetRenameTest extends TestCase
         $this->service()->rename($planet, $owner, "  Neu   Terra \n");
 
         self::assertSame('Neu Terra', $planet->getName());
+    }
+
+    public function testTransportRequestsAndContractsGetTheNewName(): void
+    {
+        $owner = new User('besitzer', $this->now);
+        $planet = new Planet($owner, 'Alt', 3, 146, 7, $this->now);
+        $requests = $this->createMock(TransportRequestRepository::class);
+        $requests->expects(self::once())->method('renamePlanetAt')->with(3, 146, 7, 'Neu Terra');
+        $contracts = $this->createMock(ContractRepository::class);
+        $contracts->expects(self::once())->method('renamePlanetAt')->with(3, 146, 7, 'Neu Terra');
+        $economy = new Economy(1.0);
+        $service = new PlanetService($this->createStub(EntityManagerInterface::class), new LockFactory(new InMemoryStore()), new MockClock($this->now), new PlanetUpdater($economy), $economy, null, $requests, $contracts);
+
+        $service->rename($planet, $owner, 'Neu Terra');
     }
 
     public function testInvaderMayRenameDuringTheIntegrationPeriod(): void

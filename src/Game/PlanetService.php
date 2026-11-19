@@ -38,6 +38,8 @@ final readonly class PlanetService
         private PlanetUpdater $updater,
         private Economy $economy,
         private ?\App\Repository\FleetRepository $fleets = null,
+        private ?\App\Repository\TransportRequestRepository $transportRequests = null,
+        private ?\App\Repository\ContractRepository $contracts = null,
     ) {
     }
 
@@ -179,6 +181,9 @@ final readonly class PlanetService
             }
             $planet->setName($name);
         });
+        // Transport requests and contracts keep a copy of the name: they show the new one too.
+        $this->transportRequests?->renamePlanetAt($planet->getGalaxy(), $planet->getSystem(), $planet->getPosition(), $planet->getName());
+        $this->contracts?->renamePlanetAt($planet->getGalaxy(), $planet->getSystem(), $planet->getPosition(), $planet->getName());
     }
 
     /** How long it takes until an abandoned planet is really given up. */

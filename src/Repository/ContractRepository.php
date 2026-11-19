@@ -45,4 +45,15 @@ class ContractRepository extends ServiceEntityRepository
     {
         return $this->findBy(['status' => Contract::RUNNING, 'galaxy' => $galaxy, 'system' => $system]);
     }
+
+    /** A planet was renamed: entries for its coordinates show the new name (a copy is kept for when the planet is gone). */
+    public function renamePlanetAt(int $galaxy, int $system, int $position, string $name): void
+    {
+        $this->getEntityManager()->createQuery('UPDATE '.Contract::class.' e SET e.planetName = :name WHERE e.galaxy = :galaxy AND e.system = :system AND e.position = :position')
+            ->setParameter('name', mb_substr($name, 0, 30))
+            ->setParameter('galaxy', $galaxy)
+            ->setParameter('system', $system)
+            ->setParameter('position', $position)
+            ->execute();
+    }
 }
