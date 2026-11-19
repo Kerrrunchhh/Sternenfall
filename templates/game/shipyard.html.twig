@@ -79,7 +79,7 @@
                             <span class="requirement">{{ 'Benötigt: {missing}'|trans({'{missing}': s.missing|map(m => m|trans)|join(', ')}) }}</span>
                         {% else %}
                             {% set base = s.rates|first %}
-                            <form method="post" action="{{ path('app_shipyard_order', {type: s.type.value}) }}" class="order-form">
+                            <form method="post" action="{{ path('app_shipyard_order', {type: s.type.value}) }}" class="order-form" data-swap>
                                 <input type="hidden" name="_token" value="{{ csrf_token('shipyard') }}">
                                 <input type="number" name="quantity" min="1" max="{{ max(base.max, 1) }}" value="1" aria-label="{{ 'Anzahl {label}'|trans({'{label}': s.type.label|trans}) }}">
                                 <select name="percent" aria-label="{{ 'Baurate {label}'|trans({'{label}': s.type.label|trans}) }}" title="{{ 'Baurate: mehr Kosten, kürzere Bauzeit'|trans }}">

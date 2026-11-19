@@ -240,7 +240,6 @@ const orbit = (() => {
 
 // Live resource counters and construction countdowns.
 (() => {
-    const started = Date.now();
     const fmt = new Intl.NumberFormat(LOCALE_TAG, { maximumFractionDigits: 0 });
 
     const duration = (s) => {
@@ -253,6 +252,10 @@ const orbit = (() => {
         return d ? `${d}d ${time}` : time;
     };
 
+    // Resource counters, countdowns and buttons waiting for resources. Restartable: after parts
+    // of the page were swapped in without a reload (data-swap forms) they start again.
+    const startCounters = () => {
+    const started = Date.now();
     const resources = [...document.querySelectorAll('[data-rate]')].map((el) => ({
         el,
         amount: parseFloat(el.dataset.amount),
@@ -278,23 +281,6 @@ const orbit = (() => {
     }));
 
     let reloading = false;
-    // A finished countdown reloads the page – but never while the player is typing or has
-    // unsent input (a ticker post, a mail, amounts): then it waits until that is gone.
-    const hasUnsentInput = () => {
-        const active = document.activeElement;
-        if (active && active.matches('textarea, input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=checkbox]):not([type=radio]), select, [contenteditable]')) {
-            return true;
-        }
-        return [...document.querySelectorAll('textarea, input[type=text], input[type=number], input[type=search], input:not([type])')]
-            .some((field) => field.value !== field.defaultValue);
-    };
-    const reloadWhenIdle = () => {
-        if (hasUnsentInput()) {
-            setTimeout(reloadWhenIdle, 5000);
-            return;
-        }
-        location.reload();
-    };
     const tick = () => {
         const elapsed = (Date.now() - started) / 1000;
 
@@ -332,7 +318,29 @@ const orbit = (() => {
     };
 
     tick();
-    setInterval(tick, 1000);
+    const timer = setInterval(tick, 1000);
+
+    return () => clearInterval(timer);
+    };
+
+    // A finished countdown reloads the page – but never while the player is typing or has
+    // unsent input (a ticker post, a mail, amounts): then it waits until that is gone.
+    const hasUnsentInput = () => {
+        const active = document.activeElement;
+        if (active && active.matches('textarea, input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=checkbox]):not([type=radio]), select, [contenteditable]')) {
+            return true;
+        }
+        return [...document.querySelectorAll('textarea, input[type=text], input[type=number], input[type=search], input:not([type])')]
+            .some((field) => field.value !== field.defaultValue);
+    };
+    const reloadWhenIdle = () => {
+        if (hasUnsentInput()) {
+            setTimeout(reloadWhenIdle, 5000);
+            return;
+        }
+        location.reload();
+    };
+    let stopCounters = startCounters();
 
     // System messages: opening an unread one marks it read and lowers the counter in the menu.
     document.querySelectorAll('details[data-read-url]').forEach((details) => {
@@ -414,7 +422,7 @@ const orbit = (() => {
     })();
 
     // Card pictures on/off (buildings, research, shipyard), remembered per browser; <html> gets the class early in base.html.twig.
-    document.querySelectorAll('[data-picture-toggle]').forEach((button) => {
+    const initPictureToggle = (root) => root.querySelectorAll('[data-picture-toggle]').forEach((button) => {
         const root = document.documentElement;
         const label = () => { button.textContent = root.classList.contains('hide-pictures') ? button.dataset.labelShow : button.dataset.labelHide; };
         button.addEventListener('click', () => {
@@ -424,6 +432,7 @@ const orbit = (() => {
         });
         label();
     });
+    initPictureToggle(document);
 
     // Lists ordered with ↑/↓ (overview boxes in the account settings): moves the row; the form saves the order.
     document.querySelectorAll('[data-reorder]').forEach((list) => {
@@ -1240,8 +1249,11 @@ const orbit = (() => {
         });
     });
 
+    // Listeners of the page's content on the document: dropped when the content is swapped (data-swap).
+    let pageScope = new AbortController();
+
     // Shipyard build rate (100–200 %): highlight the cost row of the chosen rate and use its maximum.
-    document.querySelectorAll('[data-build-rates]').forEach((box) => {
+    const initBuildRates = (root, signal) => root.querySelectorAll('[data-build-rates]').forEach((box) => {
         const select = box.querySelector('select[name="percent"]');
         if (!select) {
             return;
@@ -1294,7 +1306,7 @@ const orbit = (() => {
             if (changed) {
                 update();
             }
-        });
+        }, { signal });
         // Clicking a cost row picks that rate.
         box.querySelectorAll('[data-rate-percent]').forEach((row) => row.addEventListener('click', () => {
             select.value = row.dataset.ratePercent;
@@ -1302,6 +1314,7 @@ const orbit = (() => {
         }));
         update();
     });
+    initBuildRates(document, pageScope.signal);
 
     // Account: offer the time zone of this device if it differs from the saved one.
     const zoneSelect = document.querySelector('[data-timezone-select]');
@@ -1756,7 +1769,7 @@ const orbit = (() => {
     }
 
     // Queues: reorder by drag & drop, then save the new order.
-    document.querySelectorAll('[data-sortable]').forEach((list) => {
+    const initSortable = (root) => root.querySelectorAll('[data-sortable]').forEach((list) => {
         let dragged = null;
         const initialOrder = () => [...list.querySelectorAll('input[name="order[]"]')].map((input) => input.value).join(',');
         const before = initialOrder();
@@ -1781,9 +1794,61 @@ const orbit = (() => {
             dragged.classList.remove('dragging');
             dragged = null;
             if (initialOrder() !== before) {
-                list.closest('form').submit();
+                // requestSubmit: a data-swap form then saves without reloading the page.
+                const form = list.closest('form');
+                if (form.requestSubmit) form.requestSubmit(); else form.submit();
             }
         });
+    });
+    initSortable(document);
+
+    // Forms marked data-swap (building, ordering ships and defenses, their queues) are sent in the background; the page
+    // they lead to replaces only the parts that change – resources, planet list, content – so the
+    // page neither reloads nor jumps. Anything unexpected falls back to a normal submit.
+    const swapRegions = ['.topbar .resources', '.sidebar-left .planet-list', 'main.content'];
+    const swapIn = (html) => {
+        const next = new DOMParser().parseFromString(html, 'text/html');
+        const parts = swapRegions.map((selector) => [document.querySelector(selector), next.querySelector(selector)]);
+        if (parts.some(([now, then]) => !now || !then)) return false;
+        parts.forEach(([now, then]) => now.replaceWith(document.importNode(then, true)));
+        document.title = next.title;
+        stopCounters();
+        stopCounters = startCounters();
+        pageScope.abort();
+        pageScope = new AbortController();
+        const main = document.querySelector('main.content');
+        initSortable(main);
+        initPictureToggle(main);
+        initBuildRates(main, pageScope.signal);
+        return true;
+    };
+    document.addEventListener('submit', (event) => {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement) || !form.matches('[data-swap]') || event.defaultPrevented || form.dataset.busy) return;
+        event.preventDefault();
+        const submitter = event.submitter || null;
+        const action = submitter?.getAttribute('formaction') || form.action;
+        const fallback = () => {
+            // A normal submit with the clicked button's value.
+            if (submitter?.name) {
+                const field = document.createElement('input');
+                Object.assign(field, { type: 'hidden', name: submitter.name, value: submitter.value });
+                form.append(field);
+            }
+            form.action = action;
+            HTMLFormElement.prototype.submit.call(form);
+        };
+        form.dataset.busy = '1';
+        document.body.classList.add('swapping');
+        fetch(action, { method: 'POST', body: new FormData(form, submitter), credentials: 'same-origin' })
+            .then((response) => {
+                // Only a page like this one can be swapped in (not e.g. the login after a timeout).
+                if (!response.ok || new URL(response.url).pathname !== window.location.pathname) throw new Error('other page');
+                return response.text();
+            })
+            .then((html) => { if (!swapIn(html)) throw new Error('parts missing'); })
+            .catch(fallback)
+            .finally(() => { delete form.dataset.busy; document.body.classList.remove('swapping'); });
     });
 
     // Flight preview: duration and arrival for the chosen target and speed (same formula as the server).

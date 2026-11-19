@@ -11,7 +11,8 @@
     {% if entries is empty %}
         <p class="muted small">{{ 'Keine Aufträge.'|trans }}</p>
     {% else %}
-        <form method="post" action="{{ path('app_queue_reorder', {id: queue_planet.id, kind: kind.value}) }}" class="queue-form">
+        {# On the buildings, shipyard and defense pages the queue saves without reloading the page (game.js, data-swap). #}
+        <form method="post" action="{{ path('app_queue_reorder', {id: queue_planet.id, kind: kind.value}) }}" class="queue-form"{% if back in ['app_buildings', 'app_shipyard', 'app_defense'] %} data-swap{% endif %}>
             <input type="hidden" name="_token" value="{{ csrf_token('queue') }}">
             <input type="hidden" name="to" value="{{ back }}">
             <ol class="queue-list" data-sortable>

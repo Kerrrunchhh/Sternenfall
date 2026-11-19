@@ -35,7 +35,7 @@
                     {% elseif queue_full %}
                         <button class="btn btn-small" disabled title="{{ 'Ein Gebäude im Bau und eines in Wartestellung'|trans }}">{{ 'Bauschleife voll'|trans }}</button>
                     {% else %}
-                        <form method="post" action="{{ path('app_build', {type: b.type.value}) }}">
+                        <form method="post" action="{{ path('app_build', {type: b.type.value}) }}" data-swap>
                             <input type="hidden" name="_token" value="{{ csrf_token('build') }}">
                             <button class="btn btn-small" type="submit" id="build-{{ b.type.value }}" {{ b.affordable ? '' : 'disabled data-unlock-when-affordable' }}>
                                 {{ b.planned == 0 ? ('Bauen'|trans) : ('Ausbauen auf'|trans ~ ' ') ~ (b.planned + 1) }}{{ queue is not empty ? ' (' ~ 'einreihen'|trans ~ ')' }}
