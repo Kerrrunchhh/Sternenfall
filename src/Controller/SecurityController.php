@@ -165,6 +165,7 @@ class SecurityController extends AbstractController
         UserPasswordHasherInterface $hasher,
         EntityManagerInterface $em,
         \App\Game\GameMailer $mailer,
+        \App\Game\AdminNotices $adminNotices,
     ): Response {
         if ($this->getUser()) {
             return $this->redirectToRoute('app_overview');
@@ -188,6 +189,7 @@ class SecurityController extends AbstractController
             // The home world and the starter bonus wait for the confirmed address (verifyEmail).
             $em->persist($user);
             $em->flush();
+            $adminNotices->record(\App\Entity\AdminNotice::SIGNUP, $user);
             $link = $mailer->sendConfirmation($user);
 
             // Playing starts after confirming the e-mail address.

@@ -604,6 +604,7 @@ label.checkbox { display: flex; gap: .4rem; align-items: center; color: var(--te
 
 /* Fleet movements on the overview: one line each */
 .movement-table td { padding-top: .3rem; padding-bottom: .3rem; vertical-align: middle; }
+.movement-table .movement-cargo { display: block; overflow: hidden; text-overflow: ellipsis; }
 .movement-table .movement-what { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; width: 100%; }
 .movement-table .movement-time { white-space: nowrap; width: 1%; }
 .movement-table .movement-time { padding-left: .9rem; }

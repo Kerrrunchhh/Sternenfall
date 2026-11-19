@@ -35,6 +35,7 @@ final class PayPalSubscriptions
         #[Autowire(env: 'PAYPAL_CLIENT_SECRET')] private readonly string $clientSecret,
         #[Autowire(env: 'PAYPAL_PLAN_ID')] private readonly string $planId,
         #[Autowire(env: 'PAYPAL_WEBHOOK_ID')] private readonly string $webhookId,
+        private readonly ?\App\Game\AdminNotices $adminNotices = null,
     ) {
     }
 
@@ -71,9 +72,13 @@ final class PayPalSubscriptions
         if (!\in_array($subscription['status'] ?? '', ['ACTIVE', 'APPROVED'], true)) {
             throw new PaymentException(t('PayPal meldet das Abo noch nicht als aktiv. Versuche es gleich noch einmal.'));
         }
+        $booked = $user->getSubscriptionId() !== $subscriptionId;
         $user->setSubscription($subscriptionId, $subscription['status']);
         $this->apply($user, $subscription);
         $this->em->flush();
+        if ($booked) {
+            $this->adminNotices?->record(\App\Entity\AdminNotice::EXTENDED, $user);
+        }
     }
 
     /** Ends the subscription at PayPal; the paid time still runs out. */
@@ -125,9 +130,14 @@ final class PayPalSubscriptions
         if ((string) ($subscription['custom_id'] ?? '') !== (string) $user->getId()) {
             return true;
         }
+        // A new subscription the player's browser didn't confirm (e.g. window closed): a booking, too.
+        $booked = $user->getSubscriptionId() !== $subscriptionId && \in_array($subscription['status'] ?? '', ['ACTIVE', 'APPROVED'], true);
         $user->setSubscription($subscriptionId, (string) ($subscription['status'] ?? 'UNKNOWN'));
         $this->apply($user, $subscription);
         $this->em->flush();
+        if ($booked) {
+            $this->adminNotices?->record(\App\Entity\AdminNotice::EXTENDED, $user);
+        }
 
         return true;
     }
