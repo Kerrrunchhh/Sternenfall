@@ -27,7 +27,7 @@ final class ExtendedAccountTest extends TestCase
         $this->now = new \DateTimeImmutable('2026-11-10 12:00');
     }
 
-    public function testNormalAccountsSaveTwoFiltersExtendedOnesTwenty(): void
+    public function testNormalAccountsSaveTwoFiltersExtendedOnesAsManyAsTheyLike(): void
     {
         $player = new User('filterer', $this->now);
         $filters = new FleetFilters($this->createStub(EntityManagerInterface::class), new MockClock($this->now));
@@ -43,8 +43,10 @@ final class ExtendedAccountTest extends TestCase
         }
 
         $player->extendUntil($this->now->modify('+1 month'));
-        $filters->save($player, 'Drei', '#ffffff', self::FILTER);
-        self::assertCount(3, $player->getFleetFilters());
+        for ($i = 3; $i <= 30; ++$i) {
+            $filters->save($player, 'Filter '.$i, '#ffffff', self::FILTER);
+        }
+        self::assertCount(30, $player->getFleetFilters(), 'more than the old limit of 20');
         self::assertFalse($player->isExtended($this->now->modify('+2 months')), 'runs out');
     }
 

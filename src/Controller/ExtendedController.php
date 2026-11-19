@@ -32,7 +32,6 @@ class ExtendedController extends AbstractGameController
         return $this->renderGame('game/extended.html.twig', $this->currentPlanet(), [
             'paypal' => $this->paypal,
             'filters_normal' => FleetFilters::MAX_FILTERS_NORMAL,
-            'filters_extended' => FleetFilters::MAX_FILTERS,
         ]);
     }
 

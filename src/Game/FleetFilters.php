@@ -14,8 +14,9 @@ use function Symfony\Component\Translation\t;
  */
 final readonly class FleetFilters
 {
-    public const int MAX_FILTERS = 20;
-    /** Normal accounts; extended accounts may save MAX_FILTERS. */
+    /** Extended accounts save as many as they like – this only guards against abuse (scripts). */
+    public const int MAX_FILTERS = 200;
+    /** Normal accounts. */
     public const int MAX_FILTERS_NORMAL = 2;
     public const int MAX_RULES = 20;
 
@@ -59,7 +60,7 @@ final readonly class FleetFilters
         if (\count($filters) >= $limit) {
             throw new GameException(self::MAX_FILTERS === $limit
                 ? t('Du kannst höchstens {limit} Filter speichern.', ['{limit}' => $limit])
-                : t('Ohne erweiterten Account kannst du {limit} Filter speichern (erweitert: {value}).', ['{limit}' => $limit, '{value}' => self::MAX_FILTERS]));
+                : t('Ohne erweiterten Account kannst du {limit} Filter speichern – mit erweitertem Account beliebig viele.', ['{limit}' => $limit]));
         }
         $filters[] = $filter;
         usort($filters, static fn (array $a, array $b): int => strcasecmp($a['name'], $b['name']));

@@ -3,6 +3,8 @@ twig:
     form_themes: ['form/theme.html.twig']
     globals:
         game_name: '%env(GAME_NAME)%'
+        # The menu marks the build bot with ✨ for players without an extended account.
+        build_bot_extended_only: '%game.build_bot_extended_only%'
         ad_html: '%env(AD_HTML)%'
         adsense_client: '%env(ADSENSE_CLIENT)%'
         adsense_slots:

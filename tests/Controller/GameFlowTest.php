@@ -684,7 +684,16 @@ class GameFlowTest extends WebTestCase
     {
         $this->register('Bauherrin');
         $crawler = $this->client->request('GET', '/baubot');
-        self::assertSelectorNotExists('.warning', 'everyone may use the bot for now');
+        self::assertSelectorTextContains('.warning', 'erweiterten Account', 'the bot belongs to the extended account');
+        self::assertSelectorTextContains('.sidebar a[href="/baubot"]', '✨');
+
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $user = $this->user('Bauherrin');
+        $user->extendUntil(new \DateTimeImmutable('+1 month'));
+        $em->flush();
+        $crawler = $this->client->request('GET', '/baubot');
+        self::assertSelectorNotExists('.warning', 'extended accounts may use it');
+        self::assertSelectorTextNotContains('.sidebar a[href="/baubot"]', '✨');
 
         $this->client->submit($crawler->filter('#bot-fill-buildings')->form(['goals[0][building]' => 'iron_mine', 'goals[0][level]' => '3']));
         $this->client->followRedirect();

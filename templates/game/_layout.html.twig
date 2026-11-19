@@ -68,7 +68,7 @@
             <a href="{{ path('app_overview') }}" class="{{ route == 'app_overview' ? 'active' }}"><span class="nav-icon" aria-hidden="true">🏠</span>{{ 'Übersicht'|trans }}</a>
             <a href="{{ path('app_buildings') }}" class="{{ route == 'app_buildings' ? 'active' }}"><span class="nav-icon" aria-hidden="true">🏗️</span>{{ 'Gebäude'|trans }}</a>
             <a href="{{ path('app_queues') }}" class="{{ route == 'app_queues' ? 'active' }}"><span class="nav-icon" aria-hidden="true">📋</span>{{ 'Bauschleifen'|trans }}</a>
-            <a href="{{ path('app_build_bot') }}" class="{{ route starts with 'app_build_bot' ? 'active' }}"><span class="nav-icon" aria-hidden="true">🤖</span>{{ 'Baubot'|trans }}</a>
+            <a href="{{ path('app_build_bot') }}" class="{{ route starts with 'app_build_bot' ? 'active' }}"><span class="nav-icon" aria-hidden="true">🤖</span>{{ 'Baubot'|trans }}{% if build_bot_extended_only and not player.isExtended(now) %} <span title="{{ 'Gehört zum erweiterten Account'|trans }}">✨</span>{% endif %}</a>
             <a href="{{ path('app_research') }}" class="{{ route == 'app_research' ? 'active' }}"><span class="nav-icon" aria-hidden="true">🔬</span>{{ 'Forschung'|trans }}</a>
             <a href="{{ path('app_shipyard') }}" class="{{ route == 'app_shipyard' ? 'active' }}"><span class="nav-icon" aria-hidden="true">🛠️</span>{{ 'Werft'|trans }}</a>
             <a href="{{ path('app_defense') }}" class="{{ route == 'app_defense' ? 'active' }}"><span class="nav-icon" aria-hidden="true">🏰</span>{{ 'Planetenverteidigung'|trans }}</a>
