@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Game\MessageFolder;
 use App\Repository\MessageRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -11,6 +12,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity(repositoryClass: MessageRepository::class)]
 #[ORM\Index(name: 'idx_message_inbox', columns: ['recipient_id', 'is_read'])]
+#[ORM\Index(name: 'idx_message_folder', columns: ['recipient_id', 'folder'])]
 class Message
 {
     #[ORM\Id]
@@ -41,12 +43,22 @@ class Message
     #[ORM\Column(length: 80, nullable: true)]
     private ?string $actionLabel = null;
 
-    public function __construct(User $recipient, string $subject, string $body, \DateTimeImmutable $createdAt)
+    /** The folder it is listed in (MessageFolder). */
+    #[ORM\Column(length: 10, options: ['default' => 'general'])]
+    private string $folder;
+
+    public function __construct(User $recipient, string $subject, string $body, \DateTimeImmutable $createdAt, MessageFolder $folder = MessageFolder::General)
     {
         $this->recipient = $recipient;
         $this->subject = mb_substr($subject, 0, 150);
         $this->body = $body;
         $this->createdAt = $createdAt;
+        $this->folder = $folder->value;
+    }
+
+    public function getFolder(): MessageFolder
+    {
+        return MessageFolder::tryFrom($this->folder) ?? MessageFolder::General;
     }
 
     public function getId(): ?int

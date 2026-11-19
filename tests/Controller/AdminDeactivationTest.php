@@ -62,7 +62,7 @@ class AdminDeactivationTest extends WebTestCase
 
         $this->client->request('GET', '/highscores');
         self::assertStringNotContainsString('Opfer', (string) $this->client->getResponse()->getContent());
-        $this->client->request('GET', '/spieler', ['q' => 'Opf']);
+        $this->client->request('GET', '/suche', ['q' => 'Opf']);
         self::assertStringNotContainsString('Opfer', (string) $this->client->getResponse()->getContent());
 
         $this->client->loginUser($this->user('Opfer'));

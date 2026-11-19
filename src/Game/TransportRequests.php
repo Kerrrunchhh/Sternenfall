@@ -118,13 +118,31 @@ final readonly class TransportRequests
         }
     }
 
-    /** Requests whose fleet is gone (destroyed, dissolved) are open again. */
+    /**
+     * Requests whose fleet is gone (destroyed, dissolved) or no longer on its way there
+     * (recalled, sent elsewhere) are open again – the requester waits for nobody.
+     */
     public function reopenOrphans(): void
     {
         // Deliveries of the trade guild have no fleet on purpose.
         foreach ($this->requests->findBy(['status' => TransportRequest::ASSIGNED, 'fleet' => null, 'guildDeliveryAt' => null]) as $request) {
             $request->reopen();
         }
+        foreach ($this->requests->findAssignedToFleets() as $request) {
+            if (!self::isOnItsWay($request)) {
+                $request->reopen();
+            }
+        }
+    }
+
+    /** Whether the request's fleet is still flying the goods to the requested planet. */
+    public static function isOnItsWay(TransportRequest $request): bool
+    {
+        $fleet = $request->getFleet();
+
+        return null !== $fleet && $fleet->isMoving() && !$fleet->isReturning()
+            && FleetMission::Transport === $fleet->getMission()
+            && [$fleet->getTargetGalaxy(), $fleet->getTargetSystem(), $fleet->getTargetPosition()] === [$request->getGalaxy(), $request->getSystem(), $request->getPosition()];
     }
 
     /** Deletes requests delivered or cancelled more than CLOSED_KEPT ago. @return int how many */

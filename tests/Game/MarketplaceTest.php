@@ -5,10 +5,12 @@ namespace App\Tests\Game;
 use App\Entity\Alliance;
 use App\Entity\Contract;
 use App\Entity\Planet;
+use App\Entity\Fleet;
 use App\Entity\TransportRequest;
 use App\Entity\User;
 use App\Game\ContractService;
 use App\Game\GameException;
+use App\Game\FleetMission;
 use App\Game\Inbox;
 use App\Game\LifeForm;
 use App\Game\Resources;
@@ -153,6 +155,28 @@ final class MarketplaceTest extends TestCase
         $em->method('getConnection')->willReturn($connection);
 
         return new TransportRequests($em, $this->createStub(TransportRequestRepository::class), $this->inbox(), new MockClock($this->now));
+    }
+
+    public function testARecalledDeliveryFreesTheRequestAtOnce(): void
+    {
+        $beginner = new User('neu', $this->now);
+        $home = new Planet($beginner, 'Heim', 12, 46, 11, $this->now);
+        $trader = new User('haendler', $this->now);
+        $fleet = new Fleet($trader, '02:HR:02', 20, 430, 6, ['freighter' => 1]);
+        $fleet->depart(FleetMission::Transport, 12, 46, 11, $this->now, 3600);
+        $request = new TransportRequest($beginner, $home, new Resources(titanium: 5000), 500, $this->now);
+        $request->assign($trader, $fleet);
+        $requests = $this->createStub(TransportRequestRepository::class);
+        $requests->method('findAssignedToFleets')->willReturn([$request]);
+        $service = new TransportRequests($this->createStub(EntityManagerInterface::class), $requests, $this->inbox(), new MockClock($this->now));
+
+        $service->reopenOrphans();
+        self::assertSame(TransportRequest::ASSIGNED, $request->getStatus(), 'on its way: stays assigned');
+
+        $fleet->recall($this->now->modify('+10 minutes'));
+        $service->reopenOrphans();
+        self::assertSame(TransportRequest::OPEN, $request->getStatus(), 'recalled: open again for others and the guild');
+        self::assertNull($request->getFleet());
     }
 
     private function inbox(): Inbox

@@ -1,7 +1,6 @@
 {#
-  The ticker a player chose to show on the overview and below the alliance's black board –
-  e.g. to keep in touch with a former alliance. Needs: joined_tickers, board_ticker,
-  board_ticker_posts, back ('alliance' or 'overview': where to return after sending);
+  The ticker a player chose to show on the overview – e.g. to keep in touch with a former
+  alliance. Needs: joined_tickers, board_ticker, board_ticker_posts, back ('overview': where to return after sending);
   the overview leaves the box out for players in no ticker. Optional fold: key to make the box foldable.
 #}
 {% import 'game/_macros.html.twig' as ui %}
@@ -16,7 +15,7 @@
             <input type="hidden" name="_token" value="{{ csrf_token('ticker') }}">
             <input type="hidden" name="back" value="{{ back }}">
             <label>{{ 'Hier anzeigen:'|trans }}
-                <select name="ticker" aria-label="{{ 'Ticker auf der Übersicht und unter dem schwarzen Brett'|trans }}">
+                <select name="ticker" aria-label="{{ 'Ticker auf der Übersicht'|trans }}">
                     <option value="0">{{ '– keinen –'|trans }}</option>
                     {% for t in joined_tickers %}<option value="{{ t.id }}" {{ board_ticker and board_ticker.id == t.id ? 'selected' }}>{{ t.name }}</option>{% endfor %}
                 </select>

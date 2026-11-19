@@ -16,11 +16,24 @@ use function Symfony\Component\Translation\t;
 /** Traders serve transport requests: one small trade fleet from the chosen planet per request. */
 final readonly class TransportRequestDispatcher
 {
+    /** A trader's delivery may take at most this long – otherwise the trade guild is faster (2 h wait + at most 4 h). */
+    public const int MAX_DELIVERY_HOURS = 12;
+
     public function __construct(
         private EntityManagerInterface $em,
         private FleetRepository $fleets,
         private FleetService $fleetService,
+        private Navigation $navigation,
     ) {
+    }
+
+    /** Flight time of the fleet from where it waits to the requested planet, in seconds. */
+    public function flightSeconds(Fleet $fleet, TransportRequest $request): int
+    {
+        return $this->navigation->flightSeconds(
+            $this->navigation->distance($fleet->getGalaxy(), $fleet->getSystem(), $fleet->getPosition(), $request->getGalaxy(), $request->getSystem(), $request->getPosition()),
+            $this->navigation->slowestSpeed($fleet->getShips(), $fleet->getOwner()),
+        );
     }
 
     /** @return list<Fleet> idle trade fleets (freighters only, empty) waiting at the planet */
@@ -62,12 +75,23 @@ final readonly class TransportRequestDispatcher
                 continue;
             }
             $fleet = null;
+            $tooFar = null;
             foreach ($ready as $i => $candidate) {
-                if ($this->capacity($candidate) >= $request->getGoods()->total()) {
-                    $fleet = $candidate;
-                    unset($ready[$i]);
-                    break;
+                if ($this->capacity($candidate) < $request->getGoods()->total()) {
+                    continue;
                 }
+                $seconds = $this->flightSeconds($candidate, $request);
+                if ($seconds > self::MAX_DELIVERY_HOURS * 3600) {
+                    $tooFar = min($tooFar ?? $seconds, $seconds);
+                    continue;
+                }
+                $fleet = $candidate;
+                unset($ready[$i]);
+                break;
+            }
+            if (null === $fleet && null !== $tooFar) {
+                $lines[] = t('{where}: zu weit – deine Flotte bräuchte {duration}, Lieferungen dürfen höchstens {hours} Stunden dauern.', ['{where}' => $where, '{duration}' => new \App\I18n\Raw(\App\Twig\GameExtension::formatDuration($tooFar)), '{hours}' => self::MAX_DELIVERY_HOURS]);
+                continue;
             }
             if (null === $fleet) {
                 $lines[] = t('{where}: keine freie Handelsflotte mit genug Frachtraum mehr bei {planet}.', ['{where}' => $where, '{planet}' => $source->getName()]);

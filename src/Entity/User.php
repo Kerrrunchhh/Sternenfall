@@ -187,7 +187,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(nullable: true, enumType: AllianceRank::class)]
     private ?AllianceRank $allianceRank = null;
 
-    /** Ticker the player shows below the alliance's black board (e.g. to keep in touch with a former alliance). */
+    /** Ticker the player shows on the overview (e.g. to keep in touch with a former alliance). */
     #[ORM\ManyToOne(targetEntity: Ticker::class)]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Ticker $boardTicker = null;

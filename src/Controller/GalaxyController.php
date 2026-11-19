@@ -14,7 +14,7 @@ use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
 
 class GalaxyController extends AbstractGameController
 {
-    /** Spy icon in the galaxy: the nearest scout in any own hangar flies off. */
+    /** Spy icon in the galaxy (and in a player's profile): the nearest scout in any own hangar flies off. */
     #[Route('/galaxy/spy', name: 'app_galaxy_spy', methods: ['POST'])]
     #[IsCsrfTokenValid('galaxy', tokenKey: '_token')]
     public function spy(Request $request): Response
@@ -26,6 +26,11 @@ class GalaxyController extends AbstractGameController
             $this->addFlash('success', $this->fleetService->quickSpy($this->player(), $galaxy, $system, $position));
         } catch (\App\Game\GameException $e) {
             $this->addFlash('error', $e->translatable());
+        }
+
+        // From a player's profile: back to his planet list.
+        if (($profile = $form->getInt('profile')) > 0) {
+            return $this->redirect($this->generateUrl('app_player', ['id' => $profile]).'#planets');
         }
 
         return $this->redirectToRoute('app_galaxy', ['galaxy' => $galaxy, 'system' => $system]);

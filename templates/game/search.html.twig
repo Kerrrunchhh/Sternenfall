@@ -1,0 +1,53 @@
+{% extends 'game/_layout.html.twig' %}
+{% import 'game/_macros.html.twig' as ui %}
+
+{% block title %}{{ 'Suche – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
+
+{% block content %}
+    <h1>{{ 'Suche'|trans }}</h1>
+    {# The same search as at the top of the page, here also for phones (there the top field is hidden). #}
+    <form method="get" action="{{ path('app_search') }}" class="panel inline-action" role="search">
+        <input type="search" name="q" value="{{ query }}" minlength="2" required placeholder="{{ 'Spieler oder Allianz'|trans }}" aria-label="{{ 'Spieler oder Allianz suchen'|trans }}" {{ query is empty ? 'autofocus' }}>
+        <button class="btn btn-small" type="submit" id="search-submit">{{ 'Suchen'|trans }}</button>
+    </form>
+    {% if query|length >= 2 %}
+        <nav class="tabs" aria-label="{{ 'Suchergebnisse'|trans }}">
+            <a href="{{ path('app_search', {q: query, tab: 'players'}) }}" class="{{ tab == 'players' ? 'active' }}" id="search-tab-players">{{ 'Spieler'|trans }} <span class="badge">{{ players|length }}</span></a>
+            <a href="{{ path('app_search', {q: query, tab: 'alliances'}) }}" class="{{ tab == 'alliances' ? 'active' }}" id="search-tab-alliances">{{ 'Allianzen'|trans }} <span class="badge">{{ alliances|length }}</span></a>
+        </nav>
+        <section class="panel">
+            {% if tab == 'players' %}
+                {% if players is empty %}
+                    <p class="muted">{{ 'Kein Spieler gefunden.'|trans }}</p>
+                {% else %}
+                    <table class="table" id="search-players">
+                        {% for u in players %}
+                            <tr>
+                                <td>{{ ui.player(u) }}{% if u.onVacation(now) %} <span class="vacation-tag">{{ '🌴 Urlaub'|trans }}</span>{% endif %} {{ ui.presence(u) }}</td>
+                                <td class="small muted">{{ u.lifeForm.label|trans }}</td>
+                                <td class="num small">{{ '{player_points} Punkte'|trans({'{player_points}': player_points(u)|num}) }}</td>
+                                <td class="num"><a class="btn btn-small btn-secondary" href="{{ path('app_mail_compose', {to: u.username}) }}" title="{{ 'Nachricht senden'|trans }}">✉</a></td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                    {% if players|length == max_results %}<p class="muted small">{{ 'Nur die ersten {max} Treffer – grenze die Suche weiter ein.'|trans({'{max}': max_results}) }}</p>{% endif %}
+                {% endif %}
+            {% else %}
+                {% if alliances is empty %}
+                    <p class="muted">{{ 'Keine Allianz gefunden.'|trans }}</p>
+                {% else %}
+                    <table class="table" id="search-alliances">
+                        {% for a in alliances %}
+                            <tr>
+                                <td><a href="{{ path('app_alliance_public', {id: a.id}) }}"><span class="alliance-tag">[{{ a.tag }}]</span> {{ a.name }}</a></td>
+                                <td class="small muted">{{ a.type|trans }}</td>
+                                <td class="num small">{{ (a.members|length == 1 ? '1 Mitglied' : '{count} Mitglieder')|trans({'{count}': a.members|length}) }}</td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                    {% if alliances|length == max_results %}<p class="muted small">{{ 'Nur die ersten {max} Treffer – grenze die Suche weiter ein.'|trans({'{max}': max_results}) }}</p>{% endif %}
+                {% endif %}
+            {% endif %}
+        </section>
+    {% endif %}
+{% endblock %}

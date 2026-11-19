@@ -561,7 +561,7 @@ final readonly class CombatService
             $key = $recipient->getId() ?? spl_object_id($recipient);
             if (!isset($sent[$key])) {
                 $text = new Lines([$body($recipient), $share]);
-                $this->inbox->send($recipient, $subject, $text);
+                $this->inbox->send($recipient, $subject, $text, folder: MessageFolder::Battle);
                 $this->gameMailer?->notify($recipient, 'battle', $subject, $text);
                 $sent[$key] = true;
             }

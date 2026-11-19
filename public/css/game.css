@@ -487,6 +487,18 @@ form.inline { display: inline; }
     .empire-nav { flex-direction: row; flex-wrap: wrap; }
 }
 
+/* Search field in the top bar (desktop); on phones the menu has a "Suche" link instead. */
+.top-search { display: flex; align-items: center; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-2); }
+.top-search input { width: 10rem; padding: .3rem .5rem; border: 0; background: transparent; color: var(--text); font-size: .85rem; }
+.top-search input:focus { outline: none; }
+.top-search:focus-within { border-color: var(--accent); }
+.top-search button { border: 0; background: none; cursor: pointer; padding: .3rem .5rem; font-size: .9rem; }
+.nav-search-link { display: none !important; }
+@media (max-width: 760px) {
+    .top-search { display: none; }
+    .nav-search-link { display: block !important; }
+}
+
 /* Phones: tab bar with the most used pages below the top bar; "Menü" opens the Imperium menu over the page. */
 .mobile-tabs, .menu-close { display: none; }
 @media (max-width: 760px) {

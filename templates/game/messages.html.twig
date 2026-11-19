@@ -7,9 +7,19 @@
         <h1>{{ 'Nachrichten'|trans }}</h1>
         <form method="post" action="{{ path('app_messages_read_all') }}" data-read-all>
             <input type="hidden" name="_token" value="{{ csrf_token('messages') }}">
-            <button class="btn btn-small btn-secondary" type="submit" id="messages-read-all" {% if unread_messages == 0 %}disabled title="{{ 'Alles gelesen'|trans }}"{% endif %}>{{ 'Alle als gelesen markieren'|trans }}</button>
+            {% set unread_here = folder ? (folder_unread[folder.value] ?? 0) : unread_messages %}
+            {% if folder %}<input type="hidden" name="folder" value="{{ folder.value }}">{% endif %}
+            <button class="btn btn-small btn-secondary" type="submit" id="messages-read-all" {% if unread_here == 0 %}disabled title="{{ 'Alles gelesen'|trans }}"{% endif %}>{{ 'Alle als gelesen markieren'|trans }}</button>
         </form>
     </div>
+    {# Folders: all, battle reports, espionage, general; the badges count unread messages. #}
+    <nav class="tabs message-folders" aria-label="{{ 'Ordner'|trans }}">
+        <a href="{{ path('app_messages') }}" class="{{ folder is null ? 'active' }}" {{ folder is null ? 'aria-current="page"' }}>{{ 'Alle'|trans }} <span class="badge" data-unread-badge {{ unread_messages > 0 ? '' : 'hidden' }}>{{ unread_messages }}</span></a>
+        {% for f in folders %}
+            {% set n = folder_unread[f.value] ?? 0 %}
+            <a href="{{ path('app_messages', {folder: f.value}) }}" class="{{ folder == f ? 'active' }}" {{ folder == f ? 'aria-current="page"' }} id="folder-{{ f.value }}"><span aria-hidden="true">{{ f.icon }}</span> {{ f.label|trans }} <span class="badge" data-folder-badge="{{ f.value }}" {{ n > 0 ? '' : 'hidden' }}>{{ n }}</span></a>
+        {% endfor %}
+    </nav>
     <p class="muted small">{{ 'Nachrichten werden nach {keep_days} Tagen automatisch gelöscht.'|trans({'{keep_days}': keep_days}) }}</p>
     {% set token = csrf_token('messages') %}
     {% for m in messages %}
@@ -23,18 +33,20 @@
             {% if m.actionUrl %}<p><a class="btn btn-small" href="{{ m.actionUrl }}">{{ m.actionLabel }}</a></p>{% endif %}
             <form method="post" action="{{ path('app_message_delete', {id: m.id}) }}" class="message-actions">
                 <input type="hidden" name="_token" value="{{ token }}">
+                {% if folder %}<input type="hidden" name="folder" value="{{ folder.value }}">{% endif %}
+                <input type="hidden" name="page" value="{{ page }}">
                 <span class="muted small">{{ 'wird am {createdAt} automatisch gelöscht'|trans({'{createdAt}': m.createdAt|date_modify('+' ~ keep_days ~ ' days')|date('d.m.Y')}) }}</span>
                 <button class="btn btn-small btn-danger" type="submit" id="message-delete-{{ m.id }}">{{ 'Löschen'|trans }}</button>
             </form>
         </details>
     {% else %}
-        <p class="panel muted">{{ 'Keine Nachrichten.'|trans }}</p>
+        <p class="panel muted">{{ folder ? 'Keine Nachrichten in diesem Ordner.'|trans : 'Keine Nachrichten.'|trans }}</p>
     {% endfor %}
     {% if pages > 1 %}
         <nav class="pager" aria-label="{{ 'Seiten'|trans }}">
-            {% if page > 1 %}<a class="btn btn-small btn-secondary" href="{{ path('app_messages', {page: page - 1}) }}">{{ '← Neuere'|trans }}</a>{% endif %}
+            {% if page > 1 %}<a class="btn btn-small btn-secondary" href="{{ path('app_messages', {page: page - 1}|merge(folder ? {folder: folder.value} : {})) }}">{{ '← Neuere'|trans }}</a>{% endif %}
             <span class="muted small">{{ 'Seite {page} von {pages} · {total} Nachrichten'|trans({'{page}': page, '{pages}': pages, '{total}': total|num}) }}</span>
-            {% if page < pages %}<a class="btn btn-small btn-secondary" href="{{ path('app_messages', {page: page + 1}) }}">{{ 'Ältere →'|trans }}</a>{% endif %}
+            {% if page < pages %}<a class="btn btn-small btn-secondary" href="{{ path('app_messages', {page: page + 1}|merge(folder ? {folder: folder.value} : {})) }}">{{ 'Ältere →'|trans }}</a>{% endif %}
         </nav>
     {% endif %}
 {% endblock %}

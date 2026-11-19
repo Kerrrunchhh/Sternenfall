@@ -7,25 +7,52 @@
     <h1>{{ 'Transportgesuche'|trans }}</h1>
     <p class="muted small">{{ 'Dir fehlen Rohstoffe? Stelle ein Gesuch über höchstens eine Frachterladung ({max_load} Rohstoffe). Der Preis ist fest: 1 Credit je {per} Rohstoffe. Händler liefern; bezahlt wird erst, wenn die Ladung ankommt – bis dahin sind deine Credits verwahrt.'|trans({'{max_load}': max_load|num, '{per}': resources_per_credit|num}) }}</p>
 
+    <section class="panel">
+        <h2>{{ 'Neues Gesuch'|trans }} <small class="muted">{{ '{active} von {max} laufen'|trans({'{active}': active_requests, '{max}': max_active}) }}</small></h2>
+        {% if active_requests >= max_active %}
+            <p class="muted">{{ 'Du hast schon {max} Transportgesuche laufen. Ein neues geht erst, wenn eines geliefert oder zurückgezogen ist.'|trans({'{max}': max_active}) }}</p>
+        {% else %}
+        <form method="post" action="{{ path('app_transport_request_create') }}" class="mail-form" data-transport-offer data-resources-per-credit="{{ resources_per_credit }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('transport_requests') }}">
+            <label>{{ 'Lieferung an'|trans }}
+                <select name="planet">
+                    {% for p in player.planets %}<option value="{{ p.id }}" {{ p.id == planet.id ? 'selected' }}>{{ p.name }} [{{ p.coordinates }}]</option>{% endfor %}
+                </select>
+            </label>
+            <div class="coords">
+                {% for type in resource_types %}
+                    <label>{{ type.label|trans }} <input type="number" name="goods[{{ type.value }}]" min="0" max="{{ max_load }}" value="0" data-goods></label>
+                {% endfor %}
+            </div>
+            <p class="muted small">{{ 'Summe: <span data-goods-total>0</span> von {max_load} · Preis: <strong><span data-offer-hint>0</span> Credits</strong>'|trans({'{max_load}': max_load|num|e})|raw }}</p>
+            <button class="btn" type="submit" id="transport-request-create">{{ 'Gesuch einstellen'|trans }}</button>
+        </form>
+        {% endif %}
+    </section>
+
     {% if is_trader %}
         <section class="panel">
             <h2>{{ 'Gesuche beliefern'|trans }}</h2>
             <p class="muted small">{{ 'Geliefert wird von <strong>{name}</strong> {coordinates}: je Gesuch eine leere, dort wartende Flotte nur aus Frachtern. Stationiere dafür viele kleine Handelsflotten an diesem Planeten. Bereit: <strong>{ready_fleets}</strong> {ready_fleets2}.'|trans({'{name}': planet.name|e, '{coordinates}': ui.coords(planet.coordinates), '{ready_fleets}': ready_fleets|length|e, '{ready_fleets2}': (ready_fleets|length == 1 ? ('Flotte'|trans) : ('Flotten'|trans))|e})|raw }}</p>
+            <p class="muted small">{{ 'Beliefern kannst du Gesuche, die deine Flotte in höchstens {hours} Stunden erreicht – weiter entfernte liefert die Handelsgilde schneller.'|trans({'{hours}': max_delivery_seconds // 3600}) }}</p>
             {% if open is empty %}
                 <p class="muted">{{ 'Gerade sucht niemand Rohstoffe.'|trans }}</p>
             {% else %}
                 <form method="post" action="{{ path('app_transport_request_serve') }}">
                     <input type="hidden" name="_token" value="{{ csrf_token('transport_requests') }}">
                     <table class="table">
-                        <thead><tr><th><input type="checkbox" data-check-all="requests[]" aria-label="{{ 'Alle auswählen'|trans }}"></th><th>{{ 'Ziel'|trans }}</th><th>{{ 'Ware'|trans }}</th><th>{{ 'Preis'|trans }}</th><th>{{ 'Von'|trans }}</th></tr></thead>
+                        <thead><tr><th><input type="checkbox" data-check-all="requests[]" aria-label="{{ 'Alle auswählen'|trans }}"></th><th>{{ 'Ziel'|trans }}</th><th>{{ 'Ware'|trans }}</th><th>{{ 'Preis'|trans }}</th><th>{{ 'Von'|trans }}</th><th class="num" title="{{ 'Flugzeit deiner schnellsten wartenden Handelsflotte'|trans }}">{{ 'Flug'|trans }}</th></tr></thead>
                         <tbody>
                         {% for r in open %}
-                            <tr>
-                                <td><input type="checkbox" name="requests[]" value="{{ r.id }}" aria-label="{{ 'Gesuch {planetName}'|trans({'{planetName}': r.planetName}) }}"></td>
+                            {% set flight = flights[r.id] ?? null %}
+                            {% set too_far = flight is not null and flight > max_delivery_seconds %}
+                            <tr class="{{ too_far ? 'muted' }}">
+                                <td><input type="checkbox" name="requests[]" value="{{ r.id }}" aria-label="{{ 'Gesuch {planetName}'|trans({'{planetName}': r.planetName}) }}"{{ too_far ? ' disabled' }}></td>
                                 <td>{{ r.planetName }} {{ ui.coords(r.coordinates) }}</td>
                                 <td class="small">{{ ui.goods(r.goods) }}</td>
                                 <td>{{ '<strong>{offer}</strong> Cr'|trans({'{offer}': r.offer|num|e})|raw }}</td>
                                 <td>{{ ui.player(r.requester) }}</td>
+                                <td class="num small">{% if flight is null %}–{% else %}{{ flight|format_duration }}{% if too_far %} <span title="{{ 'Lieferungen dürfen höchstens {hours} Stunden dauern.'|trans({'{hours}': max_delivery_seconds // 3600}) }}">{{ 'zu weit'|trans }}</span>{% endif %}{% endif %}</td>
                             </tr>
                         {% endfor %}
                         </tbody>
@@ -73,29 +100,6 @@
                     {% endif %}
                 </div>
             {% endfor %}
-        {% endif %}
-    </section>
-
-    <section class="panel">
-        <h2>{{ 'Neues Gesuch'|trans }} <small class="muted">{{ '{active} von {max} laufen'|trans({'{active}': active_requests, '{max}': max_active}) }}</small></h2>
-        {% if active_requests >= max_active %}
-            <p class="muted">{{ 'Du hast schon {max} Transportgesuche laufen. Ein neues geht erst, wenn eines geliefert oder zurückgezogen ist.'|trans({'{max}': max_active}) }}</p>
-        {% else %}
-        <form method="post" action="{{ path('app_transport_request_create') }}" class="mail-form" data-transport-offer data-resources-per-credit="{{ resources_per_credit }}">
-            <input type="hidden" name="_token" value="{{ csrf_token('transport_requests') }}">
-            <label>{{ 'Lieferung an'|trans }}
-                <select name="planet">
-                    {% for p in player.planets %}<option value="{{ p.id }}" {{ p.id == planet.id ? 'selected' }}>{{ p.name }} [{{ p.coordinates }}]</option>{% endfor %}
-                </select>
-            </label>
-            <div class="coords">
-                {% for type in resource_types %}
-                    <label>{{ type.label|trans }} <input type="number" name="goods[{{ type.value }}]" min="0" max="{{ max_load }}" value="0" data-goods></label>
-                {% endfor %}
-            </div>
-            <p class="muted small">{{ 'Summe: <span data-goods-total>0</span> von {max_load} · Preis: <strong><span data-offer-hint>0</span> Credits</strong>'|trans({'{max_load}': max_load|num|e})|raw }}</p>
-            <button class="btn" type="submit" id="transport-request-create">{{ 'Gesuch einstellen'|trans }}</button>
-        </form>
         {% endif %}
     </section>
 {% endblock %}

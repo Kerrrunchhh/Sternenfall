@@ -1863,19 +1863,19 @@ final readonly class FleetService
                 if (null !== $prey = $fleet->getTargetFleet()) {
                     // Probe sent after a fleet: it must still be on its way to this place.
                     if ($prey->isMoving() && Radar::nextStop($prey) === [$g, $s, $p] && $prey->getNextEventAt() >= $fleet->getArriveAt()) {
-                        $this->inbox->send($player, t('Flotte von {player} ausgespäht', ['{player}' => $prey->getOwner()->getUsername()]), $this->espionage->scoutFleet($player, $prey));
+                        $this->inbox->send($player, t('Flotte von {player} ausgespäht', ['{player}' => $prey->getOwner()->getUsername()]), $this->espionage->scoutFleet($player, $prey), folder: MessageFolder::Spy);
                         if (null !== $notice = $this->espionage->spiedNotice($prey->getOwner(), $player, t('Deine Flotte {name} bei {where}', ['{name}' => $prey->getLabel(), '{where}' => $where]))) {
-                            $this->inbox->send($prey->getOwner(), ...$notice);
+                            $this->inbox->send($prey->getOwner(), ...$notice, folder: MessageFolder::Spy);
                         }
                     } else {
-                        $this->inbox->send($player, t('Sonde bei {where}: Flotte verpasst', ['{where}' => $where]), t('Die Flotte war nicht mehr dorthin unterwegs. Die Sonde hat nichts entdeckt und ist verglüht.'));
+                        $this->inbox->send($player, t('Sonde bei {where}: Flotte verpasst', ['{where}' => $where]), t('Die Flotte war nicht mehr dorthin unterwegs. Die Sonde hat nichts entdeckt und ist verglüht.'), folder: MessageFolder::Spy);
                     }
                 } elseif (null === $target) {
-                    $this->inbox->send($player, t('Spionagebericht {where}', ['{where}' => $where]), $this->espionage->report($player, $g, $s, $p, null));
+                    $this->inbox->send($player, t('Spionagebericht {where}', ['{where}' => $where]), $this->espionage->report($player, $g, $s, $p, null), folder: MessageFolder::Spy);
                 } else {
-                    $this->planets->transaction($target, fn (Planet $t) => $this->inbox->send($player, t('Spionagebericht {name} {where}', ['{name}' => $t->getName(), '{where}' => $where]), $this->espionage->report($player, $g, $s, $p, $t)));
+                    $this->planets->transaction($target, fn (Planet $t) => $this->inbox->send($player, t('Spionagebericht {name} {where}', ['{name}' => $t->getName(), '{where}' => $where]), $this->espionage->report($player, $g, $s, $p, $t), folder: MessageFolder::Spy));
                     if (null !== $notice = $this->espionage->spiedNotice($target->getOwner(), $player, t('Dein Planet {name} {where}', ['{name}' => $target->getName(), '{where}' => $where]))) {
-                        $this->inbox->send($target->getOwner(), ...$notice);
+                        $this->inbox->send($target->getOwner(), ...$notice, folder: MessageFolder::Spy);
                     }
                 }
 

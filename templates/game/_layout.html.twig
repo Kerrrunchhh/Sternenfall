@@ -48,6 +48,11 @@
                 {% endif %}
             </form>
         {% endif %}
+        {# Players and alliances by name: results on their own page (SearchController). #}
+        <form method="get" action="{{ path('app_search') }}" class="top-search" role="search">
+            <input type="search" name="q" minlength="2" required value="{{ route == 'app_search' ? app.request.query.get('q') : '' }}" placeholder="{{ 'Spieler, Allianz …'|trans }}" aria-label="{{ 'Spieler oder Allianz suchen'|trans }}">
+            <button type="submit" title="{{ 'Suchen'|trans }}" aria-label="{{ 'Suchen'|trans }}">🔍</button>
+        </form>
         <div class="user">
             {% if player.alliance %}<a class="alliance-tag" href="{{ path('app_alliance_public', {id: player.alliance.id}) }}">[{{ player.alliance.tag }}]</a> {% endif %}<a href="{{ path('app_player', {id: player.id}) }}" title="{{ 'Dein Profil und Konto (Urlaub, E-Mail, erweiterter Account)'|trans }}">{{ player.lifeForm.icon }} {{ app.user.username }}</a> <span class="muted">({{ player.lifeForm.label|trans }})</span> · <a href="{{ path('app_logout') }}">{{ 'Abmelden'|trans }}</a>
         </div>
@@ -158,7 +163,8 @@
             {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('app_admin_action_log') }}" class="{{ route == 'app_admin_action_log' ? 'active' }}">{{ '🛡 Protokoll'|trans }}</a>{% endif %}
             {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('app_admin_game') }}" class="{{ route == 'app_admin_game' ? 'active' }}">{{ '🛡 Spielsteuerung'|trans }}{% if attack_ban|default(null) %} <span class="badge">⛔</span>{% endif %}</a>{% endif %}
             <a href="{{ path('app_notes') }}" class="{{ route == 'app_notes' ? 'active' }}"><span class="nav-icon" aria-hidden="true">📝</span>{{ 'Notizblock'|trans }}</a>
-            <a href="{{ path('app_player_search') }}" class="{{ route == 'app_player_search' ? 'active' }}"><span class="nav-icon" aria-hidden="true">🔍</span>{{ 'Spieler suchen'|trans }}</a>
+            {# Phones only: the search field at the top is hidden there. #}
+            <a href="{{ path('app_search') }}" class="nav-search-link {{ route == 'app_search' ? 'active' }}"><span class="nav-icon" aria-hidden="true">🔍</span>{{ 'Suche'|trans }}</a>
             <a href="{{ path('app_highscores') }}" class="{{ route == 'app_highscores' ? 'active' }}"><span class="nav-icon" aria-hidden="true">🏆</span>{{ 'Highscores'|trans }}</a>
             <a href="{{ path('app_newspaper') }}" class="{{ route == 'app_newspaper' ? 'active' }}" title="{{ 'Alle Kampfberichte des Universums, 24 Stunden später'|trans }}"><span class="nav-icon" aria-hidden="true">📰</span>{{ 'Zeitung'|trans }}</a>
             <a href="{{ path('app_polls') }}" class="{{ route starts with 'app_poll' ? 'active' }}"><span class="nav-icon" aria-hidden="true">🗳</span>{{ 'Umfragen'|trans }}{% if open_polls|default(0) > 0 %} <span class="badge" title="{{ 'Offene Umfragen'|trans }}">{{ open_polls }}</span>{% endif %}</a>

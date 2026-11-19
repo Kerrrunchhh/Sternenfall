@@ -123,7 +123,7 @@ class GameFlowTest extends WebTestCase
         self::assertSelectorTextContains('#profile-awards', 'Bronzener Pfeil KW 46/2026');
     }
 
-    public function testAPlayerShowsATickerBelowTheBlackBoardAndWritesInIt(): void
+    public function testAPlayerShowsATickerOnTheOverviewAndWritesInIt(): void
     {
         $this->register('Pilotin');
         $this->client->request('GET', '/ticker');
@@ -131,21 +131,22 @@ class GameFlowTest extends WebTestCase
         $this->client->request('GET', '/alliance');
         $this->client->submitForm('alliance-found', ['name' => 'Sternenbund', 'tag' => 'STB']);
 
-        $crawler = $this->client->request('GET', '/alliance');
+        // The alliance page has its black board; the personal ticker is only on the overview.
+        $this->client->request('GET', '/alliance');
+        self::assertSelectorNotExists('#ticker');
+
+        $crawler = $this->client->request('GET', '/overview');
         $ticker = static::getContainer()->get(\App\Repository\TickerRepository::class)->findJoined($this->user('Pilotin'))[0];
         $this->client->submit($crawler->filter('#board-ticker-save')->form(['ticker' => (string) $ticker->getId()]));
-        self::assertResponseRedirects();
+        self::assertResponseRedirects('/overview#ticker');
         self::assertSame($ticker->getId(), $this->user('Pilotin')->getBoardTicker()?->getId());
 
-        $crawler = $this->client->request('GET', '/alliance');
-        $this->client->submit($crawler->filter('#board-ticker-send')->form(['body' => 'Hallo ihr Alten!']));
-        self::assertResponseRedirects('/alliance#ticker');
-        $crawler = $this->client->followRedirect();
-        self::assertSelectorTextContains('#ticker', 'Hallo ihr Alten!');
-
-        // The same ticker on the overview; sending there returns to the overview.
         $crawler = $this->client->request('GET', '/overview');
+        $this->client->submit($crawler->filter('#board-ticker-send')->form(['body' => 'Hallo ihr Alten!']));
+        self::assertResponseRedirects('/overview#ticker');
+        $this->client->followRedirect();
         self::assertSelectorTextContains('#ticker', 'Hallo ihr Alten!');
+        $crawler = $this->client->request('GET', '/overview');
         $this->client->submit($crawler->filter('#board-ticker-send')->form(['body' => 'Grüße von der Übersicht']));
         self::assertResponseRedirects('/overview#ticker');
 
@@ -569,6 +570,67 @@ class GameFlowTest extends WebTestCase
         $this->client->click($crawler->filter('#contact-planets-'.$her->getId())->link());
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('#planets', $her->getPlanets()->first()->getCoordinates());
+    }
+
+    public function testAPlayersPlanetsCanBeSpiedFromHisProfile(): void
+    {
+        $this->register('Ziel');
+        $this->client->request('GET', '/logout');
+        $this->register('Spaeherin');
+        $target = $this->user('Ziel');
+        $planet = $target->getPlanets()->first();
+
+        $crawler = $this->client->request('GET', '/player/'.$target->getId());
+        self::assertSelectorExists('#spy-planet-'.$planet->getId());
+        $this->client->submit($crawler->filter('#spy-planet-'.$planet->getId())->form());
+
+        self::assertResponseRedirects('/player/'.$target->getId().'#planets', null, 'back to the profile, not to the galaxy');
+        $this->client->request('GET', '/player/'.$this->user('Spaeherin')->getId());
+        self::assertSelectorNotExists('[id^="spy-planet-"]', 'no spying on your own planets');
+    }
+
+    public function testMessagesAreSortedIntoFolders(): void
+    {
+        $this->register('Leserin');
+        $inbox = static::getContainer()->get(\App\Game\Inbox::class);
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $user = $this->user('Leserin');
+        $inbox->send($user, \Symfony\Component\Translation\t('Spionagebericht Testwelt'), \Symfony\Component\Translation\t('Viel Eisen.'), folder: \App\Game\MessageFolder::Spy);
+        $inbox->send($user, \Symfony\Component\Translation\t('Kampfbericht Testwelt'), \Symfony\Component\Translation\t('Gewonnen.'), folder: \App\Game\MessageFolder::Battle);
+        $em->flush();
+
+        $this->client->request('GET', '/messages?folder=spy');
+        self::assertSelectorTextContains('#folder-spy.active', 'Spionage');
+        self::assertSelectorTextContains('.message summary', 'Spionagebericht Testwelt');
+        self::assertSelectorTextNotContains('main', 'Kampfbericht Testwelt');
+
+        $this->client->request('GET', '/messages');
+        self::assertSelectorTextContains('main', 'Kampfbericht Testwelt');
+        self::assertSelectorTextContains('main', 'Spionagebericht Testwelt');
+    }
+
+    public function testTheSearchFindsPlayersAndAlliancesExactMatchesFirst(): void
+    {
+        $this->register('Sternwanderer');
+        $this->client->request('GET', '/logout');
+        $this->register('Stern');
+        $this->client->request('GET', '/alliance');
+        $this->client->submitForm('alliance-found', ['name' => 'Sternenbund', 'tag' => 'STB']);
+
+        // The field at the top of every page.
+        $crawler = $this->client->request('GET', '/overview');
+        $this->client->submit($crawler->filter('form.top-search')->form(['q' => 'stern']));
+        self::assertResponseIsSuccessful();
+        $names = $this->client->getCrawler()->filter('#search-players .player-name a')->each(static fn ($a): string => $a->text());
+        self::assertSame(['Stern', 'Sternwanderer'], $names, 'the exact name first');
+        self::assertSelectorTextContains('#search-tab-alliances .badge', '1');
+
+        $this->client->request('GET', '/suche', ['q' => 'STB', 'tab' => 'alliances']);
+        self::assertSelectorTextContains('#search-alliances', 'Sternenbund');
+
+        // Old links to the player search still work.
+        $this->client->request('GET', '/spieler', ['q' => 'stern']);
+        self::assertResponseRedirects('/suche?q=stern', 301);
     }
 
     public function testThePlayerChoosesWhichSectionsTheOverviewShows(): void

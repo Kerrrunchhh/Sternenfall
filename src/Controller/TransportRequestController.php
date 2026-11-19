@@ -37,9 +37,18 @@ class TransportRequestController extends AbstractGameController
         $planet = $this->currentPlanet();
         $player = $this->player();
         $trader = LifeForm::Trader === $player->getLifeForm();
+        $open = array_values(array_filter($this->requests->findOpen(), static fn (TransportRequest $r): bool => !$r->getRequester()->isSameAs($player)));
+        $ready = $trader ? $this->dispatcher->readyFleets($player, $planet) : [];
+        // Traders see how long the fastest waiting fleet would fly (only up to MAX_DELIVERY_HOURS may be served).
+        $flights = [];
+        foreach ($ready === [] ? [] : $open as $request) {
+            $flights[$request->getId()] = min(array_map(fn (\App\Entity\Fleet $fleet): int => $this->dispatcher->flightSeconds($fleet, $request), $ready));
+        }
 
         return $this->renderGame('game/transport_requests.html.twig', $planet, [
-            'open' => array_values(array_filter($this->requests->findOpen(), static fn (TransportRequest $r): bool => !$r->getRequester()->isSameAs($player))),
+            'open' => $open,
+            'flights' => $flights,
+            'max_delivery_seconds' => \App\Game\TransportRequestDispatcher::MAX_DELIVERY_HOURS * 3600,
             'mine' => $this->requests->findOf($player),
             'max_load' => TransportRequests::maxLoad(),
             'active_requests' => $this->requests->countActive($player),
@@ -47,7 +56,7 @@ class TransportRequestController extends AbstractGameController
             'resources_per_credit' => TransportRequests::RESOURCES_PER_CREDIT,
             'resource_types' => ResourceType::cases(),
             'is_trader' => $trader,
-            'ready_fleets' => $trader ? $this->dispatcher->readyFleets($player, $planet) : [],
+            'ready_fleets' => $ready,
         ]);
     }
 

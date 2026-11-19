@@ -103,7 +103,7 @@ class TickerController extends AbstractGameController
             $this->addFlash('error', $e->translatable());
         }
 
-        // Written from the overview or below the alliance's black board: back there.
+        // Written from the overview: back there.
         return $this->backToBoardTicker($request) ?? $this->redirectToRoute('app_ticker', ['id' => $ticker->getId()]);
     }
 
@@ -120,17 +120,16 @@ class TickerController extends AbstractGameController
         } else {
             $player->setBoardTicker($ticker);
             $em->flush();
-            $this->addFlash('success', null === $ticker ? t('Auf der Übersicht und unter dem schwarzen Brett wird kein Ticker mehr angezeigt.') : t('Der Ticker „{name}“ wird jetzt auf der Übersicht und unter dem schwarzen Brett angezeigt.', ['{name}' => $ticker->getName()]));
+            $this->addFlash('success', null === $ticker ? t('Auf der Übersicht wird kein Ticker mehr angezeigt.') : t('Der Ticker „{name}“ wird jetzt auf der Übersicht angezeigt.', ['{name}' => $ticker->getName()]));
         }
 
         return $this->backToBoardTicker($request) ?? $this->redirectToRoute('app_overview', ['_fragment' => 'ticker']);
     }
 
-    /** Back to the page showing the chosen ticker (overview or alliance), if the form came from there. */
+    /** Back to the overview showing the chosen ticker, if the form came from there. */
     private function backToBoardTicker(Request $request): ?Response
     {
         return match ($request->request->getString('back')) {
-            'alliance' => $this->redirectToRoute('app_alliance', ['_fragment' => 'ticker']),
             'overview' => $this->redirectToRoute('app_overview', ['_fragment' => 'ticker']),
             default => null,
         };

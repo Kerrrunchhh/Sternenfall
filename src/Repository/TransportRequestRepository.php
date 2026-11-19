@@ -77,6 +77,17 @@ class TransportRequestRepository extends ServiceEntityRepository
             ->execute();
     }
 
+    /** @return list<TransportRequest> requests a player trader's fleet is delivering */
+    public function findAssignedToFleets(): array
+    {
+        return $this->createQueryBuilder('r')
+            ->where('r.status = :assigned')
+            ->andWhere('r.fleet IS NOT NULL')
+            ->setParameter('assigned', TransportRequest::ASSIGNED)
+            ->getQuery()
+            ->getResult();
+    }
+
     /** A planet was renamed: entries for its coordinates show the new name (a copy is kept for when the planet is gone). */
     public function renamePlanetAt(int $galaxy, int $system, int $position, string $name): void
     {

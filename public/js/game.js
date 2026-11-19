@@ -355,6 +355,12 @@ const orbit = (() => {
                     badge.textContent = data.unread;
                     badge.hidden = data.unread < 1;
                 });
+                // The folder tabs count their own unread messages.
+                document.querySelectorAll('[data-folder-badge]').forEach((badge) => {
+                    const count = (data.folders || {})[badge.dataset.folderBadge] || 0;
+                    badge.textContent = count;
+                    badge.hidden = count < 1;
+                });
                 if (data.unread < 1) {
                     const button = document.querySelector('[data-read-all] button');
                     if (button) {
