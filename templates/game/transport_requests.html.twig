@@ -1,6 +1,13 @@
 {% extends 'game/_layout.html.twig' %}
 {% import 'game/_macros.html.twig' as ui %}
 
+{# The requested goods, e.g. "Eisen 2.000 · Wasser 1.000" (only the kinds asked for). #}
+{% macro goods(goods, types) %}
+    {%- set parts = [] -%}
+    {%- for type in types %}{% if goods.get(type) > 0 %}{% set parts = parts|merge([(type.label|trans) ~ ' ' ~ goods.get(type)|num]) %}{% endif %}{% endfor -%}
+    {{- parts|join(' · ') -}}
+{% endmacro %}
+
 {% block title %}{{ 'Transportgesuche – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
 
 {% block content %}
@@ -23,7 +30,7 @@
                             <tr>
                                 <td><input type="checkbox" name="requests[]" value="{{ r.id }}" aria-label="{{ 'Gesuch {planetName}'|trans({'{planetName}': r.planetName}) }}"></td>
                                 <td>{{ r.planetName }} {{ ui.coords(r.coordinates) }}</td>
-                                <td class="small">{% for type in resource_types %}{% set n = r.goods.get(type) %}{% if n > 0 %}{{ type.label|trans }} {{ n|num }}{% if not loop.last %} · {% endif %}{% endif %}{% endfor %}</td>
+                                <td class="small">{{ _self.goods(r.goods, resource_types) }}</td>
                                 <td>{{ '<strong>{offer}</strong> Cr'|trans({'{offer}': r.offer|num|e})|raw }}</td>
                                 <td>{{ ui.player(r.requester) }}</td>
                             </tr>
@@ -41,7 +48,7 @@
                 <p class="muted">{{ 'Keine.'|trans }}</p>
             {% else %}
                 {% for r in open %}
-                    <div class="proposal"><div>{{ '{planetName} {coordinates} · {total} Rohstoffe für <strong>{offer} Credits</strong> · {requester}'|trans({'{planetName}': r.planetName|e, '{coordinates}': ui.coords(r.coordinates), '{total}': r.goods.total|num|e, '{offer}': r.offer|num|e, '{requester}': ui.player(r.requester)})|raw }}</div></div>
+                    <div class="proposal"><div>{{ '{planetName} {coordinates} · {goods} für <strong>{offer} Credits</strong> · {requester}'|trans({'{planetName}': r.planetName|e, '{coordinates}': ui.coords(r.coordinates), '{goods}': _self.goods(r.goods, resource_types)|e, '{offer}': r.offer|num|e, '{requester}': ui.player(r.requester)})|raw }}</div></div>
                 {% endfor %}
                 <p class="muted small">{{ 'Beliefern können nur Händler.'|trans }}</p>
             {% endif %}
@@ -57,7 +64,7 @@
             {% for r in mine %}
                 <div class="proposal">
                     <div>
-                        {{ '{planetName} {coordinates} · {total} Rohstoffe · {offer} Credits'|trans({'{planetName}': r.planetName|e, '{coordinates}': ui.coords(r.coordinates), '{total}': r.goods.total|num|e, '{offer}': r.offer|num|e})|raw }}
+                        {{ '{planetName} {coordinates} · {goods} · {offer} Credits'|trans({'{planetName}': r.planetName|e, '{coordinates}': ui.coords(r.coordinates), '{goods}': _self.goods(r.goods, resource_types)|e, '{offer}': r.offer|num|e})|raw }}
                         <div class="muted small">
                             {{ {open: ('offen'|trans), assigned: ('wird geliefert'|trans), done: ('geliefert'|trans), cancelled: ('zurückgezogen'|trans)}[r.status] }}
                             {% if r.requester.id == player.id %}{% if r.trader %} {{ '· Händler {trader}'|trans({'{trader}': ui.player(r.trader)})|raw }}{% endif %}{% else %} {{ '· du lieferst an {requester}'|trans({'{requester}': ui.player(r.requester)})|raw }}{% endif %}
