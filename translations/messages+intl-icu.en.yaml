@@ -3193,3 +3193,5 @@
 "Mit „alles bis auf“ bleibt die eingetragene Menge im Lager und die Flotte lädt den Rest – bei 0 alles. Mehrere Flotten lassen zusammen genau diese Menge zurück.": "With “all but” the amount entered stays in storage and the fleet loads the rest – with 0 everything. Several fleets together leave exactly this amount behind."
 "alles bis auf {amount}": "all but {amount}"
 "alles": "all"
+"Forschung abgebrochen. Die Rohstoffe gehen zurück an {name} [{coords}], wo sie gestartet wurde.": "Research cancelled. The resources go back to {name} [{coords}], where it was started."
+"auf {name} [{coords}] – beim Abbrechen gehen die Rohstoffe dorthin zurück": "on {name} [{coords}] – if cancelled, the resources go back there"

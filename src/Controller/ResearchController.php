@@ -40,6 +40,8 @@ class ResearchController extends AbstractGameController
             'colony_slots' => $this->economy->colonySlots($player),
             'owned_slots' => Economy::ownedSlots($player),
             'fusion_capacity' => $this->economy->fusionCapacity($player),
+            // Where the running research was started: it paid, and a cancel refunds it there.
+            'research_planet' => $player->isResearching() ? \App\Game\PlanetService::researchPlanet($player) : null,
         ]);
     }
 
@@ -58,7 +60,12 @@ class ResearchController extends AbstractGameController
     public function cancel(): Response
     {
         $planet = $this->currentPlanet();
-        $this->attempt(fn () => $this->planetService->cancelResearch($planet), t('Forschung abgebrochen, Rohstoffe wurden erstattet.'));
+        try {
+            $refunded = $this->planetService->cancelResearch($planet);
+            $this->addFlash('success', t('Forschung abgebrochen. Die Rohstoffe gehen zurück an {name} [{coords}], wo sie gestartet wurde.', ['{name}' => $refunded->getName(), '{coords}' => $refunded->getCoordinates()]));
+        } catch (\App\Game\GameException $e) {
+            $this->addFlash('error', $e->translatable());
+        }
 
         return $this->redirectToRoute('app_research');
     }

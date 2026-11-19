@@ -42,5 +42,13 @@ final class ResearchPaysOnePlanetTest extends TestCase
         self::assertTrue($player->isResearching());
         self::assertEquals($homeBefore->subtract($cost)->toArray(), $home->getResources()->toArray(), 'the home planet pays the research');
         self::assertEquals($colonyBefore->toArray(), $colony->getResources()->toArray(), 'the colony keeps its resources');
+
+        // Cancelled while the colony is selected: the refund goes back to the planet that paid.
+        self::assertSame($home, PlanetService::researchPlanet($player));
+        $refunded = $service->cancelResearch($colony);
+        self::assertSame($home, $refunded);
+        self::assertEquals($homeBefore->toArray(), $home->getResources()->toArray(), 'the home planet has its resources back');
+        self::assertEquals($colonyBefore->toArray(), $colony->getResources()->toArray(), 'the colony gets nothing extra – no moving resources by cancelling elsewhere');
+        self::assertFalse($player->isResearching());
     }
 }

@@ -8,7 +8,8 @@
 
     {% if player.researching %}
         <div class="panel construction">
-            <div>{{ '<strong>In Forschung:</strong> {label} (Stufe {researchTargetLevel})'|trans({'{label}': player.researchType.label|trans|e, '{researchTargetLevel}': player.researchTargetLevel|e})|raw }}</div>
+            <div>{{ '<strong>In Forschung:</strong> {label} (Stufe {researchTargetLevel})'|trans({'{label}': player.researchType.label|trans|e, '{researchTargetLevel}': player.researchTargetLevel|e})|raw }}
+                {% if research_planet %}<span class="muted small">{{ 'auf {name} [{coords}] – beim Abbrechen gehen die Rohstoffe dorthin zurück'|trans({'{name}': research_planet.name, '{coords}': research_planet.coordinates}) }}</span>{% endif %}</div>
             <div>{{ ui.countdown(player.researchFinishesAt, now) }}</div>
             <form method="post" action="{{ path('app_research_cancel') }}">
                 <input type="hidden" name="_token" value="{{ csrf_token('research') }}">

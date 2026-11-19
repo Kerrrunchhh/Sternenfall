@@ -253,19 +253,35 @@ final readonly class PlanetService
         return $done;
     }
 
-    /** Abort the running research and refund its full cost to the given planet. */
-    public function cancelResearch(Planet $planet): void
+    /**
+     * Abort the running research and refund its full cost to the planet that paid it (where it
+     * was started) – only if that one is no longer the player's, to the given planet. Returns the
+     * planet that got the refund.
+     */
+    public function cancelResearch(Planet $planet): Planet
     {
-        $this->locked($planet, function (Planet $planet): void {
+        $refunded = $planet;
+        $this->locked($planet, function (Planet $planet) use (&$refunded): void {
             $player = $planet->getOwner();
             if (!$player->isResearching()) {
                 throw new GameException(t('Es läuft keine Forschung.'));
             }
 
+            $refunded = self::researchPlanet($player) ?? $planet;
             $cost = $this->economy->researchCost($player->getResearchType(), $player->getResearchTargetLevel());
-            $planet->setResources($planet->getResources()->add($cost));
+            $refunded->setResources($refunded->getResources()->add($cost));
             $player->clearResearch();
         });
+
+        return $refunded;
+    }
+
+    /** The player's planet the running research was started on (it paid for it), if he still owns it. */
+    public static function researchPlanet(User $player): ?Planet
+    {
+        [$galaxy, $system, $position] = array_map('intval', explode(':', (string) $player->getResearchSlot()) + [1 => 0, 2 => 0]);
+
+        return $player->getPlanets()->findFirst(static fn (int $key, Planet $p): bool => $p->getGalaxy() === $galaxy && $p->getSystem() === $system && $p->covers($position));
     }
 
     /**
