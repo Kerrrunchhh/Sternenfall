@@ -17,7 +17,7 @@
                 {% if profile.alliance %}
                     {{ '· {label} in'|trans({'{label}': profile.allianceRank.label|trans}) }} <a href="{{ path('app_alliance_public', {id: profile.alliance.id}) }}">{{ profile.alliance.name }} [{{ profile.alliance.tag }}]</a>
                 {% endif %}
-                {{ (listed_planets|length == 1 ? '· {count} Planet · dabei seit {createdAt}' : '· {count} Planeten · dabei seit {createdAt}')|trans({'{count}': listed_planets|length, '{createdAt}': profile.createdAt|date('d.m.Y')}) }}
+                {% if not hides_planets %}{{ (listed_planets|length == 1 ? '· {count} Planet · dabei seit {createdAt}' : '· {count} Planeten · dabei seit {createdAt}')|trans({'{count}': listed_planets|length, '{createdAt}': profile.createdAt|date('d.m.Y')}) }}{% endif %}
             </p>
             <p class="player-scores">
                 {{ '<span title="Wie weit die Planeten ausgebaut sind: jede Gebäudestufe zählt mit dem Punktesatz des Gebäudes"><strong>{player_points}</strong> Punkte</span> <span title="Nur aus Schlachten: zerstörte Schildpunkte gegnerischer Einheiten (Verteidigungstürme zählen halb), aufgeteilt nach der Bauzeit der eigenen Einheiten"><strong>{combatExperience}</strong> Kampferfahrung</span>'|trans({'{player_points}': player_points(profile)|num|e, '{combatExperience}': profile.combatExperience|num|e})|raw }}
@@ -113,7 +113,9 @@
         {% if own %}
             <p class="muted small">{{ 'Bis zu {max_hidden} Planeten kannst du hier verbergen, z. B. Kampfkolonien – andere sehen sie dann nicht in dieser Liste. Verborgen: {hidden_count} von {max_hidden}.'|trans({'{max_hidden}': max_hidden, '{hidden_count}': hidden_count}) }}</p>
         {% endif %}
-        {% if listed_planets is empty %}
+        {% if hides_planets %}
+            <p class="muted">{{ 'Wo herrenlose Planeten liegen, verrät niemand – du findest sie nur, wenn du das Universum erkundest.'|trans }}</p>
+        {% elseif listed_planets is empty %}
             <p class="muted">{{ 'Keine Planeten.'|trans }}</p>
         {% else %}
             <table class="table">
@@ -122,7 +124,7 @@
                         <td>{% if own %}<img class="planet-pic planet-pic-tiny" src="{{ asset(p.picture) }}" alt="{{ p.fused ? 'Fusion'|trans : p.type.label|trans }}" title="{{ p.fused ? 'Fusion'|trans : p.type.label|trans }}" width="22" height="22"> {% endif %}{{ p.name }}{% if p.homeworld %} <span title="{{ 'Heimatplanet'|trans }}">🏠</span>{% endif %}{% if p.fused %} <span class="muted small">{{ 'Fusion aus {fusionSize} Planeten'|trans({'{fusionSize}': p.fusionSize}) }}</span>{% endif %}</td>
                         <td class="num">{{ ui.coords(p.coordinates) }}</td>
                         <td class="num muted small" title="{{ 'Planetenpunkte: Gebäudestufen mal Punktesatz'|trans }}">{{ '{points} Punkte'|trans({'{points}': planet_points(p)|num}) }}</td>
-                        {% if not own %}
+                        {% if not hides_planets %}
                             <td class="num spy-cell">
                                 <form method="post" action="{{ path('app_galaxy_spy') }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('galaxy') }}">

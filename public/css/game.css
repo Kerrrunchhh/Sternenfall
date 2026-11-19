@@ -616,6 +616,12 @@ label.checkbox { display: flex; gap: .4rem; align-items: center; color: var(--te
 
 /* Fleet movements on the overview: one line each */
 .movement-table td { padding-top: .3rem; padding-bottom: .3rem; vertical-align: middle; }
+/* Short notices at the bottom of the screen (game.js toast). */
+.toast-stack { position: fixed; right: 1rem; bottom: 1rem; z-index: 200; display: flex; flex-direction: column; gap: .4rem; max-width: min(28rem, calc(100vw - 2rem)); }
+.toast { margin: 0; box-shadow: 0 6px 18px rgba(0, 0, 0, .45); background: var(--bg-2); cursor: pointer; }
+.flash-success.toast { background: #16301e; }
+.flash-error.toast { background: #3a1717; }
+.icon-button.spy-sent { opacity: .45; }
 .fleet-strength { display: flex; flex-wrap: wrap; gap: .3rem 1.1rem; margin: .4rem 0 .6rem; padding: .5rem .75rem; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; background: var(--bg-2); }
 .fleet-strength strong { font-variant-numeric: tabular-nums; color: var(--text); }
 .movement-table .movement-cargo { display: block; overflow: hidden; text-overflow: ellipsis; }
@@ -652,6 +658,10 @@ label.checkbox { display: flex; gap: .4rem; align-items: center; color: var(--te
 .sort-link.active { color: var(--accent); }
 
 .cargo-room-info { margin: .4rem 0 0; color: var(--muted); }
+.pickup-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: .4rem 1rem; margin: .3rem 0 .5rem; }
+.pickup-row { display: grid; grid-template-columns: 6.5rem auto 1fr; align-items: center; gap: .4rem; margin: 0; }
+.pickup-row select { width: auto; }
+.pickup-row input[type=number] { width: 100%; min-width: 6rem; }
 .cargo-room-info.lacking { color: var(--bad); font-weight: 600; }
 .trade-preview { font-weight: 600; margin: .4rem 0; }
 .trade-preview.lacking { color: var(--bad); }

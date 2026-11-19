@@ -536,14 +536,22 @@ class FleetController extends AbstractGameController
         return ctype_digit($id) ? $fleets->find((int) $id) : null;
     }
 
-    /** @return array<string, float> resource => amount each fleet picks up */
+    /**
+     * What each fleet picks up: "iron" => amount, or "keep:iron" => amount to leave behind
+     * ("alles bis auf"; 0 takes everything).
+     *
+     * @return array<string, float>
+     */
     private function pickupOrder(Request $request): array
     {
         $wanted = $request->request->all('pickup');
+        $modes = $request->request->all('pickup_mode');
         $order = [];
         foreach (ResourceType::cases() as $type) {
             $amount = max(0, (int) ($wanted[$type->value] ?? 0));
-            if ($amount > 0) {
+            if ('keep' === ($modes[$type->value] ?? null)) {
+                $order[Fleet::KEEP_PREFIX.$type->value] = (float) $amount;
+            } elseif ($amount > 0) {
                 $order[$type->value] = (float) $amount;
             }
         }

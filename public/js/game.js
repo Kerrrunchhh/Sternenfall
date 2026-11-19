@@ -1919,6 +1919,41 @@ const orbit = (() => {
         setInterval(() => { if (form.dataset.from && !document.hidden) update(); }, 1000);
     });
 
+    // Short notices at the bottom of the screen (e.g. after sending a probe without reloading).
+    const toast = (message, ok) => {
+        let stack = document.querySelector('.toast-stack');
+        if (!stack) {
+            stack = document.createElement('div');
+            stack.className = 'toast-stack';
+            stack.setAttribute('aria-live', 'polite');
+            document.body.append(stack);
+        }
+        const note = document.createElement('div');
+        note.className = 'flash ' + (ok ? 'flash-success' : 'flash-error') + ' toast';
+        note.textContent = message;
+        note.addEventListener('click', () => note.remove());
+        stack.append(note);
+        setTimeout(() => note.remove(), ok ? 5000 : 8000);
+    };
+
+    // Spy buttons (🔭 in the universe and in profiles): the probe is sent in the background, the page stays.
+    document.querySelectorAll('form[action$="/galaxy/spy"]').forEach((form) => {
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const button = form.querySelector('button');
+            if (button.disabled) return;
+            button.disabled = true;
+            fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' } })
+                .then((response) => response.json())
+                .then((result) => {
+                    toast(result.message, result.ok);
+                    if (result.ok) button.classList.add('spy-sent');
+                })
+                .catch(() => form.submit())
+                .finally(() => { setTimeout(() => { button.disabled = false; }, 800); });
+        });
+    });
+
     // Ship pickers: as soon as ships are picked, a box adds up their number and fighting values.
     document.querySelectorAll('[data-ship-picker]').forEach((picker) => {
         const box = picker.querySelector('[data-fleet-strength]');

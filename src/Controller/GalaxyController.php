@@ -17,16 +17,22 @@ class GalaxyController extends AbstractGameController
     /** Spy icon in the galaxy (and in a player's profile): the nearest scout in any own hangar flies off. */
     #[Route('/galaxy/spy', name: 'app_galaxy_spy', methods: ['POST'])]
     #[IsCsrfTokenValid('galaxy', tokenKey: '_token')]
-    public function spy(Request $request): Response
+    public function spy(Request $request, \Symfony\Contracts\Translation\TranslatorInterface $translator): Response
     {
         $this->currentPlanet();
         $form = $request->request;
         [$galaxy, $system, $position] = [$form->getInt('galaxy'), $form->getInt('system'), $form->getInt('position')];
         try {
-            $this->addFlash('success', $this->fleetService->quickSpy($this->player(), $galaxy, $system, $position));
+            [$ok, $message] = [true, $this->fleetService->quickSpy($this->player(), $galaxy, $system, $position)];
         } catch (\App\Game\GameException $e) {
-            $this->addFlash('error', $e->translatable());
+            [$ok, $message] = [false, $e->translatable()];
         }
+
+        // Sent by game.js: answer in place, the page stays as it is (no reload).
+        if ($request->isXmlHttpRequest()) {
+            return new \Symfony\Component\HttpFoundation\JsonResponse(['ok' => $ok, 'message' => $message->trans($translator)], $ok ? 200 : 422);
+        }
+        $this->addFlash($ok ? 'success' : 'error', $message);
 
         // From a player's profile: back to his planet list.
         if (($profile = $form->getInt('profile')) > 0) {

@@ -43,6 +43,12 @@ final readonly class ProfileService
         return array_values(array_filter($player->getPlanets()->toArray(), static fn (Planet $p): bool => $p->isHiddenInProfile()));
     }
 
+    /** Whether the profile keeps its planets to itself: the ownerless account would list every abandoned planet to settle. */
+    public static function hidesPlanets(User $player): bool
+    {
+        return $player->isSystem() && AccountDeletion::NOBODY === $player->getUsername();
+    }
+
     /**
      * Planets others see on the profile (the owner sees all of them).
      *
@@ -50,6 +56,9 @@ final readonly class ProfileService
      */
     public static function listedPlanets(User $player, bool $own): array
     {
+        if (self::hidesPlanets($player)) {
+            return [];
+        }
         $planets = array_values(array_filter($player->getPlanets()->toArray(), static fn (Planet $p): bool => $own || !$p->isHiddenInProfile()));
         usort($planets, static fn (Planet $a, Planet $b): int => [$a->getGalaxy(), $a->getSystem(), $a->getPosition()] <=> [$b->getGalaxy(), $b->getSystem(), $b->getPosition()]);
 

@@ -28,6 +28,7 @@ class ProfileController extends AbstractGameController
             'profile' => $user,
             'own' => $own,
             'listed_planets' => ProfileService::listedPlanets($user, $own),
+            'hides_planets' => ProfileService::hidesPlanets($user),
             'hidden_count' => \count(ProfileService::hiddenPlanets($user)),
             'max_hidden' => ProfileService::MAX_HIDDEN_PLANETS,
             'contact' => $own ? null : $contacts->findBetween($this->player(), $user),

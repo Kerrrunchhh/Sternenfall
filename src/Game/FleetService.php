@@ -1615,15 +1615,17 @@ final readonly class FleetService
                 // Checked already now: planet above, owner, and whether both together are a legal fusion.
                 default => $this->fusion->plan($target)['reason'],
             },
+            // Own planets may be spied on too (e.g. to see the report others get).
             FleetMission::Spy => match (true) {
-                $owned => 'Deine eigenen Planeten musst du nicht ausspionieren.',
                 ($ships[ShipType::Scout->value] ?? 0) < 1 => 'Zum Spionieren wird mindestens eine Sonde benötigt.',
                 default => null,
             },
             FleetMission::Pickup => match (true) {
                 !$owned => 'Rohstoffe abholen kannst du nur von deinen eigenen Planeten.',
                 0 === $this->navigation->cargoCapacity($ships) => 'Rohstoffe abholen können nur Handelsschiffe (Frachter, Großfrachter).',
-                [] === array_filter(array_intersect_key($order, array_flip(array_map(static fn (ResourceType $t): string => $t->value, ResourceType::cases())))) => 'Gib an, wie viel von welchem Rohstoff abgeholt werden soll.',
+                // A fixed amount of some resource, or "everything but …" of one.
+                [] === array_filter(array_intersect_key($order, array_flip(array_map(static fn (ResourceType $t): string => $t->value, ResourceType::cases()))))
+                    && [] === array_filter(array_keys($order), static fn (string $key): bool => str_starts_with($key, Fleet::KEEP_PREFIX)) => 'Gib an, wie viel von welchem Rohstoff abgeholt werden soll.',
                 default => null,
             },
             FleetMission::Supply => match (true) {
@@ -1874,7 +1876,7 @@ final readonly class FleetService
                     $this->inbox->send($player, t('Spionagebericht {where}', ['{where}' => $where]), $this->espionage->report($player, $g, $s, $p, null), folder: MessageFolder::Spy);
                 } else {
                     $this->planets->transaction($target, fn (Planet $t) => $this->inbox->send($player, t('Spionagebericht {name} {where}', ['{name}' => $t->getName(), '{where}' => $where]), $this->espionage->report($player, $g, $s, $p, $t), folder: MessageFolder::Spy));
-                    if (null !== $notice = $this->espionage->spiedNotice($target->getOwner(), $player, t('Dein Planet {name} {where}', ['{name}' => $target->getName(), '{where}' => $where]))) {
+                    if (!$target->getOwner()->isSameAs($player) && null !== $notice = $this->espionage->spiedNotice($target->getOwner(), $player, t('Dein Planet {name} {where}', ['{name}' => $target->getName(), '{where}' => $where]))) {
                         $this->inbox->send($target->getOwner(), ...$notice, folder: MessageFolder::Spy);
                     }
                 }
@@ -2017,10 +2019,12 @@ final readonly class FleetService
         $planet->setResources($planet->getResources()->add($fleet->getCargo()));
         $fleet->setCargo(new Resources());
         $free = $this->navigation->cargoCapacity($fleet->getShips());
-        $order = $fleet->getTradeOrder();
+        $plan = $fleet->getPickupPlan();
         $stock = $planet->getResources();
-        $taken = Resources::fromCallback(static function (ResourceType $type) use ($order, $stock, &$free): float {
-            $amount = max(0.0, min((float) ($order[$type->value] ?? 0), floor($stock->get($type)), $free));
+        // Fixed amounts, and for "alles bis auf X" everything above the reserve.
+        $wanted = $fleet->getPickupWanted($stock);
+        $taken = Resources::fromCallback(static function (ResourceType $type) use ($wanted, $stock, &$free): float {
+            $amount = max(0.0, min($wanted[$type->value] ?? 0.0, floor($stock->get($type)), $free));
             $free -= $amount;
 
             return $amount;
@@ -2029,11 +2033,10 @@ final readonly class FleetService
         $fleet->setCargo($taken);
 
         $lines = [];
-        foreach (ResourceType::cases() as $type) {
-            $wanted = (float) ($order[$type->value] ?? 0);
-            if ($wanted > 0) {
-                $lines[] = \sprintf('  %s: %s von %s', $type->label(), number_format($taken->get($type), 0, ',', '.'), number_format($wanted, 0, ',', '.'));
-            }
+        foreach ($plan as ['type' => $type, 'keep' => $keep, 'amount' => $amount]) {
+            $lines[] = $keep
+                ? \sprintf('  %s: %s (alles bis auf %s)', $type->label(), number_format($taken->get($type), 0, ',', '.'), number_format($amount, 0, ',', '.'))
+                : \sprintf('  %s: %s von %s', $type->label(), number_format($taken->get($type), 0, ',', '.'), number_format($amount, 0, ',', '.'));
         }
 
         return implode("\n", $lines);

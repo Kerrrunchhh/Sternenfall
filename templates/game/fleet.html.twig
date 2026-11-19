@@ -290,11 +290,19 @@
                 </div>
                 <div data-panel="send:pickup">
                     <h3>{{ 'Abholen <span class="muted small">– je Flotte</span>'|trans|raw }}</h3>
-                    <div class="coords">
+                    {# Per resource: exactly this much, or everything but this much ("alles bis auf"; 0 = everything). #}
+                    <div class="pickup-rows">
                         {% for type in enum_cases('App\\Game\\ResourceType') %}
-                            <label>{{ type.label|trans }} <input type="number" name="pickup[{{ type.value }}]" min="0" value="0"></label>
+                            <label class="pickup-row"><span>{{ type.label|trans }}</span>
+                                <select name="pickup_mode[{{ type.value }}]" aria-label="{{ 'Art der Menge für {resource}'|trans({'{resource}': type.label|trans}) }}">
+                                    <option value="take">{{ 'genau'|trans }}</option>
+                                    <option value="keep">{{ 'alles bis auf'|trans }}</option>
+                                </select>
+                                <input type="number" name="pickup[{{ type.value }}]" min="0" value="0" aria-label="{{ 'Menge {resource}'|trans({'{resource}': type.label|trans}) }}">
+                            </label>
                         {% endfor %}
                     </div>
+                    <p class="muted small">{{ 'Mit „alles bis auf“ bleibt die eingetragene Menge im Lager und die Flotte lädt den Rest – bei 0 alles. Mehrere Flotten lassen zusammen genau diese Menge zurück.'|trans }}</p>
                     <p class="muted small">{{ 'Jede ausgewählte Flotte lädt am Ziel diese Mengen ein – höchstens, was dort im Lager liegt und in ihren Frachtraum passt – und bringt sie ins Lager ihres Startplaneten. Oben eingetragene Ladung liefert sie vorher am Ziel ab.'|trans }}</p>
                 </div>
                 <p class="muted small">{{ 'Treibstoff und Proviant zahlt der Planet, an dem eine Flotte steht, sonst ihre eigene Ladung. Mehrere Flotten zum Angreifen oder als Transport (auch mit Kriegsflotten als Geleitschutz) fliegen gemeinsam und kommen zusammen an; die Ladung wird auf die Flotten mit Frachtraum verteilt. Bei anderen Aufträgen fliegt jede Flotte einzeln.'|trans }}</p>

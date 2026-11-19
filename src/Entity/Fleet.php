@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Game\FleetMission;
+use App\Game\ResourceType;
 use App\Game\Resources;
 use App\Game\ShipType;
 use App\Repository\FleetRepository;
@@ -485,10 +486,49 @@ class Fleet
         return $this->tradeOrder ?? [];
     }
 
-    /** What a pickup is to load at its target, as resources. */
+    /** In a pickup order: "keep:iron" => 5000 loads all iron but 5000 ("alles bis auf"). */
+    public const string KEEP_PREFIX = 'keep:';
+
+    /** Fixed amounts a pickup is to load at its target, as resources (without the "all but" ones). */
     public function getPickupGoods(): Resources
     {
         return Resources::fromArray(array_map('floatval', $this->getTradeOrder()));
+    }
+
+    /**
+     * What the pickup wants of the planet's stock: the fixed amounts, and for "alles bis auf X"
+     * everything above X (not yet limited by the hold).
+     *
+     * @return array<string, float> resource value => amount
+     */
+    public function getPickupWanted(Resources $stock): array
+    {
+        $wanted = [];
+        foreach ($this->getPickupPlan() as ['type' => $type, 'keep' => $keep, 'amount' => $amount]) {
+            $wanted[$type->value] = $keep ? max(0.0, floor($stock->get($type)) - $amount) : $amount;
+        }
+
+        return $wanted;
+    }
+
+    /**
+     * The pickup order per resource: a fixed amount, or everything but an amount.
+     *
+     * @return list<array{type: ResourceType, keep: bool, amount: float}>
+     */
+    public function getPickupPlan(): array
+    {
+        $order = $this->getTradeOrder();
+        $plan = [];
+        foreach (ResourceType::cases() as $type) {
+            if (isset($order[self::KEEP_PREFIX.$type->value])) {
+                $plan[] = ['type' => $type, 'keep' => true, 'amount' => (float) $order[self::KEEP_PREFIX.$type->value]];
+            } elseif ((float) ($order[$type->value] ?? 0) > 0) {
+                $plan[] = ['type' => $type, 'keep' => false, 'amount' => (float) $order[$type->value]];
+            }
+        }
+
+        return $plan;
     }
 
     /** Whether the fleet has a hold: trade ships, or salvagers for loot. */

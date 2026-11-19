@@ -15,17 +15,6 @@
         <span class="muted small galaxy-keys-hint">{{ 'Tastatur: ←/→ oder A/D wechseln das System, ↑/↓ oder W/S die Galaxie.'|trans }}</span>
     </form>
 
-    {# The planets circle their sun; flights within the system depend on where they are (App\Game\Orbit). #}
-    <section class="panel system-view" id="systemansicht" data-fold="galaxy-system-view">
-        <h2>{{ '☀ {sun} im System {galaxy}:{system}'|trans({'{sun}': sun.label|trans, '{galaxy}': galaxy, '{system}': system}) }}</h2>
-        <p class="muted small">{{ 'Die Planeten kreisen um ihre Sonne – innen schnell, außen langsam. Flüge innerhalb des Systems sind kurz, wenn Start und Ziel auf derselben Seite stehen, und lang, wenn die Sonne dazwischen liegt. Mit dem Regler siehst du, wie es in den nächsten Tagen aussieht.'|trans }}</p>
-        <div class="system-view-canvas">
-            <svg data-system-view data-config="{{ system_view|json_encode }}" viewBox="-110 -110 220 220" role="img" aria-label="{{ 'Grafische Systemansicht'|trans }}"></svg>
-        </div>
-        <label class="system-time small">{{ 'Zeit:'|trans }} <input type="range" min="0" max="336" step="1" value="0" data-system-time aria-label="{{ 'Stunden in die Zukunft'|trans }}"> <output data-system-time-label>{{ 'jetzt'|trans }}</output></label>
-        <p class="small system-info" data-system-info aria-live="polite">{{ system_view.origin ? 'Tippe auf einen Planeten: Du siehst die Strecke von {name} dorthin und wann sie am kürzesten ist.'|trans({'{name}': system_view.originName}) : 'Tippe auf einen Planeten für Details. Strecken siehst du, wenn dein gewählter Planet in diesem System liegt.'|trans }}</p>
-    </section>
-
     <section class="panel">
         <h2>{{ 'System {galaxy}:{system} <small class="muted">· {slots} Planetenplätze</small>'|trans({'{galaxy}': galaxy|e, '{system}': system|e, '{slots}': slots|length|e})|raw }}</h2>
         <table class="table galaxy-table">
@@ -76,15 +65,13 @@
                                 <button class="icon-button bookmark-add" type="submit" title="{{ 'Koordinaten merken'|trans }}" aria-label="{{ 'Platz {position} merken'|trans({'{position}': position}) }}">📌</button>
                             </form>
                         {% endif %}
-                        {% if not (p and p.owner.id == player.id) %}
-                            <form method="post" action="{{ path('app_galaxy_spy') }}">
-                                <input type="hidden" name="_token" value="{{ csrf_token('galaxy') }}">
-                                <input type="hidden" name="galaxy" value="{{ galaxy }}">
-                                <input type="hidden" name="system" value="{{ system }}">
-                                <input type="hidden" name="position" value="{{ position }}">
-                                <button class="icon-button" type="submit" title="{{ 'Ausspionieren: die nächste Sonde aus deinen Hangars fliegt los (verglüht danach)'|trans }}" aria-label="{{ 'Platz {position} ausspionieren'|trans({'{position}': position}) }}">🔭</button>
-                            </form>
-                        {% endif %}
+                        <form method="post" action="{{ path('app_galaxy_spy') }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('galaxy') }}">
+                            <input type="hidden" name="galaxy" value="{{ galaxy }}">
+                            <input type="hidden" name="system" value="{{ system }}">
+                            <input type="hidden" name="position" value="{{ position }}">
+                            <button class="icon-button" type="submit" title="{{ 'Ausspionieren: die nächste Sonde aus deinen Hangars fliegt los (verglüht danach)'|trans }}" aria-label="{{ 'Platz {position} ausspionieren'|trans({'{position}': position}) }}">🔭</button>
+                        </form>
                     </td>
                     {% if p and p.fused %}
                         <td class="slot-type" title="{{ 'Fusion aus {fusionSize} Planeten'|trans({'{fusionSize}': p.fusionSize}) }}"><img class="planet-pic planet-pic-tiny" src="{{ asset(p.picture) }}" alt="{{ 'Fusion'|trans }}" width="22" height="22" loading="lazy"></td>
@@ -162,6 +149,17 @@
             </tbody>
         </table>
         <p class="muted small galaxy-legend"><span class="legend-swatch legend-vacation"></span> {{ 'Im Urlaub'|trans }} <span class="legend-swatch legend-newbie"></span> {{ 'Noobschutz'|trans }} <span class="legend-swatch legend-inactive"></span> {{ 'Inaktiv (30 Tage)'|trans }} <span class="legend-swatch legend-criminal"></span> {{ 'Kriminell'|trans }} <span class="legend-swatch legend-trade"></span> {{ 'Handelsstützpunkt'|trans }}</p>
+    </section>
+
+    {# The planets circle their sun; flights within the system depend on where they are (App\Game\Orbit). #}
+    <section class="panel system-view" id="systemansicht" data-fold="galaxy-system-view">
+        <h2>{{ '☀ {sun} im System {galaxy}:{system}'|trans({'{sun}': sun.label|trans, '{galaxy}': galaxy, '{system}': system}) }}</h2>
+        <p class="muted small">{{ 'Die Planeten kreisen um ihre Sonne – innen schnell, außen langsam. Flüge innerhalb des Systems sind kurz, wenn Start und Ziel auf derselben Seite stehen, und lang, wenn die Sonne dazwischen liegt. Mit dem Regler siehst du, wie es in den nächsten Tagen aussieht.'|trans }}</p>
+        <div class="system-view-canvas">
+            <svg data-system-view data-config="{{ system_view|json_encode }}" viewBox="-110 -110 220 220" role="img" aria-label="{{ 'Grafische Systemansicht'|trans }}"></svg>
+        </div>
+        <label class="system-time small">{{ 'Zeit:'|trans }} <input type="range" min="0" max="336" step="1" value="0" data-system-time aria-label="{{ 'Stunden in die Zukunft'|trans }}"> <output data-system-time-label>{{ 'jetzt'|trans }}</output></label>
+        <p class="small system-info" data-system-info aria-live="polite">{{ system_view.origin ? 'Tippe auf einen Planeten: Du siehst die Strecke von {name} dorthin und wann sie am kürzesten ist.'|trans({'{name}': system_view.originName}) : 'Tippe auf einen Planeten für Details. Strecken siehst du, wenn dein gewählter Planet in diesem System liegt.'|trans }}</p>
     </section>
 
     {# The galaxy map: the systems on spiral arms; the galaxy turns as a whole and circles the centre of the universe (App\Game\Orbit). #}

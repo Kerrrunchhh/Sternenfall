@@ -586,7 +586,7 @@ class GameFlowTest extends WebTestCase
 
         self::assertResponseRedirects('/player/'.$target->getId().'#planets', null, 'back to the profile, not to the galaxy');
         $this->client->request('GET', '/player/'.$this->user('Spaeherin')->getId());
-        self::assertSelectorNotExists('[id^="spy-planet-"]', 'no spying on your own planets');
+        self::assertSelectorExists('[id^="spy-planet-"]', 'own planets may be spied on too');
     }
 
     public function testMessagesAreSortedIntoFolders(): void
@@ -651,6 +651,24 @@ class GameFlowTest extends WebTestCase
         self::assertCount(1, $notices, 'unknown kinds are ignored');
         self::assertStringContainsString('Window closed', (string) $notices[0]->getDetail());
         self::assertStringContainsString('Testbrowser', (string) $notices[0]->getDetail());
+    }
+
+    public function testSpyingFromTheUniverseAnswersInPlaceWithoutReload(): void
+    {
+        $this->register('Lauscherin');
+        $crawler = $this->client->request('GET', '/galaxy');
+        $form = $crawler->filter('form[action$="/galaxy/spy"]')->first()->form();
+
+        // Sent by game.js: a short answer instead of a redirect (no probe in the hangar yet).
+        $this->client->request('POST', $form->getUri(), $form->getPhpValues(), [], ['HTTP_X-Requested-With' => 'XMLHttpRequest']);
+        self::assertResponseStatusCodeSame(422);
+        $answer = json_decode((string) $this->client->getResponse()->getContent(), true);
+        self::assertFalse($answer['ok']);
+        self::assertStringContainsString('Sonde', $answer['message']);
+
+        // Without JavaScript the form still works with a redirect.
+        $this->client->submit($form);
+        self::assertResponseRedirects();
     }
 
     public function testThePlayerChoosesWhichSectionsTheOverviewShows(): void

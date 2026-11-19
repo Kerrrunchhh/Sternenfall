@@ -128,7 +128,10 @@
                             {% elseif f.hasHold %}<span class="movement-cargo small muted" title="{{ 'Ladung'|trans }}">📦 {{ 'leer'|trans }}</span>{% endif %}
                             {# Gathering: which ships join which fleet. #}
                             {% if f.mission.value == 'gather' and not f.returning %}<span class="movement-cargo small muted">🚀 {{ hover|trim }}{% if f.targetFleet %} {{ '→ zu „{fleet}“'|trans({'{fleet}': f.targetFleet.label|trans}) }}{% endif %}</span>{% endif %}
-                            {% if f.mission.value == 'pickup' and not f.returning and not f.pickupGoods.empty %}<span class="movement-cargo small muted">📥 {{ 'holt ab: {goods}'|trans({'{goods}': ui.goods(f.pickupGoods)}) }}</span>{% endif %}
+                            {% if f.mission.value == 'pickup' and not f.returning and f.pickupPlan is not empty %}
+                                {%- set plan -%}{% for item in f.pickupPlan %}{{ item.type.label|trans }} {{ item.keep ? (item.amount > 0 ? 'alles bis auf {amount}'|trans({'{amount}': item.amount|num}) : 'alles'|trans) : item.amount|num }}{{ not loop.last ? ' · ' }}{% endfor %}{%- endset -%}
+                                <span class="movement-cargo small muted">📥 {{ 'holt ab: {goods}'|trans({'{goods}': plan}) }}</span>
+                            {% endif %}
                         </td>
                         <td class="num movement-time" title="{{ f.returning ? 'Rückkehr'|trans : (f.mission.value == 'hover' ? 'landet'|trans : 'Ankunft'|trans) }}">{{ ui.countdown(f.nextEventAt, now) }}</td>
                         <td class="num small muted movement-time">{{ ui.at(f.nextEventAt, now) }}</td>
