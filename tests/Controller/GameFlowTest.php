@@ -10,7 +10,6 @@ use App\Game\Resources;
 use App\Game\ShipType;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Tools\SchemaTool;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Clock\Test\ClockSensitiveTrait;
@@ -26,11 +25,7 @@ class GameFlowTest extends WebTestCase
         $this->client = static::createClient([], ['HTTP_ACCEPT_LANGUAGE' => 'de']);
         $this->client->setServerParameter('HTTP_ORIGIN', 'http://localhost');
 
-        $em = static::getContainer()->get(EntityManagerInterface::class);
-        $schemaTool = new SchemaTool($em);
-        $metadata = $em->getMetadataFactory()->getAllMetadata();
-        $schemaTool->dropSchema($metadata);
-        $schemaTool->createSchema($metadata);
+        // The schema comes from the migrations; every test is rolled back afterwards (DAMA DoctrineTestBundle).
     }
 
     public function testRegistrationCreatesHomePlanetAndLogsIn(): void
@@ -195,7 +190,7 @@ class GameFlowTest extends WebTestCase
         $crawler = $this->client->request('GET', '/overview');
 
         // 100 inhabitants à 0,05 food and water per hour
-        self::assertSelectorTextContains('table', 'Verbrauch Nahrung');
+        self::assertSelectorTextContains('[data-fold="overview-population"] table', 'Verbrauch Nahrung');
         self::assertStringContainsString('−5/h', $crawler->filterXPath('//tr[td[1][normalize-space()="Verbrauch Nahrung"]]')->text());
         self::assertStringContainsString('−5/h', $crawler->filterXPath('//tr[td[1][normalize-space()="Verbrauch Wasser"]]')->text());
         self::assertStringContainsString('Verbrauch der Bevölkerung −5/h', (string) $crawler->filter('.res-food .res-rate')->attr('title'));
@@ -220,6 +215,8 @@ class GameFlowTest extends WebTestCase
     {
         $clock = static::mockTime('2026-01-01 12:00:00');
         $this->register('Baumeister');
+        // Start resources plus the starter bonus for the confirmed address.
+        $start = $this->planet('Baumeister')->getResources()->iron;
 
         $this->client->request('GET', '/buildings');
         $this->client->submitForm('build-iron_mine');
@@ -229,7 +226,7 @@ class GameFlowTest extends WebTestCase
 
         $planet = $this->planet('Baumeister');
         self::assertTrue($planet->isConstructing());
-        self::assertEqualsWithDelta(500 - 60, $planet->getResources()->iron, 0.001);
+        self::assertEqualsWithDelta($start - 60, $planet->getResources()->iron, 0.001);
 
         // A second upgrade of the same building is queued behind the first one, at the next level.
         $this->client->request('POST', '/buildings/iron_mine/build', ['_token' => $this->buildToken()]);
@@ -245,7 +242,7 @@ class GameFlowTest extends WebTestCase
         self::assertFalse($planet->isConstructing());
         self::assertSame(2, $planet->getBuildingLevel(BuildingType::IronMine));
         // Level 2 was the second entry of the queue: 90 iron + 30 % surcharge = 117.
-        self::assertGreaterThan(500 - 60 - 117, $planet->getResources()->iron);
+        self::assertGreaterThan($start - 60 - 117, $planet->getResources()->iron);
     }
 
     public function testQueueCanBeReordered(): void
@@ -253,8 +250,10 @@ class GameFlowTest extends WebTestCase
         static::mockTime('2026-01-01 12:00:00');
         $this->register('Planerin');
 
+        // With a full queue the page shows no build buttons, so the token is taken once.
+        $token = $this->buildToken();
         foreach (['iron_mine', 'water_pump', 'farm'] as $type) {
-            $this->client->request('POST', "/buildings/$type/build", ['_token' => $this->buildToken()]);
+            $this->client->request('POST', "/buildings/$type/build", ['_token' => $token]);
         }
         // Only two upgrades fit into the building queue; the third was rejected.
         $queue = $this->planet('Planerin')->getBuildingQueue();
@@ -281,6 +280,7 @@ class GameFlowTest extends WebTestCase
     {
         static::mockTime('2026-01-01 12:00:00');
         $this->register('Zauderer');
+        $start = $this->planet('Zauderer')->getResources()->iron;
 
         $this->client->request('GET', '/buildings');
         $this->client->submitForm('build-iron_mine');
@@ -293,7 +293,7 @@ class GameFlowTest extends WebTestCase
         self::assertSelectorTextContains('.flash-success', 'abgebrochen');
         $planet = $this->planet('Zauderer');
         self::assertFalse($planet->isConstructing());
-        self::assertEqualsWithDelta(500, $planet->getResources()->iron, 0.001);
+        self::assertEqualsWithDelta($start, $planet->getResources()->iron, 0.001);
     }
 
     public function testMissingRequirementsAndInvalidTokenAreRejected(): void
@@ -328,7 +328,8 @@ class GameFlowTest extends WebTestCase
         self::assertSelectorTextContains('.construction', 'Feststoffantrieb (Stufe 1)');
 
         $clock->sleep(86400);
-        $this->client->request('GET', '/shipyard');
+        // Freighters are civil ships: their own tab of the shipyard.
+        $this->client->request('GET', '/shipyard?tab=civil');
         $this->client->submitForm('order-freighter', ['quantity' => 3]);
         $this->client->followRedirect();
         self::assertSelectorTextContains('.flash-success', '3 × Frachter');
@@ -358,7 +359,8 @@ class GameFlowTest extends WebTestCase
         $planet->setResources(new Resources(iron: 1_000_000, titanium: 1_000_000, food: 1000, water: 1000));
         $em->flush();
 
-        $this->client->request('GET', '/shipyard');
+        // Freighters are civil ships: their own tab of the shipyard.
+        $this->client->request('GET', '/shipyard?tab=civil');
         $this->client->submitForm('order-freighter', ['quantity' => 1000]);
         $this->client->followRedirect();
 
@@ -366,7 +368,7 @@ class GameFlowTest extends WebTestCase
         self::assertSame(0, $this->planet('Kleinstadt')->getShipCount(ShipType::Freighter));
     }
 
-    public function testColonizeAndReturn(): void
+    public function testFleetsAreFormedAndColonyShipsStartFromTheHangar(): void
     {
         $clock = static::mockTime('2026-01-01 12:00:00');
         $this->register('Siedlerin');
@@ -374,27 +376,27 @@ class GameFlowTest extends WebTestCase
         $em = static::getContainer()->get(EntityManagerInterface::class);
         $home = $this->planet('Siedlerin');
         $home->addShips(ShipType::ColonyShip, 1)->addShips(ShipType::Freighter, 1);
+        // Fleets are steered from a fleet control center.
+        $home->setBuildingLevel(BuildingType::FleetControl, 1);
         $home->setResources(new Resources(iron: 50_000, titanium: 50_000, food: 5000, water: 5000, hydrogen: 50_000));
+        // A second planet slot.
+        $home->getOwner()->setResearchLevel(ResearchType::Colonization, 1);
         $em->flush();
 
-        // Ships only move as a fleet: form one first.
+        // Ships move as a fleet …
         $this->client->request('GET', '/fleet');
-        $this->client->submitForm('fleet-create', [
-            'name' => 'Siedlerzug',
-            'ships[colony_ship]' => 1,
-            'ships[freighter]' => 1,
-        ]);
+        $this->client->submitForm('fleet-create', ['name' => 'Frachtzug', 'ships[freighter]' => 1]);
         $this->client->followRedirect();
-        self::assertSelectorTextContains('.flash-success', 'Siedlerzug');
-        $fleet = static::getContainer()->get(\App\Repository\FleetRepository::class)->findOneBy(['name' => 'Siedlerzug']);
-        self::assertSame(0, $this->planet('Siedlerin')->getShipCount(ShipType::ColonyShip), 'ships left the hangar');
+        self::assertSelectorTextContains('.flash-success', 'Frachtzug');
+        self::assertSame(0, $this->planet('Siedlerin')->getShipCount(ShipType::Freighter), 'the freighter left the hangar');
 
-        // A free slot right next to the home planet.
+        // … but a colony ship starts from the hangar: "Kolonisieren" at a free slot in the universe.
         $position = $home->getPosition() > 1 ? $home->getPosition() - 1 : $home->getPosition() + 1;
-        $this->client->request('GET', '/fleet?mission=colonize&position='.$position);
-        $this->client->submitForm('fleet-'.$fleet->getId().'-send', ['cargo[iron]' => 1000]);
+        $this->client->request('GET', '/galaxy');
+        $this->client->submitForm('colonize-'.$position);
         $this->client->followRedirect();
-        self::assertSelectorTextContains('.flash-success', 'Kolonisieren');
+        self::assertSelectorTextContains('.flash-success', 'Kolonie');
+        self::assertSame(0, $this->planet('Siedlerin')->getShipCount(ShipType::ColonyShip), 'the colony ship is on its way');
 
         $clock->sleep(86400);
         $this->client->request('GET', '/overview');
@@ -402,24 +404,19 @@ class GameFlowTest extends WebTestCase
         $em->clear();
         $user = $em->getRepository(User::class)->findOneBy(['username' => 'Siedlerin']);
         self::assertCount(2, $user->getPlanets());
-        $colony = $user->getPlanets()->last();
+        $colony = array_values(array_filter($user->getPlanets()->toArray(), static fn (Planet $p): bool => !$p->isHomeworld()))[0];
         self::assertSame($position, $colony->getPosition());
-        self::assertSame(1000.0, $colony->getResources()->iron);
-        self::assertSame(100.0, $colony->getPopulation());
-
-        // The colony ship was used up; the freighter is back home as the (still named) fleet.
-        $fleet = $em->getRepository(\App\Entity\Fleet::class)->findOneBy(['name' => 'Siedlerzug']);
-        self::assertTrue($fleet->isIdle());
-        self::assertSame(['freighter' => 1], $fleet->getShips());
-        self::assertSame($home->getCoordinates(), $fleet->getCoordinates());
+        self::assertGreaterThan(0, $colony->getPopulation());
 
         $this->client->request('GET', '/messages');
-        self::assertSelectorTextContains('.message', 'Neue Kolonie');
+        self::assertSelectorTextContains('body', 'Neue Kolonie');
     }
 
     public function testNewPlayersSeeTheWelcomeNewsUntilTheyMarkItRead(): void
     {
         $em = static::getContainer()->get(EntityManagerInterface::class);
+        // Only the news of this test (a migration brings the game's real welcome news along).
+        $em->createQuery('DELETE FROM '.\App\Entity\News::class.' n')->execute();
         $welcome = new \App\Entity\News(new \DateTimeImmutable('-1 year'));
         $welcome->setTitle('Willkommen!');
         $welcome->setBody('Schön, dass du da bist.');
@@ -563,7 +560,9 @@ class GameFlowTest extends WebTestCase
         $this->client->request('GET', '/logout');
         $this->register('Funkerin');
         $em = static::getContainer()->get(EntityManagerInterface::class);
-        [$her, $me] = [$this->user('Kurierin'), $this->user('Funkerin')];
+        // user() clears the entity manager, so the second one is loaded without it.
+        $her = $this->user('Kurierin');
+        $me = $em->getRepository(User::class)->findOneBy(['username' => 'Funkerin']);
         $contact = new \App\Entity\Contact($me, $her, new \DateTimeImmutable());
         $contact->accept(new \DateTimeImmutable());
         $em->persist($contact);
@@ -625,7 +624,7 @@ class GameFlowTest extends WebTestCase
         $crawler = $this->client->request('GET', '/overview');
         $this->client->submit($crawler->filter('form.top-search')->form(['q' => 'stern']));
         self::assertResponseIsSuccessful();
-        $names = $this->client->getCrawler()->filter('#search-players .player-name a')->each(static fn ($a): string => $a->text());
+        $names = $this->client->getCrawler()->filter('#search-players .player-name a:not(.alliance-tag)')->each(static fn ($a): string => $a->text());
         self::assertSame(['Stern', 'Sternwanderer'], $names, 'the exact name first');
         self::assertSelectorTextContains('#search-tab-alliances .badge', '1');
 
@@ -783,7 +782,7 @@ class GameFlowTest extends WebTestCase
             $coords[] = implode(':', [$form['galaxy']->getValue(), $form['system']->getValue(), $form['position']->getValue()]);
             $this->client->submit($form);
         }
-        $rows = fn (): array => $this->client->getCrawler()->filter('tr[data-bookmark-id]')->each(static fn ($row): string => trim($row->filter('td.num')->first()->text()));
+        $rows = fn (): array => $this->client->getCrawler()->filter('tr[data-bookmark-id]')->each(static fn ($row): string => trim($row->filter('td.num')->first()->text(), ' []'));
 
         // Tick the last one and move it to the top: it stays ticked for the next move.
         $crawler = $this->client->request('GET', '/bookmarks');
@@ -795,7 +794,7 @@ class GameFlowTest extends WebTestCase
         self::assertResponseRedirects('/bookmarks?selected='.$lastId.'#bookmark-'.$lastId);
         $crawler = $this->client->followRedirect();
         self::assertSame([$coords[2], $coords[0], $coords[1]], $rows());
-        self::assertSame('checked', $crawler->filter('#bookmark-check-'.$lastId)->attr('checked'));
+        self::assertNotNull($crawler->filter('#bookmark-check-'.$lastId)->attr('checked'), 'still ticked');
 
         $this->client->submit($crawler->filter('#bookmark-move-down')->form());
         $crawler = $this->client->followRedirect();

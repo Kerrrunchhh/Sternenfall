@@ -5,7 +5,6 @@ namespace App\Tests\Controller;
 use App\Entity\User;
 use App\Game\AccountDeletion;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Tools\SchemaTool;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
@@ -18,11 +17,7 @@ class AdminDeactivationTest extends WebTestCase
         $this->client = static::createClient([], ['HTTP_ACCEPT_LANGUAGE' => 'de']);
         $this->client->setServerParameter('HTTP_ORIGIN', 'http://localhost');
 
-        $em = static::getContainer()->get(EntityManagerInterface::class);
-        $schemaTool = new SchemaTool($em);
-        $metadata = $em->getMetadataFactory()->getAllMetadata();
-        $schemaTool->dropSchema($metadata);
-        $schemaTool->createSchema($metadata);
+        // The schema comes from the migrations; every test is rolled back afterwards (DAMA DoctrineTestBundle).
     }
 
     public function testAdminDeactivatesAndReactivatesAPlayer(): void
@@ -95,6 +90,8 @@ class AdminDeactivationTest extends WebTestCase
         $token = $crawler->filter('input[name="_token"]')->first()->attr('value');
         $this->client->request('POST', '/admin/benutzer/'.$this->user($username)->getId(), ['_token' => $token] + $fields);
         self::assertResponseRedirects();
+        // Shows the confirmation, so it doesn't turn up on the next page.
+        $this->client->followRedirect();
     }
 
     /** Signs up, confirms the e-mail address (that creates the home world) and logs in – as a new player does. */
