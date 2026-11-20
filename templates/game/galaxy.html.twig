@@ -140,7 +140,6 @@
                         <td class="num planet-points"></td>
                         <td>{{ ui.player(post.owner) }}</td>
                         <td class="num actions">
-                            {% if post.owner.id == player.id and post.active %}<a href="{{ path('app_fleet', coords|merge({mission: 'supply'})) }}">{{ 'Beliefern'|trans }}</a>{% endif %}
                             {% if post.accessibleTo(player) %}<a href="{{ path('app_fleet', coords|merge({mission: 'trade'})) }}" title="{{ 'Handelsflotte hinschicken (Transport oder Stationieren) – sie wartet dort zum Handeln'|trans }}">{{ 'Handeln'|trans }}</a>{% else %}<span class="muted small">{{ 'gesperrt'|trans }}</span>{% endif %}
                             <a href="{{ path('app_trade_post', {id: post.id}) }}">{{ 'Preise'|trans }}</a>
                         </td>

@@ -84,6 +84,36 @@ final class GuestFleetTest extends TestCase
         $this->service()->sendFleet($fleet, $this->guest, 1, 10, 1, FleetMission::Station, new Resources());
     }
 
+    public function testStationingTakesCargoAlongKeepsItOnBoardAbroadAndStoresItAtHome(): void
+    {
+        $home = $this->planets['1:10:1'];
+        $home->setResources(new Resources(iron: 50000, hydrogen: 100000, food: 100000, water: 100000));
+        // The host is past newbie protection.
+        $this->planets['1:20:3']->setBuildingLevel(\App\Game\BuildingType::FleetControl, 1);
+
+        // With cargo (formerly "Springen"): allowed, and it travels on board.
+        $abroad = new Fleet($this->guest, 'Konvoi', 1, 10, 1, ['freighter' => 2]);
+        $this->service()->sendFleet($abroad, $this->guest, 1, 20, 3, FleetMission::Station, new Resources(iron: 3000));
+        self::assertTrue($abroad->isMoving());
+        self::assertSame(3000.0, $abroad->getCargo()->iron);
+
+        $arrive = new \ReflectionMethod(FleetService::class, 'arrive');
+        $arrive->invoke($this->service(), $abroad);
+        self::assertTrue($abroad->isIdle(), 'it waits at the foreign planet');
+        self::assertTrue($abroad->isAt(1, 20, 3));
+        self::assertSame(3000.0, $abroad->getCargo()->iron, 'the cargo stays on board abroad');
+        self::assertSame(0.0, $this->planets['1:20:3']->getResources()->iron, 'nothing delivered to the host');
+
+        // Back at an own planet the cargo goes into its storage.
+        $before = $home->getResources()->iron;
+        $back = new Fleet($this->guest, 'Rückweg', 1, 20, 3, ['freighter' => 2], new Resources(iron: 3000));
+        $back->depart(FleetMission::Station, 1, 10, 1, $this->now->modify('-1 hour'), 600);
+        $arrive->invoke($this->service(), $back);
+        self::assertTrue($back->isIdle());
+        self::assertTrue($back->getCargo()->isEmpty());
+        self::assertSame($before + 3000.0, $home->getResources()->iron);
+    }
+
     public function testAnAbandonedPlanetBecomesOwnerlessWithItsStorage(): void
     {
         $colony = $this->place(new Planet($this->guest, 'Kolonie', 1, 30, 2, $this->now));

@@ -14,8 +14,9 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * A trader's station on a free slot. Sells (and buys) resources from its
- * stock at prices (credits per unit) set by the trader.
+ * A trader's station on one of his planets. Sells (and buys) resources at prices (credits per
+ * unit) set by the trader – straight from and into the planet's storage, it has no stock of its
+ * own. Only the trade guild's central exchanges (no planet) keep a stock.
  */
 #[ORM\Entity(repositoryClass: TradePostRepository::class)]
 #[ORM\UniqueConstraint(name: 'uniq_trade_post_slot', columns: ['galaxy', 'solar_system', 'position'])]

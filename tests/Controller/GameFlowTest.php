@@ -540,6 +540,8 @@ class GameFlowTest extends WebTestCase
 
     public function testTransportRequestCostsAFixedPrice(): void
     {
+        // Frozen time: no credits are earned between the two readings.
+        static::mockTime('2026-01-01 12:00:00');
         $this->register('Neuling');
         $em = static::getContainer()->get(EntityManagerInterface::class);
         $player = $this->planet('Neuling')->getOwner();

@@ -30,7 +30,9 @@ enum FleetMission: string
     /** @return list<self> missions a player can choose when sending ships */
     public static function selectable(): array
     {
-        return array_values(array_filter(self::cases(), static fn (self $m): bool => !\in_array($m, [self::Gather, self::Intercept, self::Raid, self::Hover, self::Spy], true)));
+        // "Beliefern" is gone (a trade post sells from its planet's storage, so a transport fills it),
+        // and "Springen" is part of "Stationieren".
+        return array_values(array_filter(self::cases(), static fn (self $m): bool => !\in_array($m, [self::Gather, self::Intercept, self::Raid, self::Hover, self::Spy, self::Supply, self::Jump], true)));
     }
 
     /**
@@ -95,9 +97,9 @@ enum FleetMission: string
     public function description(): string
     {
         return match ($this) {
-            self::Transport => 'Liefert die Ladung an einen besiedelten Planeten ab und kehrt zurück.',
+            self::Transport => 'Liefert die Ladung an einen besiedelten Planeten ab und kehrt zurück. Steht dort dein Handelsstützpunkt, verkauft er aus genau diesen Rohstoffen.',
             self::TransportStation => 'Liefert die Ladung an einen besiedelten Planeten ab und bleibt dort stationiert, statt zurückzufliegen. Mit Ladung ist die Flotte unterwegs sichtbar.',
-            self::Station => 'Verlegt Schiffe und Ladung dauerhaft auf einen deiner Planeten.',
+            self::Station => 'Verlegt Schiffe dorthin, wo sie bleiben: Unbenannte Schiffe kommen auf einem deiner Planeten in den Hangar. Eine benannte Flotte fliegt zu jedem besiedelten Planeten oder Handelsstützpunkt und wartet dort auf Befehle. Ladung kommt auf eigenen Planeten ins Lager, sonst bleibt sie an Bord. Ohne Ladung ist die Flotte unterwegs unsichtbar, mit Ladung sichtbar und von Piraten abfangbar.',
             self::Jump => 'Springt mit normaler Flugzeit zu einem besiedelten Planeten (auch fremd) und wartet dort auf Befehle. Ohne Fracht unsichtbar und unangreifbar; mit Fracht sichtbar und von Piraten abfangbar.',
             self::Colonize => 'Gründet mit einem Kolonieschiff aus dem Hangar eine Kolonie auf einem freien Platz oder besiedelt einen herrenlosen Planeten. Ob du noch Kolonieplätze frei hast, wird erst bei der Ankunft geprüft – sonst kehrt das Schiff zurück. Am schnellsten geht es mit „Kolonisieren“ in der Galaxie. Kolonieschiffe in benannten Flotten kannst du zu anderen Planeten verlegen; zum Kolonisieren nimm sie vorher aus der Flotte.',
             self::Spy => 'Eine Sonde fliegt direkt aus dem Hangar (🔭 in Universum oder Radar), schickt einen Bericht und verglüht danach. Wie viel du erfährst, hängt von deiner Spionagetechnik ab.',

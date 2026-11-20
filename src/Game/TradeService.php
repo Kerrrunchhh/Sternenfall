@@ -20,8 +20,8 @@ use function Symfony\Component\Translation\t;
 
 /**
  * Trade posts of traders: opening, prices and access, and the goods that fleets
- * deliver ("Beliefern") or buy ("Handeln"). Stock changes run under the fleet
- * event lock, credits under the lock of the player they belong to.
+ * buy ("Handeln"); a transport fills a post, as it sells from its planet's storage.
+ * Stock changes run under the fleet event lock, credits under the lock of the player they belong to.
  */
 final readonly class TradeService
 {
@@ -204,23 +204,6 @@ final readonly class TradeService
             $this->inbox->send($fleet->getOwner(), t('Flotte „{label}“ weggeschickt', ['{label}' => $fleet->getLabel()]), t('{player} hat deine Flotte vom Handelsstützpunkt {name} [{coords}] zu deinem Heimatplaneten {name2} [{coords2}] zurückgeschickt.', ['{player}' => $actor->getUsername(), '{name}' => $post->getName(), '{coords}' => $post->getCoordinates(), '{name2}' => $home->getName(), '{coords2}' => $home->getCoordinates()]), folder: MessageFolder::Trade);
             $this->em->flush();
         });
-    }
-
-    /**
-     * Arrival of a "Beliefern" fleet: the cargo goes into stock (fusionators are no trade post goods).
-     * The caller holds the fleet event lock.
-     */
-    public function supply(TradePost $post, Fleet $fleet): TranslatableInterface
-    {
-        $delivered = array_filter($fleet->getCargo()->toArray(), static fn (float $amount): bool => $amount > 0);
-        $this->asPlayer($post->getOwner(), static function () use ($post, $delivered): void {
-            foreach ($delivered as $good => $amount) {
-                $post->addStock($good, $amount);
-            }
-        });
-        $fleet->setCargo(new Resources());
-
-        return [] === $delivered ? t('nichts') : Goods::summary($delivered);
     }
 
     /**

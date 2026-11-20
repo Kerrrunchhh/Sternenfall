@@ -758,7 +758,7 @@ final readonly class FleetService
             // An empty fleet (a rally point) moves at once, without flight time and fuel.
             if (!$fleet->hasShips()) {
                 if (!\in_array($mission, [FleetMission::Station, FleetMission::Jump], true)) {
-                    throw new GameException(t('Eine leere Flotte kann nur stationieren oder springen – sie wird dabei ohne Flugzeit verlegt.'));
+                    throw new GameException(t('Eine leere Flotte kann nur stationieren – sie wird dabei ohne Flugzeit verlegt.'));
                 }
                 if (!Universe::isValidSlot($galaxy, $system, $position)) {
                     throw new GameException(t('Diese Koordinaten gibt es nicht.'));
@@ -1458,10 +1458,6 @@ final readonly class FleetService
             && !$target->getOwner()->isSameAs($owner) && true !== $this->transportRequests?->isPaidDelivery($fleet)) {
             $this->pushing?->checkAndRecord($owner, $target->getOwner(), $fleet->getCargo()->add($cargo)->total(), $now);
         }
-        // Cargo travels openly: a fleet with cargo has to transport, it can't be stationed.
-        if (FleetMission::Station === $mission && !$fleet->getCargo()->add($cargo)->isEmpty()) {
-            throw new GameException(t('Eine Flotte mit Ladung kann nicht stationieren – schicke sie mit „Transport“ (dabei ist sie auf dem Radar sichtbar) oder lade die Ladung vorher ab.'));
-        }
 
         foreach (ResourceType::cases() as $type) {
             if ($cargo->get($type) < 0) {
@@ -1596,7 +1592,7 @@ final readonly class FleetService
         $owned = null !== $target && $target->getOwner()->getId() === $player->getId();
 
         // Only trade fleets dock at trade posts: freighters and large freighters.
-        if (null !== $post && \in_array($mission, [FleetMission::Trade, FleetMission::Supply, FleetMission::Station], true)) {
+        if (null !== $post && \in_array($mission, [FleetMission::Trade, FleetMission::Station], true)) {
             foreach ($ships as $type => $count) {
                 $shipType = ShipType::from($type);
                 if ($count > 0 && !$shipType->carriesCargo()) {
@@ -1608,6 +1604,7 @@ final readonly class FleetService
         $error = match ($mission) {
             FleetMission::Transport, FleetMission::TransportStation => null === $target ? 'Am Ziel befindet sich kein Planet.' : null,
             // Named fleets may wait at planets and trade posts – never at a free slot, where nothing supplies them.
+            // (Formerly also "Springen", now part of it: cargo may come along and stays on board elsewhere.)
             FleetMission::Station => match (true) {
                 null === $target && null === $post => 'Auf freien Plätzen kann man nicht stationieren – dort versorgt niemand die Flotte. Stationiere auf einem Planeten oder an einem Handelsstützpunkt.',
                 $owned || $named => null,
@@ -1646,12 +1643,6 @@ final readonly class FleetService
                 // A fixed amount of some resource, or "everything but …" of one.
                 [] === array_filter(array_intersect_key($order, array_flip(array_map(static fn (ResourceType $t): string => $t->value, ResourceType::cases()))))
                     && [] === array_filter(array_keys($order), static fn (string $key): bool => str_starts_with($key, Fleet::KEEP_PREFIX)) => 'Gib an, wie viel von welchem Rohstoff abgeholt werden soll.',
-                default => null,
-            },
-            FleetMission::Supply => match (true) {
-                null === $post => 'Dort steht kein Handelsstützpunkt.',
-                !$post->getOwner()->isSameAs($player) => 'Nur der Besitzer kann seinen Handelsstützpunkt beliefern.',
-                !$post->isActive() => 'Dieser Stützpunkt ist aufgegeben. Du kannst nur noch die Ware abholen.',
                 default => null,
             },
             FleetMission::Trade => match (true) {
@@ -1694,6 +1685,8 @@ final readonly class FleetService
         $name = $fleet->isNamed() ? t('Flotte „{name}“', ['{name}' => $fleet->getName()]) : t('Deine Flotte');
 
         switch ($fleet->getMission()) {
+            // "Beliefern" (retired) flew to the own trade post, whose stock is its planet's storage: a transport.
+            case FleetMission::Supply:
             case FleetMission::Transport:
             case FleetMission::TransportStation:
                 if (null === $target) {
@@ -1726,13 +1719,8 @@ final readonly class FleetService
                 }
                 break;
 
+            // "Springen" (retired) is stationing: a named fleet waits there, cargo on board unless the planet is own.
             case FleetMission::Jump:
-                // Cargo stays on board; the fleet waits at the planet for new orders.
-                $fleet->settleAtTarget();
-                $this->inbox->send($player, t('{name} nach {where} gesprungen', ['{name}' => $name, '{where}' => $where]), t('{name} ist bei {value} {where} eingetroffen und wartet dort auf neue Befehle.', ['{name}' => $name, '{value}' => $target?->getName() ?? t('dem Planeten'), '{where}' => $where]));
-
-                return;
-
             case FleetMission::Station:
                 // The planet changed hands while the ships were underway (e.g. invaded): they land
                 // anyway and wait there – without permission to stay they have to leave within 24
@@ -1752,6 +1740,9 @@ final readonly class FleetService
                         $this->planets->transaction($target, static fn (Planet $t) => $t->setResources($t->getResources()->add($cargo)));
                         $fleet->setCargo(new Resources());
                         $delivered = new Lines([t("\nDie Ladung wurde ins Lager von {planet} gebracht:", ['{planet}' => $target->getName()]), $this->formatResources($cargo)]);
+                    } elseif (!$cargo->isEmpty()) {
+                        // Somewhere else the cargo stays on board – for a later transport or trade.
+                        $delivered = t("\nDie Ladung bleibt an Bord.");
                     }
                     $limit = null !== $target && !$this->mayStayAt($player, $target)
                         ? t("\nAchtung: Ohne Allianz oder Bündnis mit {player} darf sie dort höchstens 24 Stunden bleiben. Für den Heimflug braucht sie Treibstoff und Proviant aus ihrer Ladung; reicht das nicht, sitzt sie fest und verliert jeden Tag 10 % ihrer Schiffe.", ['{player}' => $target->getOwner()->getUsername()])
@@ -1780,21 +1771,6 @@ final readonly class FleetService
                     $report = $this->pickUp($t, $fleet);
                 });
                 $this->inbox->send($player, t('Rohstoffe von {name} abgeholt', ['{name}' => $target->getName()]), t("{name} hat auf {name2} {where} geladen:\n{report}\nSie bringt die Ladung zurück zu ihrem Startplaneten.", ['{name}' => $name, '{name2}' => $target->getName(), '{where}' => $where, '{report}' => $report]), folder: MessageFolder::Trade);
-                break;
-
-            case FleetMission::Supply:
-                $post = $this->tradePosts->findAt($fleet->getTargetGalaxy(), $fleet->getTargetSystem(), $fleet->getTargetPosition());
-                if (null === $post || !$post->getOwner()->isSameAs($player) || !$post->isActive()) {
-                    $this->inbox->send($player, t('Belieferung von {where} gescheitert', ['{where}' => $where]), t('Dort steht kein aktiver Handelsstützpunkt von dir mehr. {name} kehrt zurück.', ['{name}' => $name]), folder: MessageFolder::Trade);
-                    break;
-                }
-                $delivered = $this->trade->supply($post, $fleet);
-                $this->inbox->send($player, t('{name} beliefert', ['{name}' => $post->getName()]), t('{name} hat an {name2} {where} abgeliefert: {delivered}.', ['{name}' => $name, '{name2}' => $post->getName(), '{where}' => $where, '{delivered}' => $delivered]), folder: MessageFolder::Trade);
-                if (!$fleet->hasShips()) {
-                    $this->fleetRepository->forget($fleet);
-
-                    return;
-                }
                 break;
 
             case FleetMission::Trade:
