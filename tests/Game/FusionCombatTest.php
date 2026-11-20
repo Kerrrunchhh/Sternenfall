@@ -399,15 +399,15 @@ class FusionCombatTest extends TestCase
         return array_values(array_filter($this->persisted, static fn (object $o): bool => $o instanceof Planet));
     }
 
-    public function testTheShareableReportNamesTheDefenderInsteadOfThePlanet(): void
+    public function testTheShareableReportNamesThePlayersInsteadOfThePlanet(): void
     {
         $target = $this->fusion(1, shieldLevels: 0);
         $this->attack($target, ['monarch' => 1], reports: true);
 
         $shared = array_values(array_filter($this->persisted, static fn (object $o): bool => $o instanceof \App\Entity\BattleReport));
         self::assertCount(1, $shared);
-        self::assertSame('Kampfbericht verteidiger', $shared[0]->getSubject());
-        self::assertSame('Battle report verteidiger', $shared[0]->subjectIn('en'), 'every language names the player');
+        self::assertSame('Kampfbericht angreifer gegen verteidiger', $shared[0]->getSubject());
+        self::assertSame('Battle report angreifer vs. verteidiger', $shared[0]->subjectIn('en'), 'every language names the players');
         // The participants keep the planet and its coordinates.
         $messages = array_values(array_filter($this->persisted, static fn (object $o): bool => $o instanceof Message));
         self::assertStringContainsString('['.$target->getCoordinates().']', $messages[0]->getSubject());
@@ -418,7 +418,7 @@ class FusionCombatTest extends TestCase
     {
         $translator = new \Symfony\Component\Translation\Translator('de');
         $translator->addLoader('array', new \Symfony\Component\Translation\Loader\ArrayLoader());
-        $translator->addResource('array', ['Kampfbericht {player}' => 'Battle report {player}'], 'en');
+        $translator->addResource('array', ['Kampfbericht {attacker} gegen {defender}' => 'Battle report {attacker} vs. {defender}'], 'en');
 
         return $translator;
     }

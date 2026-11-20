@@ -158,8 +158,8 @@ final readonly class CombatService
             $this->logBattle($attackers, \sprintf('Angriff auf %s [%s] von %s', $target->getName(), $target->getCoordinates(), $defender->getUsername()), $defender, $result->attackerWon() ? 'gewonnen' : 'nicht gewonnen', $loot);
             $subject = t('Kampfbericht {name} [{coords}]', ['{name}' => $target->getName(), '{coords}' => $target->getCoordinates()]);
             $body = static fn (?User $viewer): TranslatableInterface => new Lines([$headline, '', $result->report($viewer), '', ...array_filter($outcome), ...$experience]);
-            // The shareable copy names the defender instead of the planet and where it is.
-            $public = t('Kampfbericht {player}', ['{player}' => $defender->getUsername()]);
+            // The shareable copy names the players instead of the planet and where it is.
+            $public = t('Kampfbericht {attacker} gegen {defender}', ['{attacker}' => implode(', ', array_unique(array_map(static fn (Fleet $f): string => $f->getOwner()->getUsername(), $attackers))), '{defender}' => $defender->getUsername()]);
             $this->notify([...array_map(static fn (Fleet $f): User => $f->getOwner(), $attackers), $defender, ...array_map(static fn (Fleet $f): User => $f->getOwner(), $guards), ...$result->participants()], $subject, $body, $result, $loot, $public);
         });
     }
@@ -271,7 +271,8 @@ final readonly class CombatService
             : ($raid ? t('Überfall ohne Entscheidung.') : t('Abfangkampf ohne Entscheidung.'));
         $body = static fn (?User $viewer): TranslatableInterface => new Lines([$headline, '', $result->report($viewer), '', ...array_filter($outcome), ...$experience]);
         $player = $preys[0]->getOwner()->getUsername();
-        $public = $raid ? t('Kampfbericht Überfall auf {player}', ['{player}' => $player]) : t('Kampfbericht Abfangkampf gegen {player}', ['{player}' => $player]);
+        $names = ['{attacker}' => $hunter->getOwner()->getUsername(), '{defender}' => $player];
+        $public = $raid ? t('Kampfbericht Überfall {attacker} gegen {defender}', $names) : t('Kampfbericht Abfangkampf {attacker} gegen {defender}', $names);
         $this->notify([$hunter->getOwner(), ...array_map(static fn (Fleet $f): User => $f->getOwner(), $preys), ...$result->participants()], $subject, $body, $result, $taken, $public);
     }
 
