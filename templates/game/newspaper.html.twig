@@ -22,10 +22,10 @@
     {% for r in reports %}
         <details class="panel message newspaper-item">
             <summary>
-                <span>{{ r.subjectIn(app.request.locale) }}</span>
+                <span>{{ r.subjectIn(app.request.locale)|hide_coordinates }}</span>
                 <span class="muted small">{{ r.createdAt|date('d.m.Y H:i') }}</span>
             </summary>
-            <pre class="message-body">{{ r.bodyIn(app.request.locale)|link_coordinates }}</pre>
+            <pre class="message-body">{{ r.bodyIn(app.request.locale)|hide_coordinates|link_coordinates }}</pre>
             <p class="small"><a href="{{ path('app_battle_report', {hash: r.hash}) }}">{{ 'Eigene Seite'|trans }}</a> <button type="button" class="btn btn-small btn-secondary copy-link" data-copy-link="{{ url('app_battle_report', {hash: r.hash}) }}">{{ 'Link kopieren'|trans }}</button></p>
         </details>
     {% else %}

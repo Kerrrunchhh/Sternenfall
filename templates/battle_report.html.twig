@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}{{ report ? report.subjectIn(app.request.locale) : 'Kampfbericht nicht gefunden'|trans }} – {{ game_name }}{% endblock %}
+{% block title %}{{ report ? report.subjectIn(app.request.locale)|hide_coordinates : 'Kampfbericht nicht gefunden'|trans }} – {{ game_name }}{% endblock %}
 
 {% block javascripts %}<script>window.I18N = {{ js_i18n()|json_encode|raw }}; window.LOCALE = {{ app.request.locale|json_encode|raw }};</script><script src="{{ asset('js/game.js') }}" defer></script>{% endblock %}
 
@@ -13,12 +13,12 @@
                 <p class="panel attack-ban-banner">{{ '⚖ Dieser Kampfbericht wurde am {annulledAt} von der Spielleitung annulliert: {reason}'|trans({'{annulledAt}': report.annulledAt|date('d.m.Y H:i'), '{reason}': report.annulReason}) }}</p>
             {% endif %}
             <article class="panel battle-report">
-                <h1>{{ report.subjectIn(app.request.locale) }}</h1>
+                <h1>{{ report.subjectIn(app.request.locale)|hide_coordinates }}</h1>
                 <p class="muted small">
                     {{ '{createdAt} · Link gültig bis {expiresAt}'|trans({'{createdAt}': report.createdAt|date('d.m.Y H:i'), '{expiresAt}': report.expiresAt|date('d.m.Y H:i')}) }}
                     <button type="button" class="btn btn-small btn-secondary copy-link" data-copy-link="{{ url('app_battle_report', {hash: report.hash}) }}" id="report-copy">{{ 'Link kopieren'|trans }}</button>
                 </p>
-                <pre class="message-body">{{ report.bodyIn(app.request.locale) }}</pre>
+                <pre class="message-body">{{ report.bodyIn(app.request.locale)|hide_coordinates }}</pre>
             </article>
             {% if replay %}{{ include('_battle_replay.html.twig') }}{% endif %}
             {% if refund_players is not null %}

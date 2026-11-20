@@ -93,6 +93,17 @@ final class GameExtension
         return Scoring::planetPoints($planet);
     }
 
+    /** Masks every coordinate like [16:185:6] or [3:196:1-3] as [xx:xxx:x], so public combat reports do not reveal where a fight took place. */
+    #[AsTwigFilter('hide_coordinates')]
+    public static function hideCoordinates(string $text): string
+    {
+        return preg_replace_callback(
+            '/\[\d+:\d+:\d+(?:-\d+)?\]/',
+            static fn (array $m): string => preg_replace('/\d/', 'x', $m[0]),
+            $text,
+        );
+    }
+
     /** Formats seconds as e.g. "1d 02:03:04" or "02:03". */
     #[AsTwigFilter('format_duration')]
     public static function formatDuration(int|float $seconds): string
