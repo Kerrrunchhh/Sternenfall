@@ -32,7 +32,8 @@ enum FleetMission: string
     {
         // "Beliefern" is gone (a trade post sells from its planet's storage, so a transport fills it),
         // "Springen" is part of "Stationieren", and "Bergen" happens right after a battle.
-        return array_values(array_filter(self::cases(), static fn (self $m): bool => !\in_array($m, [self::Gather, self::Intercept, self::Raid, self::Hover, self::Spy, self::Supply, self::Jump, self::Salvage], true)));
+        // Colony ships start from the hangar ("Kolonisieren" in the universe), never as a named fleet.
+        return array_values(array_filter(self::cases(), static fn (self $m): bool => !\in_array($m, [self::Gather, self::Intercept, self::Raid, self::Hover, self::Spy, self::Supply, self::Jump, self::Salvage, self::Colonize], true)));
     }
 
     /**

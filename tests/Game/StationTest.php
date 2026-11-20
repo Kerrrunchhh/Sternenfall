@@ -17,6 +17,7 @@ class StationTest extends TestCase
         self::assertContains(FleetMission::Station, FleetMission::selectable());
         self::assertNotContains(FleetMission::Jump, FleetMission::selectable(), 'part of stationing now');
         self::assertNotContains(FleetMission::Supply, FleetMission::selectable(), 'a transport fills a trade post');
+        self::assertNotContains(FleetMission::Colonize, FleetMission::selectable(), 'colony ships start from the hangar in the universe');
     }
 
     public function testStationingWithoutCargoIsInvisible(): void
