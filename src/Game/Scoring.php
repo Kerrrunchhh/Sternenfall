@@ -18,6 +18,12 @@ final class Scoring
         return array_sum(array_map(self::planetPoints(...), $player->getPlanets()->toArray()));
     }
 
+    /** Research points: the levels of all researches added up. */
+    public static function researchPoints(User $player): int
+    {
+        return array_sum(array_map(static fn (ResearchType $type): int => $player->getResearchLevel($type), ResearchType::cases()));
+    }
+
     public static function planetPoints(Planet $planet): int
     {
         $points = 0;

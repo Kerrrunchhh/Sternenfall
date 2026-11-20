@@ -278,7 +278,7 @@ enum ShipType: string
                 [$yard(1), $tech($solid, 1)]),
             self::LargeFreighter => new ShipSpec($r(6000, 4000), 8, 5, 25, 1200, 8000, 25000, 50, $ion,
                 [$yard(4), $tech($ion, 3)]),
-            self::Salvager => new ShipSpec($r(8000, 6000, 1000), 10, 1, 10, 1600, 12000, 20000, 300, $ion,
+            self::Salvager => new ShipSpec($r(8000, 6000, 1000), 10, 1, 10, 1600, 12000, 20000, 60, $ion,
                 [$yard(3), $tech($ion, 2), $tech(ResearchType::RotationShield, 2)]),
             self::RescueShip => new ShipSpec($r(6000, 5000, 1000), 10, 0, 40, 2000, 12000, 0, 100, $ion,
                 [$yard(3), $tech($ion, 2), $tech(ResearchType::RotationShield, 1)]),

@@ -61,15 +61,15 @@ class PlanetUpdaterTest extends TestCase
         self::assertSame(0.0, $this->economy->protectedAmount($planet), 'without a storage complex nothing is protected');
 
         $planet->setBuildingLevel(BuildingType::Storage, 1);
-        self::assertSame(15000.0, $this->economy->protectedAmount($planet));
+        self::assertSame(5000.0, $this->economy->protectedAmount($planet));
 
-        // Linear: the same step for every level, as before at levels 1 and 10.
+        // Linear: the same step of 5,000 for every level.
         $planet->setBuildingLevel(BuildingType::Storage, 2);
-        self::assertSame(77405.0, $this->economy->protectedAmount($planet));
+        self::assertSame(10000.0, $this->economy->protectedAmount($planet));
         $planet->setBuildingLevel(BuildingType::Storage, 10);
-        self::assertSame(576650.0, $this->economy->protectedAmount($planet));
+        self::assertSame(50000.0, $this->economy->protectedAmount($planet), '5,000 per level');
         $planet->setBuildingLevel(BuildingType::Storage, 20);
-        self::assertSame(1200705.0, $this->economy->protectedAmount($planet));
+        self::assertSame(100000.0, $this->economy->protectedAmount($planet));
     }
 
     public function testFinishedConstructionIsAppliedAndLaterProductionUsesNewLevel(): void

@@ -18,7 +18,7 @@ class ProfileController extends AbstractGameController
 {
     /** Anyone's profile; the own one can be edited here. */
     #[Route('/player/{id}', name: 'app_player', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
-    public function show(User $user, ContactRepository $contacts, \App\Game\Awards $awards): Response
+    public function show(User $user, ContactRepository $contacts, \App\Game\Awards $awards, \App\Game\Highscores $highscores): Response
     {
         $planet = $this->currentPlanet();
 
@@ -33,6 +33,8 @@ class ProfileController extends AbstractGameController
             'max_hidden' => ProfileService::MAX_HIDDEN_PLANETS,
             'contact' => $own ? null : $contacts->findBetween($this->player(), $user),
             'awards' => $awards->of($user),
+            // Points, research, experience, credits, planets – each with the place in the highscores.
+            'standing' => $highscores->standingOf($user),
         ]);
     }
 

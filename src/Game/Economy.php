@@ -118,7 +118,8 @@ final readonly class Economy
         return match (true) {
             BuildingType::BioCell === $type => floor(self::linear($level, 250, 9610)),
             BuildingType::Bunker === $type => floor(self::linear($level, 100, 6871)),
-            BuildingType::Storage === $type => floor(self::linear($level, 15000, 576650)),
+            // 5,000 of each resource per level (until 2026-11-20 15,000 at level 1 and 576,650 at level 10 – raids got nothing).
+            BuildingType::Storage === $type => floor(self::linear($level, 5000, 50000)),
             null !== $type->produces() => $type->productionBase() * self::linear($level, self::PRODUCTION_LEVEL_1, self::PRODUCTION_AT_ANCHOR, self::PRODUCTION_ANCHOR),
             default => null,
         };

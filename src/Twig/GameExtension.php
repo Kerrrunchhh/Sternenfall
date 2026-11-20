@@ -79,6 +79,13 @@ final class GameExtension
         ];
     }
 
+    /** Research points of a player: all research levels added up. */
+    #[AsTwigFunction('research_points')]
+    public static function researchPoints(\App\Entity\User $player): int
+    {
+        return Scoring::researchPoints($player);
+    }
+
     /** Points of one planet (building levels × points rate). */
     #[AsTwigFunction('planet_points')]
     public static function planetPoints(\App\Entity\Planet $planet): int

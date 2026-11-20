@@ -112,6 +112,37 @@ final class HighscoresTest extends TestCase
         self::assertSame(array_fill(0, 3, $rows[0]['points']), array_column($rows, 'points'));
     }
 
+    public function testResearchPointsAddUpAllResearchLevels(): void
+    {
+        $this->users[3]->setResearchLevel(\App\Game\ResearchType::Espionage, 4);
+        $this->users[3]->setResearchLevel(\App\Game\ResearchType::IonDrive, 3);
+        $this->users[2]->setResearchLevel(\App\Game\ResearchType::Espionage, 2);
+        $this->users[0]->setResearchLevel(\App\Game\ResearchType::Colonization, 1);
+
+        self::assertSame(7, \App\Game\Scoring::researchPoints($this->users[3]));
+        $rows = $this->highscores()->players(Highscores::BY_RESEARCH);
+        self::assertSame(['Dora', 'Carla', 'Anna', 'Bert'], $this->names($rows));
+        self::assertSame([7, 2, 1, 0], array_column($rows, 'research'));
+        $orden = $this->highscores()->alliances(Highscores::BY_RESEARCH)[0];
+        self::assertSame('Orden', $orden['alliance']->getName());
+        self::assertSame(3, $orden['research'], 'Anna 1 + Carla 2');
+    }
+
+    public function testAProfileShowsThePlayersPlaceInEveryRanking(): void
+    {
+        $this->users[3]->setResearchLevel(\App\Game\ResearchType::Espionage, 4);
+        $standing = $this->highscores()->standingOf($this->users[3]); // Dora
+
+        self::assertSame(Highscores::SORTS, array_keys($standing));
+        self::assertSame(4, $standing['points']['rank'], 'fewest points');
+        self::assertSame(1, $standing['research']['rank']);
+        self::assertSame(4.0, $standing['research']['value']);
+        self::assertSame(4, $standing['research']['of']);
+
+        $this->users[1]->deactivate(new \DateTimeImmutable()); // Bert
+        self::assertNull($this->highscores()->standingOf($this->users[1]), 'not ranked: no places');
+    }
+
     public function testResearchLeadersAreTheBestThreeOfEveryResearch(): void
     {
         foreach ([3, 7, 7, 1] as $i => $level) {

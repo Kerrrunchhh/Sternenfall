@@ -61,6 +61,7 @@
                     <td>{{ 'Lebensform'|trans }}</td>
                     {% if view == 'alliances' %}<td class="num">{{ 'Mitglieder'|trans }}</td>{% endif %}
                     <td class="num"><a class="sort-link {{ sort == 'points' ? 'active' }}" href="{{ path('app_highscores', params|merge({sort: 'points'})) }}" title="{{ 'Nach Punkten sortieren'|trans }}">{{ 'Punkte{points}'|trans({'{points}': (sort == 'points' ? ' ▼')}) }}</a></td>
+                    <td class="num"><a class="sort-link {{ sort == 'research' ? 'active' }}" href="{{ path('app_highscores', params|merge({sort: 'research'})) }}" title="{{ 'Nach Forschungspunkten sortieren (alle Forschungsstufen zusammen)'|trans }}">{{ 'Forschung'|trans }}{{ sort == 'research' ? ' ▼' }}</a></td>
                     <td class="num"><a class="sort-link {{ sort == 'experience' ? 'active' }}" href="{{ path('app_highscores', params|merge({sort: 'experience'})) }}" title="{{ 'Nach Kampferfahrung sortieren'|trans }}">{{ 'Kampferfahrung{experience}'|trans({'{experience}': (sort == 'experience' ? ' ▼')}) }}</a></td>
                     <td class="num"><a class="sort-link {{ sort == 'credits' ? 'active' }}" href="{{ path('app_highscores', params|merge({sort: 'credits'})) }}" title="{{ 'Nach Credits sortieren'|trans }}">{{ 'Credits'|trans }}{{ sort == 'credits' ? ' ▼' }}</a></td>
                     <td class="num"><a class="sort-link {{ sort == 'planets' ? 'active' }}" href="{{ path('app_highscores', params|merge({sort: 'planets'})) }}" title="{{ 'Nach Anzahl Planeten sortieren (verschweißte zählen einzeln)'|trans }}">{{ 'Planeten'|trans }}{{ sort == 'planets' ? ' ▼' }}</a></td>
@@ -69,7 +70,7 @@
                     {{ _self.row(r, view, own) }}
                 {% endfor %}
                 {% if own_outside %}
-                    <tr class="highscore-gap"><td colspan="{{ view == 'alliances' ? 8 : 7 }}" class="muted">…</td></tr>
+                    <tr class="highscore-gap"><td colspan="{{ view == 'alliances' ? 9 : 8 }}" class="muted">…</td></tr>
                     {{ _self.row(own, view, own) }}
                 {% endif %}
             </table>
@@ -102,6 +103,7 @@
             <td class="num">{{ r.members }}</td>
         {% endif %}
         <td class="num">{{ r.points|num }}</td>
+        <td class="num">{{ r.research|num }}</td>
         <td class="num">{{ r.experience|num }}</td>
         <td class="num">{{ r.credits|round(0, 'floor')|num }}</td>
         <td class="num">{{ r.planets|num }}</td>

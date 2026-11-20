@@ -16,8 +16,9 @@ final readonly class Highscores
     public const string BY_EXPERIENCE = 'experience';
     public const string BY_CREDITS = 'credits';
     public const string BY_PLANETS = 'planets';
+    public const string BY_RESEARCH = 'research';
 
-    public const array SORTS = [self::BY_POINTS, self::BY_EXPERIENCE, self::BY_CREDITS, self::BY_PLANETS];
+    public const array SORTS = [self::BY_POINTS, self::BY_RESEARCH, self::BY_EXPERIENCE, self::BY_CREDITS, self::BY_PLANETS];
     /** Ties of the chosen value are broken by these, then by who was in the game first. */
     public const array TIE_BREAKERS = [self::BY_PLANETS, self::BY_POINTS];
 
@@ -28,14 +29,44 @@ final readonly class Highscores
     /** @return list<array{rank: int, user: User, points: int, experience: float, credits: float, planets: int}> */
     public function players(string $sort, ?LifeForm $lifeForm = null): array
     {
+        return $this->rank($this->playerRows($lifeForm), $sort);
+    }
+
+    /**
+     * The player's value and place in every ranking (for his profile); null if he isn't ranked
+     * (system accounts, deactivated players, pending deletion).
+     *
+     * @return array<string, array{value: float, rank: int, of: int}>|null sort => value, place, number of players
+     */
+    public function standingOf(User $player): ?array
+    {
+        $rows = $this->playerRows();
+        $standing = [];
+        foreach (self::SORTS as $sort) {
+            foreach ($this->rank($rows, $sort) as $row) {
+                if ($row['user']->isSameAs($player)) {
+                    $standing[$sort] = ['value' => (float) $row[$sort], 'rank' => $row['rank'], 'of' => \count($rows)];
+                    continue 2;
+                }
+            }
+
+            return null;
+        }
+
+        return $standing;
+    }
+
+    /** @return list<array{user: User, name: string, points: int, research: int, experience: float, credits: float, planets: int, since: int}> */
+    private function playerRows(?LifeForm $lifeForm = null): array
+    {
         $rows = [];
         foreach ($this->allPlayers() as $user) {
             if (null === $lifeForm || $user->getLifeForm() === $lifeForm) {
-                $rows[] = ['user' => $user, 'name' => $user->getUsername(), 'points' => Scoring::points($user), 'experience' => $user->getCombatExperience(), 'credits' => $user->getCredits(), 'planets' => self::planets($user), 'since' => $user->getCreatedAt()->getTimestamp()];
+                $rows[] = ['user' => $user, 'name' => $user->getUsername(), 'points' => Scoring::points($user), 'research' => Scoring::researchPoints($user), 'experience' => $user->getCombatExperience(), 'credits' => $user->getCredits(), 'planets' => self::planets($user), 'since' => $user->getCreatedAt()->getTimestamp()];
             }
         }
 
-        return $this->rank($rows, $sort);
+        return $rows;
     }
 
     /** @return list<array{rank: int, alliance: Alliance, points: int, experience: float, credits: float, planets: int, members: int}> */
@@ -48,8 +79,9 @@ final readonly class Highscores
                 continue;
             }
             $id = (int) $alliance->getId();
-            $rows[$id] ??= ['alliance' => $alliance, 'name' => $alliance->getName(), 'points' => 0, 'experience' => 0.0, 'credits' => 0.0, 'planets' => 0, 'members' => 0, 'since' => $alliance->getCreatedAt()->getTimestamp()];
+            $rows[$id] ??= ['alliance' => $alliance, 'name' => $alliance->getName(), 'points' => 0, 'research' => 0, 'experience' => 0.0, 'credits' => 0.0, 'planets' => 0, 'members' => 0, 'since' => $alliance->getCreatedAt()->getTimestamp()];
             $rows[$id]['points'] += Scoring::points($user);
+            $rows[$id]['research'] += Scoring::researchPoints($user);
             $rows[$id]['experience'] += $user->getCombatExperience();
             $rows[$id]['credits'] += $user->getCredits();
             $rows[$id]['planets'] += self::planets($user);

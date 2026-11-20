@@ -19,10 +19,32 @@
                 {% endif %}
                 {% if not hides_planets %}{{ (listed_planets|length == 1 ? '· {count} Planet · dabei seit {createdAt}' : '· {count} Planeten · dabei seit {createdAt}')|trans({'{count}': listed_planets|length, '{createdAt}': profile.createdAt|date('d.m.Y')}) }}{% endif %}
             </p>
+            {% if standing %}
+                {# Values and places in the highscores; a click opens that ranking. #}
+                {% set stats = {
+                    points: {label: 'Punkte', hint: 'Wie weit die Planeten ausgebaut sind: jede Gebäudestufe zählt mit dem Punktesatz des Gebäudes'},
+                    research: {label: 'Forschungspunkte', hint: 'Alle Forschungsstufen zusammengezählt'},
+                    experience: {label: 'Kampferfahrung', hint: 'Nur aus Schlachten: zerstörte Schildpunkte gegnerischer Einheiten (Verteidigungstürme zählen halb), aufgeteilt nach der Bauzeit der eigenen Einheiten'},
+                    credits: {label: 'Credits', hint: 'Credits auf dem Konto'},
+                    planets: {label: 'Planeten', hint: 'Alle Planeten, verschweißte einzeln gezählt'},
+                } %}
+                <div class="player-stats" id="profile-stats">
+                    {% for key, stat in stats %}
+                        <a class="player-stat" href="{{ path('app_highscores', {sort: key}) }}" title="{{ stat.hint|trans }}" id="stat-{{ key }}">
+                            <strong>{{ (key == 'credits' ? standing[key].value|round(0, 'floor') : standing[key].value)|num }}</strong>
+                            <span class="player-stat-label">{{ stat.label|trans }}</span>
+                            <span class="player-stat-rank">{{ 'Platz {rank} von {of}'|trans({'{rank}': standing[key].rank, '{of}': standing[key].of}) }}</span>
+                        </a>
+                    {% endfor %}
+                </div>
+                {% if not own %}<p class="player-scores">{{ ui.presence(profile) }}</p>{% endif %}
+            {% else %}
             <p class="player-scores">
                 {{ '<span title="Wie weit die Planeten ausgebaut sind: jede Gebäudestufe zählt mit dem Punktesatz des Gebäudes"><strong>{player_points}</strong> Punkte</span> <span title="Nur aus Schlachten: zerstörte Schildpunkte gegnerischer Einheiten (Verteidigungstürme zählen halb), aufgeteilt nach der Bauzeit der eigenen Einheiten"><strong>{combatExperience}</strong> Kampferfahrung</span>'|trans({'{player_points}': player_points(profile)|num|e, '{combatExperience}': profile.combatExperience|num|e})|raw }}
+                <span title="{{ 'Alle Forschungsstufen zusammengezählt'|trans }}">{{ '<strong>{research_points}</strong> Forschungspunkte'|trans({'{research_points}': research_points(profile)|num|e})|raw }}</span>
                 {% if not own %}{{ ui.presence(profile) }}{% endif %}
             </p>
+            {% endif %}
             {% if not profile.system %}
                 {# Hero points: below 0 the player is criminal (App\Game\HeroPoints). #}
                 {% if profile.criminal %}
