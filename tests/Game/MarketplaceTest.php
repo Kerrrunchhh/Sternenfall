@@ -116,6 +116,26 @@ final class MarketplaceTest extends TestCase
         $service->create($beginner, $home, new Resources(iron: 100));
     }
 
+    public function testRequestsAreAStartingHelpForTheFirstFourteenDays(): void
+    {
+        $beginner = new User('neu', $this->now->modify('-13 days'));
+        (new \ReflectionProperty(User::class, 'id'))->setValue($beginner, 5);
+        $home = new Planet($beginner, 'Heim', 1, 1, 1, $this->now);
+        $connection = $this->createStub(Connection::class);
+        $connection->method('executeStatement')->willReturn(1);
+        $em = $this->createStub(EntityManagerInterface::class);
+        $em->method('getConnection')->willReturn($connection);
+        $service = new TransportRequests($em, $this->createStub(TransportRequestRepository::class), $this->inbox(), new MockClock($this->now));
+
+        self::assertEquals($this->now->modify('+1 day'), TransportRequests::openUntil($beginner));
+        $service->create($beginner, $home, new Resources(iron: 100));
+
+        $veteran = new User('alt', $this->now->modify('-15 days'));
+        $this->expectException(GameException::class);
+        $this->expectExceptionMessage('ersten {days} Tagen');
+        $service->create($veteran, new Planet($veteran, 'Heim', 1, 1, 2, $this->now), new Resources(iron: 100));
+    }
+
     public function testFinishedRequestsAreDeletedThreeDaysAfterTheyClosed(): void
     {
         $beginner = new User('neu', $this->now);

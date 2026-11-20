@@ -8,8 +8,15 @@
     <p class="muted small">{{ 'Dir fehlen Rohstoffe? Stelle ein Gesuch über höchstens eine Frachterladung ({max_load} Rohstoffe). Der Preis ist fest: 1 Credit je {per} Rohstoffe. Händler liefern; bezahlt wird erst, wenn die Ladung ankommt – bis dahin sind deine Credits verwahrt.'|trans({'{max_load}': max_load|num, '{per}': resources_per_credit|num}) }}</p>
 
     <section class="panel">
+        {% set may_request = now < requests_until %}
         <h2>{{ 'Neues Gesuch'|trans }} <small class="muted">{{ '{active} von {max} laufen'|trans({'{active}': active_requests, '{max}': max_active}) }}</small></h2>
-        {% if active_requests >= max_active %}
+        {# A help for new players: only in the first days after confirming the e-mail address. #}
+        {% if may_request %}
+            <p class="small transport-window">{{ '⏳ Transportgesuche sind eine Starthilfe: Du kannst sie in den ersten {days} Tagen nach der Bestätigung deiner E-Mail-Adresse stellen – noch bis {date} ({countdown}).'|trans({'{days}': newcomer_days, '{date}': requests_until|date('d.m.Y H:i'), '{countdown}': ui.countdown(requests_until, now)})|raw }}</p>
+        {% endif %}
+        {% if not may_request %}
+            <p class="muted">{{ 'Transportgesuche sind eine Starthilfe für die ersten {days} Tage nach der Bestätigung der E-Mail-Adresse. Deine Zeit dafür ist am {date} abgelaufen. Rohstoffe bekommst du jetzt über den Handel – bei Handelsstützpunkten oder der Handelsgilde.'|trans({'{days}': newcomer_days, '{date}': requests_until|date('d.m.Y')}) }}</p>
+        {% elseif active_requests >= max_active %}
             <p class="muted">{{ 'Du hast schon {max} Transportgesuche laufen. Ein neues geht erst, wenn eines geliefert oder zurückgezogen ist.'|trans({'{max}': max_active}) }}</p>
         {% else %}
         <form method="post" action="{{ path('app_transport_request_create') }}" class="mail-form" data-transport-offer data-resources-per-credit="{{ resources_per_credit }}">

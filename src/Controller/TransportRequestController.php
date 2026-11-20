@@ -54,6 +54,9 @@ class TransportRequestController extends AbstractGameController
             'active_requests' => $this->requests->countActive($player),
             'max_active' => TransportRequests::MAX_ACTIVE,
             'resources_per_credit' => TransportRequests::RESOURCES_PER_CREDIT,
+            // New players only: the first NEWCOMER_DAYS days after confirming the e-mail address.
+            'requests_until' => TransportRequests::openUntil($player),
+            'newcomer_days' => TransportRequests::NEWCOMER_DAYS,
             'resource_types' => ResourceType::cases(),
             'is_trader' => $trader,
             'ready_fleets' => $ready,

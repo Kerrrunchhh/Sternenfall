@@ -45,6 +45,15 @@ final readonly class TransportRequests
         return (int) ceil($amount / self::RESOURCES_PER_CREDIT);
     }
 
+    /** New players only: requests can be posted this many days after the e-mail address was confirmed (the start of the game). */
+    public const int NEWCOMER_DAYS = 14;
+
+    /** Until when the player may post requests (his start of the game + NEWCOMER_DAYS). */
+    public static function openUntil(User $player): \DateTimeImmutable
+    {
+        return $player->getCreatedAt()->modify('+'.self::NEWCOMER_DAYS.' days');
+    }
+
     /** Requests a player may have running at the same time (open or on their way). */
     public const int MAX_ACTIVE = 3;
     /** Delivered or cancelled requests stay in the lists this long, then they are deleted. */
@@ -54,6 +63,9 @@ final readonly class TransportRequests
     {
         if (!$planet->getOwner()->isSameAs($requester)) {
             throw new GameException(t('Transportgesuche gibt es nur für deine eigenen Planeten.'));
+        }
+        if ($this->now() >= self::openUntil($requester)) {
+            throw new GameException(t('Transportgesuche kannst du nur in den ersten {days} Tagen nach der Bestätigung deiner E-Mail-Adresse stellen – deine Zeit ist am {date} abgelaufen.', ['{days}' => self::NEWCOMER_DAYS, '{date}' => new \App\I18n\When(self::openUntil($requester), 'd.m.Y H:i')]));
         }
         if ($this->requests->countActive($requester) >= self::MAX_ACTIVE) {
             throw new GameException(t('Du hast schon {max} Transportgesuche laufen. Ein neues geht erst, wenn eines geliefert oder zurückgezogen ist.', ['{max}' => self::MAX_ACTIVE]));

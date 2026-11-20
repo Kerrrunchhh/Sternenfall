@@ -3232,3 +3232,6 @@
 "Beute-Reihenfolge": "Plunder order"
 "gleichmäßig von allen Rohstoffen": "evenly from all resources"
 "in dieser Reihenfolge (zuerst oben):": "in this order (top first):"
+"Transportgesuche kannst du nur in den ersten {days} Tagen nach der Bestätigung deiner E-Mail-Adresse stellen – deine Zeit ist am {date} abgelaufen.": "You can only post transport requests in the first {days} days after confirming your e-mail address – your time ran out on {date}."
+"⏳ Transportgesuche sind eine Starthilfe: Du kannst sie in den ersten {days} Tagen nach der Bestätigung deiner E-Mail-Adresse stellen – noch bis {date} ({countdown}).": "⏳ Transport requests are a starting help: you can post them in the first {days} days after confirming your e-mail address – until {date} ({countdown})."
+"Transportgesuche sind eine Starthilfe für die ersten {days} Tage nach der Bestätigung der E-Mail-Adresse. Deine Zeit dafür ist am {date} abgelaufen. Rohstoffe bekommst du jetzt über den Handel – bei Handelsstützpunkten oder der Handelsgilde.": "Transport requests are a starting help for the first {days} days after confirming the e-mail address. Your time for them ran out on {date}. You now get resources by trading – at trade posts or the trade guild."
