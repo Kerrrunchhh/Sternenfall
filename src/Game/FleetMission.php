@@ -31,8 +31,8 @@ enum FleetMission: string
     public static function selectable(): array
     {
         // "Beliefern" is gone (a trade post sells from its planet's storage, so a transport fills it),
-        // and "Springen" is part of "Stationieren".
-        return array_values(array_filter(self::cases(), static fn (self $m): bool => !\in_array($m, [self::Gather, self::Intercept, self::Raid, self::Hover, self::Spy, self::Supply, self::Jump], true)));
+        // "Springen" is part of "Stationieren", and "Bergen" happens right after a battle.
+        return array_values(array_filter(self::cases(), static fn (self $m): bool => !\in_array($m, [self::Gather, self::Intercept, self::Raid, self::Hover, self::Spy, self::Supply, self::Jump, self::Salvage], true)));
     }
 
     /**

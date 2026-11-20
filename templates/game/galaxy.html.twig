@@ -51,7 +51,7 @@
                 <tr id="slot-{{ position }}" class="{{ p and p.owner.id == player.id ? 'own' }} {{ relation and relation != 'own' ? 'rel-' ~ relation }} {{ posts[position] is defined ? 'trade-post' }} {{ on_vacation ? 'vacation' }} {{ newbie ? 'newbie' }} {{ inactive ? 'inactive' }} {{ criminal ? 'criminal' }}"
                     title="{{ tip|trim }}" data-rel="{{ relation }}"{% if posts[position] is defined %} data-post{% endif %}>
                     {% set slot_type = types[position] %}
-                    <td class="num pos">{{ position }}{% if debris[position] is defined %} <a class="debris" href="{{ path('app_fleet', coords|merge({mission: 'salvage'})) }}" title="{{ 'Trümmerfeld: {debrisIron} Eisen, {debrisTitanium} Titan (Stand {debrisSeenAt}) – bergen'|trans({'{debrisIron}': debris[position].debrisIron|num, '{debrisTitanium}': debris[position].debrisTitanium|num, '{debrisSeenAt}': debris[position].debrisSeenAt|date('d.m. H:i')}) }}">✦</a>{% endif %}</td>
+                    <td class="num pos">{{ position }}</td>
                     {% if p and position != p.position %}
                         {# Welded into the fusion above: only its top planet is shown. #}
                         <td class="spy-cell"></td>

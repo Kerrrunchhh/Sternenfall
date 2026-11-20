@@ -3,13 +3,11 @@
 namespace App\Game;
 
 use App\I18n\When;
-use App\Entity\DebrisField;
 use App\Entity\Fleet;
 use App\Entity\FleetIntel;
 use App\Entity\Planet;
 use App\Entity\PlanetIntel;
 use App\Entity\User;
-use App\Repository\DebrisFieldRepository;
 use App\Repository\FleetRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -39,7 +37,6 @@ final readonly class Espionage
         private EntityManagerInterface $em,
         private FleetRepository $fleets,
         private ClockInterface $clock,
-        private ?DebrisFieldRepository $debris = null,
     ) {
     }
 
@@ -66,47 +63,13 @@ final readonly class Espionage
         return $known;
     }
 
-    /** Remembers the type of a scouted slot and its debris (persisted, flushed by the caller). */
+    /** Remembers the type of a scouted slot (persisted, flushed by the caller). */
     public function remember(User $player, int $galaxy, int $system, int $position): PlanetType
     {
         $intel = $this->intel($player, $galaxy, $system, $position);
         $intel->refresh(\DateTimeImmutable::createFromInterface($this->clock->now()));
-        $this->applyDebris($intel, $galaxy, $system, $position);
 
         return $intel->getType();
-    }
-
-    /** The player sees the debris field at a slot as it is now (probe, battle, salvaging). */
-    public function noteDebris(User $player, int $galaxy, int $system, int $position): void
-    {
-        $this->applyDebris($this->intel($player, $galaxy, $system, $position), $galaxy, $system, $position);
-    }
-
-    private function applyDebris(PlanetIntel $intel, int $galaxy, int $system, int $position): void
-    {
-        $field = $this->debrisAt($galaxy, $system, $position);
-        $intel->seeDebris($field?->getIron(), $field?->getTitanium(), \DateTimeImmutable::createFromInterface($this->clock->now()));
-    }
-
-    /**
-     * Debris fields the player knows about in a system and that still drift there.
-     *
-     * @return array<int, PlanetIntel> position => intel with the amounts seen
-     */
-    public function knownDebris(User $player, int $galaxy, int $system): array
-    {
-        $existing = [];
-        foreach ($this->debris?->findInSystem($galaxy, $system) ?? [] as $position => $field) {
-            $existing[$field->getPosition()] = true;
-        }
-        $known = [];
-        foreach ($this->em->getRepository(PlanetIntel::class)->findBy(['user' => $player, 'galaxy' => $galaxy, 'system' => $system]) as $intel) {
-            if ($intel->hasDebris() && isset($existing[$intel->getPosition()])) {
-                $known[$intel->getPosition()] = $intel;
-            }
-        }
-
-        return $known;
     }
 
     private function intel(User $player, int $galaxy, int $system, int $position): PlanetIntel
@@ -127,28 +90,6 @@ final readonly class Espionage
         return $intel;
     }
 
-    /** The debris field at a slot, also one just created in this request (not flushed yet). */
-    private function debrisAt(int $galaxy, int $system, int $position): ?DebrisField
-    {
-        foreach ($this->em->getUnitOfWork()->getScheduledEntityInsertions() as $entity) {
-            if ($entity instanceof DebrisField && $entity->getGalaxy() === $galaxy && $entity->getSystem() === $system && $entity->getPosition() === $position) {
-                return $entity;
-            }
-        }
-
-        return $this->debris?->findAt($galaxy, $system, $position);
-    }
-
-    /** Debris line of a spy report. */
-    private function debrisLine(int $galaxy, int $system, int $position): TranslatableInterface
-    {
-        $field = $this->debrisAt($galaxy, $system, $position);
-
-        return null === $field || $field->isEmpty()
-            ? t('Trümmerfeld: keins')
-            : t('Trümmerfeld: {iron} Eisen, {titanium} Titan – mit Bergungsschiffen abholen', ['{iron}' => new Num($field->getIron()), '{titanium}' => new Num($field->getTitanium())]);
-    }
-
     /** A spy report as deep as the spy's espionage research allows. */
     public function report(User $spy, int $galaxy, int $system, int $position, ?Planet $planet): TranslatableInterface
     {
@@ -164,7 +105,6 @@ final readonly class Espionage
                 ? t('Freier Platz [{galaxy}:{system}:{position}]', ['{galaxy}' => $galaxy, '{system}' => $system, '{position}' => $position])
                 : t('Planet {name} [{coords}] von {player}', ['{name}' => $planet->getName(), '{coords}' => $planet->getCoordinates(), '{player}' => $planet->getOwner()->getUsername()]),
             t('Planetentyp: {icon} {type} ({effect})', ['{icon}' => $type->icon(), '{type}' => t($type->label()), '{effect}' => t($type->effect())]),
-            $this->debrisLine($galaxy, $system, $position),
         ];
         if (null === $planet) {
             return new Lines($lines);

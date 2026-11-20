@@ -3,11 +3,9 @@
 namespace App\Game;
 
 use App\Entity\BattleReport;
-use App\Entity\DebrisField;
 use App\Entity\Fleet;
 use App\Entity\Planet;
 use App\Entity\User;
-use App\Repository\DebrisFieldRepository;
 use App\Repository\FleetRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -21,11 +19,15 @@ use function Symfony\Component\Translation\t;
 
 /**
  * Resolves combat when fleets arrive: attacks on planets, interceptions,
- * raids on transports and salvaging debris. The caller (fleet processing) holds
+ * raids on transports; afterwards salvage ships take what they can of the wreckage.
+ * The caller (fleet processing) holds
  * the fleet event lock; planet changes run under the planet owner's lock.
  */
 final readonly class CombatService
 {
+    /** Share of the iron and titanium of destroyed units that salvage ships can take after a battle. */
+    public const float WRECKAGE_SHARE = 0.3;
+
     /** Inhabitants outside the bunkers one heavy bomber kills. */
     public const int BOMBER_KILLS = 50;
 
@@ -33,13 +35,11 @@ final readonly class CombatService
         private EntityManagerInterface $em,
         private PlanetService $planets,
         private FleetRepository $fleets,
-        private DebrisFieldRepository $debris,
         private Economy $economy,
         private Inbox $inbox,
         private ClockInterface $clock,
         private Randomizer $random = new Randomizer(),
         private ?BattleReports $reports = null,
-        private ?Espionage $espionage = null,
         private ?Diplomacy $diplomacy = null,
         private ?GameMailer $gameMailer = null,
         private ?\App\Repository\PlanetRepository $planetRepository = null,
@@ -116,8 +116,7 @@ final readonly class CombatService
                     $this->fleets->forget($guard);
                 }
             }
-            $outcome = [$this->leaveDebris($g, $s, $p, $result)];
-            $this->showDebris($result->participants(), $g, $s, $p);
+            $outcome = [];
 
             $beforeBombing = $target->getPopulation();
             // What each attacker carried off, stored with the shared report (battle summaries add it up).
@@ -129,6 +128,8 @@ final readonly class CombatService
                 $alive = [] !== array_filter($attackers, static fn (Fleet $f): bool => $f->hasShips());
                 $headline = $alive ? t('Unentschieden: die Verteidigung hält.') : ([] === $joiners ? t('Der Angreifer wurde vernichtet.') : t('Der Verband wurde vernichtet.'));
             }
+            // Plunder first, then the salvage ships of every side take what they can of the wreckage.
+            $outcome[] = $this->salvageWreckage($result, [...$attackers, ...$guards], $target);
             if ([] !== $joiners) {
                 $headline = new Lines([$headline, t('Verbandsangriff mit {count} Flotten ({value}).', ['{count}' => \count($attackers), '{value}' => implode(', ', array_unique(array_map(static fn (Fleet $f): string => $f->getOwner()->getUsername(), $attackers)))])], ' ');
             }
@@ -178,25 +179,6 @@ final readonly class CombatService
         $this->fleetBattle($hunter, [$prey, ...$companions], raid: true);
     }
 
-    /** Salvagers collect a debris field. */
-    public function salvage(Fleet $fleet): TranslatableInterface
-    {
-        $field = $this->debris->findAt($fleet->getTargetGalaxy(), $fleet->getTargetSystem(), $fleet->getTargetPosition());
-        if (null === $field) {
-            return t('Dort gab es kein Trümmerfeld.');
-        }
-        // What they collect stays on board until they are home – and can be raided on the way.
-        $taken = $field->collect(max(0, $this->lootCapacity($fleet) - $fleet->getCargo()->total()));
-        $where = $this->loadLoot($fleet, $taken);
-        if ($field->isEmpty()) {
-            $this->em->remove($field);
-        }
-        // The salvagers saw what is left.
-        $this->espionage?->noteDebris($fleet->getOwner(), $field->getGalaxy(), $field->getSystem(), $field->getPosition());
-
-        return t('Geborgen: {iron} Eisen, {titanium} Titan – {where}.', ['{iron}' => new Num($taken->iron), '{titanium}' => new Num($taken->titanium), '{where}' => $where]);
-    }
-
     /** @param list<Fleet> $preys the attacked fleet and those flying with it */
     private function fleetBattle(Fleet $hunter, array $preys, bool $raid): void
     {
@@ -222,8 +204,7 @@ final readonly class CombatService
                 $prey->setCargo($hold > 0 ? $prey->getCargo()->multiply($hold / $prey->getCargo()->total())->floor() : new Resources());
             }
         }
-        $outcome = [$this->leaveDebris($g, $s, $p, $result)];
-        $this->showDebris($result->participants(), $g, $s, $p);
+        $outcome = [];
         // Intercepting an attack defends: it can only earn hero points. A raid is an attack.
         $outcome = [...$outcome, ...HeroPoints::apply(HeroPoints::forBattle($result, defensive: !$raid))];
         if (\count($preys) > 1) {
@@ -255,6 +236,9 @@ final readonly class CombatService
             $outcome[] = t('Erbeutet: {loot} – {where}.', ['{loot}' => $this->describe($loot), '{where}' => $where]);
             $taken = [self::lootEntry($hunter->getOwner(), $loot)];
         }
+
+        // After the loot the salvage ships of both sides take what they can of the wreckage.
+        $outcome[] = $this->salvageWreckage($result, [$hunter, ...$preys]);
 
         foreach ($preys as $prey) {
             if (!$prey->hasShips()) {
@@ -449,31 +433,52 @@ final readonly class CombatService
     }
 
     /**
-     * Everybody who fought at a place sees the debris field there.
+     * After a battle the surviving salvage ships of every side take the wreckage (WRECKAGE_SHARE of
+     * the iron and titanium destroyed), shared by their free salvage hold; the rest is lost. Fleets
+     * carry their share home, salvagers in the planet's hangar put theirs into its storage (the caller
+     * holds the planet's lock).
      *
-     * @param list<User> $players
+     * @param list<Fleet> $fleets
      */
-    private function showDebris(array $players, int $g, int $s, int $p): void
+    private function salvageWreckage(BattleResult $result, array $fleets, ?Planet $planet = null): ?TranslatableInterface
     {
-        foreach ($players as $player) {
-            $this->espionage?->noteDebris($player, $g, $s, $p);
-        }
-    }
-
-    private function leaveDebris(int $g, int $s, int $p, BattleResult $result): ?TranslatableInterface
-    {
-        $wreckage = $result->destroyedValue()->multiply(DebrisField::SHARE)->floor();
+        $wreckage = $result->destroyedValue()->multiply(self::WRECKAGE_SHARE)->floor();
         if ($wreckage->total() < 1) {
             return null;
         }
-        $field = $this->debris->findAt($g, $s, $p);
-        if (null === $field) {
-            $field = new DebrisField($g, $s, $p);
-            $this->em->persist($field);
+        // Salvage holds still free: what freighters carry beyond their own space fills them already.
+        $space = [];
+        foreach ($fleets as $i => $fleet) {
+            $space[$i] = $fleet->hasShips() ? max(0.0, $this->lootCapacity($fleet) - max(0.0, $fleet->getCargo()->total() - $this->capacity($fleet))) : 0.0;
         }
-        $field->add($wreckage);
+        $hangar = null !== $planet ? (float) ($planet->getShipCount(ShipType::Salvager) * ShipType::Salvager->salvageCapacity()) : 0.0;
+        $free = array_sum($space) + $hangar;
+        $share = $free > 0 ? min(1.0, $free / $wreckage->total()) : 0.0;
 
-        return t('Trümmerfeld: {iron} Eisen, {titanium} Titan treiben im Orbit.', ['{iron}' => new Num($wreckage->iron), '{titanium}' => new Num($wreckage->titanium)]);
+        $taken = new Resources();
+        foreach ($fleets as $i => $fleet) {
+            if ($space[$i] >= 1) {
+                $part = $wreckage->multiply($share * $space[$i] / $free)->floor();
+                // Waiting at home (defending its own planet): straight into the storage, like the hangar.
+                if (null !== $planet && !$fleet->isMoving() && $fleet->getOwner()->isSameAs($planet->getOwner())) {
+                    $planet->setResources($planet->getResources()->add($part));
+                } else {
+                    $fleet->setCargo($fleet->getCargo()->add($part));
+                }
+                $taken = $taken->add($part);
+            }
+        }
+        if (null !== $planet && $hangar >= 1) {
+            $part = $wreckage->multiply($share * $hangar / $free)->floor();
+            $planet->setResources($planet->getResources()->add($part));
+            $taken = $taken->add($part);
+        }
+
+        $wrecked = ['{iron}' => new Num($wreckage->iron), '{titanium}' => new Num($wreckage->titanium)];
+
+        return $taken->total() < 1
+            ? t('Trümmer: {iron} Eisen, {titanium} Titan – kein Bergungsschiff konnte etwas aufnehmen, sie sind zerstört.', $wrecked)
+            : t('Trümmer: {iron} Eisen, {titanium} Titan – die Bergungsschiffe haben {taken} aufgenommen, der Rest ist zerstört.', $wrecked + ['{taken}' => $this->describe($taken)]);
     }
 
     /** @return array{owner: string, ownerId: ?int, resources: array<string, float>} */

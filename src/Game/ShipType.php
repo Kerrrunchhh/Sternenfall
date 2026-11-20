@@ -103,7 +103,7 @@ enum ShipType: string
         return $this->carriesCargo() ? $this->spec()->cargo : 0;
     }
 
-    /** Hold for debris; only salvagers have one. */
+    /** Hold for loot and wreckage; only salvagers have one. */
     public function salvageCapacity(): int
     {
         return self::Salvager === $this ? $this->spec()->cargo : 0;
@@ -223,7 +223,7 @@ enum ShipType: string
             self::Scout => 'Sehr billige, extrem schnelle Einweg-Sonde: startet über 🔭 direkt aus dem Hangar, späht Planeten, freie Plätze oder Flotten aus und verglüht danach – auch wenn sie nichts entdeckt. Kann nicht in Flotten aufgenommen werden. Jede Stufe Spionagetechnik macht sie 4 % schneller.',
             self::Freighter => 'Kleines Handelsschiff für Rohstoffe zwischen Kolonien. Nur Handelsschiffe transportieren Fracht; in Kriegsflotten fliegen sie nicht mit – die Beute tragen Bergungsschiffe.',
             self::LargeFreighter => 'Großes Handelsschiff mit enormer Ladekapazität. Nur Handelsschiffe transportieren Fracht; in Kriegsflotten fliegen sie nicht mit – die Beute tragen Bergungsschiffe.',
-            self::Salvager => 'Sammelt nach Raumschlachten die Trümmerfelder im Orbit ein und trägt die Beute eines Angriffs. Was er geladen hat, bringt er zu seinem Startplaneten – unterwegs kann es überfallen werden. Andere Fracht nimmt er nicht auf.',
+            self::Salvager => 'Trägt die Beute eines Angriffs und nimmt direkt nach einer Raumschlacht auf, was er von den Trümmern fassen kann – der Rest wird zerstört. Was er geladen hat, bringt er zu seinem Startplaneten, unterwegs kann es überfallen werden. Andere Fracht nimmt er nicht auf.',
             self::RescueShip => 'Fliegt mit Angriffen mit und rettet die Besatzungen zerstörter feindlicher Schiffe: Jedes Rettungsschiff, das den Kampf übersteht, rettet bis zu 200 Besatzungsmitglieder. Gerettete zählen nicht als Tote – so gibt es dafür keine Krimipunkte. Besatzungen von Piraten und Kriminellen rettet es nicht (für sie gibt es weiter Heldenpunkte), ausgebombte Einwohner auch nicht. Kämpft selbst nicht.',
             self::ColonyShip => 'Gründet eine Kolonie auf einem freien Planeten oder besiedelt einen herrenlosen (mit dessen Gebäuden, Lager und Bauschleifen – sobald dort keine Schiffe und keine Verteidigung mehr stehen) und wird dabei verbraucht. Die Besatzung wird zu Siedlern. An Bord sind Vorräte für den Anfang: 500 Eisen, 500 Titan, 200 Nahrung, 200 Wasser und 200 Wasserstoff.',
             self::InvasionShip => 'Bringt Truppen für die Übernahme feindlicher Planeten. Ein Invasionsschiff reicht für etwa 20.000 Einwohner (dann 90 % Chance); die Chance liegt immer zwischen 1 und 99 %. Bei einer Fusion wird nur ein Planet abgesprengt und übernommen.',

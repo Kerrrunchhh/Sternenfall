@@ -698,18 +698,6 @@ final readonly class FleetService
     }
 
     /** Unloads the cargo of an idle fleet onto the own planet it is at. */
-    public function unloadCargo(Fleet $fleet, User $actor): void
-    {
-        $this->withEventLock(function () use ($fleet, $actor): void {
-            $this->em->refresh($fleet);
-            $base = $this->idleAtOwnPlanet($fleet, $actor);
-            $this->planets->transaction($base, function (Planet $base) use ($fleet): void {
-                $base->setResources($base->getResources()->add($fleet->getCargo()));
-                $fleet->setCargo(new Resources());
-            });
-        });
-    }
-
     /**
      * Sends an idle named fleet on a mission. If it is at one of its owner's
      * planets, cargo is loaded there and that planet pays fuel and supplies;
@@ -1697,8 +1685,8 @@ final readonly class FleetService
                 null !== $this->lifeFormRefusal($player, $target->getOwner()) => $this->lifeFormRefusal($player, $target->getOwner()),
                 default => null,
             },
-            FleetMission::Salvage => ($ships[ShipType::Salvager->value] ?? 0) < 1 ? 'Zum Bergen wird ein Bergungsschiff benötigt.' : null,
-            FleetMission::Gather, FleetMission::Intercept, FleetMission::Raid, FleetMission::Hover => 'Ungültiger Auftrag.',
+            // Retired missions ("Beliefern", "Bergen") and those started elsewhere can't be chosen here.
+            FleetMission::Gather, FleetMission::Intercept, FleetMission::Raid, FleetMission::Hover, FleetMission::Supply, FleetMission::Salvage => 'Ungültiger Auftrag.',
         };
 
         if (null !== $error) {
@@ -1963,8 +1951,9 @@ final readonly class FleetService
                 }
                 break;
 
+            // "Bergen" (retired): salvage ships now take the wreckage right after a battle.
             case FleetMission::Salvage:
-                $this->inbox->send($player, t('Bergung bei {where}', ['{where}' => $where]), new Lines([$this->combat->salvage($fleet), t('{name} kehrt zurück.', ['{name}' => $name])], ' '));
+                $this->inbox->send($player, t('Bergung bei {where}', ['{where}' => $where]), t('Trümmerfelder gibt es nicht mehr – Bergungsschiffe nehmen die Trümmer direkt nach einer Schlacht auf. {name} kehrt zurück.', ['{name}' => $name]));
                 break;
 
             case FleetMission::Intercept:
@@ -2010,9 +1999,9 @@ final readonly class FleetService
     /** A returning fleet reaches its point of departure. */
     private function land(Fleet $fleet): void
     {
-        // Picked-up resources and loot (attack, raid, salvage) go into the storage of the own planet
-        // the fleet returns to; until then they were on board and could be raided.
-        if (\in_array($fleet->getMission(), [FleetMission::Pickup, FleetMission::Attack, FleetMission::Raid, FleetMission::Salvage], true)
+        // Picked-up resources, bought goods, loot and wreckage (attack, raid, interception) go into the storage of the
+        // own planet the fleet returns to; until then they were on board and could be raided.
+        if (\in_array($fleet->getMission(), [FleetMission::Pickup, FleetMission::Trade, FleetMission::Attack, FleetMission::Raid, FleetMission::Intercept, FleetMission::Salvage], true)
             && $fleet->isNamed() && !$fleet->getCargo()->isEmpty() && null !== $home = $this->ownPlanetAt($fleet)) {
             $this->planets->transaction($home, function (Planet $home) use ($fleet): void {
                 $home->setResources($home->getResources()->add($fleet->getCargo()));

@@ -217,37 +217,4 @@ class EspionageTest extends TestCase
         self::assertTrue($radar->sees($victim, $attack), 'radar 1 covers the own system');
         self::assertTrue($radar->sees($victim, $probe), 'with radar, top espionage notices probes');
     }
-
-    public function testSpyReportNamesTheDebrisFieldAndRemembersIt(): void
-    {
-        $field = new \App\Entity\DebrisField(2, 50, 9);
-        $field->add(new \App\Game\Resources(iron: 1200, titanium: 800));
-        $debris = $this->createStub(\App\Repository\DebrisFieldRepository::class);
-        $debris->method('findAt')->willReturn($field);
-        $intelRepo = $this->createStub(EntityRepository::class);
-        $intelRepo->method('findOneBy')->willReturn(null);
-        $persisted = [];
-        $em = $this->createStub(EntityManagerInterface::class);
-        $em->method('getRepository')->willReturn($intelRepo);
-        $em->method('persist')->willReturnCallback(function (object $o) use (&$persisted): void { $persisted[] = $o; });
-        $espionage = new Espionage($em, $this->createStub(FleetRepository::class), new MockClock($this->now), $debris);
-
-        $spy = new User('spion');
-        $spy->setResearchLevel(ResearchType::Espionage, 1);
-        $report = self::text($espionage->report($spy, 2, 50, 9, null));
-
-        self::assertStringContainsString('Trümmerfeld: 1.200 Eisen, 800 Titan', $report);
-        $intel = array_values(array_filter($persisted, static fn (object $o): bool => $o instanceof \App\Entity\PlanetIntel));
-        self::assertTrue($intel[0]->hasDebris(), 'the spy now knows the field');
-        self::assertSame(1200.0, $intel[0]->getDebrisIron());
-    }
-
-    public function testCollectedDebrisIsForgotten(): void
-    {
-        $intel = new \App\Entity\PlanetIntel(new User('x'), 1, 1, 1, Universe::planetType(1, 1, 1), $this->now);
-        $intel->seeDebris(500, 100, $this->now);
-        self::assertTrue($intel->hasDebris());
-        $intel->seeDebris(0, 0, $this->now);
-        self::assertFalse($intel->hasDebris());
-    }
 }

@@ -19,7 +19,6 @@ use App\Game\PlanetUpdater;
 use App\Game\ResearchType;
 use App\Game\Resources;
 use App\Game\ShipType;
-use App\Repository\DebrisFieldRepository;
 use App\Repository\FleetRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -238,6 +237,32 @@ class FusionCombatTest extends TestCase
         return $top;
     }
 
+    public function testSalvageShipsTakeTheWreckageAfterTheLootTheRestIsDestroyed(): void
+    {
+        // Nothing to plunder; freighters that don't shoot back are destroyed in the hangar.
+        $planet = new Planet($this->defender, 'Werft', 1, 1, 6, $this->now);
+        $planet->setResources(new Resources());
+        $planet->addShips(ShipType::LargeFreighter, 30);
+        $fleet = $this->attack($planet, ['monarch' => 3, 'salvager' => 1]);
+
+        $hold = (float) ShipType::Salvager->salvageCapacity();
+        self::assertSame(1, $fleet->getShipCount(ShipType::Salvager), 'nobody shot at it');
+        self::assertSame($hold, $fleet->getCargo()->iron + $fleet->getCargo()->titanium, 'the hold is full of wreckage');
+        self::assertStringContainsString('die Bergungsschiffe haben', $this->report());
+        self::assertStringContainsString('der Rest ist zerstört', $this->report());
+    }
+
+    public function testWithoutSalvageShipsTheWreckageIsDestroyed(): void
+    {
+        $planet = new Planet($this->defender, 'Werft', 1, 1, 6, $this->now);
+        $planet->setResources(new Resources());
+        $planet->addShips(ShipType::LargeFreighter, 5);
+        $fleet = $this->attack($planet, ['monarch' => 3]);
+
+        self::assertTrue($fleet->getCargo()->isEmpty());
+        self::assertStringContainsString('kein Bergungsschiff konnte etwas aufnehmen', $this->report());
+    }
+
     /** @param array<string, int> $ships */
     public function testSalvageShipsCarryTheLootHome(): void
     {
@@ -309,7 +334,11 @@ class FusionCombatTest extends TestCase
 
         self::assertStringContainsString('Im Konvoi flogen gemeinsam: Karawane (verteidiger), Geleit (verteidiger)', $this->report());
         self::assertLessThan(20, $hunter->getShipCount(ShipType::Falke), 'the escort fires back');
-        self::assertSame(0.0, $hunter->getCargo()->total(), 'the raid was beaten off: no loot');
+        self::assertStringNotContainsString('Erbeutet', $this->report(), 'the raid was beaten off: no loot');
+        // Its surviving salvage ship still took what it could of the wreckage (iron and titanium only).
+        self::assertStringContainsString('Trümmer:', $this->report());
+        self::assertLessThanOrEqual((float) ShipType::Salvager->salvageCapacity(), $hunter->getCargo()->total());
+        self::assertSame(0.0, $hunter->getCargo()->food + $hunter->getCargo()->water + $hunter->getCargo()->hydrogen);
         self::assertSame($freighters->hasShips() ? 30000.0 : 0.0, $freighters->getCargo()->iron, 'surviving holds keep their cargo, destroyed ones lose it');
     }
 
@@ -329,8 +358,6 @@ class FusionCombatTest extends TestCase
         $economy = new Economy(1.0);
         $fleets = $this->createStub(FleetRepository::class);
         $fleets->method('findIdleOf')->willReturn([]);
-        $debris = $this->createStub(DebrisFieldRepository::class);
-        $debris->method('findAt')->willReturn(null);
 
         $this->combat($lucky, $deletion, $reports)->attackPlanet($fleet, $target, $joiners);
 
@@ -347,8 +374,6 @@ class FusionCombatTest extends TestCase
         $economy = new Economy(1.0);
         $fleets = $this->createStub(FleetRepository::class);
         $fleets->method('findIdleOf')->willReturn([]);
-        $debris = $this->createStub(DebrisFieldRepository::class);
-        $debris->method('findAt')->willReturn(null);
 
         $planets = $this->createStub(\App\Repository\PlanetRepository::class);
         $planets->method('findAt')->willReturnCallback(fn (): ?Planet => $this->startPlanet);
@@ -357,7 +382,6 @@ class FusionCombatTest extends TestCase
             $em,
             new PlanetService($em, new LockFactory(new InMemoryStore()), $clock, new PlanetUpdater($economy), $economy),
             $fleets,
-            $debris,
             $economy,
             new Inbox($em, $clock),
             $clock,

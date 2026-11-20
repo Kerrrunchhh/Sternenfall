@@ -227,7 +227,7 @@ class BattleTest extends TestCase
         self::assertSame(0, $result->survivingCount(BattleGroup::DEFENDER, ShipType::Freighter));
     }
 
-    public function testDestroyedValueFeedsTheDebrisField(): void
+    public function testDestroyedValueIsTheWreckageSalvagersCanTake(): void
     {
         $battle = new Battle();
         $battle->add(BattleGroup::ATTACKER, new User('a'), ['pfeil' => 100]);

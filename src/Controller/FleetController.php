@@ -46,7 +46,7 @@ class FleetController extends AbstractGameController
             }
         }
 
-        // Where each fleet is: own planets allow loading, unloading and dissolving.
+        // Where each fleet is: own planets allow loading ships and dissolving.
         $entries = [];
         $hoverSources = $this->fleetService->hoverSources($player);
         foreach ($fleets->findByOwner($player) as $fleet) {
@@ -305,17 +305,6 @@ class FleetController extends AbstractGameController
     }
 
     #[RequiresFleetControl]
-    #[Route('/fleets/{id}/unload', name: 'app_fleets_unload', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
-    #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
-    public function unload(Fleet $fleet): Response
-    {
-        $this->currentPlanet();
-        $this->attempt(fn () => $this->fleetService->unloadCargo($fleet, $this->player()), t('Ladung abgeladen.'));
-
-        return $this->redirectToRoute('app_fleet');
-    }
-
-    #[RequiresFleetControl]
     #[Route('/fleets/{id}/dissolve', name: 'app_fleets_dissolve', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     #[IsCsrfTokenValid('fleet', tokenKey: '_token')]
     public function dissolve(Fleet $fleet): Response
@@ -347,7 +336,6 @@ class FleetController extends AbstractGameController
         'drop' => 'Schiffe aus der Flotte entfernen (eine Flotte)',
         'split' => 'Aufteilen (eine Flotte)',
         'rename' => 'Umbenennen (eine Flotte)',
-        'unload' => 'Ladung abladen',
         'dissolve' => 'Auflösen (Schiffe in den Hangar)',
         'release_alliance' => 'Für die Allianz freigeben',
         'unrelease_alliance' => 'Allgemeine Freigabe zurücknehmen',
@@ -469,7 +457,6 @@ class FleetController extends AbstractGameController
                     'drop' => t('{label} {what}.', ['{label}' => $label, '{what}' => $this->fleetService->removeShips($fleet, $player, array_map('intval', $form->all('drop')[$id] ?? []))]),
                     'split' => $this->run(fn () => $this->fleetService->split($fleet, $player, $form->getString('name'), array_map('intval', $form->all('split')[$id] ?? [])), t('{label} wurde aufgeteilt, neue Flotte „{value}“.', ['{label}' => $label, '{value}' => trim($form->getString('name'))])),
                     'rename' => $this->run(fn () => $this->fleetService->rename($fleet, $player, $form->getString('name')), t('{label} heißt jetzt „{value}“.', ['{label}' => $label, '{value}' => trim($form->getString('name'))])),
-                    'unload' => $this->run(fn () => $this->fleetService->unloadCargo($fleet, $player), t('{label} hat die Ladung abgeladen.', ['{label}' => $label])),
                     'dissolve' => $this->run(fn () => $this->fleetService->dissolve($fleet, $player), t('{label} wurde aufgelöst, die Schiffe stehen im Hangar.', ['{label}' => $label])),
                     'release_alliance' => $this->run(fn () => $this->fleetService->releaseToAlliance($fleet, $player, true), t('{label} ist für die Allianz freigegeben.', ['{label}' => $label])),
                     'unrelease_alliance' => $this->run(fn () => $this->fleetService->releaseToAlliance($fleet, $player, false), t('{label} ist nicht mehr allgemein freigegeben.', ['{label}' => $label])),

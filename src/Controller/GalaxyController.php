@@ -145,8 +145,6 @@ class GalaxyController extends AbstractGameController
             'types' => $types,
             'posts' => $posts,
             'relations' => $relations,
-            // Debris fields only where the player discovered them (probe, battle, salvaging).
-            'debris' => $espionage->knownDebris($this->player(), $galaxy, $system),
             'galaxies' => Universe::GALAXIES,
             'systems' => Universe::SYSTEMS_PER_GALAXY,
             // The galaxy map: every system on the spiral arms, turning with the galaxy (see Orbit, public/js/game.js).

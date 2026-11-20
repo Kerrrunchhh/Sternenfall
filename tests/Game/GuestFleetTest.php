@@ -224,6 +224,19 @@ final class GuestFleetTest extends TestCase
         self::assertTrue($fleet->getCargo()->isEmpty());
     }
 
+    public function testBoughtGoodsAreStoredWhenTheTradeFleetLandsAtHome(): void
+    {
+        $fleet = new Fleet($this->guest, 'Händler', 1, 10, 1, ['large_freighter' => 1]);
+        $fleet->depart(FleetMission::Trade, 1, 20, 3, $this->now->modify('-2 hours'), 3600);
+        $fleet->setCargo(new Resources(water: 8000));
+        $fleet->startReturn();
+
+        (new \ReflectionMethod(FleetService::class, 'land'))->invoke($this->service(), $fleet);
+
+        self::assertSame(8000.0, $this->planets['1:10:1']->getResources()->water, 'no "Ladung abladen" needed any more');
+        self::assertTrue($fleet->getCargo()->isEmpty());
+    }
+
     public function testAPlanetWithOwnFleetsBoundToItCannotBeAbandoned(): void
     {
         $colony = $this->place(new Planet($this->guest, 'Kolonie', 1, 30, 2, $this->now));
