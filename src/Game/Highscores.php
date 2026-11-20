@@ -17,8 +17,9 @@ final readonly class Highscores
     public const string BY_CREDITS = 'credits';
     public const string BY_PLANETS = 'planets';
 
-    /** The sort keys, in the order they break ties. */
     public const array SORTS = [self::BY_POINTS, self::BY_EXPERIENCE, self::BY_CREDITS, self::BY_PLANETS];
+    /** Ties of the chosen value are broken by these, then by who was in the game first. */
+    public const array TIE_BREAKERS = [self::BY_PLANETS, self::BY_POINTS];
 
     public function __construct(private EntityManagerInterface $em)
     {
@@ -30,7 +31,7 @@ final readonly class Highscores
         $rows = [];
         foreach ($this->allPlayers() as $user) {
             if (null === $lifeForm || $user->getLifeForm() === $lifeForm) {
-                $rows[] = ['user' => $user, 'name' => $user->getUsername(), 'points' => Scoring::points($user), 'experience' => $user->getCombatExperience(), 'credits' => $user->getCredits(), 'planets' => self::planets($user)];
+                $rows[] = ['user' => $user, 'name' => $user->getUsername(), 'points' => Scoring::points($user), 'experience' => $user->getCombatExperience(), 'credits' => $user->getCredits(), 'planets' => self::planets($user), 'since' => $user->getCreatedAt()->getTimestamp()];
             }
         }
 
@@ -47,7 +48,7 @@ final readonly class Highscores
                 continue;
             }
             $id = (int) $alliance->getId();
-            $rows[$id] ??= ['alliance' => $alliance, 'name' => $alliance->getName(), 'points' => 0, 'experience' => 0.0, 'credits' => 0.0, 'planets' => 0, 'members' => 0];
+            $rows[$id] ??= ['alliance' => $alliance, 'name' => $alliance->getName(), 'points' => 0, 'experience' => 0.0, 'credits' => 0.0, 'planets' => 0, 'members' => 0, 'since' => $alliance->getCreatedAt()->getTimestamp()];
             $rows[$id]['points'] += Scoring::points($user);
             $rows[$id]['experience'] += $user->getCombatExperience();
             $rows[$id]['credits'] += $user->getCredits();
@@ -103,10 +104,11 @@ final readonly class Highscores
     }
 
     /**
-     * Sorts descending by the chosen value (then by the others, then by name) and numbers
-     * the rows; equal values share a rank.
+     * Sorts descending by the chosen value; ties go to more planets, then more points, then to
+     * whoever was in the game first (player sign-up, alliance founding). Numbers the rows – a rank
+     * is only shared when all of that is equal (then the name decides the order).
      *
-     * @template T of array{name: string, points: int, experience: float, credits: float, planets: int}
+     * @template T of array{name: string, points: int, experience: float, credits: float, planets: int, since: int}
      *
      * @param list<T> $rows
      *
@@ -114,18 +116,18 @@ final readonly class Highscores
      */
     private function rank(array $rows, string $sort): array
     {
-        $keys = [$sort, ...array_values(array_diff(self::SORTS, [$sort]))];
-        $key = static fn (array $row, array $named): array => [...array_map(static fn (string $k): float => (float) $row[$k], $keys), mb_strtolower($named['name'])];
-        usort($rows, static fn (array $a, array $b): int => $key($b, $a) <=> $key($a, $b));
+        $keys = [$sort, ...array_values(array_diff(self::TIE_BREAKERS, [$sort]))];
+        // Descending values; the earlier start counts as more (hence negated).
+        $standing = static fn (array $row): array => [...array_map(static fn (string $k): float => floor((float) $row[$k]), $keys), -$row['since']];
+        usort($rows, static fn (array $a, array $b): int => [$standing($b), mb_strtolower($a['name'])] <=> [$standing($a), mb_strtolower($b['name'])]);
 
         $ranked = [];
         $previous = null;
         $rank = 0;
         foreach ($rows as $i => $row) {
-            $value = (int) floor($row[$sort]);
-            if ($value !== $previous) {
+            if ($standing($row) !== $previous) {
                 $rank = $i + 1;
-                $previous = $value;
+                $previous = $standing($row);
             }
             $ranked[] = ['rank' => $rank] + $row;
         }

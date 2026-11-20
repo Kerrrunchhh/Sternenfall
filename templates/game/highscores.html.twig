@@ -53,6 +53,7 @@
         {% if rows is empty %}
             <p class="muted">{{ '{Allianzen} mit dieser Lebensform.'|trans({'{Allianzen}': view == 'players' ? ('Keine Spieler'|trans) : ('Keine Allianzen'|trans)}) }}</p>
         {% else %}
+            <p class="muted small">{{ view == 'players' ? 'Bei Gleichstand liegt vorne, wer mehr Planeten hat – dann, wer früher ins Spiel gekommen ist.'|trans : 'Bei Gleichstand liegt vorne, wer mehr Planeten hat – dann die früher gegründete Allianz.'|trans }}</p>
             <table class="table highscore-table">
                 <tr class="table-head">
                     <td class="num">{{ 'Platz'|trans }}</td>

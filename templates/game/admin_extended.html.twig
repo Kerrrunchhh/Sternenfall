@@ -1,0 +1,76 @@
+{% extends 'game/_layout.html.twig' %}
+
+{% block title %}{{ 'Erweiterte Accounts – Admin – {game_name}'|trans({'{game_name}': game_name}) }}{% endblock %}
+
+{% block content %}
+    <h1>{{ '🛡 Erweiterte Accounts'|trans }}</h1>
+    <p class="panel admin-extended-summary">
+        {{ '<strong>{active}</strong> gerade erweitert · <strong>{subscribed}</strong> mit laufendem PayPal-Abo · erwartet <strong>{income} €</strong> im Monat'|trans({'{active}': active_count|e, '{subscribed}': subscribed_count|e, '{income}': monthly_income|num|e})|raw }}
+        {% if not paypal_configured %}<br><span class="negative small">{{ 'PayPal ist nicht eingerichtet – Kündigen und Abgleichen gehen nicht.'|trans }}</span>{% endif %}
+    </p>
+
+    {# Any player, e.g. as a prize or a thank-you. #}
+    <section class="panel">
+        <h2>{{ 'Erweiterten Account schenken'|trans }}</h2>
+        <form method="post" action="{{ path('app_admin_extended_grant') }}" class="inline-action">
+            <input type="hidden" name="_token" value="{{ csrf_token('admin_extended') }}">
+            <input type="text" name="username" required placeholder="{{ 'Spielername'|trans }}" aria-label="{{ 'Spielername'|trans }}">
+            <label>{{ 'Tage'|trans }} <input type="number" name="days" min="1" max="{{ max_gift_days }}" value="30" class="short"></label>
+            <button class="btn btn-small" type="submit" id="extended-grant">{{ 'Schenken'|trans }}</button>
+        </form>
+        <p class="muted small">{{ 'Die Tage kommen zum laufenden Zeitraum dazu (oder zählen ab jetzt). Der Spieler bekommt eine Nachricht.'|trans }}</p>
+    </section>
+
+    <section class="panel">
+        <h2>{{ 'Alle Konten mit erweitertem Account oder Abo'|trans }}</h2>
+        {% if accounts is empty %}
+            <p class="muted">{{ 'Noch niemand.'|trans }}</p>
+        {% else %}
+            <div class="table-scroll">
+                <table class="table admin-extended">
+                    <thead><tr><th>{{ 'Spieler'|trans }}</th><th>{{ 'Erweitert bis'|trans }}</th><th>{{ 'PayPal-Abo'|trans }}</th><th>{{ 'Verwalten'|trans }}</th></tr></thead>
+                    <tbody>
+                        {% for u in accounts %}
+                            {% set extended = u.isExtended(now) %}
+                            <tr id="account-{{ u.id }}">
+                                <td><a href="{{ path('app_admin_users', {q: u.username}) }}" title="{{ 'In der Benutzerverwaltung öffnen'|trans }}">{{ u.username }}</a></td>
+                                <td class="small nowrap">
+                                    {% if extended %}✨ {{ u.extendedUntil|date('d.m.Y H:i') }}{% elseif u.extendedUntil %}<span class="muted">{{ 'abgelaufen {date}'|trans({'{date}': u.extendedUntil|date('d.m.Y')}) }}</span>{% else %}–{% endif %}
+                                </td>
+                                <td class="small">
+                                    {% if u.subscriptionId %}<strong>{{ u.subscriptionStatus ?? '?' }}</strong><br><span class="muted">{{ u.subscriptionId }}</span>{% else %}<span class="muted">{{ 'kein Abo'|trans }}</span>{% endif %}
+                                </td>
+                                <td class="admin-extended-actions">
+                                    {% set token = csrf_token('admin_extended') %}
+                                    <form method="post" action="{{ path('app_admin_extended_act', {id: u.id}) }}" class="inline-action">
+                                        <input type="hidden" name="_token" value="{{ token }}">
+                                        <input type="hidden" name="do" value="grant">
+                                        <input type="number" name="days" min="1" max="{{ max_gift_days }}" value="30" class="short" aria-label="{{ 'Tage für {player}'|trans({'{player}': u.username}) }}">
+                                        <button class="btn btn-small btn-secondary" type="submit" id="grant-{{ u.id }}">{{ '+ Tage'|trans }}</button>
+                                    </form>
+                                    {% if extended %}
+                                        <form method="post" action="{{ path('app_admin_extended_act', {id: u.id}) }}">
+                                            <input type="hidden" name="_token" value="{{ token }}">
+                                            <button class="btn btn-small btn-danger" type="submit" name="do" value="end" id="end-{{ u.id }}"
+                                                    data-confirm="{{ 'Den erweiterten Account von {player} sofort beenden? Ein laufendes PayPal-Abo bleibt bestehen – kündige es gegebenenfalls zusätzlich.'|trans({'{player}': u.username}) }}" data-confirm-label="{{ 'Beenden'|trans }}">{{ 'Sofort beenden'|trans }}</button>
+                                        </form>
+                                    {% endif %}
+                                    {% if u.subscriptionId and paypal_configured %}
+                                        <form method="post" action="{{ path('app_admin_extended_act', {id: u.id}) }}">
+                                            <input type="hidden" name="_token" value="{{ token }}">
+                                            <button class="btn btn-small btn-secondary" type="submit" name="do" value="sync" id="sync-{{ u.id }}" title="{{ 'Aktuellen Stand des Abos bei PayPal abfragen'|trans }}">{{ 'Abgleichen'|trans }}</button>
+                                            {% if u.subscriptionStatus not in ['CANCELLED', 'EXPIRED'] %}
+                                                <button class="btn btn-small btn-danger" type="submit" name="do" value="cancel" id="cancel-{{ u.id }}"
+                                                        data-confirm="{{ 'Das Abo von {player} bei PayPal kündigen? Der bezahlte Zeitraum läuft noch zu Ende.'|trans({'{player}': u.username}) }}" data-confirm-label="{{ 'Kündigen'|trans }}">{{ 'Abo kündigen'|trans }}</button>
+                                            {% endif %}
+                                        </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </section>
+{% endblock %}

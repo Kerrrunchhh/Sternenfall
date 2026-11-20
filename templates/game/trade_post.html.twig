@@ -89,7 +89,9 @@
     {% if access %}
         <section class="panel">
             <h2>{{ 'Handeln'|trans }}</h2>
-            {% if waiting is empty %}
+            {% if at_own_planet %}
+                <p class="muted">{{ 'Das ist dein Stützpunkt auf {name}: Er handelt mit den Rohstoffen dieses Planeten. Deine Flotten dort sind einfach auf deinem Planeten stationiert – beladen und entladen kannst du sie auf der Flottenseite.'|trans({'{name}': post.planet.name}) }}</p>
+            {% elseif waiting is empty %}
                 <p class="muted">{{ 'Keine deiner Flotten wartet hier. Schicke eine benannte Flotte aus Frachtern mit dem Auftrag „Handeln“ hierher (leer zum Einkaufen oder mit Rohstoffen zum Verkaufen) – sie wartet dann am Stützpunkt.'|trans }}</p>
                 <a class="btn btn-small" href="{{ path('app_fleet', {galaxy: post.galaxy, system: post.system, position: post.position, mission: 'transport'}) }}">{{ 'Flotte herschicken'|trans }}</a>
             {% else %}

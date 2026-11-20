@@ -160,6 +160,7 @@
             {% if is_granted('ROLE_MODERATOR') %}<a href="{{ path('app_admin_multis') }}" class="{{ route == 'app_admin_multis' ? 'active' }}">{{ '🛡 Multis'|trans }}</a>{% endif %}
             {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('app_admin_users') }}" class="{{ route starts with 'app_admin_user' ? 'active' }}">{{ '🛡 Benutzer'|trans }}</a>{% endif %}
             {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('app_admin_signups') }}" class="{{ route == 'app_admin_signups' ? 'active' }}">{{ '🛡 Anmeldungen'|trans }}</a>{% endif %}
+            {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('app_admin_extended') }}" class="{{ route starts with 'app_admin_extended' ? 'active' }}">{{ '🛡 Erweiterte Accounts'|trans }}</a>{% endif %}
             {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('app_admin_action_log') }}" class="{{ route == 'app_admin_action_log' ? 'active' }}">{{ '🛡 Protokoll'|trans }}</a>{% endif %}
             {% if is_granted('ROLE_ADMIN') %}<a href="{{ path('app_admin_game') }}" class="{{ route == 'app_admin_game' ? 'active' }}">{{ '🛡 Spielsteuerung'|trans }}{% if attack_ban|default(null) %} <span class="badge">⛔</span>{% endif %}</a>{% endif %}
             <a href="{{ path('app_notes') }}" class="{{ route == 'app_notes' ? 'active' }}"><span class="nav-icon" aria-hidden="true">📝</span>{{ 'Notizblock'|trans }}</a>

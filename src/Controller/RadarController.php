@@ -91,6 +91,12 @@ class RadarController extends AbstractGameController
                 throw new GameException(t('Bitte wähle eine eigene Flotte aus.'));
             }
             $speed = \App\Game\Navigation::parsePercent($request->request->getString('speed'));
+            // A raid plunders evenly or in the order the player chose (remembered for the next time).
+            if ('raid' === $mission && $hunter->getOwner()->isSameAs($this->player())) {
+                $lootOrder = FleetController::lootOrder($request);
+                $hunter->setLootOrder($lootOrder);
+                $this->player()->setLootOrder($lootOrder);
+            }
             $this->addFlash('success', $this->fleetService->hunt($hunter, $this->player(), $prey, FleetMission::from($mission), $speed));
         } catch (GameException $e) {
             $this->addFlash('error', $e->translatable());

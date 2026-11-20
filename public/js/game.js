@@ -434,11 +434,14 @@ const orbit = (() => {
     });
     initPictureToggle(document);
 
-    // Lists ordered with ↑/↓ (overview boxes in the account settings): moves the row; the form saves the order.
+    // Lists ordered with ↑/↓ (overview boxes in the account settings, plunder order): moves the row; the form saves the order.
     document.querySelectorAll('[data-reorder]').forEach((list) => {
         list.addEventListener('click', (event) => {
             const button = event.target.closest('[data-reorder-up], [data-reorder-down]');
             if (!button) return;
+            // Sorting the plunder order means: use it.
+            const ordered = list.closest('.loot-order')?.querySelector('input[name="loot_mode"][value="ordered"]');
+            if (ordered) ordered.checked = true;
             const item = button.closest('[data-reorder-item]');
             if (button.matches('[data-reorder-up]') && item.previousElementSibling) {
                 item.parentNode.insertBefore(item, item.previousElementSibling);

@@ -625,6 +625,18 @@ body.swapping main.content { opacity: .75; transition: opacity .15s; cursor: pro
 .flash-success.toast { background: #16301e; }
 .flash-error.toast { background: #3a1717; }
 .icon-button.spy-sent { opacity: .45; }
+.admin-extended-actions { display: flex; flex-wrap: wrap; gap: .3rem .5rem; align-items: center; }
+.admin-extended-actions form { margin: 0; display: inline-flex; gap: .3rem; align-items: center; }
+.admin-extended-actions .btn { margin-top: 0; }
+.loot-order { border: 1px solid var(--border); border-radius: 6px; padding: .4rem .75rem .6rem; margin: .5rem 0; }
+.loot-order legend { padding: 0 .3rem; color: var(--muted); font-size: .85rem; }
+.loot-order .inline-choice { display: block; margin: .15rem 0; font-size: .9rem; }
+.loot-order-list { list-style: none; margin: .3rem 0 0 .4rem; padding: 0; counter-reset: loot; }
+.loot-order-list li { display: flex; align-items: center; gap: .4rem; margin: .15rem 0; counter-increment: loot; }
+.loot-order-list li::before { content: counter(loot) "."; min-width: 1.3rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.loot-order-list li span { min-width: 7rem; }
+.loot-order-list .btn { margin-top: 0; padding: .1rem .45rem; }
+.loot-order-details { flex-basis: 100%; }
 .fleet-strength { display: flex; flex-wrap: wrap; gap: .3rem 1.1rem; margin: .4rem 0 .6rem; padding: .5rem .75rem; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; background: var(--bg-2); }
 .fleet-strength strong { font-variant-numeric: tabular-nums; color: var(--text); }
 .movement-table .movement-cargo { display: block; overflow: hidden; text-overflow: ellipsis; }

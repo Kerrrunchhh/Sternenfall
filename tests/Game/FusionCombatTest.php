@@ -258,6 +258,23 @@ class FusionCombatTest extends TestCase
         self::assertNull(\App\Game\FleetService::freightersInWarfleet(['pfeil' => 5, 'salvager' => 1]));
     }
 
+    public function testAnAttackPlundersInTheChosenOrder(): void
+    {
+        $planet = new Planet($this->defender, 'Speicher', 1, 1, 5, $this->now);
+        $planet->setResources(new Resources(iron: 500000, titanium: 500000, hydrogen: 3000));
+        $this->startPlanet = new Planet($this->attacker, 'Basis', 1, 2, 1, $this->now);
+        $protected = (new Economy(1.0))->protectedAmount($planet);
+        $order = [\App\Game\ResourceType::Hydrogen, \App\Game\ResourceType::Titanium, \App\Game\ResourceType::Iron, \App\Game\ResourceType::Food, \App\Game\ResourceType::Water];
+
+        $loot = $this->attack($planet, ['leviathan' => 1, 'salvager' => 2], lootOrder: $order)->getCargo();
+
+        $capacity = 2 * ShipType::Salvager->salvageCapacity();
+        $hydrogen = max(0, 3000 - $protected);
+        self::assertEqualsWithDelta($hydrogen, $loot->hydrogen, 1, 'all the hydrogen above the protection first');
+        self::assertEqualsWithDelta($capacity - $hydrogen, $loot->titanium, 1, 'then titanium fills the rest');
+        self::assertSame(0.0, $loot->iron, 'no room left for iron');
+    }
+
     public function testJointInvasionAddsUpInvasionShipsAndAPlayerWithSlotsConquers(): void
     {
         $this->attacker->setResearchLevel(ResearchType::Colonization, 0); // no room left
@@ -297,9 +314,11 @@ class FusionCombatTest extends TestCase
     }
 
     /** @param list<Fleet> $joiners */
-    private function attack(Planet $target, array $ships, bool $lucky = true, array $joiners = [], bool $deletion = false): Fleet
+    /** @param list<\App\Game\ResourceType>|null $lootOrder */
+    private function attack(Planet $target, array $ships, bool $lucky = true, array $joiners = [], bool $deletion = false, ?array $lootOrder = null): Fleet
     {
         $fleet = new Fleet($this->attacker, 'Sturm', 1, 2, 1, $ships);
+        $fleet->setLootOrder($lootOrder);
         $fleet->depart(FleetMission::Attack, $target->getGalaxy(), $target->getSystem(), $target->getPosition(), $this->now, 60);
 
         $em = $this->createStub(EntityManagerInterface::class);

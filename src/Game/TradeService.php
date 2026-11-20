@@ -249,6 +249,9 @@ final readonly class TradeService
             }
             $trader = $post->getOwner();
             $own = $actor->isSameAs($trader);
+            if ($own && null !== $post->getPlanet()) {
+                throw new GameException(t('{label} steht auf deinem eigenen Planeten – beladen und entladen kannst du sie auf der Flottenseite.', ['{label}' => $fleet->getLabel()]));
+            }
 
             // 1. Selling to the trader (the owner just stores his goods).
             $sold = [];

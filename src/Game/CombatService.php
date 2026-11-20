@@ -241,10 +241,11 @@ final readonly class CombatService
             $outcome[] = t('Die Flotte war leer – keine Beute.');
         } elseif ($raid && $result->attackerWon() && $hunter->hasShips()) {
             $free = max(0, $this->lootCapacity($hunter) - $hunter->getCargo()->total());
-            $share = $cargo->total() > 0 ? min(1.0, $free / $cargo->total()) : 0;
+            // Evenly or in the order the raider chose; each resource is taken from the preys in proportion to what they carry.
+            $wanted = LootOrder::take($cargo, $free, $hunter->getLootOrder());
             $loot = new Resources();
             foreach ($preys as $prey) {
-                $part = $prey->getCargo()->multiply($share)->floor();
+                $part = Resources::fromCallback(static fn (ResourceType $t): float => $cargo->get($t) > 0 ? floor($prey->getCargo()->get($t) * $wanted->get($t) / $cargo->get($t)) : 0.0);
                 $prey->setCargo($prey->getCargo()->subtract($part));
                 $loot = $loot->add($part);
             }
@@ -292,14 +293,16 @@ final readonly class CombatService
             $space[$i] = $fleet->hasShips() ? max(0, $this->lootCapacity($fleet) - $fleet->getCargo()->total()) : 0;
         }
         $free = array_sum($space);
+        // Each fleet gets its share of what there is (by free space) – evenly or in the order its player chose.
         $share = $available->total() > 0 ? min(1.0, $free / $available->total()) : 0;
-        $loot = $available->multiply($share)->floor();
+        $left = $available;
         $taken = new Resources();
         foreach ($attackers as $i => $fleet) {
             if ($space[$i] <= 0) {
                 continue;
             }
-            $part = $loot->multiply($space[$i] / $free)->floor();
+            $part = LootOrder::take($left, floor($available->total() * $share * $space[$i] / $free), $fleet->getLootOrder());
+            $left = $left->subtract($part);
             $where = $this->loadLoot($fleet, $part);
             $taken = $taken->add($part);
             $takenBy[] = self::lootEntry($fleet->getOwner(), $part);

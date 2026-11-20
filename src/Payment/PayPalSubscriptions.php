@@ -81,6 +81,22 @@ final class PayPalSubscriptions
         }
     }
 
+    /** Asks PayPal for the current state of the player's subscription and takes it over (admin). Returns the status. */
+    public function sync(User $user): string
+    {
+        $id = $user->getSubscriptionId();
+        if (null === $id || !$this->isConfigured()) {
+            throw new PaymentException(t('Kein Abo zum Abgleichen.'));
+        }
+        $subscription = $this->fetch($id);
+        $status = (string) ($subscription['status'] ?? 'UNKNOWN');
+        $user->setSubscription($id, $status);
+        $this->apply($user, $subscription);
+        $this->em->flush();
+
+        return $status;
+    }
+
     /** Ends the subscription at PayPal; the paid time still runs out. */
     public function cancel(User $user): void
     {

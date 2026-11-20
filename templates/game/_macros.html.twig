@@ -57,3 +57,23 @@
     {%- for type in enum_cases('App\\Game\\ResourceType') %}{% if goods.get(type) > 0 %}{% set parts = parts|merge([(type.label|trans) ~ ' ' ~ goods.get(type)|num]) %}{% endif %}{% endfor -%}
     {{- parts|join(' · ') -}}
 {% endmacro %}
+
+{# Plunder order for an attack or raid: evenly, or the resources in an order (↑/↓, game.js data-reorder). Pre-set: the player's last choice. #}
+{% macro loot_order(player) %}
+    {%- set ordered = player.lootOrder is not null -%}
+    <fieldset class="loot-order">
+        <legend>{{ 'Beute'|trans }}</legend>
+        <label class="inline-choice"><input type="radio" name="loot_mode" value="even" {{ ordered ? '' : 'checked' }}> {{ 'gleichmäßig von allen Rohstoffen'|trans }}</label>
+        <label class="inline-choice"><input type="radio" name="loot_mode" value="ordered" {{ ordered ? 'checked' }}> {{ 'in dieser Reihenfolge (zuerst oben):'|trans }}</label>
+        <ol class="loot-order-list" data-reorder>
+            {% for type in player.lootOrderOrDefault %}
+                <li data-reorder-item>
+                    <input type="hidden" name="loot_order[]" value="{{ type.value }}">
+                    <span>{{ type.label|trans }}</span>
+                    <button type="button" class="btn btn-small btn-secondary" data-reorder-up aria-label="{{ '{label} nach oben'|trans({'{label}': type.label|trans}) }}">↑</button>
+                    <button type="button" class="btn btn-small btn-secondary" data-reorder-down aria-label="{{ '{label} nach unten'|trans({'{label}': type.label|trans}) }}">↓</button>
+                </li>
+            {% endfor %}
+        </ol>
+    </fieldset>
+{% endmacro %}

@@ -88,6 +88,30 @@ final class HighscoresTest extends TestCase
         self::assertSame(3, $scores->alliances(Highscores::BY_PLANETS)[0]['planets'], 'Orden: Anna 1 + Carla 2');
     }
 
+    public function testEqualPointsGoToMorePlanetsThenToWhoWasThereFirst(): void
+    {
+        // Three newcomers with exactly the same points (no buildings).
+        $make = function (string $name, string $joined, int $planets): User {
+            $user = new User($name, new \DateTimeImmutable($joined));
+            (new \ReflectionProperty(User::class, 'id'))->setValue($user, 100 + \count($this->users));
+            for ($i = 0; $i < $planets; ++$i) {
+                new Planet($user, 'P'.$i, 9, 9, \count($this->users) * 10 + $i, $this->now);
+            }
+
+            return $this->users[] = $user;
+        };
+        $this->users = [];
+        $make('Zora', '2026-01-03', 1);
+        $make('Yann', '2026-01-02', 1);
+        $make('Xaver', '2026-01-04', 2);
+
+        $rows = $this->highscores()->players(Highscores::BY_POINTS);
+
+        self::assertSame(['Xaver', 'Yann', 'Zora'], $this->names($rows), 'more planets first, then the earlier player');
+        self::assertSame([1, 2, 3], array_column($rows, 'rank'), 'no shared ranks when planets or start differ');
+        self::assertSame(array_fill(0, 3, $rows[0]['points']), array_column($rows, 'points'));
+    }
+
     public function testResearchLeadersAreTheBestThreeOfEveryResearch(): void
     {
         foreach ([3, 7, 7, 1] as $i => $level) {

@@ -75,6 +75,7 @@
                             {% for own in own_fleets %}<option value="{{ own.id }}">{{ own.label|trans }} [{{ own.coordinates }}]</option>{% endfor %}
                         </select>
                         <label class="inline-action small">{{ 'mit'|trans }} <input type="text" name="speed" value="100" inputmode="decimal" class="short" aria-label="{{ 'Geschwindigkeit in Prozent'|trans }}"> %</label>
+                        {% if not c.can_intercept %}<details class="loot-order-details"><summary class="small">{{ 'Beute-Reihenfolge'|trans }}</summary>{{ ui.loot_order(player) }}</details>{% endif %}
                         <button class="btn btn-small btn-danger" type="submit" id="hunt-{{ f.id }}">{{ c.can_intercept ? ('Abfangen'|trans) : ('Überfallen'|trans) }}</button>
                     </form>
                 {% endif %}

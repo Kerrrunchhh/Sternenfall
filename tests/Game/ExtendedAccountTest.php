@@ -98,6 +98,35 @@ final class ExtendedAccountTest extends TestCase
         self::assertEquals(new \DateTimeImmutable('2027-01-11T12:00:00Z'), $player->getExtendedUntil());
     }
 
+    public function testAdminsCanEndAnExtendedAccountAtOnce(): void
+    {
+        $player = $this->player(7);
+        $player->extendUntil($this->now->modify('+20 days'));
+        self::assertTrue($player->isExtended($this->now));
+
+        $player->endExtended($this->now);
+
+        self::assertFalse($player->isExtended($this->now));
+        $player->endExtended($this->now->modify('+1 day'));
+        self::assertEquals($this->now, $player->getExtendedUntil(), 'ending never lengthens it');
+    }
+
+    public function testAdminsCanSyncTheSubscriptionWithPayPal(): void
+    {
+        $player = $this->player(7);
+        $player->setSubscription('I-ABC123456', 'ACTIVE');
+        $paypal = $this->paypal([
+            $this->token(),
+            new MockResponse(json_encode(['id' => 'I-ABC123456', 'status' => 'CANCELLED', 'plan_id' => 'P-PLAN', 'custom_id' => '7'])),
+        ]);
+
+        self::assertSame('CANCELLED', $paypal->sync($player));
+        self::assertSame('CANCELLED', $player->getSubscriptionStatus());
+
+        $this->expectException(PaymentException::class);
+        $this->paypal([])->sync($this->player(8));
+    }
+
     public function testNotOfferedWithoutCredentials(): void
     {
         $paypal = new PayPalSubscriptions(new MockHttpClient(), $this->createStub(EntityManagerInterface::class), $this->createStub(UserRepository::class), new MockClock($this->now), new NullLogger(), 'https://api-m.sandbox.paypal.com', '', '', '', '');

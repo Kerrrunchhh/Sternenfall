@@ -66,8 +66,9 @@ class FleetController extends AbstractGameController
                 'fleet' => $fleet,
                 'at' => $at,
                 'base' => null !== $at && $at->getOwner()->getId() === $player->getId() ? $at : null,
-                // Waiting at a trade post: "Handeln" opens the post's page instead of flying.
-                'post' => $fleet->isIdle() ? $tradePosts->findAt($fleet->getGalaxy(), $fleet->getSystem(), $fleet->getPosition()) : null,
+                // Waiting at a trade post: "Handeln" opens the post's page instead of flying – not at the
+                // player's own post on his own planet, where the fleet is simply stationed at home.
+                'post' => $fleet->isIdle() && !(null !== $at && $at->getOwner()->isSameAs($player)) ? $tradePosts->findAt($fleet->getGalaxy(), $fleet->getSystem(), $fleet->getPosition()) : null,
                 'capacity' => array_sum(array_map(static fn (array $s): int => $s['type']->cargo() * $s['count'], $fleet->getShipList())),
             ];
         }
@@ -434,6 +435,15 @@ class FleetController extends AbstractGameController
         }
         $member = \in_array($action, ['release_member', 'revoke_member'], true) ? $users->find($form->getInt('member')) : null;
 
+        // An attack plunders evenly or in the order the player chose; the order is remembered for the next time.
+        if ('send' === $action && FleetMission::Attack === $mission) {
+            $lootOrder = self::lootOrder($request);
+            foreach ($selected as $fleet) {
+                $fleet->setLootOrder($lootOrder);
+            }
+            $player->setLootOrder($lootOrder);
+        }
+
         // Several fleets attacking or transporting together (joint attack, convoy with escort) arrive together.
         $lead = FleetMission::Attack === $mission ? $this->leadFleet($form->getString('join'), $fleets) : null;
         if ('send' === $action && \in_array($mission, FleetService::GROUP_MISSIONS, true) && (\count($selected) > 1 || null !== $lead)) {
@@ -534,6 +544,12 @@ class FleetController extends AbstractGameController
     private function leadFleet(string $id, FleetRepository $fleets): ?Fleet
     {
         return ctype_digit($id) ? $fleets->find((int) $id) : null;
+    }
+
+    /** @return list<\App\Game\ResourceType>|null the plunder order from the form ("in dieser Reihenfolge"), null for evenly */
+    public static function lootOrder(Request $request): ?array
+    {
+        return 'ordered' === $request->request->getString('loot_mode') ? \App\Game\LootOrder::parse($request->request->all('loot_order')) : null;
     }
 
     /**

@@ -29,6 +29,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?int $id = null;
 
+    /** @var list<string>|null resources in the plunder order last used (pre-set in the fleet form); null: evenly */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $lootOrder = null;
+
     #[ORM\Column(length: 30, unique: true)]
     #[Assert\NotBlank]
     #[Assert\Length(min: 3, max: 30)]
@@ -970,6 +974,32 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         if (null === $this->extendedUntil || $until > $this->extendedUntil) {
             $this->extendedUntil = $until;
         }
+    }
+
+    /** Ends the extended account at once (admin); a running subscription stays as it is. */
+    public function endExtended(\DateTimeImmutable $now): void
+    {
+        if (null !== $this->extendedUntil && $this->extendedUntil > $now) {
+            $this->extendedUntil = $now;
+        }
+    }
+
+    /** @return list<\App\Game\ResourceType>|null the plunder order last used for an attack or raid; null: evenly */
+    public function getLootOrder(): ?array
+    {
+        return null === $this->lootOrder ? null : \App\Game\LootOrder::parse($this->lootOrder);
+    }
+
+    /** @return list<\App\Game\ResourceType> the order to show in the form (all resources) */
+    public function getLootOrderOrDefault(): array
+    {
+        return $this->getLootOrder() ?? \App\Game\ResourceType::cases();
+    }
+
+    /** @param list<\App\Game\ResourceType>|null $order */
+    public function setLootOrder(?array $order): void
+    {
+        $this->lootOrder = null === $order ? null : array_map(static fn (\App\Game\ResourceType $t): string => $t->value, $order);
     }
 
     public function getSubscriptionId(): ?string

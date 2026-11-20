@@ -86,6 +86,10 @@ class Fleet
     #[ORM\Column(type: Types::SMALLINT, nullable: true)]
     private ?int $homePosition = null;
 
+    /** @var list<string>|null resources in the order an attack or raid plunders them; null: evenly */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $lootOrder = null;
+
     /** @var array<string, float>|null for trade missions: goods => amount to buy */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $tradeOrder = null;
@@ -484,6 +488,18 @@ class Fleet
     public function getTradeOrder(): array
     {
         return $this->tradeOrder ?? [];
+    }
+
+    /** @return list<ResourceType>|null the order this fleet plunders in; null: evenly */
+    public function getLootOrder(): ?array
+    {
+        return null === $this->lootOrder ? null : \App\Game\LootOrder::parse($this->lootOrder);
+    }
+
+    /** @param list<ResourceType>|null $order */
+    public function setLootOrder(?array $order): void
+    {
+        $this->lootOrder = null === $order ? null : array_map(static fn (ResourceType $t): string => $t->value, $order);
     }
 
     /** In a pickup order: "keep:iron" => 5000 loads all iron but 5000 ("alles bis auf"). */

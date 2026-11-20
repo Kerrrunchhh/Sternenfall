@@ -287,6 +287,7 @@
                         </select>
                     </label>
                     <p class="muted small">{{ 'Wählst du mehrere Flotten aus – auch solche, die Allianzmitglieder für dich freigegeben haben –, greifen sie als Verband an und kommen gemeinsam an (mit der langsamsten). Weitere Flotten kannst du einem laufenden Angriff, den du führst, dazuschicken, wenn sie rechtzeitig ankommen. Die Beute wird nach freiem Frachtraum geteilt; die Invasionsschiffe aller Flotten zählen zusammen. Mindestregel: Die Flotten jedes Spielers im Angriff müssen zusammen mindestens 1 % seiner gesamten Flottenstärke oder 10 % seiner Schiffe einer Klasse sein.'|trans }}</p>
+                    {{ ui.loot_order(player) }}
                 </div>
                 <div data-panel="send:pickup">
                     <h3>{{ 'Abholen <span class="muted small">– je Flotte</span>'|trans|raw }}</h3>

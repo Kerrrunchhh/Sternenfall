@@ -37,8 +37,10 @@ class TradePostController extends AbstractGameController
         $player = $this->player();
         $own = $post->getOwner()->isSameAs($player);
 
-        // The player's fleets waiting here can trade.
-        $waiting = array_values(array_filter(
+        // The player's fleets waiting here can trade – except at his own post on his own planet:
+        // there they are simply stationed at home (the post trades with the planet's resources).
+        $atOwnPlanet = $own && null !== $post->getPlanet();
+        $waiting = $atOwnPlanet ? [] : array_values(array_filter(
             $fleets->findIdleAt($post->getGalaxy(), $post->getSystem(), $post->getPosition()),
             static fn (Fleet $fleet): bool => $fleet->getOwner()->isSameAs($player),
         ));
@@ -56,6 +58,7 @@ class TradePostController extends AbstractGameController
             'goods' => TradeDeal::goods(),
             'resources' => ResourceType::cases(),
             'waiting' => $waiting,
+            'at_own_planet' => $atOwnPlanet,
             'visitors' => $visitors,
             'can_send_away' => $own && $post->isActive() && LifeForm::Trader === $player->getLifeForm(),
             'life_forms' => LifeForm::cases(),
@@ -121,6 +124,9 @@ class TradePostController extends AbstractGameController
         try {
             if (!$home instanceof Planet) {
                 throw new GameException(t('Du hast keinen Planeten, zu dem die Flotte zurückfliegen kann.'));
+            }
+            if ($fleet->isAt($home->getGalaxy(), $home->getSystem(), $home->getPosition())) {
+                throw new GameException(t('{label} steht schon auf {name}.', ['{label}' => $fleet->getLabel(), '{name}' => $home->getName()]));
             }
             // With cargo the way home is a transport (visible); it stays at the planet it came from.
             $fleet->rememberHome($home->getGalaxy(), $home->getSystem(), $home->getPosition());

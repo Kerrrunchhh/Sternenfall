@@ -671,6 +671,35 @@ class GameFlowTest extends WebTestCase
         self::assertResponseRedirects();
     }
 
+    public function testAdminsSeeAndManageExtendedAccounts(): void
+    {
+        $this->register('Spenderin');
+        $this->client->request('GET', '/logout');
+        $this->register('Chefin');
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $this->user('Chefin')->setRoles(['ROLE_ADMIN']);
+        $em->flush();
+        $this->client->loginUser($this->user('Chefin'));
+
+        $crawler = $this->client->request('GET', '/admin/erweitert');
+        self::assertResponseIsSuccessful();
+        $this->client->submit($crawler->filter('#extended-grant')->form(['username' => 'Spenderin', 'days' => '10']));
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.flash-success', 'Spenderin');
+        $player = $this->user('Spenderin');
+        self::assertTrue($player->isExtended(new \DateTimeImmutable('+9 days')));
+
+        $crawler = $this->client->request('GET', '/admin/erweitert');
+        self::assertSelectorExists('#account-'.$player->getId());
+        $this->client->submit($crawler->filter('#end-'.$player->getId())->form());
+        self::assertFalse($this->user('Spenderin')->isExtended(new \DateTimeImmutable('+1 minute')));
+
+        // Players don't get in.
+        $this->client->loginUser($this->user('Spenderin'));
+        $this->client->request('GET', '/admin/erweitert');
+        self::assertResponseStatusCodeSame(403);
+    }
+
     public function testThePlayerChoosesWhichSectionsTheOverviewShows(): void
     {
         $this->register('Ordnerin');
