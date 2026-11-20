@@ -134,6 +134,22 @@ form .btn-small[type=submit] { margin-top: 0; }
 .res-population .res-amount { color: var(--text); }
 .res-credits .res-amount { color: var(--accent-2); }
 .res-negative, .negative { color: var(--bad); }
+/* Tablets and small laptops: all values side by side in one row (they used to wrap one below the other). */
+@media (min-width: 761px) and (max-width: 1200px) {
+    .topbar { gap: .75rem; padding: .5rem .75rem; }
+    .logo-image { height: 36px; }
+    .resources { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .4rem; }
+    .res { min-width: 0; }
+    .res-amount { font-size: .9rem; }
+    .res-label { font-size: .62rem; letter-spacing: .02em; }
+    .res-label, .res-amount, .res-rate { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+/* Narrow tablets: the values get a full-width row of their own below logo and clock (still side by side). */
+@media (min-width: 761px) and (max-width: 900px) {
+    .topbar { flex-wrap: wrap; }
+    .resources { order: 3; flex: 1 1 100%; }
+    .server-clock { margin-left: auto; }
+}
 .table-head td { color: var(--muted); font-size: .8rem; }
 .at { font-variant-numeric: tabular-nums; }
 .rename { margin: -.4rem 0 1rem; }
