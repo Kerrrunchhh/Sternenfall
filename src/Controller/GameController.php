@@ -35,10 +35,11 @@ class GameController extends AbstractGameController
         $planet = $this->currentPlanet();
         $player = $this->player();
 
-        // Own fleets waiting at a trade post (shown at the very top, they want to trade).
+        // Own fleets waiting at someone else's trade post (shown at the very top, they want to trade);
+        // at the own post they are simply at home on its planet.
         $atTradePosts = [];
         foreach ($fleets->findByOwner($player) as $fleet) {
-            if ($fleet->isIdle() && null !== $post = $tradePosts->findAt($fleet->getGalaxy(), $fleet->getSystem(), $fleet->getPosition())) {
+            if ($fleet->isIdle() && null !== ($post = $tradePosts->findAt($fleet->getGalaxy(), $fleet->getSystem(), $fleet->getPosition())) && !$post->getOwner()->isSameAs($player)) {
                 $atTradePosts[] = ['fleet' => $fleet, 'post' => $post];
             }
         }

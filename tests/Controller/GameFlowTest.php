@@ -466,6 +466,34 @@ class GameFlowTest extends WebTestCase
         self::assertSame('FE', $byPosition[$slots['Gegner']]['alliance']);
     }
 
+    public function testOnlyFleetsAtSomebodyElsesTradePostAreShownAsWaitingToTrade(): void
+    {
+        $this->register('Kauffrau');
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $me = $this->user('Kauffrau');
+        $now = new \DateTimeImmutable();
+        $colony = new Planet($me, 'Basar', 9, 9, 9, $now);
+        $em->persist($colony);
+        $em->persist(\App\Entity\TradePost::onPlanet($colony, 'Dönerladen', $now));
+        $rival = new User('Konkurrenz', $now);
+        $rival->setEmail('konkurrenz@example.com');
+        $rival->setPassword('x');
+        $em->persist($rival);
+        $market = new Planet($rival, 'Markt', 9, 9, 10, $now);
+        $em->persist($market);
+        $em->persist(\App\Entity\TradePost::onPlanet($market, 'Fremdbörse', $now));
+        // One fleet at the own post, one at the rival's.
+        $em->persist(new \App\Entity\Fleet($me, 'Zuhause', 9, 9, 9, ['freighter' => 1]));
+        $em->persist(new \App\Entity\Fleet($me, 'Einkauf', 9, 9, 10, ['freighter' => 1]));
+        $em->flush();
+
+        $this->client->request('GET', '/overview');
+
+        self::assertSelectorCount(1, '.trade-waiting-row');
+        self::assertSelectorTextContains('.trade-waiting', 'Fremdbörse');
+        self::assertSelectorTextNotContains('.trade-waiting', 'Dönerladen');
+    }
+
     public function testNewPlayersSeeTheWelcomeNewsUntilTheyMarkItRead(): void
     {
         $em = static::getContainer()->get(EntityManagerInterface::class);
