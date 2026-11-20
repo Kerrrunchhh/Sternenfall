@@ -15,7 +15,7 @@ class AdminDeactivationTest extends WebTestCase
 
     protected function setUp(): void
     {
-        $this->client = static::createClient();
+        $this->client = static::createClient([], ['HTTP_ACCEPT_LANGUAGE' => 'de']);
         $this->client->setServerParameter('HTTP_ORIGIN', 'http://localhost');
 
         $em = static::getContainer()->get(EntityManagerInterface::class);
@@ -97,15 +97,37 @@ class AdminDeactivationTest extends WebTestCase
         self::assertResponseRedirects();
     }
 
+    /** Signs up, confirms the e-mail address (that creates the home world) and logs in – as a new player does. */
     private function register(string $username): void
+    {
+        $this->signUp($username);
+        $this->confirmAndLogIn($username);
+    }
+
+    /** Only the sign-up form; playing starts after the confirmation (confirmAndLogIn). */
+    private function signUp(string $username, array $extra = []): void
     {
         $this->client->request('GET', '/register');
         $this->client->submitForm('Kolonie gründen', [
             'registration_form[username]' => $username,
+            'registration_form[email]' => strtolower($username).'@example.com',
             'registration_form[plainPassword][first]' => 'geheim12345',
             'registration_form[plainPassword][second]' => 'geheim12345',
             'registration_form[agreeTerms]' => '1',
-        ]);
+        ] + $extra);
+    }
+
+    /** Opens the link from the confirmation mail, then logs in with the sign-up password. */
+    private function confirmAndLogIn(string $username): void
+    {
+        $user = static::getContainer()->get(\App\Repository\UserRepository::class)->findOneBy(['username' => $username]);
+        $link = static::getContainer()->get(\Symfony\Component\HttpFoundation\UriSigner::class)->sign(
+            static::getContainer()->get('router')->generate('app_verify_email', ['id' => $user->getId(), 'email' => $user->getEmail()], \Symfony\Component\Routing\Generator\UrlGeneratorInterface::ABSOLUTE_URL),
+            new \DateInterval('P2D'),
+        );
+        $this->client->request('GET', $link);
+        $this->client->request('GET', '/login');
+        $this->client->submitForm('Anmelden', ['_username' => $username, '_password' => 'geheim12345']);
     }
 
     private function user(string $username): User

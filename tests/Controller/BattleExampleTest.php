@@ -9,7 +9,7 @@ class BattleExampleTest extends WebTestCase
 {
     public function testAnybodyCanWatchTheSampleBattle(): void
     {
-        $client = static::createClient();
+        $client = static::createClient([], ['HTTP_ACCEPT_LANGUAGE' => 'de']);
 
         $crawler = $client->request('GET', '/kampfbericht/beispiel');
 
@@ -24,7 +24,7 @@ class BattleExampleTest extends WebTestCase
 
     public function testTheSameAttackFleetDoesBetterAgainstAnAttackFleetThanAgainstADefense(): void
     {
-        $client = static::createClient();
+        $client = static::createClient([], ['HTTP_ACCEPT_LANGUAGE' => 'de']);
         $survivors = [];
         foreach (['angriff', 'verteidigung'] as $example) {
             $crawler = $client->request('GET', '/kampfbericht/beispiel/'.$example);
@@ -38,7 +38,7 @@ class BattleExampleTest extends WebTestCase
 
     public function testTheJointAttackExampleHasSeveralPlayersOnEachSide(): void
     {
-        $client = static::createClient();
+        $client = static::createClient([], ['HTTP_ACCEPT_LANGUAGE' => 'de']);
 
         $crawler = $client->request('GET', '/kampfbericht/beispiel/verband');
 
