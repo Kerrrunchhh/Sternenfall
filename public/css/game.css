@@ -678,6 +678,9 @@ body.swapping main.content { opacity: .75; transition: opacity .15s; cursor: pro
 .highscore-table td:first-child { width: 3.5rem; padding-right: .9rem; }
 .highscore-table tr.highscore-own td { background: rgba(255, 183, 77, .12); }
 .highscore-table tr.highscore-own td:first-child { box-shadow: inset 3px 0 0 var(--accent-2); }
+.rank-change { font-size: .75rem; font-weight: 600; margin-left: .25rem; white-space: nowrap; }
+.rank-up { color: var(--ok); }
+.rank-down { color: var(--bad); }
 .sort-link { color: var(--muted); text-decoration: none; }
 .sort-link.active { color: var(--accent); }
 

@@ -63,6 +63,7 @@ final readonly class FleetService
         private ?TradeGuild $tradeGuild = null,
         private ?Awards $awards = null,
         private ?ActionLog $actionLog = null,
+        private ?RankHistory $rankHistory = null,
     ) {
     }
 
@@ -1226,6 +1227,8 @@ final readonly class FleetService
             $this->bounties?->settleDue();
             // Once a day: ships and resources of the whole game for the status page history.
             $this->stats?->recordDailySnapshot();
+            // Once an hour: everybody's highscore values, for the changes of place in 24 hours.
+            $this->rankHistory?->recordHourly();
             // Once a week, month, year: the arrows for the most combat experience.
             $this->awards?->awardDue();
             $this->transportRequests?->reopenOrphans();

@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Game\Highscores;
 use App\Game\LifeForm;
+use App\Game\RankHistory;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -14,7 +15,7 @@ class HighscoreController extends AbstractGameController
     private const int TOP = 100;
 
     #[Route('/highscores', name: 'app_highscores', methods: ['GET'])]
-    public function index(Request $request, Highscores $highscores, \App\Game\GameStats $stats): Response
+    public function index(Request $request, Highscores $highscores, \App\Game\GameStats $stats, RankHistory $history): Response
     {
         $planet = $this->currentPlanet();
         $player = $this->player();
@@ -23,7 +24,9 @@ class HighscoreController extends AbstractGameController
         $sort = \in_array($query->getString('sort'), Highscores::SORTS, true) ? $query->getString('sort') : Highscores::BY_POINTS;
         $lifeForm = LifeForm::tryFrom($query->getString('lifeform'));
 
-        $rows = 'alliances' === $view ? $highscores->alliances($sort, $lifeForm) : $highscores->players($sort, $lifeForm);
+        // Players: green and red arrows for places won or lost in the last 24 hours.
+        $history->recordHourly();
+        $rows = 'alliances' === $view ? $highscores->alliances($sort, $lifeForm) : $history->withChanges($highscores->players($sort, $lifeForm), $sort, $lifeForm);
         // Research tab: the best three of every research.
         $research = 'research' === $view ? $highscores->researchLeaders($lifeForm) : [];
         // The own row (or own alliance) is always shown, even below the top 100.

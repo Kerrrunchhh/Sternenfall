@@ -95,6 +95,7 @@
                             {%- if p.constructing %}<span title="{{ 'Gebäude im Bau'|trans }}">🏗</span>{% endif -%}
                             {%- if p.shipyardQueue is not empty %}<span title="{{ 'Werft arbeitet'|trans }}">🚀</span>{% endif -%}
                             {%- if p.defenseQueue is not empty %}<span title="{{ 'Verteidigung im Bau'|trans }}">🛡</span>{% endif -%}
+                            {%- if player.isResearchingOn(p) %}<span title="{{ 'Forschung läuft: {research}'|trans({'{research}': player.researchType.label|trans}) }}">🔬</span>{% endif -%}
                             {%- if p.integrating(now) %}<span title="{{ 'Invadiert, Übergang läuft'|trans }}">⏳</span>{% endif -%}
                             {%- if p.beingAbandoned %}<span title="{{ 'Wird am {abandonAt} verlassen'|trans({'{abandonAt}': p.abandonAt|date('d.m. H:i')}) }}">🏳</span>{% endif -%}
                         </span>

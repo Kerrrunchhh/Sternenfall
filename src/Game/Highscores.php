@@ -29,7 +29,7 @@ final readonly class Highscores
     /** @return list<array{rank: int, user: User, points: int, experience: float, credits: float, planets: int}> */
     public function players(string $sort, ?LifeForm $lifeForm = null): array
     {
-        return $this->rank($this->playerRows($lifeForm), $sort);
+        return self::rank($this->playerRows($lifeForm), $sort);
     }
 
     /**
@@ -43,7 +43,7 @@ final readonly class Highscores
         $rows = $this->playerRows();
         $standing = [];
         foreach (self::SORTS as $sort) {
-            foreach ($this->rank($rows, $sort) as $row) {
+            foreach (self::rank($rows, $sort) as $row) {
                 if ($row['user']->isSameAs($player)) {
                     $standing[$sort] = ['value' => (float) $row[$sort], 'rank' => $row['rank'], 'of' => \count($rows)];
                     continue 2;
@@ -54,6 +54,21 @@ final readonly class Highscores
         }
 
         return $standing;
+    }
+
+    /**
+     * Every ranked player's values, for the hourly snapshot (RankHistory).
+     *
+     * @return array<int, array{name: string, lifeForm: string, since: int, points: int, research: int, experience: float, credits: float, planets: int}> user id => values
+     */
+    public function values(): array
+    {
+        $values = [];
+        foreach ($this->playerRows() as $row) {
+            $values[(int) $row['user']->getId()] = ['name' => $row['name'], 'lifeForm' => $row['user']->getLifeForm()->value, 'since' => $row['since'], 'points' => $row['points'], 'research' => $row['research'], 'experience' => $row['experience'], 'credits' => $row['credits'], 'planets' => $row['planets']];
+        }
+
+        return $values;
     }
 
     /** @return list<array{user: User, name: string, points: int, research: int, experience: float, credits: float, planets: int, since: int}> */
@@ -88,7 +103,7 @@ final readonly class Highscores
             ++$rows[$id]['members'];
         }
 
-        return $this->rank(array_values($rows), $sort);
+        return self::rank(array_values($rows), $sort);
     }
 
     /**
@@ -146,7 +161,7 @@ final readonly class Highscores
      *
      * @return list<T&array{rank: int}>
      */
-    private function rank(array $rows, string $sort): array
+    public static function rank(array $rows, string $sort): array
     {
         $keys = [$sort, ...array_values(array_diff(self::TIE_BREAKERS, [$sort]))];
         // Descending values; the earlier start counts as more (hence negated).
