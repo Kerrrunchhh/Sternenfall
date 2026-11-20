@@ -912,7 +912,7 @@
 "Handelsflotte hinschicken (Transport oder Stationieren) – sie wartet dort zum Handeln": "Send a trade fleet there (transport or station) – it waits there for trading"
 "Handelsgilde": "Trade Guild"
 "Handelsnetz": "Trade network"
-"Handelsschiffe fliegen zu einem deiner Planeten, laden dort die angegebene Menge Rohstoffe ein (je Flotte, höchstens was im Lager liegt und in den Frachtraum passt) und bringen sie ins Lager des Planeten, von dem sie gestartet sind. Mitgebrachte Ladung liefern sie vorher dort ab.": "Trade ships fly to one of your planets, load the given amount of resources there (per fleet, at most what is in storage and fits into the cargo space) and bring it into the storage of the planet they started from. Cargo they brought along they deliver there first."
+"Handelsschiffe fliegen zu einem deiner Planeten, laden dort die angegebene Menge Rohstoffe ein (je Flotte, höchstens was im Lager liegt und in den Frachtraum passt) und bringen sie ins Lager des Planeten, von dem sie gestartet sind. Ladung, die eine Flotte schon an Bord hat, liefert sie vorher dort ab.": "Trade ships fly to one of your planets, load the given amount of resources there (per fleet, at most what is in storage and fits into the cargo space) and bring it into the storage of the planet they started from. Cargo a fleet already has on board is delivered there first."
 "Handelsstützpunkt": "Trade post"
 "Handelsstützpunkt eröffnet. Lege Preise fest und beliefere ihn mit einer Flotte.": "Trade post opened. Set prices and supply it with a fleet."
 "Handelsstützpunkt geschlossen.": "Trade post closed."
@@ -3268,3 +3268,4 @@
 "Verbündet (Bündnis oder Nichtangriffspakt)": "Allied (bond or non-aggression pact)"
 "Neutral": "Neutral"
 "\nDie Ladung bleibt an Bord.": "\nThe cargo stays on board."
+"Beim Abholen nimmt die Flotte keine Ladung mit. Rohstoffe hinbringen geht mit „Transport“.": "A pickup takes no cargo along. To bring resources there, use “Transport”."

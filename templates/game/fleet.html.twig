@@ -48,11 +48,14 @@
     </div>
     <p class="flight-preview small" data-flight-preview aria-live="polite"></p>
     {% if with_cargo %}
+        {# Not for "Rohstoffe abholen": that flight only brings resources back. #}
+        <div data-panel="send" data-panel-except="send:pickup">
         <h3>{{ 'Ladung'|trans }} <small class="muted">{{ 'Tipp: 25k = 25.000, 1,5m = 1.500.000, 2g = 2 Mrd.'|trans }}</small></h3>
         <div class="coords">
             {% for type in enum_cases('App\\Game\\ResourceType') %}
                 <label>{{ type.label|trans }} <input type="number" name="cargo[{{ type.value }}]" min="0" value="0" data-cargo-input></label>
             {% endfor %}
+        </div>
         </div>
         <p class="small cargo-room-info" data-cargo-room aria-live="polite"></p>
     {% endif %}

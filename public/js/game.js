@@ -766,7 +766,8 @@ const orbit = (() => {
                 setEnabled(panel, show);
                 // Parts inside a panel that belong to only some of its actions.
                 panel.querySelectorAll('[data-panel]').forEach((part) => {
-                    const own = matches(part, value);
+                    // data-panel-except: not for these actions (e.g. no cargo to take along on a pickup).
+                    const own = matches(part, value) && !(part.dataset.panelExcept || '').split(' ').includes(value);
                     part.hidden = !own;
                     if (show) {
                         setEnabled(part, own);

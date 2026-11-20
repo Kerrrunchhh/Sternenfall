@@ -1449,7 +1449,17 @@ final readonly class FleetService
         if (null !== $post && (null === $target || !$target->getOwner()->isSameAs($owner)) && \in_array($mission, [FleetMission::Transport, FleetMission::TransportStation, FleetMission::Station], true)) {
             $mission = FleetMission::Trade;
         }
-        $order = array_filter(array_map(static fn (mixed $v): float => max(0, floor((float) $v)), array_intersect_key($order, array_flip(TradeDeal::goods()))));
+        // Amounts of goods; a pickup also keeps its "alles bis auf" entries (keep:<resource>, 0 = everything).
+        $clean = [];
+        foreach ($order as $key => $value) {
+            $value = max(0, floor((float) $value));
+            if (\in_array($key, TradeDeal::goods(), true) && $value > 0) {
+                $clean[$key] = $value;
+            } elseif (FleetMission::Pickup === $mission && str_starts_with((string) $key, Fleet::KEEP_PREFIX) && null !== ResourceType::tryFrom(substr((string) $key, \strlen(Fleet::KEEP_PREFIX)))) {
+                $clean[$key] = $value;
+            }
+        }
+        $order = $clean;
         $this->validateMission($mission, $owner, $target, $ships, $fleet->isNamed(), $post, $order);
         $this->assertNotNewbie($mission, $fleet, $target);
         // Pushing protection: resources for another player without payment are limited
@@ -1463,6 +1473,10 @@ final readonly class FleetService
             if ($cargo->get($type) < 0) {
                 throw new GameException(t('Die Ladung darf nicht negativ sein.'));
             }
+        }
+        // A pickup only brings resources back; taking some along is a transport.
+        if (FleetMission::Pickup === $mission && !$cargo->isEmpty()) {
+            throw new GameException(t('Beim Abholen nimmt die Flotte keine Ladung mit. Rohstoffe hinbringen geht mit „Transport“.'));
         }
         if (null === $base && !$cargo->isEmpty()) {
             throw new GameException(t('Ladung kann nur an einem eigenen Planeten aufgenommen werden.'));
@@ -1798,6 +1812,9 @@ final readonly class FleetService
                     $this->inbox->send($player, t('Kolonisierung von {where} gescheitert', ['{where}' => $where]), t('Auf dem herrenlosen Planeten stehen Schiffe oder Verteidigung. {name} kehrt zurück – greif ihn zuerst an.', ['{name}' => $name]));
                     break;
                 }
+                // Colonization research finished before the ship arrived: it counts, even if the player
+                // hasn't clicked since (finished research is only entered with his next update).
+                $this->completeColonizationDueBy($player, $fleet->getArriveAt() ?? $this->now());
                 if (Economy::ownedSlots($player) + ($target?->getFusionSize() ?? 1) > $this->economy->colonySlots($player)) {
                     $this->inbox->send($player, t('Kolonisierung von {where} gescheitert', ['{where}' => $where]), t('Deine Kolonisationstechnik erlaubt nur {value} Planetenplätze. {name} kehrt zurück.', ['{value}' => $this->economy->colonySlots($player), '{name}' => $name]));
                     break;
@@ -2194,6 +2211,16 @@ final readonly class FleetService
             $operation();
         } finally {
             $lock->release();
+        }
+    }
+
+    /** Enters a colonization research that was done by $at (updating one of the player's planets does that). */
+    private function completeColonizationDueBy(User $player, \DateTimeImmutable $at): void
+    {
+        $finishesAt = $player->getResearchFinishesAt();
+        $any = $player->getPlanets()->first();
+        if (ResearchType::Colonization === $player->getResearchType() && null !== $finishesAt && $finishesAt <= $at && $any instanceof Planet) {
+            $this->planets->transaction($any, static function (): void {});
         }
     }
 

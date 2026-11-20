@@ -106,7 +106,7 @@ enum FleetMission: string
             self::Fuse => 'Schicke den Fusionator zu dem Planeten, der angeschweißt werden soll: Er verschweißt ihn mit deinem Planeten direkt darüber und wird dabei verbraucht.',
             self::Gather => 'Schiffe fliegen zu einer Flotte und schließen sich ihr an.',
             self::Supply => 'Bringt die Ladung der Flotte in das Lager deines Handelsstützpunkts.',
-            self::Pickup => 'Handelsschiffe fliegen zu einem deiner Planeten, laden dort die angegebene Menge Rohstoffe ein (je Flotte, höchstens was im Lager liegt und in den Frachtraum passt) und bringen sie ins Lager des Planeten, von dem sie gestartet sind. Mitgebrachte Ladung liefern sie vorher dort ab.',
+            self::Pickup => 'Handelsschiffe fliegen zu einem deiner Planeten, laden dort die angegebene Menge Rohstoffe ein (je Flotte, höchstens was im Lager liegt und in den Frachtraum passt) und bringen sie ins Lager des Planeten, von dem sie gestartet sind. Ladung, die eine Flotte schon an Bord hat, liefert sie vorher dort ab.',
             self::Attack => 'Greift einen fremden Planeten an. Frachter fliegen nicht mit – die Beute tragen Bergungsschiffe. Gewinnst du, plünderst du die ungeschützten Rohstoffe, so weit die Bergungsschiffe sie fassen; Bomber töten ungeschützte Einwohner, Invasionsschiffe übernehmen den Planeten mit einer Chance je nach Einwohnerzahl. Durchbricht die Flotte den Schild einer Fusion, wird deren unterster Planet abgesprengt.',
             self::Salvage => 'Bergungsschiffe sammeln ein Trümmerfeld ein.',
             self::Intercept => 'Fängt eine sichtbare angreifende Flotte kurz vor ihrem Ziel ab.',

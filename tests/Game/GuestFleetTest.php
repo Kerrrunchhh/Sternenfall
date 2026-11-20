@@ -114,6 +114,33 @@ final class GuestFleetTest extends TestCase
         self::assertSame($before + 3000.0, $home->getResources()->iron);
     }
 
+    public function testAPickupTakesNoCargoAlong(): void
+    {
+        $this->planets['1:10:1']->setResources(new Resources(iron: 50000, hydrogen: 100000, food: 100000, water: 100000));
+        $this->place(new Planet($this->guest, 'Kolonie', 1, 12, 4, $this->now))->setResources(new Resources(titanium: 9000));
+        $fleet = new Fleet($this->guest, 'Abholer', 1, 10, 1, ['freighter' => 2]);
+
+        $this->expectException(GameException::class);
+        $this->expectExceptionMessage('Beim Abholen nimmt die Flotte keine Ladung mit');
+        $this->service()->sendFleet($fleet, $this->guest, 1, 12, 4, FleetMission::Pickup, new Resources(iron: 1000), ['titanium' => 5000]);
+    }
+
+    public function testAPickupOfAllButSomeLeavesThatMuchAndBringsTheRest(): void
+    {
+        $this->planets['1:10:1']->setResources(new Resources(hydrogen: 100000, food: 100000, water: 100000));
+        $colony = $this->place(new Planet($this->guest, 'Kolonie', 1, 12, 4, $this->now));
+        $colony->setResources(new Resources(hydrogen: 19000));
+        $fleet = new Fleet($this->guest, 'Abholer', 1, 10, 1, ['large_freighter' => 2]);
+
+        // "alles bis auf 10.000" Wasserstoff, as the form sends it.
+        $this->service()->sendFleet($fleet, $this->guest, 1, 12, 4, FleetMission::Pickup, new Resources(), [Fleet::KEEP_PREFIX.'hydrogen' => 10000.0]);
+        self::assertTrue($fleet->isMoving());
+
+        (new \ReflectionMethod(FleetService::class, 'arrive'))->invoke($this->service(), $fleet);
+        self::assertSame(10000.0, $colony->getResources()->hydrogen, '10.000 stay');
+        self::assertSame(9000.0, $fleet->getCargo()->hydrogen, 'the rest is on board');
+    }
+
     public function testAnAbandonedPlanetBecomesOwnerlessWithItsStorage(): void
     {
         $colony = $this->place(new Planet($this->guest, 'Kolonie', 1, 30, 2, $this->now));
@@ -305,6 +332,24 @@ final class GuestFleetTest extends TestCase
 
         self::assertTrue($ship->isReturning(), 'no slot free on arrival: back home');
         self::assertCount(1, $this->guest->getPlanets());
+    }
+
+    public function testColonizationResearchDoneBeforeTheShipArrivesCounts(): void
+    {
+        $nobody = $this->user('Herrenlos', 99);
+        $nobody->markSystem();
+        $wreck = $this->place(new Planet($nobody, 'Verlassen', 1, 33, 5, $this->now));
+        // The research for a second slot ended two hours ago; the player hasn't clicked since.
+        $this->guest->startResearch(\App\Game\ResearchType::Colonization, 1, $this->now->modify('-2 hours'), $this->planets['1:10:1'], 3600);
+        self::assertSame(0, $this->guest->getResearchLevel(\App\Game\ResearchType::Colonization), 'not entered yet');
+
+        // The colony ship started before the research was done and arrived an hour after it.
+        $ship = new Fleet($this->guest, null, 1, 10, 1, ['colony_ship' => 1]);
+        $ship->depart(FleetMission::Colonize, 1, 33, 5, $this->now->modify('-4 hours'), 3 * 3600);
+        (new \ReflectionMethod(FleetService::class, 'arrive'))->invoke($this->service(), $ship);
+
+        self::assertSame($this->guest, $wreck->getOwner(), 'the second slot counted');
+        self::assertSame(1, $this->guest->getResearchLevel(\App\Game\ResearchType::Colonization));
     }
 
     public function testNamedFleetsCarryColonyShipsButDoNotColonize(): void
