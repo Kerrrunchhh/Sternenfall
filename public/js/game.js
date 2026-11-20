@@ -1393,7 +1393,7 @@ const orbit = (() => {
         systemView.append(line);
         slots.filter((slot) => slot.fusedInto === null).forEach((slot) => {
             const kind = slot.name === null ? (slot.post ? 'sv-post' : 'sv-free')
-                : slot.own ? 'sv-own' : slot.criminal ? 'sv-criminal' : slot.inactive ? 'sv-inactive' : slot.vacation ? 'sv-vacation' : 'sv-other';
+                : slot.own ? 'sv-own' : slot.post ? 'sv-post' : slot.criminal ? 'sv-criminal' : slot.inactive ? 'sv-inactive' : slot.vacation ? 'sv-vacation' : 'sv-other';
             const dot = node('circle', { class: `sv-planet ${kind}`, r: slot.name === null ? (slot.post ? 1.8 : 1) : slot.own ? 3.2 : 2.6, tabindex: slot.name === null ? -1 : 0 });
             const title = node('title', {});
             title.textContent = slot.name === null ? t('Platz {position}: frei', { position: slot.position }) : t('Platz {position}: {name} ({owner})', { position: slot.position, name: slot.name, owner: slot.owner });

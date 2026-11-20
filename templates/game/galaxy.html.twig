@@ -37,7 +37,7 @@
                 {% set inactive = p and p.owner.id != player.id and p.owner.inactive(now) %}
                 {% set criminal = p and p.owner.criminal %}
                 {% set newbie = p and not on_vacation and not inactive and p.owner.id != player.id and newbie_protected(p.owner) %}
-                <tr id="slot-{{ position }}" class="{{ p and p.owner.id == player.id ? 'own' }} {{ not p and posts[position] is defined ? 'trade-post' }} {{ on_vacation ? 'vacation' }} {{ newbie ? 'newbie' }} {{ inactive ? 'inactive' }} {{ criminal ? 'criminal' }}">
+                <tr id="slot-{{ position }}" class="{{ p and p.owner.id == player.id ? 'own' }} {{ posts[position] is defined ? 'trade-post' }} {{ on_vacation ? 'vacation' }} {{ newbie ? 'newbie' }} {{ inactive ? 'inactive' }} {{ criminal ? 'criminal' }}">
                     {% set slot_type = types[position] %}
                     <td class="num pos">{{ position }}{% if debris[position] is defined %} <a class="debris" href="{{ path('app_fleet', coords|merge({mission: 'salvage'})) }}" title="{{ 'Trümmerfeld: {debrisIron} Eisen, {debrisTitanium} Titan (Stand {debrisSeenAt}) – bergen'|trans({'{debrisIron}': debris[position].debrisIron|num, '{debrisTitanium}': debris[position].debrisTitanium|num, '{debrisSeenAt}': debris[position].debrisSeenAt|date('d.m. H:i')}) }}">✦</a>{% endif %}</td>
                     {% if p and position != p.position %}

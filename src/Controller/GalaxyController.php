@@ -109,7 +109,8 @@ class GalaxyController extends AbstractGameController
                 'vacation' => null !== $p && $p->getOwner()->isOnVacation($now),
                 // The further slots of a fusion circle with its first one.
                 'fusedInto' => null !== $p && $p->getPosition() !== $position ? $p->getPosition() : null,
-                'post' => null === $p && isset($posts[$position]),
+                // A trade post (they stand on planets): marked in the view.
+                'post' => isset($posts[$position]),
             ];
         }
         $sun = \App\Game\SunType::of($galaxy, $system);
