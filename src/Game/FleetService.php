@@ -368,35 +368,52 @@ final readonly class FleetService
             throw new GameException(t('Diese Koordinaten gibt es nicht.'));
         }
 
-        // Nearest planet with a scout in the hangar (all scouts of a player are equally fast).
-        $origin = null;
-        $best = \PHP_INT_MAX;
+        // Planets with a scout in the hangar, the nearest first (all scouts of a player are equally fast).
+        $origins = [];
         foreach ($player->getPlanets() as $planet) {
-            if ($planet->getShipCount(ShipType::Scout) < 1) {
-                continue;
-            }
-            $distance = $this->navigation->distance($planet->getGalaxy(), $planet->getSystem(), $planet->getPosition(), $galaxy, $system, $position);
-            if ($distance < $best) {
-                [$origin, $best] = [$planet, $distance];
+            if ($planet->getShipCount(ShipType::Scout) >= 1) {
+                $origins[] = [$planet, $this->navigation->distance($planet->getGalaxy(), $planet->getSystem(), $planet->getPosition(), $galaxy, $system, $position)];
             }
         }
-        if (null === $origin) {
+        if ([] === $origins) {
             throw new GameException(t('In deinen Hangars steht keine Sonde. Baue welche in der Werft.'));
         }
+        usort($origins, static fn (array $a, array $b): int => $a[1] <=> $b[1]);
 
+        // The nearest one that can pay fuel and provisions starts – if that one can't, the next.
         $fleet = null;
-        // A real closure (not fn()): arrow functions capture by value and would lose $fleet.
-        $this->withEventLock(function () use ($origin, $galaxy, $system, $position, &$fleet): void {
-            $this->planets->transaction($origin, function (Planet $origin, \DateTimeImmutable $now) use ($galaxy, $system, $position, &$fleet): void {
-            if ($origin->getShipCount(ShipType::Scout) < 1) {
-                throw new GameException(t('Die Sonde ist inzwischen nicht mehr im Hangar.'));
+        $origin = null;
+        $firstError = null;
+        foreach (array_column($origins, 0) as $candidate) {
+            try {
+                // A real closure (not fn()): arrow functions capture by value and would lose $fleet.
+                $this->withEventLock(function () use ($candidate, $galaxy, $system, $position, &$fleet): void {
+                    $this->planets->transaction($candidate, function (Planet $origin, \DateTimeImmutable $now) use ($galaxy, $system, $position, &$fleet): void {
+                        if ($origin->getShipCount(ShipType::Scout) < 1) {
+                            throw new GameException(t('Die Sonde ist inzwischen nicht mehr im Hangar.'));
+                        }
+                        $origin->addShips(ShipType::Scout, -1);
+                        $probe = new Fleet($origin->getOwner(), null, $origin->getGalaxy(), $origin->getSystem(), $origin->getPosition(), [ShipType::Scout->value => 1]);
+                        try {
+                            $this->launch($probe, $origin, FleetMission::Spy, $galaxy, $system, $position, new Resources(), $now);
+                        } catch (GameException $e) {
+                            // Not enough fuel or provisions here: the probe stays in the hangar.
+                            $origin->addShips(ShipType::Scout, 1);
+                            throw $e;
+                        }
+                        $this->em->persist($probe);
+                        $fleet = $probe;
+                    });
+                });
+                $origin = $candidate;
+                break;
+            } catch (GameException $e) {
+                $firstError ??= $e;
             }
-            $origin->addShips(ShipType::Scout, -1);
-            $fleet = new Fleet($origin->getOwner(), null, $origin->getGalaxy(), $origin->getSystem(), $origin->getPosition(), [ShipType::Scout->value => 1]);
-            $this->launch($fleet, $origin, FleetMission::Spy, $galaxy, $system, $position, new Resources(), $now);
-            $this->em->persist($fleet);
-            });
-        });
+        }
+        if (null === $fleet || null === $origin) {
+            throw $firstError ?? new GameException(t('Die Sonde konnte nicht starten.'));
+        }
 
         return t('Sonde von {name} [{coords}] gestartet nach [{galaxy}:{system}:{position}], Ankunft {value}.', ['{name}' => $origin->getName(), '{coords}' => $origin->getCoordinates(), '{galaxy}' => $galaxy, '{system}' => $system, '{position}' => $position, '{value}' => $this->localTime($fleet->getArriveAt())]);
     }

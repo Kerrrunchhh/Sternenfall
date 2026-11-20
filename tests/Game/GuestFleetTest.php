@@ -22,6 +22,7 @@ use App\Game\PlanetService;
 use App\Game\PlanetUpdater;
 use App\Game\Radar;
 use App\Game\Resources;
+use App\Game\ShipType;
 use App\Game\TradeService;
 use App\Repository\FleetRepository;
 use App\Repository\PlanetRepository;
@@ -292,6 +293,39 @@ final class GuestFleetTest extends TestCase
         (new \ReflectionProperty(Alliance::class, 'id'))->setValue($alliance, 9);
         $this->guest->joinAlliance($alliance, AllianceRank::Founder);
         $this->host->joinAlliance($alliance, AllianceRank::Member);
+    }
+
+    public function testAProbeStartsFromTheNextPlanetIfTheNearestCannotPayForIt(): void
+    {
+        // Nearer to the target, but without water for the crew.
+        $dry = $this->place(new Planet($this->guest, 'Trocken', 1, 10, 2, $this->now));
+        $dry->addShips(ShipType::Scout, 1);
+        $dry->setResources(new Resources(hydrogen: 10000));
+        // Farther out, with everything it needs.
+        $wet = $this->place(new Planet($this->guest, 'Nass', 1, 10, 8, $this->now));
+        $wet->addShips(ShipType::Scout, 1);
+        $wet->setResources(new Resources(food: 10000, water: 10000, hydrogen: 10000));
+
+        $message = $this->service()->quickSpy($this->guest, 1, 20, 3);
+
+        self::assertStringContainsString('Nass', $message->trans(new \Symfony\Component\Translation\IdentityTranslator()));
+        self::assertSame(1, $dry->getShipCount(ShipType::Scout), 'the dry planet keeps its probe');
+        self::assertEquals(new Resources(hydrogen: 10000), $dry->getResources(), 'and pays nothing');
+        self::assertSame(0, $wet->getShipCount(ShipType::Scout), 'the probe flies from the next planet');
+    }
+
+    public function testWithoutAnyPlanetThatCanPayTheNearestOnesProblemIsShown(): void
+    {
+        $dry = $this->place(new Planet($this->guest, 'Trocken', 1, 10, 2, $this->now));
+        $dry->addShips(ShipType::Scout, 1);
+        $dry->setResources(new Resources(hydrogen: 10000));
+
+        try {
+            $this->service()->quickSpy($this->guest, 1, 20, 3);
+            self::fail('no planet can pay');
+        } catch (\App\Game\GameException) {
+            self::assertSame(1, $dry->getShipCount(ShipType::Scout), 'the probe stays in the hangar');
+        }
     }
 
     private function user(string $name, int $id): User
