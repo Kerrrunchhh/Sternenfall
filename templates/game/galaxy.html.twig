@@ -17,6 +17,14 @@
 
     <section class="panel">
         <h2>{{ 'System {galaxy}:{system} <small class="muted">· {slots} Planetenplätze</small>'|trans({'{galaxy}': galaxy|e, '{system}': system|e, '{slots}': slots|length|e})|raw }}</h2>
+        {# Show only some of the planets; the others are dimmed (remembered in the browser, see game.js). #}
+        <div class="galaxy-filters" data-galaxy-filters role="group" aria-label="{{ 'Hervorheben'|trans }}">
+            <span class="muted small">{{ 'Hervorheben:'|trans }}</span>
+            <button type="button" class="filter-chip" data-galaxy-filter="alliance" aria-pressed="false"><span class="legend-swatch legend-rel-alliance"></span> {{ 'Eigene Allianz'|trans }}</button>
+            <button type="button" class="filter-chip" data-galaxy-filter="ally" aria-pressed="false"><span class="legend-swatch legend-rel-ally"></span> {{ 'Verbündete'|trans }}</button>
+            <button type="button" class="filter-chip" data-galaxy-filter="war" aria-pressed="false"><span class="legend-swatch legend-rel-war"></span> {{ 'Feinde'|trans }}</button>
+            <button type="button" class="filter-chip" data-galaxy-filter="post" aria-pressed="false"><span class="legend-swatch legend-trade"></span> {{ 'Handelsstützpunkte'|trans }}</button>
+        </div>
         <table class="table galaxy-table">
             <thead>
                 <tr>
@@ -37,7 +45,11 @@
                 {% set inactive = p and p.owner.id != player.id and p.owner.inactive(now) %}
                 {% set criminal = p and p.owner.criminal %}
                 {% set newbie = p and not on_vacation and not inactive and p.owner.id != player.id and newbie_protected(p.owner) %}
-                <tr id="slot-{{ position }}" class="{{ p and p.owner.id == player.id ? 'own' }} {{ posts[position] is defined ? 'trade-post' }} {{ on_vacation ? 'vacation' }} {{ newbie ? 'newbie' }} {{ inactive ? 'inactive' }} {{ criminal ? 'criminal' }}">
+                {% set relation = relations[position] ?? null %}
+                {# Mouse-over: who it belongs to, the alliance, how it stands to the player and the status. #}
+                {% set tip %}{% if p %}{{ p.owner.username }}{% if p.owner.alliance %} [{{ p.owner.alliance.tag }}]{% endif %} · {{ {own: 'Dein Planet', alliance: 'Eigene Allianz', ally: 'Verbündet (Bündnis oder Nichtangriffspakt)', war: 'Krieg'}[relation]|default('Neutral')|trans }}{% if on_vacation %} · {{ 'Im Urlaub'|trans }}{% endif %}{% if newbie %} · {{ 'Noobschutz'|trans }}{% endif %}{% if inactive %} · {{ 'Inaktiv (30 Tage)'|trans }}{% endif %}{% if criminal %} · {{ 'Kriminell'|trans }}{% endif %}{% if posts[position] is defined %} · {{ 'Handelsstützpunkt'|trans }}{% endif %}{% elseif posts[position] is defined %}{{ 'Handelsstützpunkt'|trans }}{% else %}{{ 'Freier Platz'|trans }}{% endif %}{% endset %}
+                <tr id="slot-{{ position }}" class="{{ p and p.owner.id == player.id ? 'own' }} {{ relation and relation != 'own' ? 'rel-' ~ relation }} {{ posts[position] is defined ? 'trade-post' }} {{ on_vacation ? 'vacation' }} {{ newbie ? 'newbie' }} {{ inactive ? 'inactive' }} {{ criminal ? 'criminal' }}"
+                    title="{{ tip|trim }}" data-rel="{{ relation }}"{% if posts[position] is defined %} data-post{% endif %}>
                     {% set slot_type = types[position] %}
                     <td class="num pos">{{ position }}{% if debris[position] is defined %} <a class="debris" href="{{ path('app_fleet', coords|merge({mission: 'salvage'})) }}" title="{{ 'Trümmerfeld: {debrisIron} Eisen, {debrisTitanium} Titan (Stand {debrisSeenAt}) – bergen'|trans({'{debrisIron}': debris[position].debrisIron|num, '{debrisTitanium}': debris[position].debrisTitanium|num, '{debrisSeenAt}': debris[position].debrisSeenAt|date('d.m. H:i')}) }}">✦</a>{% endif %}</td>
                     {% if p and position != p.position %}
@@ -151,7 +163,8 @@
             {% endfor %}
             </tbody>
         </table>
-        <p class="muted small galaxy-legend"><span class="legend-swatch legend-vacation"></span> {{ 'Im Urlaub'|trans }} <span class="legend-swatch legend-newbie"></span> {{ 'Noobschutz'|trans }} <span class="legend-swatch legend-inactive"></span> {{ 'Inaktiv (30 Tage)'|trans }} <span class="legend-swatch legend-criminal"></span> {{ 'Kriminell'|trans }} <span class="legend-swatch legend-trade"></span> {{ 'Handelsstützpunkt'|trans }}</p>
+        <p class="muted small galaxy-legend"><span class="legend-swatch legend-vacation"></span> {{ 'Im Urlaub'|trans }} <span class="legend-swatch legend-newbie"></span> {{ 'Noobschutz'|trans }} <span class="legend-swatch legend-inactive"></span> {{ 'Inaktiv (30 Tage)'|trans }} <span class="legend-swatch legend-criminal"></span> {{ 'Kriminell'|trans }} <span class="legend-swatch legend-trade"></span> {{ 'Handelsstützpunkt'|trans }}<br>
+            {{ 'Streifen links und Spielername:'|trans }} <span class="legend-swatch legend-rel-own"></span> {{ 'Du'|trans }} <span class="legend-swatch legend-rel-alliance"></span> {{ 'Eigene Allianz'|trans }} <span class="legend-swatch legend-rel-ally"></span> {{ 'Bündnis oder Nichtangriffspakt'|trans }} <span class="legend-swatch legend-rel-war"></span> {{ 'Krieg'|trans }} · {{ 'ohne Streifen: neutral'|trans }}</p>
     </section>
 
     {# The planets circle their sun; flights within the system depend on where they are (App\Game\Orbit). #}

@@ -1393,10 +1393,11 @@ const orbit = (() => {
         systemView.append(line);
         slots.filter((slot) => slot.fusedInto === null).forEach((slot) => {
             const kind = slot.name === null ? (slot.post ? 'sv-post' : 'sv-free')
-                : slot.own ? 'sv-own' : slot.post ? 'sv-post' : slot.criminal ? 'sv-criminal' : slot.inactive ? 'sv-inactive' : slot.vacation ? 'sv-vacation' : 'sv-other';
+                // Same colours as the planet list: own, alliance, bond/NAP, war; then trade post and status.
+                : slot.own ? 'sv-own' : slot.relation ? `sv-${slot.relation}` : slot.post ? 'sv-post' : slot.criminal ? 'sv-criminal' : slot.inactive ? 'sv-inactive' : slot.vacation ? 'sv-vacation' : 'sv-other';
             const dot = node('circle', { class: `sv-planet ${kind}`, r: slot.name === null ? (slot.post ? 1.8 : 1) : slot.own ? 3.2 : 2.6, tabindex: slot.name === null ? -1 : 0 });
             const title = node('title', {});
-            title.textContent = slot.name === null ? t('Platz {position}: frei', { position: slot.position }) : t('Platz {position}: {name} ({owner})', { position: slot.position, name: slot.name, owner: slot.owner });
+            title.textContent = slot.name === null ? t('Platz {position}: frei', { position: slot.position }) : t('Platz {position}: {name} ({owner})', { position: slot.position, name: slot.name, owner: slot.alliance ? `${slot.owner} [${slot.alliance}]` : slot.owner });
             dot.append(title);
             systemView.append(dot);
             dots.push({ slot, dot });
@@ -2064,4 +2065,87 @@ const orbit = (() => {
         shipInputs.forEach((input) => input.addEventListener('input', updateCapacity));
         updateCapacity();
     }
+})();
+
+// Highscores, "Zu meinem Platz": the own row in the middle of the screen, not hidden under the sticky top bar.
+(function () {
+    'use strict';
+    if (window.location.hash !== '#own') {
+        return;
+    }
+    const row = document.getElementById('own');
+    if (!row) {
+        return;
+    }
+    // After the layout settled (pictures, fonts), so the jump isn't undone by content moving down.
+    const centre = () => row.scrollIntoView({ block: 'center' });
+    if (document.readyState === 'complete') {
+        centre();
+    } else {
+        window.addEventListener('load', centre, { once: true });
+    }
+})();
+
+// Amounts: k, m and g after a number multiply it by a thousand, a million, a billion
+// (25k → 25000, 1,5m → 1500000) – in every field for resources, goods, prices and ships.
+(function () {
+    'use strict';
+    const FACTORS = { k: 1e3, m: 1e6, g: 1e9 };
+    const AMOUNT = /^(cargo|pickup|sell|buy|goods|prices|buy_prices|buy_limits|ships|load|drop|split|quantity|amount|credits|resources)(\[|$)|\[ships\]/;
+    const isAmount = (el) => el instanceof HTMLInputElement && el.type === 'number'
+        && (AMOUNT.test(el.name) || el.hasAttribute('data-count') || el.hasAttribute('data-goods'));
+    // Delegated, so fields swapped in later (AJAX) take part too.
+    document.addEventListener('keydown', (event) => {
+        const factor = FACTORS[event.key.toLowerCase()];
+        const input = event.target;
+        if (!factor || event.ctrlKey || event.metaKey || event.altKey || !isAmount(input)) {
+            return;
+        }
+        event.preventDefault();
+        const value = input.valueAsNumber;
+        if (Number.isNaN(value)) {
+            return;
+        }
+        input.value = String(Math.round(value * factor));
+        // Live sums (cargo room, costs) follow as if the digits had been typed.
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+})();
+
+// Universe: "Hervorheben" – only the chosen kinds of planets stay bright (own alliance, allies,
+// enemies, trade posts); the choice is remembered in this browser.
+(function () {
+    'use strict';
+    const box = document.querySelector('[data-galaxy-filters]');
+    const table = document.querySelector('.galaxy-table');
+    if (!box || !table) {
+        return;
+    }
+    const KEY = 'sternenfall.galaxyFilters';
+    let active = [];
+    try {
+        active = JSON.parse(localStorage.getItem(KEY) || '[]').filter((f) => typeof f === 'string');
+    } catch (e) { /* ignore */ }
+    const apply = () => {
+        box.querySelectorAll('[data-galaxy-filter]').forEach((chip) => chip.setAttribute('aria-pressed', String(active.includes(chip.dataset.galaxyFilter))));
+        table.classList.toggle('filtering', active.length > 0);
+        table.querySelectorAll('tbody tr').forEach((row) => {
+            const kinds = [row.dataset.rel || '', row.hasAttribute('data-post') ? 'post' : ''];
+            row.classList.toggle('filter-match', kinds.some((k) => k !== '' && active.includes(k)));
+        });
+    };
+    box.addEventListener('click', (event) => {
+        const chip = event.target.closest('[data-galaxy-filter]');
+        if (!chip) {
+            return;
+        }
+        const kind = chip.dataset.galaxyFilter;
+        active = active.includes(kind) ? active.filter((k) => k !== kind) : [...active, kind];
+        try {
+            localStorage.setItem(KEY, JSON.stringify(active));
+        } catch (e) { /* ignore */ }
+        apply();
+    });
+    apply();
 })();

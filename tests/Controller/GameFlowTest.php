@@ -412,6 +412,60 @@ class GameFlowTest extends WebTestCase
         self::assertSelectorTextContains('body', 'Neue Kolonie');
     }
 
+    public function testTheUniverseColoursPlanetsByAllianceAndTreaty(): void
+    {
+        $this->register('Kundschafterin');
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $me = $this->user('Kundschafterin');
+        $home = $me->getPlanets()->first();
+        $now = new \DateTimeImmutable();
+        $mine = new \App\Entity\Alliance('Sternenwacht', 'SW', \App\Game\LifeForm::Guardian, $now);
+        $friends = new \App\Entity\Alliance('Freunde', 'FR', \App\Game\LifeForm::Settler, $now);
+        $foes = new \App\Entity\Alliance('Feinde', 'FE', \App\Game\LifeForm::Pirate, $now);
+        foreach ([$mine, $friends, $foes] as $alliance) {
+            $em->persist($alliance);
+        }
+        $me->joinAlliance($mine, \App\Game\AllianceRank::Founder);
+        $em->persist(new \App\Entity\DiplomaticRelation($mine, $friends, \App\Game\TreatyKind::Bond, $now));
+        $em->persist(new \App\Entity\DiplomaticRelation($mine, $foes, \App\Game\TreatyKind::War, $now));
+
+        // Four neighbours in the home system: alliance mate, bond partner, war enemy, nobody special.
+        $free = array_values(array_diff(range(1, \App\Game\Universe::planetsInSystem($home->getGalaxy(), $home->getSystem())), [$home->getPosition()]));
+        $slots = [];
+        foreach (['Kamerad' => $mine, 'Partner' => $friends, 'Gegner' => $foes, 'Fremder' => null] as $name => $alliance) {
+            $user = new User($name, $now);
+            $user->setEmail(strtolower($name).'@example.com');
+            $user->setPassword('x');
+            if (null !== $alliance) {
+                $user->joinAlliance($alliance, \App\Game\AllianceRank::Member);
+            }
+            $em->persist($user);
+            $slots[$name] = array_shift($free);
+            $em->persist(new Planet($user, $name.'s Welt', $home->getGalaxy(), $home->getSystem(), $slots[$name], $now));
+        }
+        $em->flush();
+
+        $crawler = $this->client->request('GET', '/galaxy');
+
+        self::assertResponseIsSuccessful();
+        $row = static fn (string $name) => $crawler->filter('#slot-'.$slots[$name]);
+        self::assertStringContainsString('rel-alliance', $row('Kamerad')->attr('class'));
+        self::assertStringContainsString('rel-ally', $row('Partner')->attr('class'));
+        self::assertStringContainsString('rel-war', $row('Gegner')->attr('class'));
+        self::assertStringNotContainsString('rel-', $row('Fremder')->attr('class'));
+        self::assertStringContainsString('own', $crawler->filter('#slot-'.$home->getPosition())->attr('class'));
+        // Mouse-over: player, alliance and how they stand to the player.
+        self::assertSame('Gegner [FE] · Krieg · Noobschutz', $row('Gegner')->attr('title'), 'one planet, no fleet control center');
+        self::assertSame('Fremder · Neutral · Noobschutz', $row('Fremder')->attr('title'));
+        self::assertSame('war', $row('Gegner')->attr('data-rel'));
+        self::assertCount(4, $crawler->filter('[data-galaxy-filter]'), 'own alliance, allies, enemies, trade posts');
+        // The graphical system view gets the same relation.
+        $view = json_decode((string) $crawler->filter('[data-system-view]')->attr('data-config'), true);
+        $byPosition = array_column($view['slots'], null, 'position');
+        self::assertSame('war', $byPosition[$slots['Gegner']]['relation']);
+        self::assertSame('FE', $byPosition[$slots['Gegner']]['alliance']);
+    }
+
     public function testNewPlayersSeeTheWelcomeNewsUntilTheyMarkItRead(): void
     {
         $em = static::getContainer()->get(EntityManagerInterface::class);

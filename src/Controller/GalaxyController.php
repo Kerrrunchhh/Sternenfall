@@ -2,7 +2,9 @@
 
 namespace App\Controller;
 
+use App\Game\Diplomacy;
 use App\Game\Espionage;
+use App\Game\TreatyKind;
 use App\Game\Universe;
 use App\Repository\BookmarkRepository;
 use App\Repository\PlanetRepository;
@@ -60,7 +62,7 @@ class GalaxyController extends AbstractGameController
     }
 
     #[Route('/galaxy', name: 'app_galaxy', methods: ['GET'])]
-    public function index(Request $request, PlanetRepository $planets, TradePostRepository $tradePosts, Espionage $espionage, BookmarkRepository $bookmarks): Response
+    public function index(Request $request, PlanetRepository $planets, TradePostRepository $tradePosts, Espionage $espionage, BookmarkRepository $bookmarks, Diplomacy $diplomacy): Response
     {
         $planet = $this->currentPlanet();
         $galaxy = max(1, min(Universe::GALAXIES, $request->query->getInt('galaxy', $planet->getGalaxy())));
@@ -96,6 +98,13 @@ class GalaxyController extends AbstractGameController
 
         // The system view: the sun and every slot circling it (see Orbit, public/js/game.js).
         $player = $this->player();
+        // Who a planet belongs to, seen from the player: own, own alliance, bond or NAP partner, war enemy.
+        $relations = [];
+        foreach ($slots as $position => $p) {
+            if (null !== $p) {
+                $relations[$position] = self::relation($player, $p->getOwner(), $diplomacy);
+            }
+        }
         $now = \DateTimeImmutable::createFromInterface($this->clock->now());
         $orbits = [];
         foreach ($slots as $position => $p) {
@@ -111,6 +120,8 @@ class GalaxyController extends AbstractGameController
                 'fusedInto' => null !== $p && $p->getPosition() !== $position ? $p->getPosition() : null,
                 // A trade post (they stand on planets): marked in the view.
                 'post' => isset($posts[$position]),
+                'relation' => $relations[$position] ?? null,
+                'alliance' => $p?->getOwner()->getAlliance()?->getTag(),
             ];
         }
         $sun = \App\Game\SunType::of($galaxy, $system);
@@ -133,6 +144,7 @@ class GalaxyController extends AbstractGameController
             'slots' => $slots,
             'types' => $types,
             'posts' => $posts,
+            'relations' => $relations,
             // Debris fields only where the player discovered them (probe, battle, salvaging).
             'debris' => $espionage->knownDebris($this->player(), $galaxy, $system),
             'galaxies' => Universe::GALAXIES,
@@ -162,5 +174,19 @@ class GalaxyController extends AbstractGameController
             'galaxy_orbit_days' => (int) round(\App\Game\Orbit::galaxyPeriodSeconds($galaxy) / 86400),
             'galaxy_spin_days' => (int) \App\Game\Orbit::GALAXY_SPIN_DAYS,
         ]);
+    }
+
+    /** own, alliance (same alliance), ally (bond or NAP), war – or null for everybody else. */
+    private static function relation(\App\Entity\User $player, \App\Entity\User $owner, Diplomacy $diplomacy): ?string
+    {
+        return match (true) {
+            $owner->isSameAs($player) => 'own',
+            $owner->isAllyOf($player) => 'alliance',
+            default => match ($diplomacy->kindBetween($player, $owner)) {
+                TreatyKind::Bond, TreatyKind::Nap => 'ally',
+                TreatyKind::War => 'war',
+                null => null,
+            },
+        };
     }
 }

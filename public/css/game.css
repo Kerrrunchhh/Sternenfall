@@ -677,6 +677,8 @@ body.swapping main.content { opacity: .75; transition: opacity .15s; cursor: pro
 .highscore-filters .filter-chip.active { border-color: var(--accent); color: var(--accent); }
 .highscore-table td:first-child { width: 3.5rem; padding-right: .9rem; }
 .highscore-table tr.highscore-own td { background: rgba(255, 183, 77, .12); }
+/* Jumping to #own without JavaScript: keep the row clear of the sticky top bar. */
+.highscore-table tr { scroll-margin-top: 40vh; }
 .highscore-table tr.highscore-own td:first-child { box-shadow: inset 3px 0 0 var(--accent-2); }
 .rank-change { font-size: .75rem; font-weight: 600; margin-left: .25rem; white-space: nowrap; }
 .rank-up { color: var(--ok); }
@@ -802,6 +804,26 @@ body.swapping main.content { opacity: .75; transition: opacity .15s; cursor: pro
 .legend-inactive { background: rgba(255, 235, 59, .5); }
 .legend-criminal { background: rgba(66, 135, 245, .55); }
 .legend-trade { background: rgba(38, 166, 154, .45); }
+
+/* Galaxy: how a planet's owner stands to the player – a stripe on the left and the colour of the name
+   (the row background stays for the status: vacation, newbie protection, inactive, criminal, trade post). */
+:root { --rel-own: var(--accent); --rel-alliance: #b388ff; --rel-ally: #9ccc65; --rel-war: var(--bad); }
+.legend-rel-own { background: var(--rel-own); }
+.legend-rel-alliance { background: var(--rel-alliance); }
+.legend-rel-ally { background: var(--rel-ally); }
+.legend-rel-war { background: var(--rel-war); }
+.galaxy-table tr.own td:first-child { box-shadow: inset 4px 0 0 var(--rel-own); }
+.galaxy-table tr.rel-alliance td:first-child { box-shadow: inset 4px 0 0 var(--rel-alliance); }
+.galaxy-table tr.rel-ally td:first-child { box-shadow: inset 4px 0 0 var(--rel-ally); }
+.galaxy-table tr.rel-war td:first-child { box-shadow: inset 4px 0 0 var(--rel-war); }
+.galaxy-table tr.rel-alliance .player-name > a:not(.alliance-tag) { color: var(--rel-alliance); font-weight: 600; }
+.galaxy-table tr.rel-ally .player-name > a:not(.alliance-tag) { color: var(--rel-ally); font-weight: 600; }
+.galaxy-table tr.rel-war .player-name > a:not(.alliance-tag) { color: var(--rel-war); font-weight: 600; }
+.galaxy-table td:first-child { padding-left: .4rem; }
+.galaxy-filters { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin: 0 0 .5rem; }
+.galaxy-filters .filter-chip { cursor: pointer; font: inherit; color: inherit; }
+.galaxy-filters .filter-chip[aria-pressed="true"] { border-color: var(--accent); background: rgba(79, 195, 247, .15); }
+.galaxy-table.filtering tbody tr:not(.filter-match) td { opacity: .3; }
 /* Alliance members: name, status and scores on one line */
 .member-table .member-name + .muted.small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .member-table td:first-child { max-width: 0; width: 100%; }
@@ -956,12 +978,15 @@ tr.suspicious-strong td { background: rgba(255, 138, 128, .08); }
 .sv-orbit { fill: none; stroke: currentColor; stroke-width: .25; opacity: .2; }
 .sv-planet { stroke: rgba(0,0,0,.4); stroke-width: .3; cursor: pointer; }
 .sv-free { fill: #78909c; opacity: .45; cursor: default; }
-.sv-post { fill: #ffb74d; }
+.sv-post { fill: #26a69a; }
 .sv-other { fill: #cfd8dc; }
-.sv-own { fill: #66bb6a; }
+.sv-own { fill: var(--rel-own); }
+.sv-alliance { fill: var(--rel-alliance); }
+.sv-ally { fill: var(--rel-ally); }
+.sv-war { fill: var(--rel-war); }
 .sv-criminal { fill: #4287f5; }
 .sv-inactive { fill: #fdd835; }
-.sv-vacation { fill: #a5d6a7; }
+.sv-vacation { fill: #cfd8dc; opacity: .6; }
 .sv-selected { stroke: #fff; stroke-width: .9; }
 .sv-line { stroke: #4fc3f7; stroke-width: .5; stroke-dasharray: 1.5 1; }
 .system-time { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
