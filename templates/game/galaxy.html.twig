@@ -73,12 +73,15 @@
                             <button class="icon-button" type="submit" title="{{ 'Ausspionieren: die nächste Sonde aus deinen Hangars fliegt los (verglüht danach)'|trans }}" aria-label="{{ 'Platz {position} ausspionieren'|trans({'{position}': position}) }}">🔭</button>
                         </form>
                     </td>
+                    {# A trade post gets its own badge on the planet picture. #}
+                    {% set slot_post = posts[position] ?? null %}
+                    {% set post_badge %}{% if slot_post %}<span class="post-badge" title="{{ 'Handelsstützpunkt „{name}“'|trans({'{name}': slot_post.name}) }}" aria-label="{{ 'Handelsstützpunkt „{name}“'|trans({'{name}': slot_post.name}) }}">⚖</span>{% endif %}{% endset %}
                     {% if p and p.fused %}
-                        <td class="slot-type" title="{{ 'Fusion aus {fusionSize} Planeten'|trans({'{fusionSize}': p.fusionSize}) }}"><img class="planet-pic planet-pic-tiny" src="{{ asset(p.picture) }}" alt="{{ 'Fusion'|trans }}" width="22" height="22" loading="lazy"></td>
+                        <td class="slot-type" title="{{ 'Fusion aus {fusionSize} Planeten'|trans({'{fusionSize}': p.fusionSize}) }}"><span class="slot-icon"><img class="planet-pic planet-pic-tiny" src="{{ asset(p.picture) }}" alt="{{ 'Fusion'|trans }}" width="22" height="22" loading="lazy">{{ post_badge }}</span></td>
                     {% elseif slot_type %}
-                        <td class="slot-type" title="{{ slot_type.label|trans }}: {{ slot_type.effect|trans }}"><img class="planet-pic planet-pic-tiny" src="{{ asset(slot_type.picture) }}" alt="{{ slot_type.label|trans }}" width="22" height="22" loading="lazy"></td>
+                        <td class="slot-type" title="{{ slot_type.label|trans }}: {{ slot_type.effect|trans }}"><span class="slot-icon"><img class="planet-pic planet-pic-tiny" src="{{ asset(slot_type.picture) }}" alt="{{ slot_type.label|trans }}" width="22" height="22" loading="lazy">{{ post_badge }}</span></td>
                     {% else %}
-                        <td class="slot-type unknown" title="{{ 'Planetentyp unbekannt – schicke eine Sonde hin'|trans }}">❔</td>
+                        <td class="slot-type unknown" title="{{ 'Planetentyp unbekannt – schicke eine Sonde hin'|trans }}"><span class="slot-icon">❔{{ post_badge }}</span></td>
                     {% endif %}
                     {% if p %}
                         <td>
