@@ -10,6 +10,40 @@
     </th>
 {% endmacro %}
 
+{# Ship counts per planet (only types the player has somewhere), summed at the bottom. #}
+{% macro hangar_table(title, hint, columns, rows, sums, planet) %}
+    {% if columns is not empty %}
+    <section class="panel">
+        <h2>{{ title }}</h2>
+        {% if hint %}<p class="muted small">{{ hint }}</p>{% endif %}
+        <div class="table-scroll">
+            <table class="table empire-table empire-buildings empire-hangar">
+                <thead><tr>
+                    <th scope="col">{{ 'Planet'|trans }}</th>
+                    {% for type in columns %}<th scope="col" class="num empire-vertical"><span>{{ type.label|trans }}</span></th>{% endfor %}
+                </tr></thead>
+                <tbody>
+                    {% for row in rows %}
+                        {% set p = row.planet %}
+                        <tr class="{{ p.id == planet.id ? 'empire-current' }}">
+                            {{ _self.planet_cell(p) }}
+                            {% for type in columns %}
+                                {% set count = p.shipCount(type) %}
+                                <td class="num {{ count == 0 ? 'muted' }}">{{ count|num }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot><tr>
+                    <th scope="row">{{ 'Summe'|trans }}</th>
+                    {% for type in columns %}<td class="num">{{ sums.ships[type.value]|num }}</td>{% endfor %}
+                </tr></tfoot>
+            </table>
+        </div>
+    </section>
+    {% endif %}
+{% endmacro %}
+
 {% block content %}
     <h1>{{ 'Alle Planeten'|trans }}</h1>
     <p class="muted small">{{ 'Ein Klick auf den Namen wählt den Planeten aus. Die Summen stehen jeweils in der letzten Zeile.'|trans }}</p>
@@ -76,6 +110,9 @@
             </table>
         </div>
     </section>
+
+    {{ _self.hangar_table('Schiffe im Hangar'|trans, 'Schiffe in Flotten zählen hier nicht mit – die stehen unter Flotten.'|trans, ship_columns, rows, sums, planet) }}
+    {{ _self.hangar_table('Verteidigungsanlagen'|trans, null, turret_columns, rows, sums, planet) }}
 
     <section class="panel">
         <h2>{{ 'In den Bauschleifen'|trans }} <small><a href="{{ path('app_queues') }}">{{ 'Bauschleifen ordnen'|trans }}</a></small></h2>

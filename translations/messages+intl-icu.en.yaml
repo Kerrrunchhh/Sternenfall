@@ -3250,3 +3250,6 @@
 "Nur aus Schlachten: zerstörte Schildpunkte gegnerischer Einheiten (Verteidigungstürme zählen halb), aufgeteilt nach der Bauzeit der eigenen Einheiten": "Only from battles: destroyed shield points of enemy units (defense turrets count half), shared by the build time of the own units"
 "Vor 24 Stunden: Platz {rank}": "24 hours ago: place {rank}"
 "Forschung läuft: {research}": "Research running: {research}"
+"Schiffe im Hangar": "Ships in the hangar"
+"Verteidigungsanlagen": "Defenses"
+"Schiffe in Flotten zählen hier nicht mit – die stehen unter Flotten.": "Ships in fleets are not counted here – you find them under Fleets."

@@ -455,15 +455,23 @@ class GameFlowTest extends WebTestCase
         $em = static::getContainer()->get(EntityManagerInterface::class);
         $colony = new Planet($home->getOwner(), 'Kolonie', 9, 9, 9, new \DateTimeImmutable());
         $colony->setBuildingLevel(BuildingType::IronMine, 3);
+        $colony->addShips(\App\Game\ShipType::Pfeil, 7);
+        $colony->addShips(\App\Game\ShipType::LaserTurret, 2);
         $em->persist($colony);
         $em->flush();
 
         $this->client->request('GET', '/imperium');
 
         self::assertResponseIsSuccessful();
-        self::assertSelectorCount(6, 'tbody th.empire-planet', 'two planets in each of the three tables');
+        self::assertSelectorCount(10, 'tbody th.empire-planet', 'two planets in each of the five tables (ships and turrets included)');
         self::assertSelectorTextContains('.empire-buildings tbody', 'Kolonie');
         self::assertSelectorTextContains('.empire-buildings tfoot', (string) (3 + $home->getBuildingLevel(BuildingType::IronMine)));
+        // Ships and turrets: one column per type the player has, summed at the bottom.
+        $hangar = $this->client->getCrawler()->filter('.empire-hangar');
+        self::assertCount(2, $hangar, 'ships and turrets');
+        self::assertStringContainsString('Pfeil', $hangar->eq(0)->filter('thead')->text());
+        self::assertStringContainsString('7', $hangar->eq(0)->filter('tfoot')->text());
+        self::assertStringContainsString('Laser', $hangar->eq(1)->filter('thead')->text());
     }
 
     public function testGuideShowsQuickStartAndTheEarlyTechTree(): void

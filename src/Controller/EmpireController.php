@@ -7,10 +7,11 @@ use App\Game\BuildingType;
 use App\Game\QueueKind;
 use App\Game\QueueTimeline;
 use App\Game\ResourceType;
+use App\Game\ShipType;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
-/** All own planets at a glance: resources, building levels and what is being built – summed up at the bottom. */
+/** All own planets at a glance: resources, building levels, ships and turrets, what is being built – summed up at the bottom. */
 class EmpireController extends AbstractGameController
 {
     #[Route('/imperium', name: 'app_empire', methods: ['GET'])]
@@ -20,7 +21,7 @@ class EmpireController extends AbstractGameController
         $player = $current->getOwner();
 
         $rows = [];
-        $sums = ['resources' => array_fill_keys(array_map(static fn (ResourceType $t): string => $t->value, ResourceType::cases()), 0.0), 'population' => 0.0, 'buildings' => array_fill_keys(array_map(static fn (BuildingType $t): string => $t->value, BuildingType::cases()), 0), 'queues' => array_fill_keys(array_map(static fn (QueueKind $k): string => $k->value, QueueKind::cases()), 0)];
+        $sums = ['resources' => array_fill_keys(array_map(static fn (ResourceType $t): string => $t->value, ResourceType::cases()), 0.0), 'population' => 0.0, 'buildings' => array_fill_keys(array_map(static fn (BuildingType $t): string => $t->value, BuildingType::cases()), 0), 'queues' => array_fill_keys(array_map(static fn (QueueKind $k): string => $k->value, QueueKind::cases()), 0), 'ships' => array_fill_keys(array_map(static fn (ShipType $t): string => $t->value, ShipType::cases()), 0)];
         foreach ($player->getPlanets() as $planet) {
             // Every planet brought up to date, so the figures are those of right now.
             $this->planetService->synchronize($planet);
@@ -36,6 +37,9 @@ class EmpireController extends AbstractGameController
             foreach (BuildingType::cases() as $type) {
                 $sums['buildings'][$type->value] += $planet->getBuildingLevel($type);
             }
+            foreach (ShipType::cases() as $type) {
+                $sums['ships'][$type->value] += $planet->getShipCount($type);
+            }
             $rows[] = ['planet' => $planet, 'queues' => $queues];
         }
         usort($rows, static fn (array $a, array $b): int => [$b['planet']->isHomeworld(), $a['planet']->getGalaxy(), $a['planet']->getSystem(), $a['planet']->getPosition()] <=> [$a['planet']->isHomeworld(), $b['planet']->getGalaxy(), $b['planet']->getSystem(), $b['planet']->getPosition()]);
@@ -46,6 +50,9 @@ class EmpireController extends AbstractGameController
             'resource_types' => ResourceType::cases(),
             'building_types' => BuildingType::cases(),
             'queue_kinds' => QueueKind::cases(),
+            // Only the types the player has somewhere, so the tables stay narrow.
+            'ship_columns' => array_values(array_filter(ShipType::cases(), static fn (ShipType $t): bool => !$t->isStationary() && $sums['ships'][$t->value] > 0)),
+            'turret_columns' => array_values(array_filter(ShipType::cases(), static fn (ShipType $t): bool => $t->isStationary() && $sums['ships'][$t->value] > 0)),
         ]);
     }
 }
