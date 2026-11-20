@@ -724,12 +724,12 @@ const orbit = (() => {
             } else if (picked.length > 1) {
                 const typed = cargoInputs.reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
                 const free = capacity - loaded - typed;
-                room.textContent = t('📦 Frachtraum der Auswahl {capacity} · bereits geladen {loaded} · neue Ladung {typed} · frei {free} – beim Transport im Konvoi wird die Ladung auf die Frachter verteilt.', { capacity: number(capacity), loaded: number(loaded), typed: number(typed), free: free < 0 ? t('{free} (zu viel!)', { free: '−' + number(-free) }) : number(free) });
+                room.textContent = t('📦 Frachtraum der Auswahl {capacity} · bereits geladen {loaded} · neue Ladung {typed} · frei {free} – beim Transport im Konvoi wird die Ladung auf die Frachter verteilt, bei anderen Aufträgen nimmt jede Flotte sie von ihrem Planeten mit.', { capacity: number(capacity), loaded: number(loaded), typed: number(typed), free: free < 0 ? t('{free} – geladen wird, so viel passt', { free: '−' + number(-free) }) : number(free) });
                 room.classList.toggle('lacking', free < 0);
             } else {
                 const typed = cargoInputs.reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
                 const free = capacity - loaded - typed;
-                room.textContent = t('📦 Frachtraum {capacity} · bereits geladen {loaded} · neue Ladung {typed} · frei {free}', { capacity: number(capacity), loaded: number(loaded), typed: number(typed), free: free < 0 ? t('{free} (zu viel!)', { free: '−' + number(-free) }) : number(free) });
+                room.textContent = t('📦 Frachtraum {capacity} · bereits geladen {loaded} · neue Ladung {typed} · frei {free}', { capacity: number(capacity), loaded: number(loaded), typed: number(typed), free: free < 0 ? t('{free} – geladen wird, so viel passt', { free: '−' + number(-free) }) : number(free) });
                 room.classList.toggle('lacking', free < 0);
             }
         };

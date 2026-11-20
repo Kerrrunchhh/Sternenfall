@@ -494,6 +494,46 @@ class GameFlowTest extends WebTestCase
         self::assertSelectorTextNotContains('.trade-waiting', 'Dönerladen');
     }
 
+    public function testSeveralFleetsEachTakeTheCargoFromTheirOwnPlanet(): void
+    {
+        $this->register('Versorgerin');
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $home = $this->planet('Versorgerin');
+        $home->setBuildingLevel(BuildingType::FleetControl, 1);
+        $me = $home->getOwner();
+        $now = new \DateTimeImmutable();
+        $fleets = [];
+        foreach ([1, 2] as $i) {
+            $colony = new Planet($me, 'Farm '.$i, $home->getGalaxy(), $home->getSystem(), $home->getPosition() > 2 ? $i : $home->getPosition() + $i, $now);
+            $colony->setResources(new Resources(hydrogen: 50000, food: 40000, water: 50000));
+            $em->persist($colony);
+            $fleets[$i] = new \App\Entity\Fleet($me, 'Versorger '.$i, $colony->getGalaxy(), $colony->getSystem(), $colony->getPosition(), ['large_freighter' => 2]);
+            $em->persist($fleets[$i]);
+        }
+        $em->flush();
+
+        // Both fleets stationed at the home world, 25k food each ("je Flotte", not shared);
+        // commanded from the home world with its fleet control center.
+        $this->client->request('GET', '/planet/'.$home->getId().'/select?to=app_fleet');
+        $crawler = $this->client->request('GET', '/fleet?mission=station&galaxy='.$home->getGalaxy().'&system='.$home->getSystem().'&position='.$home->getPosition());
+        $form = $crawler->selectButton('fleet-bulk-submit')->form();
+        foreach ($form['fleets'] as $box) {
+            $box->tick();
+        }
+        $form['action']->select('send:station');
+        $form['cargo[food]'] = '25000';
+        $this->client->submit($form);
+        $this->client->followRedirect();
+
+        self::assertSelectorNotExists('.flash-error');
+        $em->clear();
+        foreach ($fleets as $fleet) {
+            $fleet = $em->find(\App\Entity\Fleet::class, $fleet->getId());
+            self::assertTrue($fleet->isMoving(), $fleet->getName());
+            self::assertSame(25000.0, $fleet->getCargo()->food, $fleet->getName().' took 25k from its own planet');
+        }
+    }
+
     public function testNewPlayersSeeTheWelcomeNewsUntilTheyMarkItRead(): void
     {
         $em = static::getContainer()->get(EntityManagerInterface::class);

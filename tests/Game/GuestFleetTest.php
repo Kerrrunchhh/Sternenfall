@@ -141,6 +141,39 @@ final class GuestFleetTest extends TestCase
         self::assertSame(9000.0, $fleet->getCargo()->hydrogen, 'the rest is on board');
     }
 
+    public function testTooMuchCargoIsCutDownToWhatIsThereAndFits(): void
+    {
+        $home = $this->planets['1:10:1'];
+        $home->setResources(new Resources(iron: 3000, hydrogen: 100000, food: 1000000, water: 100000));
+        $capacity = (new Navigation(new Economy(1.0)))->cargoCapacity(['freighter' => 2]);
+        $this->place(new Planet($this->guest, 'Kolonie', 1, 12, 4, $this->now));
+
+        // "1g" food and "1g" iron: iron is short in storage, food is cut to the hold.
+        $fleet = new Fleet($this->guest, 'Voll', 1, 10, 1, ['freighter' => 2]);
+        $message = $this->service()->sendFleet($fleet, $this->guest, 1, 12, 4, FleetMission::Station, new Resources(iron: 1e9, food: 1e9));
+
+        self::assertTrue($fleet->isMoving());
+        self::assertSame(3000.0, $fleet->getCargo()->iron, 'all the iron there is');
+        self::assertSame((float) $capacity - 3000.0, $fleet->getCargo()->food, 'food fills the rest of the hold');
+        self::assertSame(0.0, $home->getResources()->iron);
+        self::assertStringContainsString('so viel wie möglich', (string) $message->trans(new \Symfony\Component\Translation\IdentityTranslator()));
+    }
+
+    public function testFuelAndProvisionsComeBeforeTheCargo(): void
+    {
+        $home = $this->planets['1:10:1'];
+        $home->setResources(new Resources(hydrogen: 5000, food: 100000, water: 100000));
+        $this->place(new Planet($this->guest, 'Kolonie', 1, 12, 4, $this->now));
+        $fleet = new Fleet($this->guest, 'Tanker', 1, 10, 1, ['freighter' => 2]);
+
+        $this->service()->sendFleet($fleet, $this->guest, 1, 12, 4, FleetMission::Station, new Resources(hydrogen: 1e9));
+
+        self::assertTrue($fleet->isMoving());
+        self::assertGreaterThan(0.0, $fleet->getCargo()->hydrogen);
+        self::assertLessThan(5000.0, $fleet->getCargo()->hydrogen, 'the fuel for the flight was kept back');
+        self::assertSame(0.0, round($home->getResources()->hydrogen), 'the rest went on board');
+    }
+
     public function testAnAbandonedPlanetBecomesOwnerlessWithItsStorage(): void
     {
         $colony = $this->place(new Planet($this->guest, 'Kolonie', 1, 30, 2, $this->now));

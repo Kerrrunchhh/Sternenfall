@@ -164,9 +164,7 @@ final readonly class FleetService
         if ($cargo->isEmpty()) {
             return $loads;
         }
-        if ($cargo->total() > $total) {
-            throw new GameException(t('Die Ladung ({total}) übersteigt den freien Frachtraum der ausgewählten Flotten ({total2}).', ['{total}' => new Num($cargo->total()), '{total2}' => new Num($total)]));
-        }
+        // More than fits is no error: every fleet loads as much as its storage and hold allow (launch()).
         $left = $cargo;
         $carriers = array_keys(array_filter($space));
         foreach ($carriers as $i => $id) {
@@ -742,8 +740,10 @@ final readonly class FleetService
         $this->refuseGuildAttack($mission, $galaxy, $system, $position);
         $this->refuseAttackFromOwnerless($fleet, $mission);
         $result = t('Flotte „{name}“ gestartet: {mission} nach [{coords}].', ['{name}' => $fleet->getName(), '{mission}' => t($mission->label()), '{coords}' => \sprintf('%d:%d:%d', $galaxy, $system, $position)]);
-        $this->withEventLock(function () use ($fleet, $actor, $galaxy, $system, $position, $mission, $cargo, $order, $speedPercent, $lead, $shareChecked, &$result): void {
+        $cargoBefore = null;
+        $this->withEventLock(function () use ($fleet, $actor, $galaxy, $system, $position, $mission, $cargo, $order, $speedPercent, $lead, $shareChecked, &$result, &$cargoBefore): void {
             $this->em->refresh($fleet);
+            $cargoBefore = $fleet->getCargo();
             $this->assertControl($fleet, $actor);
             if (!$fleet->isIdle()) {
                 throw new GameException($this->alreadyUnderway($fleet));
@@ -833,6 +833,13 @@ final readonly class FleetService
             $launch(null, $this->now());
             $this->em->flush();
         });
+        // Less loaded than asked for (storage, hold, fuel): say what is on board.
+        if (!$cargo->isEmpty() && null !== $cargoBefore && $fleet->isMoving()) {
+            $loaded = $fleet->getCargo()->subtract($cargoBefore);
+            if ($loaded->total() < $cargo->total() - 0.5) {
+                $result = new Lines([$result, t('Geladen wurde so viel wie möglich: {goods}.', ['{goods}' => [] === array_filter($loaded->toArray(), static fn (float $v): bool => $v >= 1) ? t('nichts') : Goods::summary(array_filter($loaded->toArray(), static fn (float $v): bool => $v >= 1))])], ' ');
+            }
+        }
         if (null !== $lead && $fleet->isMoving() && !$fleet->isAt($galaxy, $system, $position)) {
             $result = FleetMission::Attack === $mission
                 ? t('Flotte „{name}“ tritt dem Angriff von {player} auf [{targetCoordinates}] bei.', ['{name}' => $fleet->getName(), '{player}' => $lead->getOwner()->getUsername(), '{targetCoordinates}' => $lead->getTargetCoordinates()])
@@ -1462,13 +1469,6 @@ final readonly class FleetService
         $order = $clean;
         $this->validateMission($mission, $owner, $target, $ships, $fleet->isNamed(), $post, $order);
         $this->assertNotNewbie($mission, $fleet, $target);
-        // Pushing protection: resources for another player without payment are limited
-        // (a delivery for a paid transport request is no gift).
-        if (\in_array($mission, [FleetMission::Transport, FleetMission::TransportStation], true) && null !== $target
-            && !$target->getOwner()->isSameAs($owner) && true !== $this->transportRequests?->isPaidDelivery($fleet)) {
-            $this->pushing?->checkAndRecord($owner, $target->getOwner(), $fleet->getCargo()->add($cargo)->total(), $now);
-        }
-
         foreach (ResourceType::cases() as $type) {
             if ($cargo->get($type) < 0) {
                 throw new GameException(t('Die Ladung darf nicht negativ sein.'));
@@ -1487,9 +1487,21 @@ final readonly class FleetService
         }
         // Loot in the salvage holds counts as well (it stays on board when the fleet lands abroad).
         $hold = $capacity + array_sum(array_map(static fn (string $type, int $count): int => ShipType::from($type)->salvageCapacity() * $count, array_keys($ships), $ships));
-        if ($fleet->getCargo()->add($cargo)->total() > $hold) {
-            throw new GameException(t('Die Ladung übersteigt die Frachtkapazität von {capacity}.', ['{capacity}' => new Num($hold)]));
+        // As much as there is and fits: more than the storage holds or the hold takes (e.g. "1g") is cut
+        // down instead of refused – what fuel and provisions still need is taken off in travel().
+        if (null !== $base) {
+            $stock = $base->getResources();
+            $cargo = Resources::fromCallback(static fn (ResourceType $type): float => min($cargo->get($type), max(0.0, floor($stock->get($type)))));
         }
+        $cargo = self::fitInto($cargo, max(0, $hold - $fleet->getCargo()->total()));
+
+        // Pushing protection: resources for another player without payment are limited
+        // (a delivery for a paid transport request is no gift).
+        if (\in_array($mission, [FleetMission::Transport, FleetMission::TransportStation], true) && null !== $target
+            && !$target->getOwner()->isSameAs($owner) && true !== $this->transportRequests?->isPaidDelivery($fleet)) {
+            $this->pushing?->checkAndRecord($owner, $target->getOwner(), $fleet->getCargo()->add($cargo)->total(), $now);
+        }
+
 
         // Leaving an own planet: remember it – trade fleets and fleets sent home after
         // 24 hours abroad fly back there.
@@ -1530,10 +1542,13 @@ final readonly class FleetService
 
         $hostPaid = null;
         if (null !== $base) {
-            $needed = $cargo->add($travel);
-            if (!$base->getResources()->covers($needed)) {
-                throw new GameException(t('Nicht genügend Rohstoffe für Ladung, {missing}.', ['{missing}' => $missing]));
+            if (!$base->getResources()->covers($travel)) {
+                throw new GameException(t('Nicht genügend Rohstoffe für {missing}.', ['{missing}' => $missing]));
             }
+            // Fuel and provisions first; the cargo gets what is left of each resource.
+            $left = $base->getResources()->subtract($travel);
+            $cargo = Resources::fromCallback(static fn (ResourceType $type): float => min($cargo->get($type), max(0.0, floor($left->get($type)))));
+            $needed = $cargo->add($travel);
             $base->setResources($base->getResources()->subtract($needed));
             $fleet->setCargo($fleet->getCargo()->add($cargo));
         } elseif (null !== $host) {
@@ -2212,6 +2227,19 @@ final readonly class FleetService
         } finally {
             $lock->release();
         }
+    }
+
+    /** The cargo cut down to $space, filled resource by resource in their usual order. */
+    private static function fitInto(Resources $cargo, float|int $space): Resources
+    {
+        $free = (float) $space;
+
+        return Resources::fromCallback(static function (ResourceType $type) use ($cargo, &$free): float {
+            $amount = min($cargo->get($type), $free);
+            $free -= $amount;
+
+            return $amount;
+        });
     }
 
     /** Enters a colonization research that was done by $at (updating one of the player's planets does that). */

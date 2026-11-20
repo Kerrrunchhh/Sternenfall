@@ -427,12 +427,8 @@ class FleetController extends AbstractGameController
             return $this->redirectToRoute('app_fleet');
         }
 
+        // Several fleets on a mission that doesn't fly together: every fleet takes this cargo from its own planet.
         $cargo = $this->cargo($request);
-        if ('send' === $action && \count($selected) > 1 && !$cargo->isEmpty() && !\in_array($mission, FleetService::GROUP_MISSIONS, true)) {
-            $this->addFlash('error', t('Ladung kann nur eine einzelne Flotte mitnehmen. Wähle nur eine Flotte aus oder lass die Ladung leer.'));
-
-            return $this->redirectToRoute('app_fleet');
-        }
         $member = \in_array($action, ['release_member', 'revoke_member'], true) ? $users->find($form->getInt('member')) : null;
 
         // An attack plunders evenly or in the order the player chose; the order is remembered for the next time.
