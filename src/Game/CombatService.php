@@ -158,7 +158,9 @@ final readonly class CombatService
             $this->logBattle($attackers, \sprintf('Angriff auf %s [%s] von %s', $target->getName(), $target->getCoordinates(), $defender->getUsername()), $defender, $result->attackerWon() ? 'gewonnen' : 'nicht gewonnen', $loot);
             $subject = t('Kampfbericht {name} [{coords}]', ['{name}' => $target->getName(), '{coords}' => $target->getCoordinates()]);
             $body = static fn (?User $viewer): TranslatableInterface => new Lines([$headline, '', $result->report($viewer), '', ...array_filter($outcome), ...$experience]);
-            $this->notify([...array_map(static fn (Fleet $f): User => $f->getOwner(), $attackers), $defender, ...array_map(static fn (Fleet $f): User => $f->getOwner(), $guards), ...$result->participants()], $subject, $body, $result, $loot);
+            // The shareable copy names the defender instead of the planet and where it is.
+            $public = t('Kampfbericht {player}', ['{player}' => $defender->getUsername()]);
+            $this->notify([...array_map(static fn (Fleet $f): User => $f->getOwner(), $attackers), $defender, ...array_map(static fn (Fleet $f): User => $f->getOwner(), $guards), ...$result->participants()], $subject, $body, $result, $loot, $public);
         });
     }
 
@@ -268,7 +270,9 @@ final readonly class CombatService
             ? ($raid ? t('Überfall erfolgreich.') : t('Abfangkampf erfolgreich.'))
             : ($raid ? t('Überfall ohne Entscheidung.') : t('Abfangkampf ohne Entscheidung.'));
         $body = static fn (?User $viewer): TranslatableInterface => new Lines([$headline, '', $result->report($viewer), '', ...array_filter($outcome), ...$experience]);
-        $this->notify([$hunter->getOwner(), ...array_map(static fn (Fleet $f): User => $f->getOwner(), $preys), ...$result->participants()], $subject, $body, $result, $taken);
+        $player = $preys[0]->getOwner()->getUsername();
+        $public = $raid ? t('Kampfbericht Überfall auf {player}', ['{player}' => $player]) : t('Kampfbericht Abfangkampf gegen {player}', ['{player}' => $player]);
+        $this->notify([$hunter->getOwner(), ...array_map(static fn (Fleet $f): User => $f->getOwner(), $preys), ...$result->participants()], $subject, $body, $result, $taken, $public);
     }
 
     /**
@@ -545,7 +549,7 @@ final readonly class CombatService
      * @param \Closure(?User): TranslatableInterface $body the report as seen by a recipient (null: neutral)
      * @param list<array{owner: string, ownerId: ?int, resources: array<string, float>}> $loot plunder per attacker, stored with the shared report
      */
-    private function notify(array $recipients, TranslatableInterface $subject, \Closure $body, ?BattleResult $result = null, array $loot = []): void
+    private function notify(array $recipients, TranslatableInterface $subject, \Closure $body, ?BattleResult $result = null, array $loot = [], ?TranslatableInterface $publicSubject = null): void
     {
         // One neutral, shareable copy of the report, linked at the end of every copy.
         $share = null;
@@ -555,7 +559,7 @@ final readonly class CombatService
                 // Plunder per attacker (an empty list: nothing taken), for battle summaries.
                 $replay['loot'] = $loot;
             }
-            $link = $this->reports->publish($subject, $body(null), $result?->losses() ?? [], $replay);
+            $link = $this->reports->publish($publicSubject ?? $subject, $body(null), $result?->losses() ?? [], $replay);
             $share = t("\nKampfbericht teilen ({value} Tage gültig, ohne Anmeldung lesbar): {link}", ['{value}' => BattleReport::DAYS_AVAILABLE, '{link}' => $link]);
         }
         // Every attacker and defender gets the report from his own point of view.

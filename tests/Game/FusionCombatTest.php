@@ -315,7 +315,7 @@ class FusionCombatTest extends TestCase
 
     /** @param list<Fleet> $joiners */
     /** @param list<\App\Game\ResourceType>|null $lootOrder */
-    private function attack(Planet $target, array $ships, bool $lucky = true, array $joiners = [], bool $deletion = false, ?array $lootOrder = null): Fleet
+    private function attack(Planet $target, array $ships, bool $lucky = true, array $joiners = [], bool $deletion = false, ?array $lootOrder = null, bool $reports = false): Fleet
     {
         $fleet = new Fleet($this->attacker, 'Sturm', 1, 2, 1, $ships);
         $fleet->setLootOrder($lootOrder);
@@ -332,12 +332,12 @@ class FusionCombatTest extends TestCase
         $debris = $this->createStub(DebrisFieldRepository::class);
         $debris->method('findAt')->willReturn(null);
 
-        $this->combat($lucky, $deletion)->attackPlanet($fleet, $target, $joiners);
+        $this->combat($lucky, $deletion, $reports)->attackPlanet($fleet, $target, $joiners);
 
         return $fleet;
     }
 
-    private function combat(bool $lucky, bool $deletion = false): CombatService
+    private function combat(bool $lucky, bool $deletion = false, bool $reports = false): CombatService
     {
         $em = $this->createStub(EntityManagerInterface::class);
         $em->method('persist')->willReturnCallback(function (object $entity): void {
@@ -363,6 +363,14 @@ class FusionCombatTest extends TestCase
             $clock,
             new Randomizer(new FixedEngine($lucky)),
             planetRepository: $planets,
+            reports: $reports ? new \App\Game\BattleReports(
+                $em,
+                $this->createStub(\App\Repository\BattleReportRepository::class),
+                $this->createStub(\Symfony\Component\Routing\Generator\UrlGeneratorInterface::class),
+                $clock,
+                $this->translator(),
+                new \App\I18n\Locales(['de', 'en'], 'de'),
+            ) : null,
             deletion: $deletion ? $this->deletion($em, $clock) : null,
         );
     }
@@ -389,6 +397,30 @@ class FusionCombatTest extends TestCase
     private function newPlanets(): array
     {
         return array_values(array_filter($this->persisted, static fn (object $o): bool => $o instanceof Planet));
+    }
+
+    public function testTheShareableReportNamesTheDefenderInsteadOfThePlanet(): void
+    {
+        $target = $this->fusion(1, shieldLevels: 0);
+        $this->attack($target, ['monarch' => 1], reports: true);
+
+        $shared = array_values(array_filter($this->persisted, static fn (object $o): bool => $o instanceof \App\Entity\BattleReport));
+        self::assertCount(1, $shared);
+        self::assertSame('Kampfbericht verteidiger', $shared[0]->getSubject());
+        self::assertSame('Battle report verteidiger', $shared[0]->subjectIn('en'), 'every language names the player');
+        // The participants keep the planet and its coordinates.
+        $messages = array_values(array_filter($this->persisted, static fn (object $o): bool => $o instanceof Message));
+        self::assertStringContainsString('['.$target->getCoordinates().']', $messages[0]->getSubject());
+    }
+
+    /** German keys as they are, plus the English line the shareable report needs. */
+    private function translator(): \Symfony\Component\Translation\Translator
+    {
+        $translator = new \Symfony\Component\Translation\Translator('de');
+        $translator->addLoader('array', new \Symfony\Component\Translation\Loader\ArrayLoader());
+        $translator->addResource('array', ['Kampfbericht {player}' => 'Battle report {player}'], 'en');
+
+        return $translator;
     }
 
     private function report(): string
