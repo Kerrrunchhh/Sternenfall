@@ -732,7 +732,7 @@ body.swapping main.content { opacity: .75; transition: opacity .15s; cursor: pro
 /* Jumping to #own without JavaScript: keep the row clear of the sticky top bar. */
 .highscore-table tr { scroll-margin-top: 40vh; }
 .highscore-table tr.highscore-own td:first-child { box-shadow: inset 3px 0 0 var(--accent-2); }
-.rank-change { font-size: .75rem; font-weight: 600; margin-left: .25rem; white-space: nowrap; }
+.rank-change { display: inline-block; min-width: 2.6em; margin-left: .25rem; font-size: .75rem; font-weight: 600; text-align: left; white-space: nowrap; }
 /* Place and arrow stay on one line, however narrow the column gets. */
 .highscore-table td.rank-cell { white-space: nowrap; }
 .rank-up { color: var(--ok); }

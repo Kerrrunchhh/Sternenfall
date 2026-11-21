@@ -93,8 +93,8 @@
     {% import 'game/_macros.html.twig' as ui %}
     {% set mine = own and own.rank == r.rank and (view == 'players' ? own.user.id == r.user.id : own.alliance.id == r.alliance.id) %}
     <tr class="{{ mine ? 'highscore-own' }}"{% if mine %} id="own"{% endif %}>
-        <td class="num rank-cell">{{ r.rank }}.{% if r.change ?? null %}{% set n = r.change|abs %}
-            <span class="rank-change {{ r.change > 0 ? 'rank-up' : 'rank-down' }}" title="{{ 'Vor 24 Stunden: Platz {rank}'|trans({'{rank}': r.rank + r.change}) }}">{{ r.change > 0 ? '▲' : '▼' }}{{ n }}</span>{% endif %}</td>
+        {# The arrow always has its slot (empty without a change), so the places line up. #}
+        <td class="num rank-cell">{{ r.rank }}.{%- if r.change ?? null %}{% set n = r.change|abs %}<span class="rank-change {{ r.change > 0 ? 'rank-up' : 'rank-down' }}" title="{{ 'Vor 24 Stunden: Platz {rank}'|trans({'{rank}': r.rank + r.change}) }}">{{ r.change > 0 ? '▲' : '▼' }}{{ n }}</span>{% else %}<span class="rank-change" aria-hidden="true"></span>{% endif %}</td>
         {% if view == 'players' %}
             <td>{{ ui.player(r.user) }}</td>
             <td class="small">{{ r.user.lifeForm.icon }} {{ r.user.lifeForm.label|trans }}</td>
