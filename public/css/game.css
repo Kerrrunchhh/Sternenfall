@@ -127,9 +127,33 @@ form .btn-small[type=submit] { margin-top: 0; }
    (at least 42rem – it grows with the font size) doesn't fit next to logo, clock, search and name,
    it moves into a full-width row of its own; numbers are never cut off. */
 @media (min-width: 761px) {
-    .topbar { flex-wrap: wrap; row-gap: .4rem; }
-    .resources { order: 5; flex: 1 1 42rem; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .5rem; }
+    /* Fixed places: logo left, player name and log-out always far right; the resources in a row of
+       their own below – unless the screen is wide enough for everything in one line (see below). */
+    .topbar {
+        display: grid;
+        grid-template-columns: auto auto minmax(0, 1fr) auto auto auto;
+        grid-template-areas: "logo clock . switch search user" "res res res res res res";
+        column-gap: 1rem;
+        row-gap: .4rem;
+        align-items: center;
+    }
+    .topbar .logo-link { grid-area: logo; }
+    .topbar .server-clock { grid-area: clock; }
+    .topbar .account-switch { grid-area: switch; }
+    .topbar .top-search { grid-area: search; }
+    /* Name and search give way when the first line gets narrow: the name wraps, the field shrinks. */
+    .topbar .user { grid-area: user; justify-self: end; white-space: normal; text-align: right; min-width: 0; }
+    .topbar .top-search input { width: clamp(6rem, 12vw, 10rem); }
+    /* Seven equal columns; with a big font on a narrow screen they wrap into a second row instead of cutting numbers. */
+    .resources { grid-area: res; display: grid; grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr)); gap: .5rem; }
     .res { min-width: 0; white-space: nowrap; }
+    /* Everything in one line – switched on by game.js only when it really fits. */
+    .topbar.one-line {
+        grid-template-columns: auto minmax(0, 1fr) auto auto auto auto;
+        grid-template-areas: "logo res clock switch search user";
+    }
+    .topbar.one-line .resources { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+    .topbar.one-line .user { white-space: nowrap; }
 }
 .res-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .res-amount { font-weight: 600; font-variant-numeric: tabular-nums; }

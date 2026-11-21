@@ -11,7 +11,7 @@
     <div class="building-list">
         {% for b in buildings %}
             {% set picture = game_picture('buildings', b.type.value) %}
-            <article class="panel building {{ picture ? 'has-picture' }}">
+            <article class="panel building {{ picture ? 'has-picture' }}" id="building-{{ b.type.value }}">
                 {% if picture %}<img class="card-picture" src="{{ asset(picture) }}" alt="{{ b.type.label|trans }}" width="345" height="251" loading="lazy">{% endif %}
                 <div class="card-body">
                 <div class="building-head">

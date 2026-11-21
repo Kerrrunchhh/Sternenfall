@@ -1856,13 +1856,23 @@ const orbit = (() => {
         };
         form.dataset.busy = '1';
         document.body.classList.add('swapping');
+        // Keep what was clicked where it is on the screen, even if the queue above grows or shrinks.
+        const anchor = form.closest('[id]');
+        const anchorId = anchor?.id;
+        const anchorTop = anchor?.getBoundingClientRect().top;
+        const keepInPlace = () => {
+            const again = anchorId ? document.getElementById(anchorId) : null;
+            if (again && undefined !== anchorTop) {
+                window.scrollBy(0, again.getBoundingClientRect().top - anchorTop);
+            }
+        };
         fetch(action, { method: 'POST', body: new FormData(form, submitter), credentials: 'same-origin' })
             .then((response) => {
                 // Only a page like this one can be swapped in (not e.g. the login after a timeout).
                 if (!response.ok || new URL(response.url).pathname !== window.location.pathname) throw new Error('other page');
                 return response.text();
             })
-            .then((html) => { if (!swapIn(html)) throw new Error('parts missing'); })
+            .then((html) => { if (!swapIn(html)) throw new Error('parts missing'); keepInPlace(); })
             .catch(fallback)
             .finally(() => { delete form.dataset.busy; document.body.classList.remove('swapping'); });
     });
@@ -2206,7 +2216,35 @@ const orbit = (() => {
         return;
     }
     const measure = () => document.documentElement.style.setProperty('--topbar-h', bar.offsetHeight + 'px');
-    measure();
+    // One line (logo, resources, clock, search, name) only if nothing gets squeezed: no cut numbers,
+    // nothing beyond the right edge. Otherwise the resources keep their own row below.
+    const fits = () => {
+        // A value is squeezed when its column (.res) is narrower than its widest line.
+        const cut = [...bar.querySelectorAll('.resources, .res')].some((el) => el.scrollWidth > el.clientWidth + 1);
+        const user = bar.querySelector('.user');
+        return !cut && bar.scrollWidth <= bar.clientWidth + 1 && (!user || user.getBoundingClientRect().right <= bar.getBoundingClientRect().right + 1);
+    };
+    const arrange = () => {
+        if (window.matchMedia('(max-width: 760px)').matches) {
+            bar.classList.remove('one-line');
+        } else {
+            bar.classList.add('one-line');
+            if (!fits()) {
+                bar.classList.remove('one-line');
+            }
+        }
+        measure();
+    };
+    arrange();
+    let width = window.innerWidth;
+    window.addEventListener('resize', () => {
+        if (window.innerWidth !== width) {
+            width = window.innerWidth;
+            arrange();
+        }
+    });
+    // Web fonts arriving late change the widths once more.
+    document.fonts?.ready.then(arrange);
     if ('ResizeObserver' in window) {
         new ResizeObserver(measure).observe(bar);
     } else {
