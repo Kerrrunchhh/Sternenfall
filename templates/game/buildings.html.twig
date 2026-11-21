@@ -28,7 +28,7 @@
                 <div class="building-foot">
                     <div class="cost">
                         {{ '{cost} <span class="duration">Dauer {seconds}</span>'|trans({'{cost}': ui.cost(b.cost, planet), '{seconds}': b.seconds|format_duration|e})|raw }}
-                        {% if surcharge and not queue_full %}<span class="requirement" title="{{ 'Das zweite Gebäude in der Bauschleife kostet 30 % mehr'|trans }}">{{ '+30 % Zuschlag'|trans }}</span>{% endif %}
+                        {% if surcharge and not queue_full %}<span class="requirement" title="{{ 'Das zweite Gebäude in der Bauschleife kostet 30 % mehr Rohstoffe – die Bauzeit bleibt gleich'|trans }}">{{ '+30 % Kosten'|trans }}</span>{% endif %}
                     </div>
                     {% if b.missing is not empty %}
                         <span class="requirement">{{ 'Benötigt: {missing}'|trans({'{missing}': b.missing|map(m => m|trans)|join(', ')}) }}</span>

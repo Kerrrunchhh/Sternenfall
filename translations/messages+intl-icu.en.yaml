@@ -34,7 +34,7 @@
 "(verbündet)": "(allied)"
 "({count} einzeln)": "({count} individually)"
 "+ Regel": "+ Rule"
-"+30 % Zuschlag": "+30 % surcharge"
+"+30 % Kosten": "+30 % cost"
 ", der Handelsstützpunkt zahlt den Flug": ", the trade post pays for the flight"
 "0 = nicht im Verkauf": "0 = not for sale"
 "0 = nichts ankaufen": "0 = buy nothing"
@@ -3289,3 +3289,4 @@
 "Kolonisierung & Fusion": "Colonization & fusion"
 "Nur bestimmte Flüge zeigen": "Show only some flights"
 "Bitte bestätige innerhalb von 48 Stunden – danach wird ein unbestätigtes Konto gelöscht, und der Name ist wieder frei.": "Please confirm within 48 hours – after that an unconfirmed account is deleted and the name is free again."
+"Das zweite Gebäude in der Bauschleife kostet 30 % mehr Rohstoffe – die Bauzeit bleibt gleich": "The second building in the queue costs 30 % more resources – the build time stays the same"
