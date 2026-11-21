@@ -773,6 +773,22 @@ body.swapping main.content { opacity: .75; transition: opacity .15s; cursor: pro
 
 /* Planet list: scrolls once there are more than about 30 planets */
 .sidebar .planet-list { max-height: min(46rem, 75vh); }
+/* Desktop and tablets: the side columns stay in place below the top bar and scroll on their own,
+   the middle scrolls with the page (--topbar-h is the measured height of the top bar, see game.js). */
+@media (min-width: 761px) {
+    .layout { align-items: flex-start; }
+    .sidebar-left, .sidebar-right {
+        position: sticky;
+        top: var(--topbar-h, 70px);
+        max-height: calc(100vh - var(--topbar-h, 70px));
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+        scrollbar-color: var(--border) transparent;
+    }
+    /* The whole column scrolls now – no second scroll bar inside the planet list. */
+    .sidebar .planet-list { max-height: none; overflow-y: visible; }
+}
 /* Reply and delete side by side, same height */
 .mail-letter-actions { align-items: stretch; }
 .mail-letter-actions .btn { display: inline-flex; align-items: center; justify-content: center; font: inherit; font-size: .95rem; line-height: 1.2; padding: .55rem 1.1rem; margin: 0; box-sizing: border-box; }

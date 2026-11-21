@@ -2197,3 +2197,19 @@ const orbit = (() => {
     });
     apply();
 })();
+
+// The side columns stick below the top bar, whose height depends on the width (resources in one or two rows).
+(function () {
+    'use strict';
+    const bar = document.querySelector('.topbar');
+    if (!bar) {
+        return;
+    }
+    const measure = () => document.documentElement.style.setProperty('--topbar-h', bar.offsetHeight + 'px');
+    measure();
+    if ('ResizeObserver' in window) {
+        new ResizeObserver(measure).observe(bar);
+    } else {
+        window.addEventListener('resize', measure);
+    }
+})();
