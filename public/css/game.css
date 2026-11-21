@@ -733,6 +733,8 @@ body.swapping main.content { opacity: .75; transition: opacity .15s; cursor: pro
 .highscore-table tr { scroll-margin-top: 40vh; }
 .highscore-table tr.highscore-own td:first-child { box-shadow: inset 3px 0 0 var(--accent-2); }
 .rank-change { font-size: .75rem; font-weight: 600; margin-left: .25rem; white-space: nowrap; }
+/* Place and arrow stay on one line, however narrow the column gets. */
+.highscore-table td.rank-cell { white-space: nowrap; }
 .rank-up { color: var(--ok); }
 .rank-down { color: var(--bad); }
 .sort-link { color: var(--muted); text-decoration: none; }

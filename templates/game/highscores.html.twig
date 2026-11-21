@@ -93,7 +93,7 @@
     {% import 'game/_macros.html.twig' as ui %}
     {% set mine = own and own.rank == r.rank and (view == 'players' ? own.user.id == r.user.id : own.alliance.id == r.alliance.id) %}
     <tr class="{{ mine ? 'highscore-own' }}"{% if mine %} id="own"{% endif %}>
-        <td class="num">{{ r.rank }}.{% if r.change ?? null %}{% set n = r.change|abs %}
+        <td class="num rank-cell">{{ r.rank }}.{% if r.change ?? null %}{% set n = r.change|abs %}
             <span class="rank-change {{ r.change > 0 ? 'rank-up' : 'rank-down' }}" title="{{ 'Vor 24 Stunden: Platz {rank}'|trans({'{rank}': r.rank + r.change}) }}">{{ r.change > 0 ? '▲' : '▼' }}{{ n }}</span>{% endif %}</td>
         {% if view == 'players' %}
             <td>{{ ui.player(r.user) }}</td>
