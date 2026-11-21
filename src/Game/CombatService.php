@@ -131,7 +131,7 @@ final readonly class CombatService
             // Plunder first, then the salvage ships of every side take what they can of the wreckage.
             $outcome[] = $this->salvageWreckage($result, [...$attackers, ...$guards], $target);
             if ([] !== $joiners) {
-                $headline = new Lines([$headline, t('Verbandsangriff mit {count} Flotten ({value}).', ['{count}' => \count($attackers), '{value}' => implode(', ', array_unique(array_map(static fn (Fleet $f): string => $f->getOwner()->getUsername(), $attackers)))])], ' ');
+                $headline = new Lines([$headline, t('Verbandsangriff mit {count} Flotten ({value}).', ['{count}' => \count($attackers), '{value}' => implode(', ', array_unique(array_map(static fn (Fleet $f): string => $f->getOwner()->getDisplayName(), $attackers)))])], ' ');
             }
 
             // Bombed civilians and destroyed crews: hero or crime points for the attackers.
@@ -160,7 +160,7 @@ final readonly class CombatService
             $subject = t('Kampfbericht {name} [{coords}]', ['{name}' => $target->getName(), '{coords}' => $target->getCoordinates()]);
             $body = static fn (?User $viewer): TranslatableInterface => new Lines([$headline, '', $result->report($viewer), '', ...array_filter($outcome), ...$experience]);
             // The shareable copy names the players instead of the planet and where it is.
-            $public = t('Kampfbericht {attacker} gegen {defender}', ['{attacker}' => implode(', ', array_unique(array_map(static fn (Fleet $f): string => $f->getOwner()->getUsername(), $attackers))), '{defender}' => $defender->getUsername()]);
+            $public = t('Kampfbericht {attacker} gegen {defender}', ['{attacker}' => implode(', ', array_unique(array_map(static fn (Fleet $f): string => $f->getOwner()->getDisplayName(), $attackers))), '{defender}' => $defender->getDisplayName()]);
             $this->notify([...array_map(static fn (Fleet $f): User => $f->getOwner(), $attackers), $defender, ...array_map(static fn (Fleet $f): User => $f->getOwner(), $guards), ...$result->participants()], $subject, $body, $result, $loot, $public);
         });
     }
@@ -208,7 +208,7 @@ final readonly class CombatService
         // Intercepting an attack defends: it can only earn hero points. A raid is an attack.
         $outcome = [...$outcome, ...HeroPoints::apply(HeroPoints::forBattle($result, defensive: !$raid))];
         if (\count($preys) > 1) {
-            $outcome[] = t('{value} flogen gemeinsam: {value2}.', ['{value}' => $raid ? t('Im Konvoi') : t('Im Verband'), '{value2}' => new Lines(array_map(static fn (Fleet $f): TranslatableInterface => t('{label} ({player})', ['{label}' => $f->getLabel(), '{player}' => $f->getOwner()->getUsername()]), $preys), ', ')]);
+            $outcome[] = t('{value} flogen gemeinsam: {value2}.', ['{value}' => $raid ? t('Im Konvoi') : t('Im Verband'), '{value2}' => new Lines(array_map(static fn (Fleet $f): TranslatableInterface => t('{label} ({player})', ['{label}' => $f->getLabel(), '{player}' => $f->getOwner()->getDisplayName()]), $preys), ', ')]);
         }
 
         $cargo = array_reduce($preys, static fn (Resources $sum, Fleet $f): Resources => $sum->add($f->getCargo()), new Resources());
@@ -254,8 +254,9 @@ final readonly class CombatService
             ? ($raid ? t('Überfall erfolgreich.') : t('Abfangkampf erfolgreich.'))
             : ($raid ? t('Überfall ohne Entscheidung.') : t('Abfangkampf ohne Entscheidung.'));
         $body = static fn (?User $viewer): TranslatableInterface => new Lines([$headline, '', $result->report($viewer), '', ...array_filter($outcome), ...$experience]);
-        $player = $preys[0]->getOwner()->getUsername();
-        $names = ['{attacker}' => $hunter->getOwner()->getUsername(), '{defender}' => $player];
+        // Names with the alliance tag of the moment (shared reports and the newspaper keep them).
+        $player = $preys[0]->getOwner()->getDisplayName();
+        $names = ['{attacker}' => $hunter->getOwner()->getDisplayName(), '{defender}' => $player];
         $public = $raid ? t('Kampfbericht Überfall {attacker} gegen {defender}', $names) : t('Kampfbericht Abfangkampf {attacker} gegen {defender}', $names);
         $this->notify([$hunter->getOwner(), ...array_map(static fn (Fleet $f): User => $f->getOwner(), $preys), ...$result->participants()], $subject, $body, $result, $taken, $public);
     }
@@ -296,7 +297,7 @@ final readonly class CombatService
             $taken = $taken->add($part);
             $takenBy[] = self::lootEntry($fleet->getOwner(), $part);
             if (\count($attackers) > 1) {
-                $lines[] = t('Beute von {player}: {value} – {where}.', ['{player}' => $fleet->getOwner()->getUsername(), '{value}' => $this->describe($part), '{where}' => $where]);
+                $lines[] = t('Beute von {player}: {value} – {where}.', ['{player}' => $fleet->getOwner()->getDisplayName(), '{value}' => $this->describe($part), '{where}' => $where]);
             } else {
                 $lines[] = t('Die Beute ist an Bord der Bergungsschiffe – {where}.', ['{where}' => $where]);
             }
@@ -350,7 +351,7 @@ final readonly class CombatService
         $inactive = $defender->isInactive($now);
         // Home planets can't be taken: only then the invasion ships come back.
         if (null === $brokenOff && !$target->isFused() && $target->isHomeworld() && !$inactive) {
-            return [t('Invasion fehlgeschlagen: {name} [{coords}] ist der Heimatplanet von {player}. Heimatplaneten können nicht erobert werden. Die Invasionsschiffe kehren zurück.', ['{name}' => $target->getName(), '{coords}' => $target->getCoordinates(), '{player}' => $target->getOwner()->getUsername()])];
+            return [t('Invasion fehlgeschlagen: {name} [{coords}] ist der Heimatplanet von {player}. Heimatplaneten können nicht erobert werden. Die Invasionsschiffe kehren zurück.', ['{name}' => $target->getName(), '{coords}' => $target->getCoordinates(), '{player}' => $target->getOwner()->getDisplayName()])];
         }
 
         // Every other attempt costs the invasion ships, whatever happens.
@@ -359,17 +360,20 @@ final readonly class CombatService
         }
 
         // Who may take the planet: an invading player with enough free slots (3, in a war 2); several – chance decides.
+        // The player a still integrating planet was taken from gets it back: it is his again at once (1 slot).
+        $original = null === $brokenOff && !$target->isFused() ? $target->getOriginalOwner($now) : null;
         $candidates = [];
         $refusals = [];
         foreach ($byPlayer as ['user' => $user]) {
             $inWar = $this->diplomacy?->atWar($user, $target->getOwner()) ?? false;
-            $cost = $inactive ? 1 : Planet::invadedSlots($now, $inWar, $now);
+            $returning = null !== $original && $original->isSameAs($user);
+            $cost = $inactive || $returning ? 1 : Planet::invadedSlots($now, $inWar, $now);
             $slots = $this->economy->colonySlots($user);
             $owned = Economy::ownedSlots($user, $now);
             if ($owned + $cost <= $slots) {
-                $candidates[] = ['user' => $user, 'war' => $inWar];
+                $candidates[] = ['user' => $user, 'war' => $inWar, 'returning' => $returning];
             } else {
-                $refusals[] = t('{player} hat nur noch {value} von {cost} nötigen Planetenplätzen frei', ['{player}' => $user->getUsername(), '{value}' => max(0, $slots - $owned), '{cost}' => $cost]);
+                $refusals[] = t('{player} hat nur noch {value} von {cost} nötigen Planetenplätzen frei', ['{player}' => $user->getDisplayName(), '{value}' => max(0, $slots - $owned), '{cost}' => $cost]);
             }
         }
         if ([] === $candidates) {
@@ -377,11 +381,18 @@ final readonly class CombatService
                 ? t('Invasion fehlgeschlagen: Ein Planet eines inaktiven Spielers belegt 1 Planetenplatz – {value}. Die Invasionsschiffe sind verloren.', ['{value}' => new Lines($refusals, '; ')])
                 : t('Invasion fehlgeschlagen: Ein invadierter Planet belegt 3 Planetenplätze (im Krieg 2) – {value}. Die Invasionsschiffe sind verloren.', ['{value}' => new Lines($refusals, '; ')])];
         }
-        ['user' => $conqueror, 'war' => $inWar] = $candidates[\count($candidates) > 1 ? $this->random->getInt(0, \count($candidates) - 1) : 0];
+        // The original owner comes first: the population rises for him, so it always succeeds.
+        $returners = array_values(array_filter($candidates, static fn (array $c): bool => $c['returning']));
+        if ([] !== $returners) {
+            $candidates = $returners;
+        }
+        ['user' => $conqueror, 'war' => $inWar, 'returning' => $returning] = $candidates[\count($candidates) > 1 ? $this->random->getInt(0, \count($candidates) - 1) : 0];
 
-        $chance = Economy::invasionChance($invaders, $population);
-        $odds = t('{invaders} Invasionsschiff(e) gegen {population} Einwohner, Chance {chance} %', ['{invaders}' => $invaders, '{population}' => new Num($population), '{chance}' => new Num(100 * $chance)]);
-        if ($this->random->nextFloat() >= $chance) {
+        $chance = $returning ? 1.0 : Economy::invasionChance($invaders, $population);
+        $odds = $returning
+            ? t('die Bevölkerung erhebt sich für {player}', ['{player}' => $conqueror->getDisplayName()])
+            : t('{invaders} Invasionsschiff(e) gegen {population} Einwohner, Chance {chance} %', ['{invaders}' => $invaders, '{population}' => new Num($population), '{chance}' => new Num(100 * $chance)]);
+        if (!$returning && $this->random->nextFloat() >= $chance) {
             return [t('Invasion gescheitert ({odds}). Die Invasionsschiffe sind verloren.', ['{odds}' => $odds])];
         }
 
@@ -401,11 +412,12 @@ final readonly class CombatService
         $this->contracts?->conquered($victim, $conqueror);
         $victim->setPopulation($victim->getPopulation() + $invaders * ShipType::InvasionShip->spec()->crew);
         $slotsNote = match (true) {
-            $inactive => t('{player} war inaktiv: Der Planet belegt 1 Planetenplatz und gehört sofort vollständig dem Eroberer.', ['{player}' => $defender->getUsername()]),
+            $returning => t('{player} hat seinen Planeten zurückerobert: Er gehört ihm sofort wieder vollständig und belegt 1 Planetenplatz.', ['{player}' => $conqueror->getDisplayName()]),
+            $inactive => t('{player} war inaktiv: Der Planet belegt 1 Planetenplatz und gehört sofort vollständig dem Eroberer.', ['{player}' => $defender->getDisplayName()]),
             $inWar => t('Im Krieg belegt er 2 Planetenplätze, nach 30 Tagen geht er vollständig in seinen Besitz über.'),
             default => t('Er belegt 3 Planetenplätze, nach 14 Tagen 2, und geht nach 30 Tagen vollständig in seinen Besitz über.'),
         };
-        $who = \count($candidates) > 1 ? t('{player} (ausgelost unter {value})', ['{player}' => $conqueror->getUsername(), '{value}' => implode(', ', array_map(static fn (array $c): string => $c['user']->getUsername(), $candidates))]) : $conqueror->getUsername();
+        $who = \count($candidates) > 1 ? t('{player} (ausgelost unter {value})', ['{player}' => $conqueror->getDisplayName(), '{value}' => implode(', ', array_map(static fn (array $c): string => $c['user']->getDisplayName(), $candidates))]) : $conqueror->getUsername();
         $lines = [t('Invasion gelungen ({odds}): {name} [{coords}] gehört jetzt {who}. {slotsNote}', ['{odds}' => $odds, '{name}' => $victim->getName(), '{coords}' => $victim->getCoordinates(), '{who}' => $who, '{slotsNote}' => $slotsNote])];
         if ($victim !== $target) {
             $lines[0] = t('Invasion gelungen ({odds}): {name} [{coords}] wurde von der Fusion abgesprengt und gehört jetzt {who}. {slotsNote}', ['{odds}' => $odds, '{name}' => $victim->getName(), '{coords}' => $victim->getCoordinates(), '{who}' => $who, '{slotsNote}' => $slotsNote]);
@@ -413,7 +425,7 @@ final readonly class CombatService
 
         // Research runs on the (top) planet it was started on and ends only when that planet is lost.
         if ($defender->isResearchingOn($victim)) {
-            $lines[] = t('Die Forschung an {label} von {player} ist mit dem Planeten verloren.', ['{label}' => t($defender->getResearchType()->label()), '{player}' => $defender->getUsername()]);
+            $lines[] = t('Die Forschung an {label} von {player} ist mit dem Planeten verloren.', ['{label}' => t($defender->getResearchType()->label()), '{player}' => $defender->getDisplayName()]);
             $defender->clearResearch();
         }
 
@@ -426,7 +438,7 @@ final readonly class CombatService
                 }
                 $planet->leaveToNobody($nobody, false);
             }
-            $lines[] = t('Das war der Heimatplanet von {player}: Alle übrigen Planeten von {player} sind jetzt herrenlos.', ['{player}' => $defender->getUsername()]);
+            $lines[] = t('Das war der Heimatplanet von {player}: Alle übrigen Planeten von {player} sind jetzt herrenlos.', ['{player}' => $defender->getDisplayName()]);
         }
 
         return $lines;
@@ -538,7 +550,7 @@ final readonly class CombatService
                 $this->em->persist(new \App\Entity\ExperienceGain($user, $experience, \DateTimeImmutable::createFromInterface($this->clock->now())));
             }
             if ($experience >= 0.5) {
-                $lines[] = t('  {player} +{experience}', ['{player}' => $user->getUsername(), '{experience}' => new Num($experience)]);
+                $lines[] = t('  {player} +{experience}', ['{player}' => $user->getDisplayName(), '{experience}' => new Num($experience)]);
             }
         }
 

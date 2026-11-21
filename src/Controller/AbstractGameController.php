@@ -276,9 +276,9 @@ abstract class AbstractGameController extends AbstractController
             'forum_url' => $this->forumUrl,
             // Own trade posts are listed under the planets in the left column.
             'own_trade_posts' => $this->tradePosts->findBy(['owner' => $planet->getOwner()], ['galaxy' => 'ASC', 'system' => 'ASC', 'position' => 'ASC']),
-            // The alliance black board is shown on every page.
+            // The newest posts of the alliance black board (shown on the overview).
             'board_posts' => true === $planet->getOwner()->getAllianceRank()?->canSeeBoard()
-                ? $this->allianceRepository->findPosts($planet->getOwner()->getAlliance(), 20)
+                ? $this->allianceRepository->findPosts($planet->getOwner()->getAlliance(), 3)
                 : [],
             'credits_per_hour' => $bonus * $this->economy->creditsPerHour(array_sum(array_map(
                 static fn (Planet $p): float => $p->getPopulation(),

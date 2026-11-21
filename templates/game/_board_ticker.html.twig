@@ -7,7 +7,7 @@
 {% if joined_tickers is not empty or back != 'overview' %}
 <section class="panel{{ order is defined ? ' ov-wide' }}" id="ticker"{% if fold is defined %} data-fold="{{ fold }}"{% endif %}{% if order is defined %} style="order: {{ order }}"{% endif %}>
     <h2>{{ board_ticker ? '📡 Ticker: {name}'|trans({'{name}': board_ticker.name}) : '📡 Ticker'|trans }}
-        {%- if board_ticker and board_ticker_posts is not empty %} <small class="fold-summary muted">{{ 'letzter Beitrag {date} von {author}'|trans({'{date}': (board_ticker_posts|first).createdAt|date('d.m.Y H:i'), '{author}': (board_ticker_posts|first).author ? (board_ticker_posts|first).author.username : ('gelöschter Spieler'|trans)}) }}</small>{% endif %}</h2>
+        {%- if board_ticker and board_ticker_posts is not empty %} <small class="fold-summary muted">{{ 'letzter Beitrag {date} von {author}'|trans({'{date}': (board_ticker_posts|first).createdAt|date('d.m.Y H:i'), '{author}': (board_ticker_posts|first).author ? (board_ticker_posts|first).author.displayName : ('gelöschter Spieler'|trans)}) }}</small>{% endif %}</h2>
     {% if joined_tickers is empty %}
         <p class="muted small">{{ 'Hier kannst du einen deiner Ticker anzeigen – zum Beispiel, um mit deiner alten Allianz in Kontakt zu bleiben. Du bist noch in keinem Ticker.'|trans }} <a href="{{ path('app_tickers') }}">{{ 'Zu den Tickern'|trans }}</a></p>
     {% else %}

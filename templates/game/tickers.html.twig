@@ -41,7 +41,7 @@
                     <li>
                         <span><a href="{{ path('app_ticker', {id: t.id}) }}"><strong>{{ t.name }}</strong></a>
                             {% if t.description %}<span class="ticker-description small muted">{{ t.description|trans|length > 120 ? t.description|trans|slice(0, 120) ~ '…' : t.description|trans }}</span>{% endif %}</span>
-                        <span class="muted small">{{ (t.acceptedMembers|length == 1 ? '{count} Mitglied · Besitzer {username}' : '{count} Mitglieder · Besitzer {username}')|trans({'{count}': t.acceptedMembers|length, '{username}': t.owner.username}) }}{% if t.isOwnedBy(player) %} {{ '(du)'|trans }}{% endif %}</span>
+                        <span class="muted small">{{ (t.acceptedMembers|length == 1 ? '{count} Mitglied · Besitzer {username}' : '{count} Mitglieder · Besitzer {username}')|trans({'{count}': t.acceptedMembers|length, '{username}': t.owner.displayName}) }}{% if t.isOwnedBy(player) %} {{ '(du)'|trans }}{% endif %}</span>
                     </li>
                 {% endfor %}
             </ul>

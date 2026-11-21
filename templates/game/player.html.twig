@@ -1,7 +1,7 @@
 {% extends 'game/_layout.html.twig' %}
 {% import 'game/_macros.html.twig' as ui %}
 
-{% block title %}{{ profile.username }} – {{ game_name }}{% endblock %}
+{% block title %}{{ profile.displayName }} – {{ game_name }}{% endblock %}
 
 {% block content %}
     <section class="panel profile">
@@ -11,7 +11,7 @@
             {{ ui.picture(profile.avatar, 'avatars', profile.username) }}
         {% endif %}
         <div class="profile-info">
-            <h1>{{ profile.lifeForm.icon }} {{ profile.username }}</h1>
+            <h1>{{ profile.lifeForm.icon }} {{ profile.username }}{% if profile.alliance %} <a class="alliance-tag muted" href="{{ path('app_alliance_public', {id: profile.alliance.id}) }}">[{{ profile.alliance.tag }}]</a>{% endif %}</h1>
             <p class="muted">
                 {{ profile.lifeForm.label|trans }}
                 {% if profile.alliance %}

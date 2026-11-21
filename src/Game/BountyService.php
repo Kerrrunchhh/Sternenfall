@@ -86,7 +86,7 @@ final readonly class BountyService
             throw new GameException(t('Dieses Kopfgeld kannst du nicht (mehr) zurückziehen.'));
         }
         if (!$bounty->getHunts()->isEmpty()) {
-            throw new GameException(t('Zurückziehen geht nicht mehr: Jäger haben schon Schiffe von {player} zerstört.', ['{player}' => $bounty->getTarget()->getUsername()]));
+            throw new GameException(t('Zurückziehen geht nicht mehr: Jäger haben schon Schiffe von {player} zerstört.', ['{player}' => $bounty->getTarget()->getDisplayName()]));
         }
         $bounty->close(Bounty::CANCELLED);
         $this->credit($client, $bounty->getReward());
@@ -120,9 +120,9 @@ final readonly class BountyService
                     }
                     if ($hunt->getShield() >= $bounty->getRequiredShield()) {
                         $this->pay($bounty, $hunter);
-                        $lines[] = t('  Kopfgeld auf {target}: {hunter} hat es verdient – {reward} Credits.', ['{target}' => $target->getUsername(), '{hunter}' => $hunter->getUsername(), '{reward}' => new Num($bounty->getReward())]);
+                        $lines[] = t('  Kopfgeld auf {target}: {hunter} hat es verdient – {reward} Credits.', ['{target}' => $target->getDisplayName(), '{hunter}' => $hunter->getDisplayName(), '{reward}' => new Num($bounty->getReward())]);
                     } else {
-                        $lines[] = t('  Kopfgeld auf {target}: {hunter} hat {shield} von {required} Schildpunkten.', ['{target}' => $target->getUsername(), '{hunter}' => $hunter->getUsername(), '{shield}' => new Num(floor($hunt->getShield())), '{required}' => new Num($bounty->getRequiredShield())]);
+                        $lines[] = t('  Kopfgeld auf {target}: {hunter} hat {shield} von {required} Schildpunkten.', ['{target}' => $target->getDisplayName(), '{hunter}' => $hunter->getDisplayName(), '{shield}' => new Num(floor($hunt->getShield())), '{required}' => new Num($bounty->getRequiredShield())]);
                     }
                 }
             }
@@ -138,7 +138,7 @@ final readonly class BountyService
             $bounty->close(Bounty::EXPIRED);
             $this->credit($bounty->getClient(), $bounty->getReward());
             $this->ledger?->book($bounty->getClient(), $bounty->getReward(), CreditLedger::BOUNTY, null, \sprintf('Kopfgeld auf %s abgelaufen – Erstattung', $bounty->getTarget()->getUsername()), counterpartyName: 'Kopfgeld');
-            $this->inbox->send($bounty->getClient(), t('Kopfgeld abgelaufen'), t('Niemand hat das Kopfgeld auf {player} verdient. Du bekommst die {reward} Credits zurück.', ['{player}' => $bounty->getTarget()->getUsername(), '{reward}' => new Num($bounty->getReward())]));
+            $this->inbox->send($bounty->getClient(), t('Kopfgeld abgelaufen'), t('Niemand hat das Kopfgeld auf {player} verdient. Du bekommst die {reward} Credits zurück.', ['{player}' => $bounty->getTarget()->getDisplayName(), '{reward}' => new Num($bounty->getReward())]));
         }
         $this->em->flush();
     }
@@ -149,9 +149,9 @@ final readonly class BountyService
         // The hunter is loaded (and may just have earned credits) during the battle: book it on the entity, flushed with the battle.
         $hunter->addCredits($bounty->getReward());
         $this->ledger?->book($hunter, $bounty->getReward(), CreditLedger::BOUNTY, $bounty->getClient(), \sprintf('Kopfgeld auf %s verdient', $bounty->getTarget()->getUsername()));
-        $this->inbox->send($hunter, t('Kopfgeld verdient'), t('Du hast {shield} Schildpunkte der Raumschiffe von {player} zerstört und bekommst das Kopfgeld von {client}: {reward} Credits.', ['{shield}' => new Num($bounty->getRequiredShield()), '{player}' => $bounty->getTarget()->getUsername(), '{client}' => $bounty->getClient()->getUsername(), '{reward}' => new Num($bounty->getReward())]));
-        $this->inbox->send($bounty->getClient(), t('Kopfgeld vergeben'), t('{hunter} hat dein Kopfgeld auf {player} verdient ({reward} Credits).', ['{hunter}' => $hunter->getUsername(), '{player}' => $bounty->getTarget()->getUsername(), '{reward}' => new Num($bounty->getReward())]));
-        $this->inbox->send($bounty->getTarget(), t('Kopfgeld auf dich vergeben'), t('{hunter} hat das Kopfgeld von {client} auf dich kassiert.', ['{hunter}' => $hunter->getUsername(), '{client}' => $bounty->getClient()->getUsername()]));
+        $this->inbox->send($hunter, t('Kopfgeld verdient'), t('Du hast {shield} Schildpunkte der Raumschiffe von {player} zerstört und bekommst das Kopfgeld von {client}: {reward} Credits.', ['{shield}' => new Num($bounty->getRequiredShield()), '{player}' => $bounty->getTarget()->getDisplayName(), '{client}' => $bounty->getClient()->getDisplayName(), '{reward}' => new Num($bounty->getReward())]));
+        $this->inbox->send($bounty->getClient(), t('Kopfgeld vergeben'), t('{hunter} hat dein Kopfgeld auf {player} verdient ({reward} Credits).', ['{hunter}' => $hunter->getDisplayName(), '{player}' => $bounty->getTarget()->getDisplayName(), '{reward}' => new Num($bounty->getReward())]));
+        $this->inbox->send($bounty->getTarget(), t('Kopfgeld auf dich vergeben'), t('{hunter} hat das Kopfgeld von {client} auf dich kassiert.', ['{hunter}' => $hunter->getDisplayName(), '{client}' => $bounty->getClient()->getDisplayName()]));
     }
 
     /** Takes credits from a player atomically; fails if he has too few. */

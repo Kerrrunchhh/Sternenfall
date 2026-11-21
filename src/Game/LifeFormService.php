@@ -44,13 +44,13 @@ final readonly class LifeFormService
                 $player = $planet->getOwner();
                 if ($player->getLifeForm() === $lifeForm) {
                     throw new GameException(null !== $admin
-                        ? t('{player} gehört bereits zu den {lifeForm}.', ['{player}' => $player->getUsername(), '{lifeForm}' => t($lifeForm->label())])
+                        ? t('{player} gehört bereits zu den {lifeForm}.', ['{player}' => $player->getDisplayName(), '{lifeForm}' => t($lifeForm->label())])
                         : t('Du gehörst bereits zu den {lifeForm}.', ['{lifeForm}' => t($lifeForm->label())]));
                 }
                 // An alliance only has players of one life form.
                 if (null !== $alliance = $player->getAlliance()) {
                     throw new GameException(null !== $admin
-                        ? t('{player} ist in „{name}“ ({type}) – dort sind nur {label}. Er muss erst austreten (oder entfernt werden).', ['{player}' => $player->getUsername(), '{name}' => $alliance->getName(), '{type}' => $alliance->getType(), '{label}' => t($alliance->getLifeForm()->label())])
+                        ? t('{player} ist in „{name}“ ({type}) – dort sind nur {label}. Er muss erst austreten (oder entfernt werden).', ['{player}' => $player->getDisplayName(), '{name}' => $alliance->getName(), '{type}' => $alliance->getType(), '{label}' => t($alliance->getLifeForm()->label())])
                         : t('Du bist in „{name}“ ({type}) – dort sind nur {label}. Tritt erst aus, dann kannst du die Lebensform wechseln.', ['{name}' => $alliance->getName(), '{type}' => $alliance->getType(), '{label}' => t($alliance->getLifeForm()->label())]));
                 }
                 if (null === $admin && null !== $refusal = HeroPoints::lifeFormChangeRefusal($player->getLifeForm(), $lifeForm, $player->getHeroPoints($now))) {

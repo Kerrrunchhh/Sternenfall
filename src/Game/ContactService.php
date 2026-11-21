@@ -34,10 +34,10 @@ final readonly class ContactService
         $existing = $this->contacts->findBetween($user, $other);
         if (null !== $existing) {
             if ($existing->isAccepted()) {
-                throw new GameException(t('{player} ist schon in deinen Schnellkontakten.', ['{player}' => $other->getUsername()]));
+                throw new GameException(t('{player} ist schon in deinen Schnellkontakten.', ['{player}' => $other->getDisplayName()]));
             }
             if ($existing->getRequester()->isSameAs($user)) {
-                throw new GameException(t('Du hast {player} schon angefragt.', ['{player}' => $other->getUsername()]));
+                throw new GameException(t('Du hast {player} schon angefragt.', ['{player}' => $other->getDisplayName()]));
             }
             // The other asked first: asking back accepts.
             $this->accept($existing, $user);
@@ -48,7 +48,7 @@ final readonly class ContactService
 
         $contact = new Contact($user, $other, $this->now());
         $this->em->persist($contact);
-        $this->inbox->send($other, t('Kontaktanfrage von {player}', ['{player}' => $user->getUsername()]), t('{player} möchte dich in die Schnellkontakte aufnehmen. Annehmen oder ablehnen kannst du in der Übersicht oder unter Post.', ['{player}' => $user->getUsername()]));
+        $this->inbox->send($other, t('Kontaktanfrage von {player}', ['{player}' => $user->getDisplayName()]), t('{player} möchte dich in die Schnellkontakte aufnehmen. Annehmen oder ablehnen kannst du in der Übersicht oder unter Post.', ['{player}' => $user->getDisplayName()]));
         $this->em->flush();
 
         return $contact;
@@ -62,7 +62,7 @@ final readonly class ContactService
         $this->assertRoom($user);
         $this->assertRoom($contact->getRequester());
         $contact->accept($this->now());
-        $this->inbox->send($contact->getRequester(), t('Kontaktanfrage angenommen'), t('{player} hat deine Anfrage angenommen und steht jetzt in deinen Schnellkontakten.', ['{player}' => $user->getUsername()]));
+        $this->inbox->send($contact->getRequester(), t('Kontaktanfrage angenommen'), t('{player} hat deine Anfrage angenommen und steht jetzt in deinen Schnellkontakten.', ['{player}' => $user->getDisplayName()]));
         $this->em->flush();
     }
 
@@ -88,7 +88,7 @@ final readonly class ContactService
     private function assertRoom(User $user): void
     {
         if (\count($this->contacts->findAccepted($user)) >= self::MAX_CONTACTS) {
-            throw new GameException(t('{player} hat schon {value} Schnellkontakte – mehr gehen nicht.', ['{player}' => $user->getUsername(), '{value}' => self::MAX_CONTACTS]));
+            throw new GameException(t('{player} hat schon {value} Schnellkontakte – mehr gehen nicht.', ['{player}' => $user->getDisplayName(), '{value}' => self::MAX_CONTACTS]));
         }
     }
 

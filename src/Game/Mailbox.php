@@ -45,10 +45,10 @@ final readonly class Mailbox
             throw new GameException(t('Du kannst dir nicht selbst schreiben.'));
         }
         if ($recipient->isSystem()) {
-            throw new GameException(t('{player} ist kein Spieler – Post kommt dort nicht an.', ['{player}' => $recipient->getUsername()]));
+            throw new GameException(t('{player} ist kein Spieler – Post kommt dort nicht an.', ['{player}' => $recipient->getDisplayName()]));
         }
         if ($recipient->isDeactivated()) {
-            throw new GameException(t('{player} spielt nicht mehr mit – Post kommt dort nicht an.', ['{player}' => $recipient->getUsername()]));
+            throw new GameException(t('{player} spielt nicht mehr mit – Post kommt dort nicht an.', ['{player}' => $recipient->getDisplayName()]));
         }
         $subject = trim($subject);
         $body = trim($body);
@@ -62,7 +62,7 @@ final readonly class Mailbox
         $message = new PlayerMessage($sender, $recipient, '' === $subject ? '(kein Betreff)' : $subject, $body, \DateTimeImmutable::createFromInterface($this->clock->now()));
         $this->em->persist($message);
         $this->em->flush();
-        $this->gameMailer?->notify($recipient, 'mail', t('Neue Nachricht von {player}', ['{player}' => $sender->getUsername()]), t("{player} hat dir geschrieben: „{subject}“\n\nLesen und antworten kannst du im Spiel unter Post.", ['{player}' => $sender->getUsername(), '{subject}' => $message->getSubject()]));
+        $this->gameMailer?->notify($recipient, 'mail', t('Neue Nachricht von {player}', ['{player}' => $sender->getDisplayName()]), t("{player} hat dir geschrieben: „{subject}“\n\nLesen und antworten kannst du im Spiel unter Post.", ['{player}' => $sender->getDisplayName(), '{subject}' => $message->getSubject()]));
 
         return $message;
     }

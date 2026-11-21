@@ -60,12 +60,12 @@ final readonly class TickerService
         $existing = $ticker->membership($user);
         if (null !== $existing) {
             throw new GameException($existing->isAccepted()
-                ? t('{player} ist schon im Ticker.', ['{player}' => $user->getUsername()])
-                : t('{player} ist schon eingeladen.', ['{player}' => $user->getUsername()]));
+                ? t('{player} ist schon im Ticker.', ['{player}' => $user->getDisplayName()])
+                : t('{player} ist schon eingeladen.', ['{player}' => $user->getDisplayName()]));
         }
         $ticker->invite($user, $this->now());
         $about = '' === $ticker->getDescription() ? '' : t("\n\nWorum es geht:\n{description}", ['{description}' => $ticker->getDescription()]);
-        $this->inbox->send($user, t('Einladung in den Ticker „{name}“', ['{name}' => $ticker->getName()]), t('{player} lädt dich in den Langstreckenticker „{name}“ ein. Annehmen oder ablehnen kannst du unter Ticker.{about}', ['{player}' => $owner->getUsername(), '{name}' => $ticker->getName(), '{about}' => $about]));
+        $this->inbox->send($user, t('Einladung in den Ticker „{name}“', ['{name}' => $ticker->getName()]), t('{player} lädt dich in den Langstreckenticker „{name}“ ein. Annehmen oder ablehnen kannst du unter Ticker.{about}', ['{player}' => $owner->getDisplayName(), '{name}' => $ticker->getName(), '{about}' => $about]));
         $this->em->flush();
 
         return $user;
@@ -103,7 +103,7 @@ final readonly class TickerService
         }
         $ticker->removeMember($member);
         if ($member->isAccepted()) {
-            $this->inbox->send($member->getUser(), t('Aus dem Ticker „{name}“ entfernt', ['{name}' => $ticker->getName()]), t('{player} hat dich aus dem Langstreckenticker „{name}“ entfernt.', ['{player}' => $owner->getUsername(), '{name}' => $ticker->getName()]));
+            $this->inbox->send($member->getUser(), t('Aus dem Ticker „{name}“ entfernt', ['{name}' => $ticker->getName()]), t('{player} hat dich aus dem Langstreckenticker „{name}“ entfernt.', ['{player}' => $owner->getDisplayName(), '{name}' => $ticker->getName()]));
         }
         $this->em->flush();
     }
@@ -115,7 +115,7 @@ final readonly class TickerService
             throw new GameException(t('Abgeben kannst du den Ticker nur an ein anderes Mitglied.'));
         }
         $ticker->handOver($member->getUser());
-        $this->inbox->send($member->getUser(), t('Ticker „{name}“ übernommen', ['{name}' => $ticker->getName()]), t('{player} hat dir den Langstreckenticker „{name}“ übergeben. Du kannst jetzt Spieler einladen und entfernen und Beiträge löschen.', ['{player}' => $owner->getUsername(), '{name}' => $ticker->getName()]));
+        $this->inbox->send($member->getUser(), t('Ticker „{name}“ übernommen', ['{name}' => $ticker->getName()]), t('{player} hat dir den Langstreckenticker „{name}“ übergeben. Du kannst jetzt Spieler einladen und entfernen und Beiträge löschen.', ['{player}' => $owner->getDisplayName(), '{name}' => $ticker->getName()]));
         $this->em->flush();
     }
 
@@ -204,7 +204,7 @@ final readonly class TickerService
         }
         $until = $this->now()->modify(\sprintf('+%d days', $days));
         $member->muteUntil($until);
-        $this->inbox->send($member->getUser(), t('Im Ticker „{name}“ stummgeschaltet', ['{name}' => $ticker->getName()]), t('{player} hat dich im Langstreckenticker „{name}“ bis {until} stummgeschaltet. Lesen kannst du weiter, schreiben erst danach wieder.', ['{player}' => $moderator->getUsername(), '{name}' => $ticker->getName(), '{until}' => new When($until)]));
+        $this->inbox->send($member->getUser(), t('Im Ticker „{name}“ stummgeschaltet', ['{name}' => $ticker->getName()]), t('{player} hat dich im Langstreckenticker „{name}“ bis {until} stummgeschaltet. Lesen kannst du weiter, schreiben erst danach wieder.', ['{player}' => $moderator->getDisplayName(), '{name}' => $ticker->getName(), '{until}' => new When($until)]));
         $this->em->flush();
     }
 
@@ -218,7 +218,7 @@ final readonly class TickerService
         $member->setAdmin($admin);
         if ($admin) {
             $member->muteUntil(null);
-            $this->inbox->send($member->getUser(), t('Admin im Ticker „{name}“', ['{name}' => $ticker->getName()]), t('{player} hat dich zum Admin des Langstreckentickers „{name}“ ernannt. Du kannst jetzt Spieler einladen, entfernen und stummschalten und Beiträge löschen.', ['{player}' => $owner->getUsername(), '{name}' => $ticker->getName()]));
+            $this->inbox->send($member->getUser(), t('Admin im Ticker „{name}“', ['{name}' => $ticker->getName()]), t('{player} hat dich zum Admin des Langstreckentickers „{name}“ ernannt. Du kannst jetzt Spieler einladen, entfernen und stummschalten und Beiträge löschen.', ['{player}' => $owner->getDisplayName(), '{name}' => $ticker->getName()]));
         }
         $this->em->flush();
     }
@@ -237,7 +237,7 @@ final readonly class TickerService
             throw new GameException(t('Stellvertreter kann nur ein anderes Mitglied werden.'));
         }
         $ticker->setDeputy($member->getUser());
-        $this->inbox->send($member->getUser(), t('Stellvertreter im Ticker „{name}“', ['{name}' => $ticker->getName()]), t('{player} hat dich zum Stellvertreter des Langstreckentickers „{name}“ ernannt. Ist {player} {days} Tage nicht online, wirst du automatisch Besitzer.', ['{player}' => $owner->getUsername(), '{name}' => $ticker->getName(), '{days}' => Ticker::DEPUTY_AFTER_DAYS]));
+        $this->inbox->send($member->getUser(), t('Stellvertreter im Ticker „{name}“', ['{name}' => $ticker->getName()]), t('{player} hat dich zum Stellvertreter des Langstreckentickers „{name}“ ernannt. Ist {player} {days} Tage nicht online, wirst du automatisch Besitzer.', ['{player}' => $owner->getDisplayName(), '{name}' => $ticker->getName(), '{days}' => Ticker::DEPUTY_AFTER_DAYS]));
         $this->em->flush();
     }
 
@@ -258,8 +258,8 @@ final readonly class TickerService
             return false;
         }
         $ticker->handOver($deputy);
-        $this->inbox->send($deputy, t('Ticker „{name}“ übernommen', ['{name}' => $ticker->getName()]), t('{player} war {days} Tage nicht online. Als Stellvertreter bist du jetzt Besitzer des Langstreckentickers „{name}“.', ['{player}' => $owner->getUsername(), '{name}' => $ticker->getName(), '{days}' => Ticker::DEPUTY_AFTER_DAYS]));
-        $this->inbox->send($owner, t('Ticker „{name}“ abgegeben', ['{name}' => $ticker->getName()]), t('Du warst {days} Tage nicht online. Dein Stellvertreter {player} ist jetzt Besitzer des Langstreckentickers „{name}“; du bleibst Mitglied.', ['{player}' => $deputy->getUsername(), '{name}' => $ticker->getName(), '{days}' => Ticker::DEPUTY_AFTER_DAYS]));
+        $this->inbox->send($deputy, t('Ticker „{name}“ übernommen', ['{name}' => $ticker->getName()]), t('{player} war {days} Tage nicht online. Als Stellvertreter bist du jetzt Besitzer des Langstreckentickers „{name}“.', ['{player}' => $owner->getDisplayName(), '{name}' => $ticker->getName(), '{days}' => Ticker::DEPUTY_AFTER_DAYS]));
+        $this->inbox->send($owner, t('Ticker „{name}“ abgegeben', ['{name}' => $ticker->getName()]), t('Du warst {days} Tage nicht online. Dein Stellvertreter {player} ist jetzt Besitzer des Langstreckentickers „{name}“; du bleibst Mitglied.', ['{player}' => $deputy->getDisplayName(), '{name}' => $ticker->getName(), '{days}' => Ticker::DEPUTY_AFTER_DAYS]));
         $this->em->flush();
 
         return true;

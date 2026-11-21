@@ -62,7 +62,7 @@ final readonly class SupportService
         // The id is needed for the button to the ticket.
         $this->em->flush();
         foreach ($this->admins() as $admin) {
-            $this->inbox->send($admin, t('Neue Meldung: {icon} {kind}', ['{icon}' => $kind->icon(), '{kind}' => t($kind->label())]), t('{player} hat eine Meldung geschickt: „{subject}“. Bearbeiten im Adminbereich unter Meldungen.', ['{player}' => $author->getUsername(), '{subject}' => $ticket->getSubject()]), ...$this->teamButton($ticket));
+            $this->inbox->send($admin, t('Neue Meldung: {icon} {kind}', ['{icon}' => $kind->icon(), '{kind}' => t($kind->label())]), t('{player} hat eine Meldung geschickt: „{subject}“. Bearbeiten im Adminbereich unter Meldungen.', ['{player}' => $author->getDisplayName(), '{subject}' => $ticket->getSubject()]), ...$this->teamButton($ticket));
         }
         $this->em->flush();
 
@@ -109,7 +109,7 @@ final readonly class SupportService
             $ticket->setStatus(TicketStatus::Open, $this->now());
         }
         foreach ($this->admins() as $admin) {
-            $this->inbox->send($admin, t('Antwort auf Meldung: {subject}', ['{subject}' => $ticket->getSubject()]), t('{player} hat geantwortet. Bearbeiten im Adminbereich unter Meldungen.', ['{player}' => $author->getUsername()]), ...$this->teamButton($ticket));
+            $this->inbox->send($admin, t('Antwort auf Meldung: {subject}', ['{subject}' => $ticket->getSubject()]), t('{player} hat geantwortet. Bearbeiten im Adminbereich unter Meldungen.', ['{player}' => $author->getDisplayName()]), ...$this->teamButton($ticket));
         }
         $this->em->flush();
     }

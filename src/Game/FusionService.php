@@ -62,7 +62,7 @@ final readonly class FusionService
         $reason = match (true) {
             1 === $target->getPosition() => 'Über diesem Planeten liegt kein Platz mehr – angeschweißt wird immer an den Planeten direkt darüber.',
             null === $top => t('Platz {value} direkt darüber ist frei – angeschweißt wird immer an den Planeten direkt darüber.', ['{value}' => $target->getPosition() - 1]),
-            !$top->getOwner()->isSameAs($player) => t('{name} [{coords}] direkt darüber gehört {player}.', ['{name}' => $top->getName(), '{coords}' => $top->getCoordinates(), '{player}' => $top->getOwner()->getUsername()]),
+            !$top->getOwner()->isSameAs($player) => t('{name} [{coords}] direkt darüber gehört {player}.', ['{name}' => $top->getName(), '{coords}' => $top->getCoordinates(), '{player}' => $top->getOwner()->getDisplayName()]),
             $target->isIntegrating($now) => t('{name} wurde invadiert und geht erst am {value} in deinen Besitz über.', ['{name}' => $target->getName(), '{value}' => new When($target->getIntegratedAt())]),
             $top->isIntegrating($now) => t('{name} wurde invadiert und geht erst am {value} in deinen Besitz über.', ['{name}' => $top->getName(), '{value}' => new When($top->getIntegratedAt())]),
             0 === $capacity => 'Für eine Fusion wird Fusionstechnik benötigt.',

@@ -78,10 +78,34 @@
         </div>
     {% endif %}
     {% if planet.integrating(now) %}
-        <p class="panel warning">{{ '{name} wurde invadiert und geht am {integratedAt} vollständig in deinen Besitz über.'|trans({'{name}': planet.name, '{integratedAt}': planet.integratedAt|date('d.m.Y H:i')}) }}</p>
+        <p class="panel warning">{{ '{name} wurde invadiert und geht am {integratedAt} vollständig in deinen Besitz über.'|trans({'{name}': planet.name, '{integratedAt}': planet.integratedAt|date('d.m.Y H:i')}) }}
+            {% if planet.originalOwner(now) %}<br><span class="invaded-from">{{ 'Ursprünglicher Besitzer: {player} – kostet dich derzeit {slots} Planetenplätze. Bis dahin gelingt ihm eine Rückeroberung mit einem Invasionsschiff immer.'|trans({'{player}': planet.originalOwner(now).displayName, '{slots}': planet.slotCost(now)}) }}</span>{% endif %}</p>
     {% endif %}
     {# The boxes below, in the player's order (Konto): a grid where wide boxes take a whole row. #}
     <div class="overview-sections">
+    {# The alliance black board, below the quick contacts: opens by itself when there is something new. #}
+    {% if player.showsOnOverview('board') and player.alliance and player.allianceRank.canSeeBoard %}
+    <section class="panel ov-wide overview-board" style="order: {{ player.overviewPosition('board') }}" data-fold="overview-board"{% if board_posts is not empty %} data-fold-newest="{{ (board_posts|first).createdAt.timestamp }}"{% endif %}>
+        <h2>{{ 'Schwarzes Brett'|trans }} <small class="muted">[{{ player.alliance.tag }}]</small>
+            {% if board_posts is not empty %}{% set newest = board_posts|first %}<small class="fold-summary muted">{{ 'zuletzt {at} von {author}'|trans({'{at}': newest.createdAt|date('d.m. H:i'), '{author}': newest.author ? newest.author.username : ('ehemaliges Mitglied'|trans)}) }}</small>{% endif %}</h2>
+        <span class="board-new-badge" aria-hidden="true">{{ 'Neu'|trans }}</span>
+        <form method="post" action="{{ path('app_alliance_post') }}" class="board-form">
+            <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
+            <input type="hidden" name="to" value="app_overview">
+            <textarea name="body" rows="2" maxlength="5000" required aria-label="{{ 'Neuer Beitrag'|trans }}" placeholder="{{ 'Nachricht an deine {type} …'|trans({'{type}': player.alliance.type|trans}) }}"></textarea>
+            <button class="btn btn-small" type="submit">{{ 'Anheften'|trans }}</button>
+        </form>
+        {% for p in board_posts|slice(0, 3) %}
+            <article class="board-note">
+                <div class="board-meta"><strong>{{ p.author ? p.author.username : ('ehemaliges Mitglied'|trans) }}</strong> · {{ p.createdAt|date('d.m. H:i') }}</div>
+                <div class="message-body">{{ p.body|link_coordinates }}</div>
+            </article>
+        {% else %}
+            <p class="muted small">{{ 'Noch keine Beiträge. Schreib den ersten!'|trans }}</p>
+        {% endfor %}
+        <p class="small"><a href="{{ path('app_alliance') }}">{{ 'Alle Beiträge und Verwaltung →'|trans }}</a></p>
+    </section>
+    {% endif %}
     {% if player.showsOnOverview('contacts') %}
     <section class="panel quick-contacts ov-wide" style="order: {{ player.overviewPosition('contacts') }}" data-fold="overview-contacts">
         <h2>{{ 'Schnellkontakte'|trans }}
@@ -99,12 +123,22 @@
             {% set next = (incoming|map(f => f.arriveAt)|merge(attacks|map(a => a.fleet.arriveAt))|merge(own_movements|map(f => f.nextEventAt))|merge(guild_deliveries|map(r => r.guildDeliveryAt)))|sort|first %}
             <h2>{{ 'Flottenbewegungen'|trans }}
                 <small class="fold-summary muted">{{ (moving == 1 ? '1 Flotte unterwegs' : '{count} Flotten unterwegs')|trans({'{count}': moving}) }}{% if hostile > 0 %} · <strong class="negative">{{ (hostile == 1 ? '1 Angriff' : '{count} Angriffe')|trans({'{count}': hostile}) }}</strong>{% endif %} · {{ 'nächste in'|trans }} {{ ui.countdown(next, now) }}</small></h2>
+            {# Kinds of flights (colour of the rows) – with several kinds, chips show only some of them. #}
+            {% set kinds = incoming|map(f => f.mission.kind)|merge(own_movements|map(f => f.mission.kind))|merge(guild_deliveries|map(r => 'trade')) %}
+            {% set present = constant('App\\Game\\FleetMission::KINDS')|filter((label, key) => key in kinds) %}
+            {% if present|length > 1 %}
+                <div class="movement-filters" data-movement-filters role="group" aria-label="{{ 'Nur bestimmte Flüge zeigen'|trans }}">
+                    {% for key, label in present %}
+                        <button type="button" class="filter-chip mv-chip mv-{{ key }}" data-movement-filter="{{ key }}" aria-pressed="false">{{ label|trans }} <span class="muted">{{ kinds|filter(k => k == key)|length }}</span></button>
+                    {% endfor %}
+                </div>
+            {% endif %}
             {# One line per movement: what, where, countdown, arrival time, action. #}
             <table class="table movement-table">
                 {% for f in incoming %}
                     {% set intel = incoming_intel[f.id] ?? null %}
                     {% set ships = intel ? intel.shipList|map(s => s.count|num ~ ' × ' ~ s.type.label|trans)|join(', ') : '' %}
-                    <tr class="{{ f.mission.value == 'attack' ? 'hostile' }}">
+                    <tr class="mv-{{ f.mission.kind }} {{ f.mission.value == 'attack' ? 'hostile' }}" data-mv="{{ f.mission.kind }}">
                         <td class="movement-what">
                             {% if f.mission.value == 'attack' %}<strong>{{ '⚠ Angriff'|trans }}</strong>{% else %}{{ f.mission.flightLabel|trans }}{% endif %}
                             {{ 'von {owner} → {targetCoordinates}'|trans({'{owner}': ui.player(f.owner), '{targetCoordinates}': ui.coords(f.targetCoordinates)})|raw }}
@@ -119,7 +153,7 @@
                 {% for f in own_movements %}
                     {% set only = f.shipList|length == 1 ? f.shipList[0].type.value : null %}
                     {% set hover %}{% for s in f.shipList %}{{ s.count|num }} × {{ s.type.label|trans }}{{ not loop.last ? ', ' }}{% endfor %}{% endset %}
-                    <tr>
+                    <tr class="mv-{{ f.mission.kind }} {{ f.returning ? 'mv-returning' }}" data-mv="{{ f.mission.kind }}">
                         <td class="movement-what" title="{{ hover|trim|raw }}">
                             {{ f.named ? f.name : (only == 'scout' ? ('Sonde'|trans) : (only == 'colony_ship' ? ('Kolonieschiff'|trans) : ('Flotte'|trans))) }}:
                             {{ f.mission.flightLabel|trans }}{% if f.mission.value != 'hover' %} {{ f.returning ? ('← zurück nach'|trans) : '→' }} {{ ui.coords(f.returning ? f.coordinates : f.targetCoordinates) }}{% endif %}
@@ -147,7 +181,7 @@
                     </tr>
                 {% endfor %}
                 {% for r in guild_deliveries %}
-                    <tr>
+                    <tr class="mv-trade" data-mv="trade">
                         <td class="movement-what">{{ 'Handelsgilde: {goods} → {coordinates}'|trans({'{goods}': ui.goods(r.goods)|e, '{coordinates}': ui.coords(r.coordinates)})|raw }}</td>
                         <td class="num movement-time" title="{{ 'Ankunft'|trans }}">{{ ui.countdown(r.guildDeliveryAt, now) }}</td>
                         <td class="num small muted movement-time">{{ ui.at(r.guildDeliveryAt, now) }}</td>

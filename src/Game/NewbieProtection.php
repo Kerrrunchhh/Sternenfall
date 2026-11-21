@@ -34,6 +34,6 @@ final class NewbieProtection
             return null;
         }
 
-        return t('{player} steht unter Noobschutz: Solange jemand nur einen Planeten und kein Flottenkontrollzentrum hat, darf niemand ihn angreifen, bei ihm stationieren oder ihm Rohstoffe schicken. Rohstoffe bekommt er über Transportgesuche.', ['{player}' => $target->getOwner()->getUsername()]);
+        return t('{player} steht unter Noobschutz: Solange jemand nur einen Planeten und kein Flottenkontrollzentrum hat, darf niemand ihn angreifen, bei ihm stationieren oder ihm Rohstoffe schicken. Rohstoffe bekommt er über Transportgesuche.', ['{player}' => $target->getOwner()->getDisplayName()]);
     }
 }

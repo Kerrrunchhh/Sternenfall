@@ -104,7 +104,7 @@ class AdminController extends AbstractGameController
         $this->currentPlanet();
         try {
             $until = $this->support->penalize($ticket, $this->player(), VacationService::parseDays($request->request->getString('days')), $request->request->getString('reason'));
-            $this->addFlash('success', t('Strafe verhängt: {player} ist bis {value} im Urlaub.', ['{player}' => $ticket->getReported()?->getUsername(), '{value}' => new When($until)]));
+            $this->addFlash('success', t('Strafe verhängt: {player} ist bis {value} im Urlaub.', ['{player}' => $ticket->getReported()?->getDisplayName(), '{value}' => new When($until)]));
         } catch (GameException $e) {
             $this->addFlash('error', $e->translatable());
         }

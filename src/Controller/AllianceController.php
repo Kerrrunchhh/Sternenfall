@@ -126,9 +126,9 @@ class AllianceController extends AbstractGameController
         $this->currentPlanet();
         $rank = AllianceRank::tryFrom($request->request->getString('rank'));
         if ('founder' === $request->request->getString('rank')) {
-            $this->attempt(fn () => $this->alliances->transferFounder($this->player(), $member), t('{player} ist jetzt Gründer.', ['{player}' => $member->getUsername()]));
+            $this->attempt(fn () => $this->alliances->transferFounder($this->player(), $member), t('{player} ist jetzt Gründer.', ['{player}' => $member->getDisplayName()]));
         } elseif (null !== $rank) {
-            $this->attempt(fn () => $this->alliances->setRank($this->player(), $member, $rank), t('{player} ist jetzt {rank}.', ['{player}' => $member->getUsername(), '{rank}' => t($rank->label())]));
+            $this->attempt(fn () => $this->alliances->setRank($this->player(), $member, $rank), t('{player} ist jetzt {rank}.', ['{player}' => $member->getDisplayName(), '{rank}' => t($rank->label())]));
         }
 
         return $this->redirectToRoute('app_alliance');
@@ -139,7 +139,7 @@ class AllianceController extends AbstractGameController
     public function kick(User $member): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->alliances->kick($this->player(), $member), t('{player} wurde ausgeschlossen.', ['{player}' => $member->getUsername()]));
+        $this->attempt(fn () => $this->alliances->kick($this->player(), $member), t('{player} wurde ausgeschlossen.', ['{player}' => $member->getDisplayName()]));
 
         return $this->redirectToRoute('app_alliance');
     }
@@ -173,9 +173,9 @@ class AllianceController extends AbstractGameController
         try {
             $deposed = $this->alliances->voteFounder($this->player(), $candidate);
             $this->addFlash('success', match (true) {
-                $deposed => t('Mehrheit erreicht: {player} ist jetzt Gründer.', ['{player}' => $candidate->getUsername()]),
+                $deposed => t('Mehrheit erreicht: {player} ist jetzt Gründer.', ['{player}' => $candidate->getDisplayName()]),
                 null === $candidate => 'Deine Stimme wurde zurückgezogen.',
-                default => t('Deine Stimme für {player} wurde gezählt.', ['{player}' => $candidate->getUsername()]),
+                default => t('Deine Stimme für {player} wurde gezählt.', ['{player}' => $candidate->getDisplayName()]),
             });
         } catch (GameException $e) {
             $this->addFlash('error', $e->translatable());
@@ -219,7 +219,7 @@ class AllianceController extends AbstractGameController
             $this->addFlash('error', t('Wähle ein Mitglied aus.'));
         } else {
             $amount = NumberInput::amount($form->getString('amount'));
-            $this->attempt(fn () => $this->alliances->payOut($this->player(), $member, $amount, $form->getString('note')), t('{value} Credits an {player} ausgezahlt.', ['{value}' => new Num(floor($amount)), '{player}' => $member->getUsername()]));
+            $this->attempt(fn () => $this->alliances->payOut($this->player(), $member, $amount, $form->getString('note')), t('{value} Credits an {player} ausgezahlt.', ['{value}' => new Num(floor($amount)), '{player}' => $member->getDisplayName()]));
         }
 
         return $this->redirectToRoute('app_alliance');

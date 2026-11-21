@@ -132,6 +132,75 @@ class FusionCombatTest extends TestCase
         self::assertStringContainsString('Invasion gescheitert', $this->report());
     }
 
+    public function testTheOriginalOwnerIsRememberedAndHisReInvasionAlwaysSucceeds(): void
+    {
+        $planet = new Planet($this->defender, 'Streitfall', 1, 1, 5, $this->now);
+        $this->attacker->setResearchLevel(ResearchType::Colonization, 5);
+        $this->attack($planet, ['leviathan' => 1, 'invasion_ship' => 3], lucky: true);
+
+        self::assertSame($this->attacker, $planet->getOwner());
+        self::assertSame($this->defender, $planet->getOriginalOwner($this->now), 'remembered while integrating');
+        self::assertSame(3, $planet->slotCost($this->now));
+        self::assertNull($planet->getOriginalOwner($this->now->modify('+31 days')), 'forgotten once fully owned');
+
+        // The old owner strikes back with a single invasion ship against many inhabitants – and an unlucky roll.
+        $planet->setPopulation(50000);
+        $this->persisted = [];
+        $revenge = new Fleet($this->defender, 'Rache', 1, 2, 1, ['leviathan' => 1, 'invasion_ship' => 1]);
+        $revenge->depart(FleetMission::Attack, 1, 1, 5, $this->now, 60);
+        $this->combat(false)->attackPlanet($revenge, $planet);
+
+        self::assertSame($this->defender, $planet->getOwner(), 'the population rose for him');
+        self::assertFalse($planet->isIntegrating($this->now), 'his again at once');
+        self::assertNull($planet->getOriginalOwner($this->now));
+        self::assertSame(1, $planet->slotCost($this->now));
+        self::assertStringContainsString('zurückerobert', $this->report());
+    }
+
+    public function testWithoutAnInvasionShipTheOriginalOwnerDoesNotTakeItBack(): void
+    {
+        $planet = new Planet($this->defender, 'Streitfall', 1, 1, 5, $this->now);
+        $this->attacker->setResearchLevel(ResearchType::Colonization, 5);
+        $this->attack($planet, ['leviathan' => 1, 'invasion_ship' => 3], lucky: true);
+
+        $revenge = new Fleet($this->defender, 'Rache', 1, 2, 1, ['leviathan' => 1]);
+        $revenge->depart(FleetMission::Attack, 1, 1, 5, $this->now, 60);
+        $this->combat(true)->attackPlanet($revenge, $planet);
+
+        self::assertSame($this->attacker, $planet->getOwner(), 'a won battle alone takes no planet');
+        self::assertSame($this->defender, $planet->getOriginalOwner($this->now));
+    }
+
+    public function testAThirdInvaderKeepsTheFirstOwnerAsTheOriginalOne(): void
+    {
+        $planet = new Planet($this->defender, 'Wanderpokal', 1, 1, 5, $this->now);
+        $this->attacker->setResearchLevel(ResearchType::Colonization, 5);
+        $this->attack($planet, ['leviathan' => 1, 'invasion_ship' => 3], lucky: true);
+
+        $third = new User('dritter', $this->now);
+        $third->setResearchLevel(ResearchType::Colonization, 5);
+        $raid = new Fleet($third, 'Dritte', 1, 2, 1, ['leviathan' => 1, 'invasion_ship' => 3]);
+        $raid->depart(FleetMission::Attack, 1, 1, 5, $this->now, 60);
+        $this->combat(true)->attackPlanet($raid, $planet);
+
+        self::assertSame($third, $planet->getOwner());
+        self::assertSame($this->defender, $planet->getOriginalOwner($this->now), 'still the one it was taken from first');
+    }
+
+    public function testBattleReportsNameThePlayersWithTheirAllianceTagOfTheMoment(): void
+    {
+        $red = new \App\Entity\Alliance('Rote Flotte', 'RF', \App\Game\LifeForm::Pirate, $this->now);
+        $this->attacker->joinAlliance($red, \App\Game\AllianceRank::Founder);
+        $planet = new Planet($this->defender, 'Ziel', 1, 1, 5, $this->now);
+        $this->attack($planet, ['monarch' => 1], reports: true);
+        // Leaving the alliance later doesn't change the report.
+        $this->attacker->leaveAlliance();
+
+        $shared = array_values(array_filter($this->persisted, static fn (object $o): bool => $o instanceof \App\Entity\BattleReport));
+        self::assertSame('Kampfbericht angreifer [RF] gegen verteidiger', $shared[0]->getSubject());
+        self::assertStringContainsString('angreifer [RF]', $this->report());
+    }
+
     public function testHomeworldCanNotBeInvaded(): void
     {
         $planet = new Planet($this->defender, 'Heimat', 1, 1, 5, $this->now);

@@ -83,16 +83,16 @@ class AdminExtendedController extends AbstractGameController
                 case 'end':
                     $user->endExtended($now);
                     $em->flush();
-                    $this->addFlash('success', t('Der erweiterte Account von {player} ist beendet.', ['{player}' => $user->getUsername()])
+                    $this->addFlash('success', t('Der erweiterte Account von {player} ist beendet.', ['{player}' => $user->getDisplayName()])
                     );
                     break;
                 case 'cancel':
                     $paypal->cancel($user);
-                    $this->addFlash('success', t('Das Abo von {player} ist bei PayPal gekündigt; der bezahlte Zeitraum läuft bis {until}.', ['{player}' => $user->getUsername(), '{until}' => new When($user->getExtendedUntil() ?? $now)]));
+                    $this->addFlash('success', t('Das Abo von {player} ist bei PayPal gekündigt; der bezahlte Zeitraum läuft bis {until}.', ['{player}' => $user->getDisplayName(), '{until}' => new When($user->getExtendedUntil() ?? $now)]));
                     break;
                 case 'sync':
                     $status = $paypal->sync($user);
-                    $this->addFlash('success', t('PayPal meldet für {player}: {status}.', ['{player}' => $user->getUsername(), '{status}' => $status]));
+                    $this->addFlash('success', t('PayPal meldet für {player}: {status}.', ['{player}' => $user->getDisplayName(), '{status}' => $status]));
                     break;
                 default:
                     throw new GameException(t('Unbekannte Aktion.'));
@@ -115,9 +115,9 @@ class AdminExtendedController extends AbstractGameController
         $user->extendUntil($from->modify("+{$days} days"));
         $inbox->send($user, t('Erweiterter Account geschenkt'), new Lines([
             t('Die Spielleitung schenkt dir {days} Tage erweiterten Account – er läuft jetzt bis {until}. Viel Spaß!', ['{days}' => $days, '{until}' => new When($user->getExtendedUntil())]),
-            t("\n– {player} (Spielleitung)", ['{player}' => $this->player()->getUsername()]),
+            t("\n– {player} (Spielleitung)", ['{player}' => $this->player()->getDisplayName()]),
         ]));
         $em->flush();
-        $this->addFlash('success', t('{player} ist jetzt erweitert bis {until}.', ['{player}' => $user->getUsername(), '{until}' => new When($user->getExtendedUntil())]));
+        $this->addFlash('success', t('{player} ist jetzt erweitert bis {until}.', ['{player}' => $user->getDisplayName(), '{until}' => new When($user->getExtendedUntil())]));
     }
 }

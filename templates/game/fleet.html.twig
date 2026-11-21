@@ -29,14 +29,26 @@
     </div>
 {% endmacro %}
 
-{% macro target_inputs(target, missions, with_cargo, bookmarks = []) %}
-    {% if bookmarks is not empty %}
-        <label class="bookmark-pick">{{ 'Gemerkte Koordinaten'|trans }}
-            <select data-bookmark-pick aria-label="{{ 'Gemerkte Koordinaten übernehmen'|trans }}">
+{% macro target_inputs(target, missions, with_cargo, bookmarks = [], own_planets = []) %}
+    {# Own planets and remembered coordinates fill in the target with one pick. #}
+    {% if bookmarks is not empty or own_planets is not empty %}
+        <label class="bookmark-pick">{{ 'Ziel übernehmen'|trans }}
+            <select data-bookmark-pick aria-label="{{ 'Eigenen Planeten oder gemerkte Koordinaten als Ziel übernehmen'|trans }}">
                 <option value="">{{ '– auswählen –'|trans }}</option>
-                {% for b in bookmarks %}
-                    <option value="{{ b.coordinates }}" data-galaxy="{{ b.galaxy }}" data-system="{{ b.system }}" data-position="{{ b.position }}">{{ b.label|trans }} [{{ b.coordinates }}]</option>
-                {% endfor %}
+                {% if own_planets is not empty %}
+                    <optgroup label="{{ 'Eigene Planeten'|trans }}">
+                        {% for p in own_planets %}
+                            <option value="{{ p.coordinates }}" data-galaxy="{{ p.galaxy }}" data-system="{{ p.system }}" data-position="{{ p.position }}">{{ p.homeworld ? '🏠 ' }}{{ p.name }} [{{ p.coordinates }}]</option>
+                        {% endfor %}
+                    </optgroup>
+                {% endif %}
+                {% if bookmarks is not empty %}
+                    <optgroup label="{{ 'Gemerkte Koordinaten'|trans }}">
+                        {% for b in bookmarks %}
+                            <option value="{{ b.coordinates }}" data-galaxy="{{ b.galaxy }}" data-system="{{ b.system }}" data-position="{{ b.position }}">{{ b.label|trans }} [{{ b.coordinates }}]</option>
+                        {% endfor %}
+                    </optgroup>
+                {% endif %}
             </select>
         </label>
     {% endif %}
@@ -218,10 +230,10 @@
                         </td>
                         <td>
                             <label for="pick-{{ f.id }}"><strong>{{ f.label|trans }}</strong></label>
-                            {% if e.own and (f.releasedToAlliance or f.releasedTo is not empty) %}<span class="release-chip small" title="{{ f.releasedTo|map(u => u.username)|join(', ') }}">{{ 'freigegeben'|trans }}{% if f.releasedToAlliance %} {{ '(Allianz)'|trans }}{% endif %}{% if f.releasedTo is not empty %} {{ '({count} einzeln)'|trans({'{count}': f.releasedTo|length}) }}{% endif %}</span>{% endif %}
+                            {% if e.own and (f.releasedToAlliance or f.releasedTo is not empty) %}<span class="release-chip small" title="{{ f.releasedTo|map(u => u.displayName)|join(', ') }}">{{ 'freigegeben'|trans }}{% if f.releasedToAlliance %} {{ '(Allianz)'|trans }}{% endif %}{% if f.releasedTo is not empty %} {{ '({count} einzeln)'|trans({'{count}': f.releasedTo|length}) }}{% endif %}</span>{% endif %}
                             <span class="muted small fleet-status">
                                 {% if f.idle %}
-                                    {{ 'wartet bei {coordinates}'|trans({'{coordinates}': ui.coords(f.coordinates)})|raw }}{% if e.at %} · {{ e.at.name }}{% if not e.base %} ({{ e.at.owner.username }}){% endif %}{% endif %}
+                                    {{ 'wartet bei {coordinates}'|trans({'{coordinates}': ui.coords(f.coordinates)})|raw }}{% if e.at %} · {{ e.at.name }}{% if not e.base %} ({{ e.at.owner.displayName }}){% endif %}{% endif %}
                                 {% elseif f.mission.value == 'hover' %}
                                     {{ 'schwebt über {coordinates} · landet in {nextEventAt} ({nextEventAt2})'|trans({'{coordinates}': ui.coords(f.coordinates), '{nextEventAt}': ui.countdown(f.nextEventAt, now), '{nextEventAt2}': ui.at(f.nextEventAt, now)})|raw }}
                                 {% else %}
@@ -279,13 +291,13 @@
             <p class="muted small" data-action-help></p>
 
             <div class="bulk-panel" data-panel="send" hidden>
-                {{ _self.target_inputs(target, missions, true, bookmarks) }}
+                {{ _self.target_inputs(target, missions, true, bookmarks, player.planets|sort((a, b) => [b.homeworld, a.galaxy, a.system, a.position] <=> [a.homeworld, b.galaxy, b.system, b.position])) }}
                 <div data-panel="send:attack">
                     <label>{{ 'Verband'|trans }}
                         <select name="join" aria-label="{{ 'Angriff, dem die Flotten beitreten'|trans }}">
                             <option value="">{{ 'Neuer Angriff auf die Koordinaten oben'|trans }}</option>
                             {% for lead in joinable_attacks %}
-                                <option value="{{ lead.id }}">{{ 'Dazuschicken: {label}'|trans({'{label}': lead.label|trans}) }}{% if lead.owner.id != player.id %} ({{ lead.owner.username }}){% endif %} {{ 'auf [{targetCoordinates}], Ankunft {arriveAt}'|trans({'{targetCoordinates}': lead.targetCoordinates, '{arriveAt}': lead.arriveAt|date('d.m. H:i:s')}) }}</option>
+                                <option value="{{ lead.id }}">{{ 'Dazuschicken: {label}'|trans({'{label}': lead.label|trans}) }}{% if lead.owner.id != player.id %} ({{ lead.owner.displayName }}){% endif %} {{ 'auf [{targetCoordinates}], Ankunft {arriveAt}'|trans({'{targetCoordinates}': lead.targetCoordinates, '{arriveAt}': lead.arriveAt|date('d.m. H:i:s')}) }}</option>
                             {% endfor %}
                         </select>
                     </label>

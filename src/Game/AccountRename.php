@@ -42,7 +42,7 @@ final readonly class AccountRename
         }
         $other = $this->users->findOneByNameIgnoringCase($name);
         if (null !== $other && !$other->isSameAs($user)) {
-            throw new GameException(t('Den Namen „{name}“ hat schon {player}.', ['{name}' => $name, '{player}' => $other->getUsername()]));
+            throw new GameException(t('Den Namen „{name}“ hat schon {player}.', ['{name}' => $name, '{player}' => $other->getDisplayName()]));
         }
 
         $user->setUsername($name);

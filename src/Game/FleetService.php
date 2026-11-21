@@ -285,7 +285,7 @@ final readonly class FleetService
                 }
             }
             if (null !== $reason = AttackRules::rejection($sent, $this->attackRules->allShips($owner))) {
-                throw new GameException(t('{player}: {reason}', ['{player}' => $owner->getUsername(), '{reason}' => $reason]));
+                throw new GameException(t('{player}: {reason}', ['{player}' => $owner->getDisplayName(), '{reason}' => $reason]));
             }
         }
     }
@@ -327,7 +327,7 @@ final readonly class FleetService
             return null;
         }
 
-        return t('{player} ist im Urlaub bis {value} – seine Planeten sind so lange geschützt.', ['{player}' => $target->getOwner()->getUsername(), '{value}' => $this->localTime($target->getOwner()->getVacationUntil())]);
+        return t('{player} ist im Urlaub bis {value} – seine Planeten sind so lange geschützt.', ['{player}' => $target->getOwner()->getDisplayName(), '{value}' => $this->localTime($target->getOwner()->getVacationUntil())]);
     }
 
     /** Whether the player's fleets may wait at this planet without the 24 hour limit (own, alliance, bond, protection contract). */
@@ -486,7 +486,7 @@ final readonly class FleetService
             });
         });
 
-        return t('Sonde von {name} [{coords}] fliegt der Flotte von {player} entgegen, Treffpunkt [{galaxy}:{system}:{position}] um {value}.', ['{name}' => $origin->getName(), '{coords}' => $origin->getCoordinates(), '{player}' => $target->getOwner()->getUsername(), '{galaxy}' => $galaxy, '{system}' => $system, '{position}' => $position, '{value}' => $this->localTime($probe->getArriveAt())]);
+        return t('Sonde von {name} [{coords}] fliegt der Flotte von {player} entgegen, Treffpunkt [{galaxy}:{system}:{position}] um {value}.', ['{name}' => $origin->getName(), '{coords}' => $origin->getCoordinates(), '{player}' => $target->getOwner()->getDisplayName(), '{galaxy}' => $galaxy, '{system}' => $system, '{position}' => $position, '{value}' => $this->localTime($probe->getArriveAt())]);
     }
 
     // ------------------------------------------------------------------
@@ -738,7 +738,7 @@ final readonly class FleetService
             }
             $this->assertReadyToLeave($fleet);
             if (!$fleet->getOwner()->isSameAs($actor)) {
-                $this->inbox->send($fleet->getOwner(), t('Flotte „{name}“ von {player} gesteuert', ['{name}' => $fleet->getName(), '{player}' => $actor->getUsername()]), t('{player} hat deine freigegebene Flotte „{name}“ mit dem Auftrag „{mission}“ nach [{galaxy}:{system}:{position}] geschickt.', ['{player}' => $actor->getUsername(), '{name}' => $fleet->getName(), '{mission}' => t($mission->label()), '{galaxy}' => $galaxy, '{system}' => $system, '{position}' => $position]));
+                $this->inbox->send($fleet->getOwner(), t('Flotte „{name}“ von {player} gesteuert', ['{name}' => $fleet->getName(), '{player}' => $actor->getDisplayName()]), t('{player} hat deine freigegebene Flotte „{name}“ mit dem Auftrag „{mission}“ nach [{galaxy}:{system}:{position}] geschickt.', ['{player}' => $actor->getDisplayName(), '{name}' => $fleet->getName(), '{mission}' => t($mission->label()), '{galaxy}' => $galaxy, '{system}' => $system, '{position}' => $position]));
             }
 
             $target = $this->planetRepository->findAt($galaxy, $system, $position);
@@ -830,7 +830,7 @@ final readonly class FleetService
         }
         if (null !== $lead && $fleet->isMoving() && !$fleet->isAt($galaxy, $system, $position)) {
             $result = FleetMission::Attack === $mission
-                ? t('Flotte „{name}“ tritt dem Angriff von {player} auf [{targetCoordinates}] bei.', ['{name}' => $fleet->getName(), '{player}' => $lead->getOwner()->getUsername(), '{targetCoordinates}' => $lead->getTargetCoordinates()])
+                ? t('Flotte „{name}“ tritt dem Angriff von {player} auf [{targetCoordinates}] bei.', ['{name}' => $fleet->getName(), '{player}' => $lead->getOwner()->getDisplayName(), '{targetCoordinates}' => $lead->getTargetCoordinates()])
                 : t('Flotte „{name}“ fliegt im Konvoi mit {label} nach [{targetCoordinates}].', ['{name}' => $fleet->getName(), '{label}' => $lead->getLabel(), '{targetCoordinates}' => $lead->getTargetCoordinates()]);
         }
 
@@ -897,7 +897,7 @@ final readonly class FleetService
         if (null === $target || null === $this->gameMailer || !$target->getOwner()->wantsMail('attack') || !$target->getOwner()->allowAttackMail($this->now())) {
             return;
         }
-        $this->gameMailer->notify($target->getOwner(), 'attack', t('Angriff auf {name}', ['{name}' => $target->getName()]), t("{player} greift deinen Planeten {name} [{coords}] an.\nEinschlag: {value}\n\nIm Spiel siehst du den Angriff auf der Übersicht und kannst die Flotte ausspionieren.", ['{player}' => $attacker->getOwner()->getUsername(), '{name}' => $target->getName(), '{coords}' => $target->getCoordinates(), '{value}' => $this->localTime($attacker->getArriveAt())]));
+        $this->gameMailer->notify($target->getOwner(), 'attack', t('Angriff auf {name}', ['{name}' => $target->getName()]), t("{player} greift deinen Planeten {name} [{coords}] an.\nEinschlag: {value}\n\nIm Spiel siehst du den Angriff auf der Übersicht und kannst die Flotte ausspionieren.", ['{player}' => $attacker->getOwner()->getDisplayName(), '{name}' => $target->getName(), '{coords}' => $target->getCoordinates(), '{value}' => $this->localTime($attacker->getArriveAt())]));
     }
 
     /** Systems around an attacked planet in which guardians receive the distress call. */
@@ -922,7 +922,7 @@ final readonly class FleetService
             }
         }
         foreach ($guardians as $guardian) {
-            $this->inbox->send($guardian, t('Hilferuf von {player}', ['{player}' => $victim->getUsername()]), t("{player} ({label}) wird angegriffen!\n\nAngreifer: {player2}\nZiel: {name} [{coords}]\nEinschlag: {value}\n\nAls Wächter kannst du die angreifende Flotte auf dem Radar abfangen, wenn dein Radar das Zielsystem abdeckt.", ['{player}' => $victim->getUsername(), '{label}' => t($victim->getLifeForm()->label()), '{player2}' => $attacker->getOwner()->getUsername(), '{name}' => $target->getName(), '{coords}' => $target->getCoordinates(), '{value}' => $this->localTime($attacker->getArriveAt())]));
+            $this->inbox->send($guardian, t('Hilferuf von {player}', ['{player}' => $victim->getDisplayName()]), t("{player} ({label}) wird angegriffen!\n\nAngreifer: {player2}\nZiel: {name} [{coords}]\nEinschlag: {value}\n\nAls Wächter kannst du die angreifende Flotte auf dem Radar abfangen, wenn dein Radar das Zielsystem abdeckt.", ['{player}' => $victim->getDisplayName(), '{label}' => t($victim->getLifeForm()->label()), '{player2}' => $attacker->getOwner()->getDisplayName(), '{name}' => $target->getName(), '{coords}' => $target->getCoordinates(), '{value}' => $this->localTime($attacker->getArriveAt())]));
         }
         $this->em->flush();
     }
@@ -1093,7 +1093,7 @@ final readonly class FleetService
                 $this->em->flush();
             }
             $this->logDeparture($fleet, $actor, $prey->getOwner());
-            $result = t('{mission}: {label} fängt die Flotte von {player} bei [{g}:{s}:{p}] ab.', ['{mission}' => t($mission->label()), '{label}' => $fleet->getLabel(), '{player}' => $prey->getOwner()->getUsername(), '{g}' => $g, '{s}' => $s, '{p}' => $p]);
+            $result = t('{mission}: {label} fängt die Flotte von {player} bei [{g}:{s}:{p}] ab.', ['{mission}' => t($mission->label()), '{label}' => $fleet->getLabel(), '{player}' => $prey->getOwner()->getDisplayName(), '{g}' => $g, '{s}' => $s, '{p}' => $p]);
         });
 
         return $result;
@@ -1218,6 +1218,8 @@ final readonly class FleetService
             $this->sendOverstayersHome();
             $this->giveUpAbandonedPlanets();
             $this->accountDeletion?->deleteDue();
+            // Sign-ups that didn't confirm their e-mail address within 48 hours.
+            $this->accountDeletion?->deleteUnconfirmed();
             $this->contracts?->settleDue();
             $this->bounties?->settleDue();
             // Once a day: ships and resources of the whole game for the status page history.
@@ -1277,7 +1279,7 @@ final readonly class FleetService
                 if ($wasAllowed && null !== $planet && $planet->getOwner()->isSystem()) {
                     $this->inbox->send($owner, t('{label} muss heim', ['{label}' => $fleet->getLabel()]), t('{name} [{coords}] ist herrenlos geworden. {label} fliegt in 24 Stunden von selbst heim, wenn du sie nicht vorher umstationierst – solange das Lager des Planeten Treibstoff und Proviant hergibt; sonst sitzt sie fest.', ['{label}' => $fleet->getLabel(), '{name}' => $planet->getName(), '{coords}' => $planet->getCoordinates()]));
                 } elseif ($wasAllowed && null !== $planet) {
-                    $this->inbox->send($owner, t('{label} muss heim', ['{label}' => $fleet->getLabel()]), t('{label} darf nicht mehr auf {name} [{coords}] von {player} bleiben – ihr seid nicht mehr in einer Allianz und habt kein Bündnis. Sie fliegt in 24 Stunden von selbst heim, wenn du sie nicht vorher wegschickst.', ['{label}' => $fleet->getLabel(), '{name}' => $planet->getName(), '{coords}' => $planet->getCoordinates(), '{player}' => $planet->getOwner()->getUsername()]));
+                    $this->inbox->send($owner, t('{label} muss heim', ['{label}' => $fleet->getLabel()]), t('{label} darf nicht mehr auf {name} [{coords}] von {player} bleiben – ihr seid nicht mehr in einer Allianz und habt kein Bündnis. Sie fliegt in 24 Stunden von selbst heim, wenn du sie nicht vorher wegschickst.', ['{label}' => $fleet->getLabel(), '{name}' => $planet->getName(), '{coords}' => $planet->getCoordinates(), '{player}' => $planet->getOwner()->getDisplayName()]));
                 }
                 continue;
             }
@@ -1285,7 +1287,7 @@ final readonly class FleetService
                 continue;
             }
 
-            $where = null !== $post ? t('am Handelsstützpunkt {name} [{coords}]', ['{name}' => $post->getName(), '{coords}' => $post->getCoordinates()]) : t('auf {name} [{coords}] von {player}', ['{name}' => $planet->getName(), '{coords}' => $planet->getCoordinates(), '{player}' => $planet->getOwner()->getUsername()]);
+            $where = null !== $post ? t('am Handelsstützpunkt {name} [{coords}]', ['{name}' => $post->getName(), '{coords}' => $post->getCoordinates()]) : t('auf {name} [{coords}] von {player}', ['{name}' => $planet->getName(), '{coords}' => $planet->getCoordinates(), '{player}' => $planet->getOwner()->getDisplayName()]);
             $home = $this->homeFor($fleet);
             if (null === $home) {
                 $fleet->park($now);
@@ -1555,8 +1557,8 @@ final readonly class FleetService
 
         $fleet->depart($mission, $galaxy, $system, $position, $now, $seconds, $targetFleet);
         if (null !== $hostPaid && $hostPaid->total() >= 1 && !$host->getOwner()->isSystem()) {
-            $this->inbox->send($host->getOwner(), t('{label} von {player} ist gestartet', ['{label}' => $fleet->getLabel(), '{player}' => $fleet->getOwner()->getUsername()]), new Lines([
-                t('{label} von {player} hat {name} [{coords}] verlassen. Treibstoff und Proviant kamen aus deinem Lager:', ['{label}' => $fleet->getLabel(), '{player}' => $fleet->getOwner()->getUsername(), '{name}' => $host->getName(), '{coords}' => $host->getCoordinates()]),
+            $this->inbox->send($host->getOwner(), t('{label} von {player} ist gestartet', ['{label}' => $fleet->getLabel(), '{player}' => $fleet->getOwner()->getDisplayName()]), new Lines([
+                t('{label} von {player} hat {name} [{coords}] verlassen. Treibstoff und Proviant kamen aus deinem Lager:', ['{label}' => $fleet->getLabel(), '{player}' => $fleet->getOwner()->getDisplayName(), '{name}' => $host->getName(), '{coords}' => $host->getCoordinates()]),
                 $this->formatResources($hostPaid),
             ]));
         }
@@ -1676,12 +1678,12 @@ final readonly class FleetService
                 null !== self::freightersInWarfleet($ships) => self::freightersInWarfleet($ships),
                 // A fused home planet can lose its lower planets, only a single one is untouchable.
                 $target->isHomeworld() && !$target->isFused() && ($ships[ShipType::InvasionShip->value] ?? 0) > 0 && !$owned && !$target->getOwner()->isInactive($this->now())
-                    => t('{name} [{coords}] ist der Heimatplanet von {player} und kann nicht erobert werden. Lass die Invasionsschiffe zu Hause oder wähle ein anderes Ziel.', ['{name}' => $target->getName(), '{coords}' => $target->getCoordinates(), '{player}' => $target->getOwner()->getUsername()]),
+                    => t('{name} [{coords}] ist der Heimatplanet von {player} und kann nicht erobert werden. Lass die Invasionsschiffe zu Hause oder wähle ein anderes Ziel.', ['{name}' => $target->getName(), '{coords}' => $target->getCoordinates(), '{player}' => $target->getOwner()->getDisplayName()]),
                 $owned => 'Deine eigenen Planeten kannst du nicht angreifen.',
                 $target->getOwner()->isSystem() && TradeGuild::NAME === $target->getOwner()->getUsername() => t('Die Zentralbörsen der Handelsgilde können nicht angegriffen werden.'),
                 $player->isAllyOf($target->getOwner()) => 'Mitglieder deiner Allianz kannst du nicht angreifen.',
                 null !== $this->vacationProtects($target) => $this->vacationProtects($target),
-                !$this->mayAttack($player, $target->getOwner()) => t('Mit der Allianz von {player} habt ihr ein {value} – Angriffe sind ausgeschlossen.', ['{player}' => $target->getOwner()->getUsername(), '{value}' => $this->diplomacy?->kindBetween($player, $target->getOwner())?->label() ?? 'Abkommen']),
+                !$this->mayAttack($player, $target->getOwner()) => t('Mit der Allianz von {player} habt ihr ein {value} – Angriffe sind ausgeschlossen.', ['{player}' => $target->getOwner()->getDisplayName(), '{value}' => $this->diplomacy?->kindBetween($player, $target->getOwner())?->label() ?? 'Abkommen']),
                 null !== $this->lifeFormRefusal($player, $target->getOwner()) => $this->lifeFormRefusal($player, $target->getOwner()),
                 default => null,
             },
@@ -1717,7 +1719,7 @@ final readonly class FleetService
                 $this->inbox->send($player, t('Transport nach {where} angekommen', ['{where}' => $where]), new Lines([t('{name} hat folgende Ladung bei {planet} {where} abgeliefert:', ['{name}' => $name, '{planet}' => $target->getName(), '{where}' => $where]), $this->formatResources($cargo)]), folder: MessageFolder::Trade);
                 if ($target->getOwner()->getId() !== $player->getId()) {
                     $this->actionLog?->record($player, ActionLog::DELIVERY, \sprintf('Lieferung von %s an %s auf %s [%s]: %s', $fleet->getName() ?? 'Schnellflotte', $target->getOwner()->getUsername(), $target->getName(), $target->getCoordinates(), ActionLog::resources($cargo)), $target->getOwner());
-                    $this->inbox->send($target->getOwner(), t('Lieferung von {player}', ['{player}' => $player->getUsername()]), new Lines([t('{player} hat dir auf {planet} {where} Rohstoffe geliefert:', ['{player}' => $player->getUsername(), '{planet}' => $target->getName(), '{where}' => $where]), $this->formatResources($cargo)]), folder: MessageFolder::Trade);
+                    $this->inbox->send($target->getOwner(), t('Lieferung von {player}', ['{player}' => $player->getDisplayName()]), new Lines([t('{player} hat dir auf {planet} {where} Rohstoffe geliefert:', ['{player}' => $player->getDisplayName(), '{planet}' => $target->getName(), '{where}' => $where]), $this->formatResources($cargo)]), folder: MessageFolder::Trade);
                 }
                 // "Transportieren und stationieren": the fleet stays there instead of flying back.
                 if (FleetMission::TransportStation === $fleet->getMission()) {
@@ -1744,7 +1746,7 @@ final readonly class FleetService
                 // hours, and a station flight only paid the way out.
                 if (!$fleet->isNamed() && null !== $target && !$this->mayStayAt($player, $target)) {
                     $fleet->settleAtTarget();
-                    $this->inbox->send($player, t('{name} bei {player} gelandet', ['{name}' => $name, '{player}' => $target->getOwner()->getUsername()]), t('{name} [{coords}] gehört inzwischen {player}. {fleet} ist trotzdem gelandet und wartet dort – ohne Allianz oder Bündnis darf sie höchstens 24 Stunden bleiben. Für den Heimflug braucht sie Treibstoff und Proviant aus ihrer Ladung; reicht das nicht, sitzt sie fest und verliert jeden Tag 10 % ihrer Schiffe.', ['{name}' => $target->getName(), '{coords}' => $target->getCoordinates(), '{player}' => $target->getOwner()->getUsername(), '{fleet}' => $name]));
+                    $this->inbox->send($player, t('{name} bei {player} gelandet', ['{name}' => $name, '{player}' => $target->getOwner()->getDisplayName()]), t('{name} [{coords}] gehört inzwischen {player}. {fleet} ist trotzdem gelandet und wartet dort – ohne Allianz oder Bündnis darf sie höchstens 24 Stunden bleiben. Für den Heimflug braucht sie Treibstoff und Proviant aus ihrer Ladung; reicht das nicht, sitzt sie fest und verliert jeden Tag 10 % ihrer Schiffe.', ['{name}' => $target->getName(), '{coords}' => $target->getCoordinates(), '{player}' => $target->getOwner()->getDisplayName(), '{fleet}' => $name]));
 
                     return;
                 }
@@ -1762,7 +1764,7 @@ final readonly class FleetService
                         $delivered = t("\nDie Ladung bleibt an Bord.");
                     }
                     $limit = null !== $target && !$this->mayStayAt($player, $target)
-                        ? t("\nAchtung: Ohne Allianz oder Bündnis mit {player} darf sie dort höchstens 24 Stunden bleiben. Für den Heimflug braucht sie Treibstoff und Proviant aus ihrer Ladung; reicht das nicht, sitzt sie fest und verliert jeden Tag 10 % ihrer Schiffe.", ['{player}' => $target->getOwner()->getUsername()])
+                        ? t("\nAchtung: Ohne Allianz oder Bündnis mit {player} darf sie dort höchstens 24 Stunden bleiben. Für den Heimflug braucht sie Treibstoff und Proviant aus ihrer Ladung; reicht das nicht, sitzt sie fest und verliert jeden Tag 10 % ihrer Schiffe.", ['{player}' => $target->getOwner()->getDisplayName()])
                         : null;
                     $this->inbox->send($player, t('{name} auf {where} stationiert', ['{name}' => $name, '{where}' => $where]), new Lines([t('{name} ist eingetroffen und wartet dort auf neue Befehle.', ['{name}' => $name]), $delivered, $limit]));
 
@@ -1881,7 +1883,7 @@ final readonly class FleetService
                 if (null !== $prey = $fleet->getTargetFleet()) {
                     // Probe sent after a fleet: it must still be on its way to this place.
                     if ($prey->isMoving() && Radar::nextStop($prey) === [$g, $s, $p] && $prey->getNextEventAt() >= $fleet->getArriveAt()) {
-                        $this->inbox->send($player, t('Flotte von {player} ausgespäht', ['{player}' => $prey->getOwner()->getUsername()]), $this->espionage->scoutFleet($player, $prey), folder: MessageFolder::Spy);
+                        $this->inbox->send($player, t('Flotte von {player} ausgespäht', ['{player}' => $prey->getOwner()->getDisplayName()]), $this->espionage->scoutFleet($player, $prey), folder: MessageFolder::Spy);
                         if (null !== $notice = $this->espionage->spiedNotice($prey->getOwner(), $player, t('Deine Flotte {name} bei {where}', ['{name}' => $prey->getLabel(), '{where}' => $where]))) {
                             $this->inbox->send($prey->getOwner(), ...$notice, folder: MessageFolder::Spy);
                         }
@@ -1934,7 +1936,7 @@ final readonly class FleetService
                         continue;
                     }
                     if (!$this->mayAttack($joiner->getOwner(), $victim)) {
-                        $this->inbox->send($joiner->getOwner(), t('Verbandsangriff auf {where} abgebrochen', ['{where}' => $where]), t('{label} darf {player} nicht angreifen (Allianz, Bündnis oder Nichtangriffspakt) und kehrt zurück.', ['{label}' => $joiner->getLabel(), '{player}' => $victim->getUsername()]));
+                        $this->inbox->send($joiner->getOwner(), t('Verbandsangriff auf {where} abgebrochen', ['{where}' => $where]), t('{label} darf {player} nicht angreifen (Allianz, Bündnis oder Nichtangriffspakt) und kehrt zurück.', ['{label}' => $joiner->getLabel(), '{player}' => $victim->getDisplayName()]));
                         $joiner->startReturn();
                         continue;
                     }

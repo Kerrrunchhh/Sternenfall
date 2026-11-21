@@ -67,6 +67,14 @@ class Planet
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $abandonAt = null;
 
+    /**
+     * Who the planet belonged to before it was invaded, while it is still integrating: his population
+     * still resists the new owner, so his own re-invasion always succeeds.
+     */
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?User $originalOwner = null;
+
     /** Invaded in a war between the two alliances: it takes fewer slots. */
     #[ORM\Column(options: ['default' => false])]
     private bool $invadedInWar = false;
@@ -226,6 +234,19 @@ class Planet
         $this->integratedAt = null;
         $this->invadedAt = null;
         $this->invadedInWar = false;
+        $this->originalOwner = null;
+    }
+
+    /** The owner before the invasion, as long as the planet is still integrating (null otherwise). */
+    public function getOriginalOwner(\DateTimeInterface $now): ?User
+    {
+        return $this->isIntegrating($now) ? $this->originalOwner : null;
+    }
+
+    /** Whether this player is the one the still integrating planet was taken from. */
+    public function wasTakenFrom(User $player, \DateTimeInterface $now): bool
+    {
+        return null !== ($original = $this->getOriginalOwner($now)) && $original->isSameAs($player);
     }
 
     /** The home planet of an inactive player was conquered: it is an ordinary planet now. */
@@ -480,6 +501,8 @@ class Planet
 
     public function conquer(User $newOwner, \DateTimeImmutable $now, bool $inWar = false): void
     {
+        // Invaded again while still integrating: the original owner stays the first one.
+        $original = $this->getOriginalOwner($now) ?? $this->owner;
         $this->hiddenInProfile = false;
         $this->owner->getPlanets()->removeElement($this);
         $this->owner = $newOwner;
@@ -490,7 +513,14 @@ class Planet
         foreach ($this->shipyardOrders->toArray() as $order) {
             $this->shipyardOrders->removeElement($order);
         }
+        // Taken back by its original owner: his again at once, no integration.
+        if ($original->isSameAs($newOwner)) {
+            $this->markFullyOwned();
+
+            return;
+        }
         $this->markInvaded($now, $inWar);
+        $this->originalOwner = $original;
     }
 
     /** @return array<string, int> */

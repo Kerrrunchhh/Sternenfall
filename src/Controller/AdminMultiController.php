@@ -73,7 +73,7 @@ class AdminMultiController extends AbstractGameController
 
             return $this->redirectToRoute('app_admin_multi_ask', ['player' => $player->getId(), 'other' => $other->getId()]);
         }
-        $this->addFlash('success', t('Nachricht an {player} geschickt – als Support-Team, ohne deinen Namen.', ['{player}' => $player->getUsername()]));
+        $this->addFlash('success', t('Nachricht an {player} geschickt – als Support-Team, ohne deinen Namen.', ['{player}' => $player->getDisplayName()]));
 
         return $this->redirectToRoute('app_admin_ticket', ['id' => $ticket->getId()]);
     }

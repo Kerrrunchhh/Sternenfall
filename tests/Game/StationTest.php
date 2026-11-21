@@ -37,4 +37,14 @@ class StationTest extends TestCase
 
         self::assertTrue(Radar::emits($fleet));
     }
+
+    public function testEveryMissionHasAKindOfFlightForTheOverview(): void
+    {
+        foreach (FleetMission::cases() as $mission) {
+            self::assertArrayHasKey($mission->kind(), FleetMission::KINDS, $mission->value);
+        }
+        self::assertSame('war', FleetMission::Raid->kind());
+        self::assertSame('trade', FleetMission::Pickup->kind());
+        self::assertSame('move', FleetMission::Station->kind());
+    }
 }

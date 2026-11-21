@@ -153,18 +153,18 @@ final class HeroPoints
             }
             $rescued = $entry['rescued'] ?? 0.0;
             if ($rescued >= 1) {
-                $lines[] = t('  🛟 Die Rettungsschiffe von {player} haben {count} Besatzungsmitglieder gerettet.', ['{player}' => $user->getUsername(), '{count}' => new Num((int) round($rescued))]);
+                $lines[] = t('  🛟 Die Rettungsschiffe von {player} haben {count} Besatzungsmitglieder gerettet.', ['{player}' => $user->getDisplayName(), '{count}' => new Num((int) round($rescued))]);
             }
             if (abs($points) < 0.5) {
                 continue;
             }
             $wasCriminal = $user->isCriminal();
             $user->addHeroPoints($points);
-            $lines[] = t('  {player} {points} (jetzt {total})', ['{player}' => $user->getUsername(), '{points}' => new Lines([$points > 0 ? '+' : '−', new Num(abs($points))], ''), '{total}' => new Num($user->getHeroPoints())]);
+            $lines[] = t('  {player} {points} (jetzt {total})', ['{player}' => $user->getDisplayName(), '{points}' => new Lines([$points > 0 ? '+' : '−', new Num(abs($points))], ''), '{total}' => new Num($user->getHeroPoints())]);
             if (!$wasCriminal && $user->isCriminal()) {
-                $lines[] = t('  🚨 {player} ist jetzt kriminell.', ['{player}' => $user->getUsername()]);
+                $lines[] = t('  🚨 {player} ist jetzt kriminell.', ['{player}' => $user->getDisplayName()]);
             } elseif ($wasCriminal && !$user->isCriminal()) {
-                $lines[] = t('  {player} ist nicht mehr kriminell.', ['{player}' => $user->getUsername()]);
+                $lines[] = t('  {player} ist nicht mehr kriminell.', ['{player}' => $user->getDisplayName()]);
             }
         }
 
@@ -182,6 +182,6 @@ final class HeroPoints
             return null;
         }
 
-        return t('Als {lifeForm} greifst du keine Siedler und Händler an, die nicht kriminell sind – außer im Krieg oder wenn sie deiner Lebensform angehören. {player} ist {victimLifeForm}.', ['{lifeForm}' => t($attacker->getLifeForm()->label()), '{player}' => $victim->getUsername(), '{victimLifeForm}' => t($victim->getLifeForm()->label())]);
+        return t('Als {lifeForm} greifst du keine Siedler und Händler an, die nicht kriminell sind – außer im Krieg oder wenn sie deiner Lebensform angehören. {player} ist {victimLifeForm}.', ['{lifeForm}' => t($attacker->getLifeForm()->label()), '{player}' => $victim->getDisplayName(), '{victimLifeForm}' => t($victim->getLifeForm()->label())]);
     }
 }

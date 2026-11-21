@@ -217,4 +217,16 @@ class EspionageTest extends TestCase
         self::assertTrue($radar->sees($victim, $attack), 'radar 1 covers the own system');
         self::assertTrue($radar->sees($victim, $probe), 'with radar, top espionage notices probes');
     }
+
+    public function testASpyReportNamesWhoAFreshlyInvadedPlanetWasTakenFrom(): void
+    {
+        $victim = new User('opfer');
+        $planet = new \App\Entity\Planet($victim, 'Beute', 1, 1, 7, $this->now);
+        $planet->conquer(new User('eroberer'), $this->now->modify('-1 day'));
+
+        $report = self::text($this->espionage->report(new User('spion'), 1, 1, 7, $planet));
+
+        self::assertStringContainsString('Planet Beute [1:1:7] von eroberer', $report);
+        self::assertStringContainsString('ursprünglicher Besitzer: opfer', $report);
+    }
 }

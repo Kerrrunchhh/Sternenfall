@@ -34,7 +34,7 @@
                             {% set other = box == 'sent' ? l.recipient : l.sender %}
                             <tr class="{{ box == 'inbox' and not l.read ? 'mail-unread' }}">
                                 <td><input type="checkbox" name="letters[]" value="{{ l.id }}" aria-label="{{ 'Nachricht „{subject}“ auswählen'|trans({'{subject}': l.subject}) }}"></td>
-                                <td>{% if other %}{{ ui.player(other, false) }}{% else %}<span class="muted">{{ 'gelöschter Spieler'|trans }}</span>{% endif %}</td>
+                                <td>{% if other %}{{ ui.player(other) }}{% else %}<span class="muted">{{ 'gelöschter Spieler'|trans }}</span>{% endif %}</td>
                                 <td><a href="{{ path('app_mail_show', {id: l.id}) }}">{{ l.subject }}</a>{% if box == 'sent' and not l.read %} <span class="muted small">{{ 'ungelesen'|trans }}</span>{% endif %}</td>
                                 <td class="num small">{{ l.createdAt|date('d.m.Y H:i') }}</td>
                             </tr>

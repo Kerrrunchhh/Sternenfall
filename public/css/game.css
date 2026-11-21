@@ -123,6 +123,14 @@ form .btn-small[type=submit] { margin-top: 0; }
 }
 .resources { display: flex; gap: 1rem; flex: 1; justify-content: center; flex-wrap: wrap; }
 .res { display: flex; flex-direction: column; align-items: center; line-height: 1.2; min-width: 72px; }
+/* Above phone width the seven values always stand side by side in equal columns. When that row
+   (at least 42rem – it grows with the font size) doesn't fit next to logo, clock, search and name,
+   it moves into a full-width row of its own; numbers are never cut off. */
+@media (min-width: 761px) {
+    .topbar { flex-wrap: wrap; row-gap: .4rem; }
+    .resources { order: 5; flex: 1 1 42rem; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .5rem; }
+    .res { min-width: 0; white-space: nowrap; }
+}
 .res-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .res-amount { font-weight: 600; font-variant-numeric: tabular-nums; }
 .res-rate { font-size: .7rem; color: var(--muted); }
@@ -134,22 +142,6 @@ form .btn-small[type=submit] { margin-top: 0; }
 .res-population .res-amount { color: var(--text); }
 .res-credits .res-amount { color: var(--accent-2); }
 .res-negative, .negative { color: var(--bad); }
-/* Tablets and small laptops: all values side by side in one row (they used to wrap one below the other). */
-@media (min-width: 761px) and (max-width: 1200px) {
-    .topbar { gap: .75rem; padding: .5rem .75rem; }
-    .logo-image { height: 36px; }
-    .resources { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .4rem; }
-    .res { min-width: 0; }
-    .res-amount { font-size: .9rem; }
-    .res-label { font-size: .62rem; letter-spacing: .02em; }
-    .res-label, .res-amount, .res-rate { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-}
-/* Narrow tablets: the values get a full-width row of their own below logo and clock (still side by side). */
-@media (min-width: 761px) and (max-width: 900px) {
-    .topbar { flex-wrap: wrap; }
-    .resources { order: 3; flex: 1 1 100%; }
-    .server-clock { margin-left: auto; }
-}
 .table-head td { color: var(--muted); font-size: .8rem; }
 .at { font-variant-numeric: tabular-nums; }
 .rename { margin: -.4rem 0 1rem; }
@@ -447,6 +439,9 @@ form.inline { display: inline; }
 .planet-badge .pb-icon { flex: none; font-size: .8rem; }
 .planet-badge .pb-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--text); font-size: .9rem; }
 .planet-badge.current .pb-name { color: var(--accent); font-weight: 600; }
+/* Planets where a building is under construction: green, to find them quickly in the list. */
+.sidebar a.planet-badge.constructing { background: rgba(102, 187, 106, .16); }
+.sidebar a.planet-badge.constructing.current { background: rgba(102, 187, 106, .26); }
 .planet-badge .pb-coords { flex: none; color: var(--muted); font-size: .72rem; font-variant-numeric: tabular-nums; }
 .planet-status { flex: none; font-size: .7rem; letter-spacing: .05rem; }
 .planet-status:empty { display: none; }
@@ -473,6 +468,11 @@ form.inline { display: inline; }
 
 /* Black board column */
 .board-column { gap: .5rem; }
+/* The black board on the overview: "Neu" when a post came in since the last visit. */
+.overview-board .board-new-badge { display: none; }
+.overview-board.fold-new { border-color: var(--accent-2); }
+.overview-board.fold-new .board-new-badge { display: inline-block; margin-bottom: .4rem; padding: .05rem .5rem; border-radius: 999px; background: var(--accent-2); color: #1a1a1a; font-size: .75rem; font-weight: 700; }
+.overview-board .board-note + .board-note { margin-top: .5rem; }
 .board-form { display: flex; flex-direction: column; gap: .4rem; }
 .board-form textarea { font-size: .9rem; resize: vertical; }
 .board-form .btn { align-self: flex-end; margin-top: 0 !important; }
@@ -558,6 +558,20 @@ label.checkbox { display: flex; gap: .4rem; align-items: center; color: var(--te
 .galaxy-table .spy-cell { width: 2rem; text-align: center; }
 .icon-button { background: none; border: 1px solid transparent; border-radius: 5px; cursor: pointer; font-size: 1rem; padding: .1rem .3rem; line-height: 1; }
 .icon-button:hover { border-color: var(--border); background: #ffffff0d; }
+/* Flight kinds on the overview: a stripe and a light tint per kind, flights home a little paler. */
+:root { --mv-war: #ef5350; --mv-trade: #26a69a; --mv-move: #4fc3f7; --mv-spy: #b388ff; --mv-settle: #fdd835; }
+.movement-table tr[data-mv] td:first-child { box-shadow: inset 4px 0 0 var(--mv-color); padding-left: .55rem; }
+.movement-table tr[data-mv] td { background: color-mix(in srgb, var(--mv-color) 9%, transparent); }
+.mv-war { --mv-color: var(--mv-war); }
+.mv-trade { --mv-color: var(--mv-trade); }
+.mv-move { --mv-color: var(--mv-move); }
+.mv-spy { --mv-color: var(--mv-spy); }
+.mv-settle { --mv-color: var(--mv-settle); }
+.movement-table tr.mv-returning td { opacity: .7; }
+.movement-filters { display: flex; flex-wrap: wrap; gap: .35rem; margin: 0 0 .5rem; }
+.movement-filters .mv-chip { --chip: var(--mv-color); cursor: pointer; font: inherit; color: inherit; }
+.movement-filters .mv-chip[aria-pressed="true"] { background: color-mix(in srgb, var(--mv-color) 35%, transparent); font-weight: 600; }
+.movement-table.filtering tr[data-mv]:not(.mv-match) { display: none; }
 .movements tr.hostile td { color: #ff8a80; }
 .movements tr.hostile td:first-child { box-shadow: inset 3px 0 0 var(--bad); padding-left: .5rem; }
 
@@ -818,6 +832,8 @@ body.swapping main.content { opacity: .75; transition: opacity .15s; cursor: pro
 .legend-inactive { background: rgba(255, 235, 59, .5); }
 .legend-criminal { background: rgba(66, 135, 245, .55); }
 .legend-trade { background: rgba(38, 166, 154, .45); }
+/* Freshly invaded planets: whose they were and the slots they still cost, in red. */
+.invaded-from { color: var(--bad); font-weight: 600; }
 
 /* Galaxy: how a planet's owner stands to the player – a stripe on the left and the colour of the name
    (the row background stays for the status: vacation, newbie protection, inactive, criminal, trade post). */

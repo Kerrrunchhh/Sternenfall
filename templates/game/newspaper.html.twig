@@ -13,7 +13,7 @@
             <p class="muted small">{{ 'Wer in einer Woche, einem Monat oder einem Jahr die meiste Kampferfahrung sammelt, bekommt den Bronzenen, Silbernen oder Goldenen Pfeil.'|trans }}</p>
             <ul class="award-list">
                 {% for a in awards %}
-                    <li class="award award-{{ a.period.value }}">{{ a.period.icon }} <strong>{{ a.period.label|trans }}</strong> {{ a.periodName|trans }}: <a href="{{ path('app_player', {id: a.user.id}) }}">{{ a.user.username }}</a> <span class="muted small">{{ '{experience} Kampferfahrung'|trans({'{experience}': a.experience|num}) }}</span></li>
+                    <li class="award award-{{ a.period.value }}">{{ a.period.icon }} <strong>{{ a.period.label|trans }}</strong> {{ a.periodName|trans }}: <a href="{{ path('app_player', {id: a.user.id}) }}">{{ a.user.displayName }}</a> <span class="muted small">{{ '{experience} Kampferfahrung'|trans({'{experience}': a.experience|num}) }}</span></li>
                 {% endfor %}
             </ul>
         </section>

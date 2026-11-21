@@ -72,6 +72,27 @@ enum FleetMission: string
         };
     }
 
+    /** Kinds of flights, to tell movements apart at a glance (colour and filter on the overview). */
+    public const array KINDS = [
+        'war' => 'Kampf',
+        'trade' => 'Handel & Transport',
+        'move' => 'Verlegung',
+        'spy' => 'Spionage',
+        'settle' => 'Kolonisierung & Fusion',
+    ];
+
+    /** The kind of flight (a key of KINDS). */
+    public function kind(): string
+    {
+        return match ($this) {
+            self::Attack, self::Raid, self::Intercept, self::Salvage => 'war',
+            self::Transport, self::TransportStation, self::Trade, self::Pickup, self::Supply => 'trade',
+            self::Station, self::Jump, self::Gather, self::Hover => 'move',
+            self::Spy => 'spy',
+            self::Colonize, self::Fuse => 'settle',
+        };
+    }
+
     /** The mission as a noun, for a fleet underway ("Angriff von … nach …"); label() is the order. */
     public function flightLabel(): string
     {

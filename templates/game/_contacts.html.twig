@@ -28,8 +28,8 @@
         {% for c in contacts %}
             {% set st = presence(c) %}
             <li><details class="contact-menu" data-contact-menu>
-                <summary class="contact-chip {{ st ? (st.online ? 'presence-online' : 'presence-offline') }}" title="{{ c.username }}{{ st ? ' · ' ~ st.text|trans }}">
-                    {%- if st %}<span class="presence-dot" aria-hidden="true"></span>{% endif %}<span aria-hidden="true">{{ c.lifeForm.icon }}</span> {{ c.username -}}
+                <summary class="contact-chip {{ st ? (st.online ? 'presence-online' : 'presence-offline') }}" title="{{ c.displayName }}{{ st ? ' · ' ~ st.text|trans }}">
+                    {%- if st %}<span class="presence-dot" aria-hidden="true"></span>{% endif %}<span aria-hidden="true">{{ c.lifeForm.icon }}</span> {{ c.displayName -}}
                 </summary>
                 <ul class="contact-menu-list">
                     <li><a href="{{ path('app_mail_compose', {to: c.username}) }}" id="contact-write-{{ c.id }}">✉️ {{ 'Nachricht senden'|trans }}</a></li>

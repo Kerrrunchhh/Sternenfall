@@ -58,7 +58,7 @@
                         <td class="slot-type"></td>
                         <td class="muted welded" title="{{ 'Einfusioniert in {name}'|trans({'{name}': p.name}) }}">–</td>
                         <td class="num planet-points"></td>
-                        <td class="muted welded" title="{{ 'Gehört zur Fusion {name} von {username}'|trans({'{name}': p.name, '{username}': p.owner.username}) }}">–</td>
+                        <td class="muted welded" title="{{ 'Gehört zur Fusion {name} von {username}'|trans({'{name}': p.name, '{username}': p.owner.displayName}) }}">–</td>
                         <td class="actions"></td>
                     {% else %}
                     <td class="spy-cell">

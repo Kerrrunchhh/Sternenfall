@@ -223,6 +223,7 @@ class GameFlowTest extends WebTestCase
         self::assertResponseRedirects('/buildings');
         $this->client->followRedirect();
         self::assertSelectorTextContains('.queue', 'Eisenmine → Stufe 1');
+        self::assertSelectorExists('.planet-list .planet-badge.constructing', 'green in the planet list while building');
 
         $planet = $this->planet('Baumeister');
         self::assertTrue($planet->isConstructing());
@@ -534,6 +535,94 @@ class GameFlowTest extends WebTestCase
         }
     }
 
+    public function testAnInvadedPlanetShowsItsOriginalOwnerAndSlotsInRed(): void
+    {
+        $this->register('Eroberin');
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $me = $this->user('Eroberin');
+        $victim = new User('Vorbesitzer', new \DateTimeImmutable());
+        $victim->setEmail('vorbesitzer@example.com');
+        $victim->setPassword('x');
+        $em->persist($victim);
+        $loot = new Planet($victim, 'Beuteland', 7, 7, 7, new \DateTimeImmutable());
+        $em->persist($loot);
+        $em->flush();
+        $loot->conquer($me, new \DateTimeImmutable());
+        $em->flush();
+
+        $this->client->request('GET', '/planet/'.$loot->getId().'/select?to=app_overview');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.invaded-from', 'Ursprünglicher Besitzer: Vorbesitzer – kostet dich derzeit 3 Planetenplätze');
+        self::assertSelectorExists('.planet-list [title*="gehörte Vorbesitzer"]');
+
+        $this->client->request('GET', '/imperium');
+        self::assertSelectorTextContains('.empire-planet .invaded-from', 'invadiert, gehörte Vorbesitzer · 3 Plätze');
+    }
+
+    public function testOverviewShowsTheBlackBoardAndFleetsComingToStay(): void
+    {
+        $this->register('Gastgeberin');
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $me = $this->user('Gastgeberin');
+        $home = $me->getPlanets()->first();
+        $now = new \DateTimeImmutable();
+        $alliance = new \App\Entity\Alliance('Brettbund', 'BB', \App\Game\LifeForm::Settler, $now);
+        $em->persist($alliance);
+        $me->joinAlliance($alliance, \App\Game\AllianceRank::Founder);
+        $em->persist(new \App\Entity\AlliancePost($alliance, $me, 'Treffen heute um 20 Uhr!', $now));
+        // Another player stations an empty fleet at her planet: no cargo, so no radar would see it.
+        $guest = new User('Besucher', $now);
+        $guest->setEmail('besucher@example.com');
+        $guest->setPassword('x');
+        $em->persist($guest);
+        $em->persist(new Planet($guest, 'Basis', 9, 9, 9, $now));
+        $visit = new \App\Entity\Fleet($guest, 'Wache', 9, 9, 9, ['pfeil' => 5]);
+        $visit->depart(\App\Game\FleetMission::Station, $home->getGalaxy(), $home->getSystem(), $home->getPosition(), $now, 3600);
+        $em->persist($visit);
+        $em->flush();
+
+        $crawler = $this->client->request('GET', '/overview');
+
+        self::assertSelectorTextContains('.overview-board', 'Treffen heute um 20 Uhr!');
+        self::assertSelectorNotExists('.sidebar-right .board-feed', 'no longer in the right column');
+        self::assertSelectorExists('.overview-board form.board-form textarea[name="body"]', 'posting right from the overview');
+        self::assertSame(
+            (int) preg_replace('/\D/', '', (string) $crawler->filter('.quick-contacts')->attr('style')) + 1,
+            (int) preg_replace('/\D/', '', (string) $crawler->filter('.overview-board')->attr('style')),
+            'the black board right below the quick contacts',
+        );
+        self::assertSelectorTextContains('.movements', 'Stationierung von');
+        self::assertSelectorExists('.movement-table tr.mv-move[data-mv="move"]', 'a stationing is coloured as relocation');
+        self::assertSelectorTextContains('.movements', 'Besucher');
+
+        // Sending fleets: the own planets are offered as targets.
+        $em->persist(new \App\Entity\Fleet($em->find(User::class, $me->getId()), 'Eigene', $home->getGalaxy(), $home->getSystem(), $home->getPosition(), ['pfeil' => 1]));
+        $em->flush();
+        $this->client->request('GET', '/fleet');
+        self::assertSelectorExists('[data-bookmark-pick] optgroup option[value="'.$home->getCoordinates().'"]');
+    }
+
+    public function testSignUpsThatAreNotConfirmedWithin48HoursAreDeleted(): void
+    {
+        $this->signUp('Schlaefer');
+        self::assertSelectorTextContains('body', 'innerhalb von 48 Stunden');
+        $this->register('Wachmann');
+        $this->client->request('GET', '/logout');
+        $deletion = static::getContainer()->get(\App\Game\AccountDeletion::class);
+
+        // 47 hours later: still there.
+        static::mockTime(new \DateTimeImmutable('+47 hours'));
+        self::assertSame(0, $deletion->deleteUnconfirmed());
+
+        // 49 hours later: the unconfirmed sign-up is gone, the confirmed player stays.
+        static::mockTime(new \DateTimeImmutable('+49 hours'));
+        self::assertSame(1, $deletion->deleteUnconfirmed());
+        $users = static::getContainer()->get(UserRepository::class);
+        self::assertNull($users->findOneBy(['username' => 'Schlaefer']));
+        self::assertNotNull($users->findOneBy(['username' => 'Wachmann']));
+        self::assertSame(0, $deletion->deleteUnconfirmed(), 'nothing left to remove');
+    }
+
     public function testNewPlayersSeeTheWelcomeNewsUntilTheyMarkItRead(): void
     {
         $em = static::getContainer()->get(EntityManagerInterface::class);
@@ -692,6 +781,19 @@ class GameFlowTest extends WebTestCase
         $em->persist($contact);
         $em->flush();
 
+        // She is in an alliance: her tag shows wherever her name does, the address stays the bare name.
+        $alliance = new \App\Entity\Alliance('Kurierdienst', 'KD', \App\Game\LifeForm::Trader, new \DateTimeImmutable());
+        $em->persist($alliance);
+        $her->joinAlliance($alliance, \App\Game\AllianceRank::Founder);
+        $em->flush();
+        static::getContainer()->get(\App\Game\Mailbox::class)->send($her, 'Funkerin', 'Hallo', 'Grüße!');
+        $em->flush();
+
+        $crawler = $this->client->request('GET', '/overview');
+        self::assertStringContainsString('Kurierin [KD]', $crawler->filter('.quick-contacts')->text());
+        $this->client->request('GET', '/mail');
+        self::assertSelectorTextContains('main', 'Kurierin');
+        self::assertSelectorTextContains('main', '[KD]');
         $crawler = $this->client->request('GET', '/overview');
         self::assertSame('/mail/new?to=Kurierin', $crawler->filter('#contact-write-'.$her->getId())->attr('href'));
         $this->client->click($crawler->filter('#contact-planets-'.$her->getId())->link());

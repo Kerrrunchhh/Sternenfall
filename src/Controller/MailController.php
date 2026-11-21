@@ -84,7 +84,7 @@ class MailController extends AbstractGameController
                 'contacts' => $this->contactService->contactsOf($this->player()),
             ], new Response(status: Response::HTTP_UNPROCESSABLE_ENTITY));
         }
-        $this->addFlash('success', t('Nachricht an {player} gesendet.', ['{player}' => $letter->getRecipient()?->getUsername()]));
+        $this->addFlash('success', t('Nachricht an {player} gesendet.', ['{player}' => $letter->getRecipient()?->getDisplayName()]));
 
         return $this->redirectToRoute('app_mail', ['box' => 'sent']);
     }
@@ -135,7 +135,7 @@ class MailController extends AbstractGameController
     public function requestContact(User $other): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->contactService->request($this->player(), $other), t('Kontaktanfrage an {player} gesendet – oder seine Anfrage angenommen.', ['{player}' => $other->getUsername()]));
+        $this->attempt(fn () => $this->contactService->request($this->player(), $other), t('Kontaktanfrage an {player} gesendet – oder seine Anfrage angenommen.', ['{player}' => $other->getDisplayName()]));
 
         return $this->redirectToRoute('app_player', ['id' => $other->getId()]);
     }
@@ -145,7 +145,7 @@ class MailController extends AbstractGameController
     public function acceptContact(Contact $contact, Request $request): Response
     {
         $this->currentPlanet();
-        $this->attempt(fn () => $this->contactService->accept($contact, $this->player()), t('{player} steht jetzt in deinen Schnellkontakten.', ['{player}' => $contact->getRequester()->getUsername()]));
+        $this->attempt(fn () => $this->contactService->accept($contact, $this->player()), t('{player} steht jetzt in deinen Schnellkontakten.', ['{player}' => $contact->getRequester()->getDisplayName()]));
 
         return $this->backTo($request, 'app_mail');
     }
@@ -157,7 +157,7 @@ class MailController extends AbstractGameController
         $this->currentPlanet();
         $player = $this->player();
         $message = match (true) {
-            $contact->isAccepted() => t('{player} aus den Schnellkontakten entfernt.', ['{player}' => $contact->other($player)->getUsername()]),
+            $contact->isAccepted() => t('{player} aus den Schnellkontakten entfernt.', ['{player}' => $contact->other($player)->getDisplayName()]),
             $contact->getRequester()->isSameAs($player) => 'Anfrage zurückgezogen.',
             default => 'Anfrage abgelehnt.',
         };

@@ -86,7 +86,7 @@
             <div class="planet-list">
                 {% for p in player.planets %}
                     {# One line per planet: type, name, coordinates, what is going on. #}
-                    <a href="{{ path('app_planet_select', {id: p.id, to: route}) }}" class="planet-badge {{ p.id == planet.id ? 'current' }} {{ attacked_planets[p.id] is defined ? 'under-attack' }}" {{ p.id == planet.id ? 'aria-current="true"' }} title="{{ p.name }} [{{ p.coordinates }}] · {{ '{points} Punkte'|trans({'{points}': planet_points(p)|num}) }} – {{ p.fused ? 'Fusion aus {fusionSize} Planeten (zählt als blauer Planet, Rohstoffe ×1,5)'|trans({'{fusionSize}': p.fusionSize}) : p.type.label|trans }}">
+                    <a href="{{ path('app_planet_select', {id: p.id, to: route}) }}" class="planet-badge {{ p.id == planet.id ? 'current' }} {{ p.constructing ? 'constructing' }} {{ attacked_planets[p.id] is defined ? 'under-attack' }}" {{ p.id == planet.id ? 'aria-current="true"' }} title="{{ p.name }} [{{ p.coordinates }}] · {{ '{points} Punkte'|trans({'{points}': planet_points(p)|num}) }} – {{ p.fused ? 'Fusion aus {fusionSize} Planeten (zählt als blauer Planet, Rohstoffe ×1,5)'|trans({'{fusionSize}': p.fusionSize}) : p.type.label|trans }}">
                         <span class="pb-icon {{ p.fused ? 'pb-fusion' }}" aria-hidden="true"><img class="planet-pic planet-pic-tiny" src="{{ asset(p.picture) }}" alt="" width="18" height="18"></span>
                         <span class="pb-name">{{ p.name }}</span>
                         <span class="pb-coords">{{ p.coordinates }}</span>
@@ -96,7 +96,7 @@
                             {%- if p.shipyardQueue is not empty %}<span title="{{ 'Werft arbeitet'|trans }}">🚀</span>{% endif -%}
                             {%- if p.defenseQueue is not empty %}<span title="{{ 'Verteidigung im Bau'|trans }}">🛡</span>{% endif -%}
                             {%- if player.isResearchingOn(p) %}<span title="{{ 'Forschung läuft: {research}'|trans({'{research}': player.researchType.label|trans}) }}">🔬</span>{% endif -%}
-                            {%- if p.integrating(now) %}<span title="{{ 'Invadiert, Übergang läuft'|trans }}">⏳</span>{% endif -%}
+                            {%- if p.integrating(now) %}<span title="{{ p.originalOwner(now) ? 'Invadiert, gehörte {player} – kostet {slots} Planetenplätze bis {integratedAt}'|trans({'{player}': p.originalOwner(now).displayName, '{slots}': p.slotCost(now), '{integratedAt}': p.integratedAt|date('d.m. H:i')}) : 'Invadiert, Übergang läuft'|trans }}">⏳</span>{% endif -%}
                             {%- if p.beingAbandoned %}<span title="{{ 'Wird am {abandonAt} verlassen'|trans({'{abandonAt}': p.abandonAt|date('d.m. H:i')}) }}">🏳</span>{% endif -%}
                         </span>
                     </a>
@@ -131,7 +131,7 @@
             {% block content %}{% endblock %}
             <footer class="game-footer muted small"><a href="{{ path('app_imprint') }}">{{ 'Impressum'|trans }}</a> · <a href="{{ path('app_privacy') }}">{{ 'Datenschutz'|trans }}</a> · <a href="{{ path('app_terms') }}">{{ 'AGB'|trans }}</a> · {{ include('_privacy_settings_link.html.twig') }} {{ include('_language_switch.html.twig') }}</footer>
         </main>
-        <aside class="sidebar sidebar-right board-column" aria-label="{{ 'Schwarzes Brett'|trans }}">
+        <aside class="sidebar sidebar-right board-column" aria-label="{{ 'Imperium'|trans }}">
             <nav class="empire-nav" id="imperium" aria-label="{{ 'Imperium'|trans }}">
             <h2 class="sidebar-title">{{ 'Imperium'|trans }}<button type="button" class="menu-close" data-menu-close aria-label="{{ 'Menü schließen'|trans }}">✕</button></h2>
             <a href="{{ path('app_fleet') }}" class="{{ route == 'app_fleet' ? 'active' }}"><span class="nav-icon" aria-hidden="true">🚀</span>{{ 'Flotten'|trans }}</a>
@@ -178,31 +178,6 @@
             <div class="vote-badge">{{ include('game/_vote_badge.html.twig') }}</div>
             <div class="vote-badge exchange-badge">{{ include('game/_exchange_badge.html.twig') }}</div>
             </nav>
-
-            <h2 class="sidebar-title">{{ 'Schwarzes Brett'|trans }}{% if player.alliance %} <small>[{{ player.alliance.tag }}]</small>{% endif %}</h2>
-            {% if player.alliance is null %}
-                <p class="muted small board-hint">{{ 'Das schwarze Brett gehört deiner Allianz. Tritt einer bei oder gründe eine – unter'|trans }} <a href="{{ path('app_alliance') }}">{{ 'Allianz'|trans }}</a>.</p>
-            {% elseif not player.allianceRank.canSeeBoard %}
-                <p class="muted small board-hint">{{ 'Als Anwärter hast du noch keinen Zugang zum schwarzen Brett. Sobald dich der Gründer befördert, siehst du es hier.'|trans }}</p>
-            {% else %}
-                <form method="post" action="{{ path('app_alliance_post') }}" class="board-form">
-                    <input type="hidden" name="_token" value="{{ csrf_token('alliance') }}">
-                    <input type="hidden" name="to" value="{{ route }}">
-                    <textarea name="body" rows="3" maxlength="5000" required aria-label="{{ 'Neuer Beitrag'|trans }}" placeholder="{{ 'Nachricht an deine {type} …'|trans({'{type}': player.alliance.type|trans}) }}"></textarea>
-                    <button class="btn btn-small" type="submit">{{ 'Anheften'|trans }}</button>
-                </form>
-                <div class="board-feed">
-                    {% for p in board_posts %}
-                        <article class="board-note">
-                            <div class="board-meta"><strong>{{ p.author ? p.author.username : ('ehemaliges Mitglied'|trans) }}</strong> · {{ p.createdAt|date('d.m. H:i') }}</div>
-                            <div class="message-body">{{ p.body|link_coordinates }}</div>
-                        </article>
-                    {% else %}
-                        <p class="muted small board-hint">{{ 'Noch keine Beiträge. Schreib den ersten!'|trans }}</p>
-                    {% endfor %}
-                </div>
-                <a class="small" href="{{ path('app_alliance') }}">{{ 'Alle Beiträge und Verwaltung →'|trans }}</a>
-            {% endif %}
         </aside>
     </div>
 

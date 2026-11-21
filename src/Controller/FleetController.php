@@ -269,7 +269,7 @@ class FleetController extends AbstractGameController
         if (null === $member) {
             $this->addFlash('error', t('Bitte wähle ein Mitglied aus.'));
         } else {
-            $this->attempt(fn () => $this->fleetService->releaseTo($fleet, $this->player(), $member), t('Flotte für {player} freigegeben.', ['{player}' => $member->getUsername()]));
+            $this->attempt(fn () => $this->fleetService->releaseTo($fleet, $this->player(), $member), t('Flotte für {player} freigegeben.', ['{player}' => $member->getDisplayName()]));
         }
 
         return $this->redirectToRoute('app_fleet');
@@ -283,7 +283,7 @@ class FleetController extends AbstractGameController
         $this->currentPlanet();
         $user = $users->find($member);
         if (null !== $user) {
-            $this->attempt(fn () => $this->fleetService->revokeFrom($fleet, $this->player(), $user), t('Freigabe für {player} zurückgenommen.', ['{player}' => $user->getUsername()]));
+            $this->attempt(fn () => $this->fleetService->revokeFrom($fleet, $this->player(), $user), t('Freigabe für {player} zurückgenommen.', ['{player}' => $user->getDisplayName()]));
         }
 
         return $this->redirectToRoute('app_fleet');
@@ -461,9 +461,9 @@ class FleetController extends AbstractGameController
                     'release_alliance' => $this->run(fn () => $this->fleetService->releaseToAlliance($fleet, $player, true), t('{label} ist für die Allianz freigegeben.', ['{label}' => $label])),
                     'unrelease_alliance' => $this->run(fn () => $this->fleetService->releaseToAlliance($fleet, $player, false), t('{label} ist nicht mehr allgemein freigegeben.', ['{label}' => $label])),
                     'release_member' => null === $member ? throw new GameException(t('Bitte wähle ein Mitglied aus.'))
-                        : $this->run(fn () => $this->fleetService->releaseTo($fleet, $player, $member), t('{label} ist für {player} freigegeben.', ['{label}' => $label, '{player}' => $member->getUsername()])),
+                        : $this->run(fn () => $this->fleetService->releaseTo($fleet, $player, $member), t('{label} ist für {player} freigegeben.', ['{label}' => $label, '{player}' => $member->getDisplayName()])),
                     'revoke_member' => null === $member ? throw new GameException(t('Bitte wähle ein Mitglied aus.'))
-                        : $this->run(fn () => $this->fleetService->revokeFrom($fleet, $player, $member), t('{label} ist für {player} nicht mehr freigegeben.', ['{label}' => $label, '{player}' => $member->getUsername()])),
+                        : $this->run(fn () => $this->fleetService->revokeFrom($fleet, $player, $member), t('{label} ist für {player} nicht mehr freigegeben.', ['{label}' => $label, '{player}' => $member->getDisplayName()])),
                 };
                 $this->addFlash('success', $message);
             } catch (GameException $e) {

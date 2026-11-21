@@ -201,7 +201,7 @@ final readonly class TradeService
 
             $home = $plan['home'];
             $fleet->depart(FleetMission::Station, $home->getGalaxy(), $home->getSystem(), $home->getPosition(), $this->now(), $plan['seconds']);
-            $this->inbox->send($fleet->getOwner(), t('Flotte „{label}“ weggeschickt', ['{label}' => $fleet->getLabel()]), t('{player} hat deine Flotte vom Handelsstützpunkt {name} [{coords}] zu deinem Heimatplaneten {name2} [{coords2}] zurückgeschickt.', ['{player}' => $actor->getUsername(), '{name}' => $post->getName(), '{coords}' => $post->getCoordinates(), '{name2}' => $home->getName(), '{coords2}' => $home->getCoordinates()]), folder: MessageFolder::Trade);
+            $this->inbox->send($fleet->getOwner(), t('Flotte „{label}“ weggeschickt', ['{label}' => $fleet->getLabel()]), t('{player} hat deine Flotte vom Handelsstützpunkt {name} [{coords}] zu deinem Heimatplaneten {name2} [{coords2}] zurückgeschickt.', ['{player}' => $actor->getDisplayName(), '{name}' => $post->getName(), '{coords}' => $post->getCoordinates(), '{name2}' => $home->getName(), '{coords2}' => $home->getCoordinates()]), folder: MessageFolder::Trade);
             $this->em->flush();
         });
     }
@@ -348,7 +348,7 @@ final readonly class TradeService
             }
 
             if (!$own) {
-                $this->inbox->send($trader, t('Handel mit {player} an {name}', ['{player}' => $actor->getUsername(), '{name}' => $post->getName()]), new Lines($lines), folder: MessageFolder::Trade);
+                $this->inbox->send($trader, t('Handel mit {player} an {name}', ['{player}' => $actor->getDisplayName(), '{name}' => $post->getName()]), new Lines($lines), folder: MessageFolder::Trade);
             }
             // An abandoned post disappears once its owner has collected everything.
             if (!$post->isActive() && $post->isEmpty()) {

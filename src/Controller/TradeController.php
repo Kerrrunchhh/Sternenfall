@@ -119,9 +119,9 @@ class TradeController extends AbstractGameController
         foreach ($visitors as $visitor) {
             try {
                 $this->trade->sendAway($post, $player, $visitor);
-                $this->addFlash('success', t('{label} von {player} fliegt zurück zu ihrem Heimatplaneten.', ['{label}' => $visitor->getLabel(), '{player}' => $visitor->getOwner()->getUsername()]));
+                $this->addFlash('success', t('{label} von {player} fliegt zurück zu ihrem Heimatplaneten.', ['{label}' => $visitor->getLabel(), '{player}' => $visitor->getOwner()->getDisplayName()]));
             } catch (GameException $e) {
-                $this->addFlash('error', t('{label} von {player}: {message}', ['{label}' => $visitor->getLabel(), '{player}' => $visitor->getOwner()->getUsername(), '{message}' => $e->getMessage()]));
+                $this->addFlash('error', t('{label} von {player}: {message}', ['{label}' => $visitor->getLabel(), '{player}' => $visitor->getOwner()->getDisplayName(), '{message}' => $e->getMessage()]));
             }
         }
 
@@ -137,7 +137,7 @@ class TradeController extends AbstractGameController
         if (null === $visitor) {
             $this->addFlash('error', t('Diese Flotte gibt es nicht mehr.'));
         } else {
-            $this->attempt(fn () => $this->trade->sendAway($post, $this->player(), $visitor), t('Die Flotte von {player} fliegt zurück zu ihrem Heimatplaneten.', ['{player}' => $visitor->getOwner()->getUsername()]));
+            $this->attempt(fn () => $this->trade->sendAway($post, $this->player(), $visitor), t('Die Flotte von {player} fliegt zurück zu ihrem Heimatplaneten.', ['{player}' => $visitor->getOwner()->getDisplayName()]));
         }
 
         return $this->redirectToRoute('app_trade_post', ['id' => $post->getId()]);

@@ -212,7 +212,7 @@ class TickerController extends AbstractGameController
         $ticker = $member->getTicker();
         $this->attempt(
             fn () => $this->service->remove($ticker, $this->player(), $member),
-            $member->isAccepted() ? t('{player} wurde entfernt.', ['{player}' => $member->getUser()->getUsername()]) : 'Einladung zurückgezogen.',
+            $member->isAccepted() ? t('{player} wurde entfernt.', ['{player}' => $member->getUser()->getDisplayName()]) : 'Einladung zurückgezogen.',
         );
 
         return $this->redirectToRoute('app_ticker', ['id' => $ticker->getId()]);
@@ -224,7 +224,7 @@ class TickerController extends AbstractGameController
     {
         $this->currentPlanet();
         $ticker = $member->getTicker();
-        $this->attempt(fn () => $this->service->handOver($ticker, $this->player(), $member), t('{player} ist jetzt Besitzer des Tickers.', ['{player}' => $member->getUser()->getUsername()]));
+        $this->attempt(fn () => $this->service->handOver($ticker, $this->player(), $member), t('{player} ist jetzt Besitzer des Tickers.', ['{player}' => $member->getUser()->getDisplayName()]));
 
         return $this->redirectToRoute('app_ticker', ['id' => $ticker->getId()]);
     }
@@ -256,7 +256,7 @@ class TickerController extends AbstractGameController
         $days = $request->request->getInt('days');
         $this->attempt(
             fn () => $this->service->mute($member->getTicker(), $this->player(), $member, $days),
-            0 === $days ? t('{player} darf wieder schreiben.', ['{player}' => $member->getUser()->getUsername()]) : t('{player} ist für {days} Tage stummgeschaltet.', ['{player}' => $member->getUser()->getUsername(), '{days}' => $days]),
+            0 === $days ? t('{player} darf wieder schreiben.', ['{player}' => $member->getUser()->getDisplayName()]) : t('{player} ist für {days} Tage stummgeschaltet.', ['{player}' => $member->getUser()->getDisplayName(), '{days}' => $days]),
         );
 
         return $this->redirectToRoute('app_ticker', ['id' => $member->getTicker()->getId()]);
@@ -271,7 +271,7 @@ class TickerController extends AbstractGameController
         $admin = $request->request->getBoolean('admin');
         $this->attempt(
             fn () => $this->service->setAdmin($member->getTicker(), $this->player(), $member, $admin),
-            $admin ? t('{player} ist jetzt Admin.', ['{player}' => $member->getUser()->getUsername()]) : t('{player} ist kein Admin mehr.', ['{player}' => $member->getUser()->getUsername()]),
+            $admin ? t('{player} ist jetzt Admin.', ['{player}' => $member->getUser()->getDisplayName()]) : t('{player} ist kein Admin mehr.', ['{player}' => $member->getUser()->getDisplayName()]),
         );
 
         return $this->redirectToRoute('app_ticker', ['id' => $member->getTicker()->getId()]);
@@ -288,7 +288,7 @@ class TickerController extends AbstractGameController
         if (0 !== $id && null === $member) {
             $this->addFlash('error', t('Stellvertreter kann nur ein anderes Mitglied werden.'));
         } else {
-            $this->attempt(fn () => $this->service->setDeputy($ticker, $this->player(), $member), null === $member ? t('Kein Stellvertreter mehr.') : t('{player} ist jetzt Stellvertreter.', ['{player}' => $member->getUser()->getUsername()]));
+            $this->attempt(fn () => $this->service->setDeputy($ticker, $this->player(), $member), null === $member ? t('Kein Stellvertreter mehr.') : t('{player} ist jetzt Stellvertreter.', ['{player}' => $member->getUser()->getDisplayName()]));
         }
 
         return $this->redirectToRoute('app_ticker', ['id' => $ticker->getId()]);

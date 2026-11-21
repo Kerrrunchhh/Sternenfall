@@ -103,11 +103,16 @@ final readonly class Espionage
         $lines = [
             null === $planet
                 ? t('Freier Platz [{galaxy}:{system}:{position}]', ['{galaxy}' => $galaxy, '{system}' => $system, '{position}' => $position])
-                : t('Planet {name} [{coords}] von {player}', ['{name}' => $planet->getName(), '{coords}' => $planet->getCoordinates(), '{player}' => $planet->getOwner()->getUsername()]),
+                : t('Planet {name} [{coords}] von {player}', ['{name}' => $planet->getName(), '{coords}' => $planet->getCoordinates(), '{player}' => $planet->getOwner()->getDisplayName()]),
             t('Planetentyp: {icon} {type} ({effect})', ['{icon}' => $type->icon(), '{type}' => t($type->label()), '{effect}' => t($type->effect())]),
         ];
         if (null === $planet) {
             return new Lines($lines);
+        }
+        // Freshly invaded: whose it was – his re-invasion always succeeds until the planet is integrated.
+        $now = \DateTimeImmutable::createFromInterface($this->clock->now());
+        if (null !== $original = $planet->getOriginalOwner($now)) {
+            $lines[] = t('Invadiert – ursprünglicher Besitzer: {player}. Bis {integratedAt} gelingt ihm eine Rückeroberung mit einem Invasionsschiff immer.', ['{player}' => $original->getDisplayName(), '{integratedAt}' => new \App\I18n\When($planet->getIntegratedAt(), 'd.m.Y H:i')]);
         }
 
         if ($level < self::LEVEL_BUILDINGS) {
@@ -149,7 +154,7 @@ final readonly class Espionage
         $lines = [...$lines, ...$this->shipLines($planet->getShips(), '  ')];
         // Fleets wait at the top slot of a fusion, whichever of its slots the probe flew to.
         foreach ($this->fleets->findIdleAt($planet->getGalaxy(), $planet->getSystem(), $planet->getPosition()) as $fleet) {
-            $lines[] = t('  Flotte von {player}:', ['{player}' => $fleet->getOwner()->getUsername()]);
+            $lines[] = t('  Flotte von {player}:', ['{player}' => $fleet->getOwner()->getDisplayName()]);
             $lines = [...$lines, ...$this->shipLines($fleet->getShips(), '    ')];
         }
 
@@ -189,7 +194,7 @@ final readonly class Espionage
 
         [$g, $s, $p] = Radar::nextStop($target);
         $lines = [
-            t('Flotte von {player}: {value} nach [{g}:{s}:{p}], Ankunft {value2}', ['{player}' => $target->getOwner()->getUsername(), '{value}' => t($target->getMission()?->label() ?? 'unterwegs'), '{g}' => $g, '{s}' => $s, '{p}' => $p, '{value2}' => new When($target->getNextEventAt(), 'd.m.Y H:i:s')]),
+            t('Flotte von {player}: {value} nach [{g}:{s}:{p}], Ankunft {value2}', ['{player}' => $target->getOwner()->getDisplayName(), '{value}' => t($target->getMission()?->label() ?? 'unterwegs'), '{g}' => $g, '{s}' => $s, '{p}' => $p, '{value2}' => new When($target->getNextEventAt(), 'd.m.Y H:i:s')]),
             '',
             t('Schiffe:'),
             ...$this->shipLines($target->getShips(), '  '),
@@ -228,7 +233,7 @@ final readonly class Espionage
             return [t('Ausspioniert'), t('{what} wurde von einer Sonde ausspioniert. Wer sie geschickt hat, erfährst du ab Spionagetechnik Stufe {level}.', ['{what}' => $what, '{level}' => self::LEVEL_NAME_SPY])];
         }
 
-        return [t('Ausspioniert von {player}', ['{player}' => $spy->getUsername()]), t('{what} wurde von einer Sonde von {player} ausspioniert.', ['{what}' => $what, '{player}' => $spy->getUsername()])];
+        return [t('Ausspioniert von {player}', ['{player}' => $spy->getDisplayName()]), t('{what} wurde von einer Sonde von {player} ausspioniert.', ['{what}' => $what, '{player}' => $spy->getDisplayName()])];
     }
 
     /**

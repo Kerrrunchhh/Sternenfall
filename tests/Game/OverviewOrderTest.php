@@ -6,7 +6,7 @@ use App\Entity\User;
 use App\Game\OverviewSection;
 use PHPUnit\Framework\TestCase;
 
-/** Every player orders the overview boxes; boxes he never placed follow in the default order. */
+/** Every player orders the overview boxes; boxes he never placed go where the default order puts them. */
 final class OverviewOrderTest extends TestCase
 {
     public function testDefaultOrderPutsTheQueuesRightAfterTheFleetMovements(): void
@@ -16,14 +16,26 @@ final class OverviewOrderTest extends TestCase
         self::assertSame($player->overviewPosition('movements') + 1, $player->overviewPosition('queues'));
     }
 
-    public function testThePlayersOrderWinsAndNewBoxesFollow(): void
+    public function testThePlayersOrderWinsAndNewBoxesGoAfterTheirDefaultPredecessor(): void
     {
         $player = new User('ordner');
         $player->setOverviewOrder([OverviewSection::Hangar, OverviewSection::Queues]);
+        $order = $player->getOverviewOrder();
 
-        self::assertSame(1, $player->overviewPosition(OverviewSection::Hangar));
-        self::assertSame(2, $player->overviewPosition('queues'));
-        self::assertSame(3, $player->overviewPosition('contacts'), 'the rest in the default order');
-        self::assertCount(\count(OverviewSection::cases()), $player->getOverviewOrder());
+        self::assertCount(\count(OverviewSection::cases()), $order);
+        self::assertLessThan($player->overviewPosition('queues'), $player->overviewPosition(OverviewSection::Hangar), 'his order of the boxes he placed stays');
+        self::assertSame($player->overviewPosition('queues') + 1, $player->overviewPosition('transport_requests'), 'transport requests right after the queues, as by default');
+    }
+
+    public function testANewBoxAppearsAtItsPlaceInASavedOrder(): void
+    {
+        // A player who saved his order before the black board box existed, contacts moved down.
+        $saved = array_values(array_filter(OverviewSection::cases(), static fn (OverviewSection $s): bool => OverviewSection::Board !== $s && OverviewSection::Contacts !== $s));
+        $saved[] = OverviewSection::Contacts;
+        $player = new User('alt');
+        $player->setOverviewOrder($saved);
+
+        self::assertSame($player->overviewPosition('contacts') + 1, $player->overviewPosition('board'), 'the black board right below the quick contacts');
+        self::assertSame(OverviewSection::Movements, $player->getOverviewOrder()[0], 'the rest as he saved it');
     }
 }

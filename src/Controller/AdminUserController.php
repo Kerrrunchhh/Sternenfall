@@ -81,11 +81,11 @@ class AdminUserController extends AbstractGameController
                     $keep = array_values(array_diff($user->getRoles(), ['ROLE_USER', 'ROLE_ADMIN', 'ROLE_MODERATOR']));
                     $user->setRoles('player' === $role ? $keep : [...$keep, $role]);
                     $em->flush();
-                    $this->addFlash('success', t('{player} ist jetzt {value}.', ['{player}' => $user->getUsername(), '{value}' => self::ROLES[$role]]));
+                    $this->addFlash('success', t('{player} ist jetzt {value}.', ['{player}' => $user->getDisplayName(), '{value}' => self::ROLES[$role]]));
                     break;
                 case 'rename':
                     $old = $rename->rename($user, $form->getString('username'));
-                    $this->addFlash('success', t('{old} heißt jetzt {player}.', ['{old}' => $old, '{player}' => $user->getUsername()]));
+                    $this->addFlash('success', t('{old} heißt jetzt {player}.', ['{old}' => $old, '{player}' => $user->getDisplayName()]));
                     // Search for the new name, so the account stays in view.
                     $form->set('q', $user->getUsername());
                     break;
@@ -93,10 +93,10 @@ class AdminUserController extends AbstractGameController
                     $lifeForm = \App\Game\LifeForm::tryFrom($form->getString('lifeform')) ?? throw new GameException(t('Unbekannte Lebensform.'));
                     $planet = $user->getPlanets()->first();
                     if (!$planet instanceof \App\Entity\Planet) {
-                        throw new GameException(t('{player} hat keinen Planeten.', ['{player}' => $user->getUsername()]));
+                        throw new GameException(t('{player} hat keinen Planeten.', ['{player}' => $user->getDisplayName()]));
                     }
                     $lifeForms->change($planet, $lifeForm, $admin);
-                    $this->addFlash('success', t('{player} gehört jetzt zu den {lifeForm}.', ['{player}' => $user->getUsername(), '{lifeForm}' => t($lifeForm->label())]));
+                    $this->addFlash('success', t('{player} gehört jetzt zu den {lifeForm}.', ['{player}' => $user->getDisplayName(), '{lifeForm}' => t($lifeForm->label())]));
                     break;
                 case 'vacation':
                     $reason = trim($form->getString('reason'));
@@ -104,16 +104,16 @@ class AdminUserController extends AbstractGameController
                         throw new GameException(t('Gib einen Grund an – der Spieler bekommt ihn mitgeteilt.'));
                     }
                     $until = $vacations->impose($user, VacationService::parseDays($form->getString('days')), $reason);
-                    $this->addFlash('success', t('{player} ist bis {value} im Urlaub.', ['{player}' => $user->getUsername(), '{value}' => new When($until)]));
+                    $this->addFlash('success', t('{player} ist bis {value} im Urlaub.', ['{player}' => $user->getDisplayName(), '{value}' => new When($until)]));
                     break;
                 case 'message':
                     $body = trim($form->getString('body'));
                     if ('' === $body) {
                         throw new GameException(t('Die Nachricht ist leer.'));
                     }
-                    $inbox->send($user, t('Nachricht der Spielleitung'), new Lines([$body, t("\n– {player} (Spielleitung)", ['{player}' => $admin->getUsername()])]));
+                    $inbox->send($user, t('Nachricht der Spielleitung'), new Lines([$body, t("\n– {player} (Spielleitung)", ['{player}' => $admin->getDisplayName()])]));
                     $em->flush();
-                    $this->addFlash('success', t('Nachricht an {player} gesendet.', ['{player}' => $user->getUsername()]));
+                    $this->addFlash('success', t('Nachricht an {player} gesendet.', ['{player}' => $user->getDisplayName()]));
                     break;
                 case 'deactivate':
                     if ($user->isSameAs($admin)) {
@@ -121,11 +121,11 @@ class AdminUserController extends AbstractGameController
                     }
                     // Reversible: the confirmation dialog is enough, no typing the name as for deleting.
                     $deactivation->deactivate($user, 'destroy' === $form->getString('planets'));
-                    $this->addFlash('success', t('{player} ist deaktiviert; seine Planeten sind herrenlos.', ['{player}' => $user->getUsername()]));
+                    $this->addFlash('success', t('{player} ist deaktiviert; seine Planeten sind herrenlos.', ['{player}' => $user->getDisplayName()]));
                     break;
                 case 'reactivate':
                     $deactivation->reactivate($user);
-                    $this->addFlash('success', t('{player} ist wieder aktiv und hat eine neue Heimatwelt.', ['{player}' => $user->getUsername()]));
+                    $this->addFlash('success', t('{player} ist wieder aktiv und hat eine neue Heimatwelt.', ['{player}' => $user->getDisplayName()]));
                     break;
                 case 'delete':
                     if ($user->isSameAs($admin)) {

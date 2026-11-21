@@ -47,7 +47,7 @@ class ProfileController extends AbstractGameController
         $amount = $form->credits();
         $this->attempt(
             fn () => $transfer->pay($planet, $user, $amount, $form->message),
-            t('Du hast {player} {amount} Credits gezahlt.', ['{player}' => $user->getUsername(), '{amount}' => new \App\I18n\Num($amount)]),
+            t('Du hast {player} {amount} Credits gezahlt.', ['{player}' => $user->getDisplayName(), '{amount}' => new \App\I18n\Num($amount)]),
         );
 
         return $this->redirectToRoute('app_player', ['id' => $user->getId(), '_fragment' => 'zahlen']);

@@ -48,7 +48,7 @@
                             {% if b.target.id == player.id %}{{ 'Das Kopfgeld ist auf dich ausgesetzt.'|trans }}
                             {% elseif b.client.id == player.id %}{{ 'Dein Kopfgeld'|trans }}
                             {% else %}{{ 'Du: {shield} von {required}'|trans({'{shield}': (mine ? mine.shield : 0)|round(0, 'floor')|num, '{required}': b.requiredShield|num}) }}{% endif %}
-                            {% if leader %}{{ '· Bester Jäger: {hunter} mit {shield}'|trans({'{hunter}': leader.hunter.username, '{shield}': leader.shield|round(0, 'floor')|num}) }}{% endif %}
+                            {% if leader %}{{ '· Bester Jäger: {hunter} mit {shield}'|trans({'{hunter}': leader.hunter.displayName, '{shield}': leader.shield|round(0, 'floor')|num}) }}{% endif %}
                         </div>
                         {% if b.note %}<blockquote class="proposal-message">{{ b.note }}</blockquote>{% endif %}
                     </div>
@@ -65,8 +65,8 @@
                         {{ '💀 {target} · {reward} Credits für {shield} Schildpunkte'|trans({'{target}': ui.player(b.target), '{reward}': b.reward|num|e, '{shield}': b.requiredShield|num|e})|raw }}
                         <div class="muted small">
                             {{ b.statusLabel|trans }}
-                            {% if b.winner %}{{ '· verdient von {hunter}'|trans({'{hunter}': b.winner.username}) }}
-                            {% elseif leader %}{{ '· Bester Jäger: {hunter} mit {shield}'|trans({'{hunter}': leader.hunter.username, '{shield}': leader.shield|round(0, 'floor')|num}) }}{% endif %}
+                            {% if b.winner %}{{ '· verdient von {hunter}'|trans({'{hunter}': b.winner.displayName}) }}
+                            {% elseif leader %}{{ '· Bester Jäger: {hunter} mit {shield}'|trans({'{hunter}': leader.hunter.displayName, '{shield}': leader.shield|round(0, 'floor')|num}) }}{% endif %}
                             {% if b.open %}{{ '· bis {endsAt}'|trans({'{endsAt}': b.endsAt|date('d.m.Y H:i')}) }}{% endif %}
                         </div>
                     </div>

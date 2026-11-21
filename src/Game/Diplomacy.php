@@ -191,7 +191,7 @@ final class Diplomacy
         $this->em->persist($proposal);
         // The one who proposes votes yes right away.
         $proposal->vote($actor, true);
-        $this->notify(self::voters($proposal->getProposer()), t('Abstimmung: {title} mit {name}', ['{title}' => t($proposal->title()), '{name}' => $proposal->getTarget()->getName()]), new Lines([t('{player} schlägt vor: {title} mit „{name}“ [{tag}]. Stimme unter Diplomatie ab.', ['{player}' => $actor->getUsername(), '{title}' => t($proposal->title()), '{name}' => $proposal->getTarget()->getName(), '{tag}' => $proposal->getTarget()->getTag()]), $proposal->quotedMessage()], ''), $actor);
+        $this->notify(self::voters($proposal->getProposer()), t('Abstimmung: {title} mit {name}', ['{title}' => t($proposal->title()), '{name}' => $proposal->getTarget()->getName()]), new Lines([t('{player} schlägt vor: {title} mit „{name}“ [{tag}]. Stimme unter Diplomatie ab.', ['{player}' => $actor->getDisplayName(), '{title}' => t($proposal->title()), '{name}' => $proposal->getTarget()->getName(), '{tag}' => $proposal->getTarget()->getTag()]), $proposal->quotedMessage()], ''), $actor);
         $this->evaluate($proposal);
 
         return $proposal;

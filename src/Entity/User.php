@@ -399,6 +399,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             && ($theirs === $this->alliance || (null !== $theirs->getId() && $theirs->getId() === $this->alliance->getId()));
     }
 
+    /** The name as other players see it: with the alliance tag, e.g. "Mansa_Musa [OLD]" (at this moment). */
+    public function getDisplayName(): string
+    {
+        return null === $this->alliance ? $this->username : $this->username.' ['.$this->alliance->getTag().']';
+    }
+
     public function isSameAs(self $other): bool
     {
         return $other === $this || (null !== $this->id && $this->id === $other->getId());
@@ -565,15 +571,39 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     /**
-     * The overview boxes in the player's order; boxes he never placed (new ones) follow in the default order.
+     * The overview boxes in the player's order. Boxes he never placed (new ones) go where they stand in
+     * the default order: right after the box before them that he did place – or, if there is none,
+     * right before the next one he placed (or at the end).
      *
      * @return list<\App\Game\OverviewSection>
      */
     public function getOverviewOrder(): array
     {
-        $ordered = array_values(array_filter(array_map(\App\Game\OverviewSection::tryFrom(...), $this->overviewOrder ?? [])));
+        $order = array_values(array_filter(array_map(\App\Game\OverviewSection::tryFrom(...), $this->overviewOrder ?? [])));
+        $defaults = \App\Game\OverviewSection::cases();
+        foreach ($defaults as $i => $section) {
+            if (\in_array($section, $order, true)) {
+                continue;
+            }
+            $at = null;
+            foreach (array_reverse(\array_slice($defaults, 0, $i)) as $previous) {
+                if (\in_array($previous, $order, true)) {
+                    $at = (int) array_search($previous, $order, true) + 1;
+                    break;
+                }
+            }
+            if (null === $at) {
+                foreach (\array_slice($defaults, $i + 1) as $next) {
+                    if (\in_array($next, $order, true)) {
+                        $at = (int) array_search($next, $order, true);
+                        break;
+                    }
+                }
+            }
+            array_splice($order, $at ?? \count($order), 0, [$section]);
+        }
 
-        return [...$ordered, ...array_values(array_filter(\App\Game\OverviewSection::cases(), static fn (\App\Game\OverviewSection $s): bool => !\in_array($s, $ordered, true)))];
+        return $order;
     }
 
     /** @param list<\App\Game\OverviewSection> $order */

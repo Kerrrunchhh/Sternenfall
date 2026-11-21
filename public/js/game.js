@@ -484,6 +484,17 @@ const orbit = (() => {
         head.tabIndex = 0;
         let folded = false;
         try { folded = localStorage.getItem(key) === '1'; } catch (e) { /* ignore */ }
+        // data-fold-newest: something new since the last visit (e.g. a black board post) opens the box once.
+        const newest = box.dataset.foldNewest;
+        if (newest) {
+            let seen = null;
+            try { seen = localStorage.getItem(key + ':seen'); } catch (e) { /* ignore */ }
+            if (null !== seen && seen !== newest) {
+                folded = false;
+                box.classList.add('fold-new');
+            }
+            try { localStorage.setItem(key + ':seen', newest); } catch (e) { /* ignore */ }
+        }
         // A link straight to the box (#id) opens it.
         set(folded && !(box.id && window.location.hash === '#' + box.id));
         const toggle = (event) => {
@@ -2142,6 +2153,42 @@ const orbit = (() => {
             return;
         }
         const kind = chip.dataset.galaxyFilter;
+        active = active.includes(kind) ? active.filter((k) => k !== kind) : [...active, kind];
+        try {
+            localStorage.setItem(KEY, JSON.stringify(active));
+        } catch (e) { /* ignore */ }
+        apply();
+    });
+    apply();
+})();
+
+// Overview, fleet movements: chips show only some kinds of flights (combat, trade, …); remembered in this browser.
+(function () {
+    'use strict';
+    const box = document.querySelector('[data-movement-filters]');
+    const table = document.querySelector('.movement-table');
+    if (!box || !table) {
+        return;
+    }
+    const KEY = 'sternenfall.movementFilters';
+    let active = [];
+    try {
+        active = JSON.parse(localStorage.getItem(KEY) || '[]').filter((k) => typeof k === 'string');
+    } catch (e) { /* ignore */ }
+    const chips = [...box.querySelectorAll('[data-movement-filter]')];
+    // Kinds no longer present (no such flight right now) don't hide everything.
+    const apply = () => {
+        const shown = active.filter((k) => chips.some((c) => c.dataset.movementFilter === k));
+        chips.forEach((chip) => chip.setAttribute('aria-pressed', String(shown.includes(chip.dataset.movementFilter))));
+        table.classList.toggle('filtering', shown.length > 0);
+        table.querySelectorAll('tr[data-mv]').forEach((row) => row.classList.toggle('mv-match', shown.includes(row.dataset.mv)));
+    };
+    box.addEventListener('click', (event) => {
+        const chip = event.target.closest('[data-movement-filter]');
+        if (!chip) {
+            return;
+        }
+        const kind = chip.dataset.movementFilter;
         active = active.includes(kind) ? active.filter((k) => k !== kind) : [...active, kind];
         try {
             localStorage.setItem(KEY, JSON.stringify(active));

@@ -77,7 +77,7 @@ final readonly class AllianceService
             $alliance = $this->managedAlliance($actor);
             $user = $this->users->findOneBy(['username' => trim($username)]) ?? throw new GameException(t('Diesen Spieler gibt es nicht.'));
             if (null !== $user->getAlliance()) {
-                throw new GameException(t('{player} ist bereits in einer Allianz.', ['{player}' => $user->getUsername()]));
+                throw new GameException(t('{player} ist bereits in einer Allianz.', ['{player}' => $user->getDisplayName()]));
             }
             $this->assertSameLifeForm($alliance, $user);
 
@@ -89,11 +89,11 @@ final readonly class AllianceService
                 return;
             }
             if (null !== $existing) {
-                throw new GameException(t('{player} wurde bereits eingeladen.', ['{player}' => $user->getUsername()]));
+                throw new GameException(t('{player} wurde bereits eingeladen.', ['{player}' => $user->getDisplayName()]));
             }
 
             $this->em->persist(new AllianceRequest($alliance, $user, true, $this->now()));
-            $this->inbox->send($user, t('Einladung: {name} [{tag}]', ['{name}' => $alliance->getName(), '{tag}' => $alliance->getTag()]), t('{player} lädt dich in „{name}“ ({type}) ein. Du kannst die Einladung auf der Allianzseite annehmen oder ablehnen.', ['{player}' => $actor->getUsername(), '{name}' => $alliance->getName(), '{type}' => t($alliance->getType())]));
+            $this->inbox->send($user, t('Einladung: {name} [{tag}]', ['{name}' => $alliance->getName(), '{tag}' => $alliance->getTag()]), t('{player} lädt dich in „{name}“ ({type}) ein. Du kannst die Einladung auf der Allianzseite annehmen oder ablehnen.', ['{player}' => $actor->getDisplayName(), '{name}' => $alliance->getName(), '{type}' => t($alliance->getType())]));
             $this->em->flush();
         });
     }
@@ -134,7 +134,7 @@ final readonly class AllianceService
             $this->em->persist($request);
             foreach ($alliance->getMembers() as $member) {
                 if ($member->getAllianceRank()?->canManage()) {
-                    $this->inbox->send($member, t('Neue Bewerbung von {player}', ['{player}' => $user->getUsername()]), new Lines([t('{player} möchte „{name}“ beitreten. Du kannst die Bewerbung auf der Allianzseite annehmen oder ablehnen.', ['{player}' => $user->getUsername(), '{name}' => $alliance->getName()]), '', $message]));
+                    $this->inbox->send($member, t('Neue Bewerbung von {player}', ['{player}' => $user->getDisplayName()]), new Lines([t('{player} möchte „{name}“ beitreten. Du kannst die Bewerbung auf der Allianzseite annehmen oder ablehnen.', ['{player}' => $user->getDisplayName(), '{name}' => $alliance->getName()]), '', $message]));
                 }
             }
             $this->em->flush();
@@ -202,7 +202,7 @@ final readonly class AllianceService
             }
             $member->setAllianceRank(AllianceRank::Founder);
             $actor->setAllianceRank(AllianceRank::Commander);
-            $this->inbox->send($member, t('Du bist jetzt Gründer'), t('{player} hat dir die Führung von „{name}“ übergeben.', ['{player}' => $actor->getUsername(), '{name}' => $alliance->getName()]));
+            $this->inbox->send($member, t('Du bist jetzt Gründer'), t('{player} hat dir die Führung von „{name}“ übergeben.', ['{player}' => $actor->getDisplayName(), '{name}' => $alliance->getName()]));
             // A new founder ends any running vote.
             foreach ($this->em->getRepository(AllianceVote::class)->findBy(['alliance' => $alliance]) as $vote) {
                 $this->em->remove($vote);
@@ -257,7 +257,7 @@ final readonly class AllianceService
             foreach ($alliance->getMembers()->toArray() as $member) {
                 $this->removeMember($member);
                 if (!$member->isSameAs($actor)) {
-                    $this->inbox->send($member, t('Allianz aufgelöst'), t('„{name}“ wurde von {player} aufgelöst.', ['{name}' => $alliance->getName(), '{player}' => $actor->getUsername()]));
+                    $this->inbox->send($member, t('Allianz aufgelöst'), t('„{name}“ wurde von {player} aufgelöst.', ['{name}' => $alliance->getName(), '{player}' => $actor->getDisplayName()]));
                 }
             }
             $this->images->delete($alliance->getImage(), 'alliances');
@@ -370,7 +370,7 @@ final readonly class AllianceService
             $alliance->setTaxRate($rate);
             foreach ($alliance->getMembers() as $member) {
                 if (!$member->isSameAs($actor)) {
-                    $this->inbox->send($member, t('Allianzsteuer: {rate} %', ['{rate}' => $rate]), t('{player} hat die Steuer auf {rate} % eures Credit-Einkommens gesetzt. Sie fließt in die Allianzkasse.', ['{player}' => $actor->getUsername(), '{rate}' => $rate]));
+                    $this->inbox->send($member, t('Allianzsteuer: {rate} %', ['{rate}' => $rate]), t('{player} hat die Steuer auf {rate} % eures Credit-Einkommens gesetzt. Sie fließt in die Allianzkasse.', ['{player}' => $actor->getDisplayName(), '{rate}' => $rate]));
                 }
             }
             $this->em->flush();
@@ -395,7 +395,7 @@ final readonly class AllianceService
             $this->em->getConnection()->executeStatement('UPDATE `user` SET credits = credits + ? WHERE id = ?', [$amount, $member->getId()]);
             $this->ledger?->book($member, $amount, CreditLedger::TREASURY, null, '' === trim($note) ? \sprintf('Auszahlung aus der Kasse von „%s“ durch %s', $alliance->getName(), $actor->getUsername()) : trim($note), counterpartyName: $alliance->getName().' ['.$alliance->getTag().']');
             $this->actionLog?->record($actor, ActionLog::TREASURY, \sprintf('%s Credits aus der Kasse von „%s“ an %s ausgezahlt', number_format($amount, 0, ',', '.'), $alliance->getName(), $member->getUsername()), $member);
-            $this->inbox->send($member, t('Auszahlung aus der Allianzkasse'), new Lines([t('{player} hat dir {amount} Credits aus der Kasse von „{name}“ ausgezahlt.', ['{player}' => $actor->getUsername(), '{amount}' => new Num($amount), '{name}' => $alliance->getName()]), '' === trim($note) ? null : trim($note)]));
+            $this->inbox->send($member, t('Auszahlung aus der Allianzkasse'), new Lines([t('{player} hat dir {amount} Credits aus der Kasse von „{name}“ ausgezahlt.', ['{player}' => $actor->getDisplayName(), '{amount}' => new Num($amount), '{name}' => $alliance->getName()]), '' === trim($note) ? null : trim($note)]));
             $this->em->flush();
         });
     }
@@ -448,12 +448,12 @@ final readonly class AllianceService
         if (null !== $user->getAlliance()) {
             $this->em->remove($request);
             $this->em->flush();
-            throw new GameException(t('{player} ist inzwischen in einer anderen Allianz.', ['{player}' => $user->getUsername()]));
+            throw new GameException(t('{player} ist inzwischen in einer anderen Allianz.', ['{player}' => $user->getDisplayName()]));
         }
         if (!$alliance->admits($user)) {
             $this->em->remove($request);
             $this->em->flush();
-            throw new GameException(t('{player} gehört inzwischen zu den {label} – in „{name}“ sind nur {label2}.', ['{player}' => $user->getUsername(), '{label}' => t($user->getLifeForm()->label()), '{name}' => $alliance->getName(), '{label2}' => t($alliance->getLifeForm()->label())]));
+            throw new GameException(t('{player} gehört inzwischen zu den {label} – in „{name}“ sind nur {label2}.', ['{player}' => $user->getDisplayName(), '{label}' => t($user->getLifeForm()->label()), '{name}' => $alliance->getName(), '{label2}' => t($alliance->getLifeForm()->label())]));
         }
 
         $user->joinAlliance($alliance, AllianceRank::Prospect);
@@ -465,7 +465,7 @@ final readonly class AllianceService
     private function assertSameLifeForm(Alliance $alliance, User $user): void
     {
         if (!$alliance->admits($user)) {
-            throw new GameException(t('In „{name}“ ({type}) sind nur {label}. {player} gehört zu den {label2}.', ['{name}' => $alliance->getName(), '{type}' => $alliance->getType(), '{label}' => t($alliance->getLifeForm()->label()), '{player}' => $user->getUsername(), '{label2}' => t($user->getLifeForm()->label())]));
+            throw new GameException(t('In „{name}“ ({type}) sind nur {label}. {player} gehört zu den {label2}.', ['{name}' => $alliance->getName(), '{type}' => $alliance->getType(), '{label}' => t($alliance->getLifeForm()->label()), '{player}' => $user->getDisplayName(), '{label2}' => t($user->getLifeForm()->label())]));
         }
     }
 
@@ -513,7 +513,7 @@ final readonly class AllianceService
             if ($member->getAllianceRank()?->canManage()) {
                 $deposed[] = $member;
                 $member->setAllianceRank(AllianceRank::Member);
-                $this->inbox->send($member, t('Als Gründer abgesetzt'), t('Die Mehrheit von „{name}“ hat dich als Gründer abgesetzt. Neuer Gründer ist {player}, du bist jetzt Mitglied.', ['{name}' => $alliance->getName(), '{player}' => $successor->getUsername()]));
+                $this->inbox->send($member, t('Als Gründer abgesetzt'), t('Die Mehrheit von „{name}“ hat dich als Gründer abgesetzt. Neuer Gründer ist {player}, du bist jetzt Mitglied.', ['{name}' => $alliance->getName(), '{player}' => $successor->getDisplayName()]));
             }
         }
         $successor->setAllianceRank(AllianceRank::Founder);
@@ -522,7 +522,7 @@ final readonly class AllianceService
         }
         foreach ($alliance->getMembers() as $member) {
             if (!$member->getAllianceRank()?->canManage() && !\in_array($member, $deposed, true)) {
-                $this->inbox->send($member, t('Neuer Gründer: {player}', ['{player}' => $successor->getUsername()]), t('Per Mehrheitsbeschluss ist {player} jetzt Gründer von „{name}“.', ['{player}' => $successor->getUsername(), '{name}' => $alliance->getName()]));
+                $this->inbox->send($member, t('Neuer Gründer: {player}', ['{player}' => $successor->getDisplayName()]), t('Per Mehrheitsbeschluss ist {player} jetzt Gründer von „{name}“.', ['{player}' => $successor->getDisplayName(), '{name}' => $alliance->getName()]));
             }
         }
         $this->inbox->send($successor, t('Du bist jetzt Gründer'), t('Die Mehrheit von „{name}“ hat dich zum neuen Gründer gewählt.', ['{name}' => $alliance->getName()]));
@@ -594,7 +594,7 @@ final readonly class AllianceService
     private function assertMember(Alliance $alliance, User $member): void
     {
         if ($member->getAlliance()?->getId() !== $alliance->getId()) {
-            throw new GameException(t('{player} ist nicht in deiner Allianz.', ['{player}' => $member->getUsername()]));
+            throw new GameException(t('{player} ist nicht in deiner Allianz.', ['{player}' => $member->getDisplayName()]));
         }
     }
 

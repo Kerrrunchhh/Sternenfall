@@ -39,7 +39,7 @@
                                     <th scope="row">{{ e.research.label|trans }}</th>
                                     {% for i in 0..2 %}
                                         {% set l = e.leaders[i] ?? null %}
-                                        <td class="{{ l and l.user.id == player.id ? 'highscore-own' }}">{% if l %}{{ ui.player(l.user, false) }} <span class="muted small">{{ 'Stufe {level}'|trans({'{level}': l.level}) }}</span>{% else %}<span class="muted">–</span>{% endif %}</td>
+                                        <td class="{{ l and l.user.id == player.id ? 'highscore-own' }}">{% if l %}{{ ui.player(l.user) }} <span class="muted small">{{ 'Stufe {level}'|trans({'{level}': l.level}) }}</span>{% else %}<span class="muted">–</span>{% endif %}</td>
                                     {% endfor %}
                                 </tr>
                             {% endfor %}

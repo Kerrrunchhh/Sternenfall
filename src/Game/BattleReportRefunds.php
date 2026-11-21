@@ -50,7 +50,7 @@ final readonly class BattleReportRefunds
             }
             $user = $this->users->find((int) $userId) ?? throw new GameException(t('Diesen Spieler gibt es nicht mehr.'));
             $planet = $user->getPlanets()->findFirst(static fn (int $k, Planet $p): bool => $p->getId() === (int) ($targets[$userId] ?? 0))
-                ?? throw new GameException(t('Wähle für {player} einen seiner Planeten.', ['{player}' => $user->getUsername()]));
+                ?? throw new GameException(t('Wähle für {player} einen seiner Planeten.', ['{player}' => $user->getDisplayName()]));
             $bookings[] = [$user, $planet, $counts];
         }
 

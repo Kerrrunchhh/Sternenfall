@@ -23,6 +23,8 @@ final readonly class AccountDeletion
 {
     public const string DELAY = '+48 hours';
     public const string NOBODY = 'Herrenlos';
+    /** Sign-ups whose e-mail address isn't confirmed by then are removed (the confirmation link is valid as long). */
+    public const string UNCONFIRMED_AFTER = '48 hours';
 
     public function __construct(
         private EntityManagerInterface $em,
@@ -61,6 +63,34 @@ final readonly class AccountDeletion
         foreach ($due as $user) {
             $this->delete($user);
         }
+    }
+
+    /**
+     * Removes sign-ups that never confirmed their e-mail address within UNCONFIRMED_AFTER. They never
+     * played (no home world yet), so nothing is left behind and they don't count as sign-offs.
+     *
+     * @return int how many were removed
+     */
+    public function deleteUnconfirmed(): int
+    {
+        $stale = $this->users->createQueryBuilder('u')
+            ->where('u.system = false AND u.email IS NOT NULL AND u.emailVerifiedAt IS NULL AND u.lastSeenAt IS NULL AND u.createdAt <= :before')
+            ->setParameter('before', $this->now()->modify('-'.self::UNCONFIRMED_AFTER))
+            ->getQuery()->getResult();
+        $removed = 0;
+        foreach ($stale as $user) {
+            if (!$user->getPlanets()->isEmpty()) {
+                continue; // played after all – leave it to the admins
+            }
+            $this->abandon($user, false);
+            $this->em->remove($user);
+            ++$removed;
+        }
+        if ($removed > 0) {
+            $this->em->flush();
+        }
+
+        return $removed;
     }
 
     public function delete(User $user): void

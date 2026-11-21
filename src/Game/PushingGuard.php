@@ -39,7 +39,7 @@ final readonly class PushingGuard
             $given = $this->givenTo($sender, $receiver, $now->modify('-'.self::DAYS.' days'));
             if ($given + $amount > $limit) {
                 throw new GameException(t('Pushing-Schutz: {player} hat mehr Punkte als du. Ohne Gegenleistung darfst du ihm in 7 Tagen höchstens {limit} Rohstoffe schicken (ein Viertel deiner Wochenproduktion), {given} hast du schon geschickt. Für Lieferungen gegen Bezahlung gibt es Handelsstützpunkte und Transportgesuche.', [
-                    '{player}' => $receiver->getUsername(),
+                    '{player}' => $receiver->getDisplayName(),
                     '{limit}' => new Num($limit),
                     '{given}' => new Num($given),
                 ]));
@@ -60,7 +60,7 @@ final readonly class PushingGuard
             $given = $this->givenTo($sender, $receiver, $now->modify('-'.self::DAYS.' days'));
             if ($given + $worth > $limit) {
                 throw new GameException(t('Pushing-Schutz: {player} hat mehr Punkte als du. In 7 Tagen darfst du ihm Rohstoffe und Credits im Wert von höchstens {limit} Rohstoffen schenken (ein Viertel deiner Wochenproduktion, {rate} Credits zählen wie 1 Rohstoff). Davon hast du schon {given} verbraucht – möglich sind noch {left} Credits.', [
-                    '{player}' => $receiver->getUsername(),
+                    '{player}' => $receiver->getDisplayName(),
                     '{limit}' => new Num($limit),
                     '{rate}' => new Num(self::CREDITS_PER_RESOURCE),
                     '{given}' => new Num($given),

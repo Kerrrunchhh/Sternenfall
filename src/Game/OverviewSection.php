@@ -9,6 +9,7 @@ namespace App\Game;
 enum OverviewSection: string
 {
     case Contacts = 'contacts';
+    case Board = 'board';
     case Movements = 'movements';
     case Queues = 'queues';
     case TransportRequests = 'transport_requests';
@@ -22,6 +23,7 @@ enum OverviewSection: string
     public function label(): string
     {
         return match ($this) {
+            self::Board => 'Schwarzes Brett',
             self::Contacts => 'Schnellkontakte',
             self::Movements => 'Flottenbewegungen',
             self::TransportRequests => 'Transportgesuche',
