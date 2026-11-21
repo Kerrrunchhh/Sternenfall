@@ -26,8 +26,6 @@ final readonly class GameMailer
     /** @var array<string, string> topic => label */
     public const array TOPICS = [
         'attack' => 'Angriff auf einen meiner Planeten',
-        'research' => 'Forschung abgeschlossen',
-        'mail' => 'Neue Nachricht in der Post',
         'battle' => 'Kampfbericht (ich war an einer Schlacht beteiligt)',
         'news' => 'Neuigkeiten zum Spiel',
     ];
@@ -82,7 +80,8 @@ final readonly class GameMailer
     /** A notification the player chose in his account settings. */
     public function notify(User $user, string $topic, TranslatableInterface $subject, TranslatableInterface $text): void
     {
-        if (!$user->wantsMail($topic)) {
+        // Only topics that still exist (finished research and new post are no longer mailed) – and only if wanted.
+        if (!isset(self::TOPICS[$topic]) || !$user->wantsMail($topic)) {
             return;
         }
         $this->send($user, $subject, $text, t("– {game}\nWelche Mails du bekommst, stellst du im Spiel unter Konto ein.", ['{game}' => $this->gameName]));

@@ -20,7 +20,6 @@ final readonly class Mailbox
         private EntityManagerInterface $em,
         private UserRepository $users,
         private ClockInterface $clock,
-        private ?GameMailer $gameMailer = null,
     ) {
     }
 
@@ -62,7 +61,6 @@ final readonly class Mailbox
         $message = new PlayerMessage($sender, $recipient, '' === $subject ? '(kein Betreff)' : $subject, $body, \DateTimeImmutable::createFromInterface($this->clock->now()));
         $this->em->persist($message);
         $this->em->flush();
-        $this->gameMailer?->notify($recipient, 'mail', t('Neue Nachricht von {player}', ['{player}' => $sender->getDisplayName()]), t("{player} hat dir geschrieben: „{subject}“\n\nLesen und antworten kannst du im Spiel unter Post.", ['{player}' => $sender->getDisplayName(), '{subject}' => $message->getSubject()]));
 
         return $message;
     }

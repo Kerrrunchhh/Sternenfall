@@ -35,11 +35,11 @@ final class NewsMailTest extends TestCase
     {
         $player = $this->verified('weg', 'weg@example.org', 'de');
         self::assertTrue($player->wantsMail('attack'));
-        self::assertTrue($player->wantsMail('research'));
+        self::assertTrue($player->wantsMail('battle'));
 
         $player->requestDeletion(new \DateTimeImmutable('+48 hours'), false);
         self::assertFalse($player->wantsMail('attack'), 'deletion pending: no attack warnings');
-        self::assertFalse($player->wantsMail('research'));
+        self::assertFalse($player->wantsMail('battle'));
 
         $player->cancelDeletion();
         self::assertTrue($player->wantsMail('attack'), 'logging in again keeps the account – and the mails');

@@ -44,7 +44,7 @@ final class GameMailerTest extends TestCase
             $user = $this->user($locale);
             $user->verifyEmail(new \DateTimeImmutable('2026-11-11'));
             $user->setMailTopics(array_keys(GameMailer::TOPICS));
-            $this->mailer()->notify($user, 'research', t('Forschung abgeschlossen'), t('Forschung abgeschlossen'));
+            $this->mailer()->notify($user, 'battle', t('Kampfbericht'), t('Kampfbericht'));
 
             $body = $this->sent[0]->getTextBody();
             self::assertStringContainsString("\n\n– Starfall: New Horizons\n", $body, $locale);
